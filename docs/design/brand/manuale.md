@@ -53,7 +53,7 @@ Regole:
 - `zagara` pieno solo nel momento in cui si guadagna qualcosa; a riposo la pillola punti è `zagara-tint`.
 - Il 70% di ogni schermata è `calce`, `calce-raised` e `lava`.
 
-**Tipografia.** **Fraunces** (serif variabile) per titoli, nomi di luoghi, prezzi e numeri, da 17px in su, mai per testo corrente. **Instrument Sans** per tutto il resto, mai sotto 16px per il testo su mobile. Fraunces usa `font-optical-sizing: auto` (l'asse ottico segue la dimensione) e l'asse `SOFT` a 50 nei titoli display, che arrotonda le terminazioni e la distingue dall'uso comune del carattere. In produzione i font si caricano con `next/font/google` (Fraunces con assi `opsz` e `SOFT`, Instrument Sans), non con `@import`.
+**Tipografia.** **Fraunces** (serif variabile) per titoli, nomi di luoghi, prezzi e numeri, da 17px in su, mai per testo corrente. **Instrument Sans** per tutto il resto, mai sotto 16px per il testo su mobile. Fraunces usa `font-optical-sizing: auto` (l'asse ottico segue la dimensione) e l'asse `SOFT` a 50 nei titoli display; in `font-variation-settings` si imposta solo `"SOFT" 50`, mai `opsz`, che sovrascriverebbe `auto`. L'asse SOFT arrotonda le terminazioni e distingue Fraunces dall'uso comune del carattere. In produzione i font si caricano con `next/font/google` (Fraunces con assi `opsz` e `SOFT`, Instrument Sans), non con `@import`.
 
 **Spazio e griglia.** Griglia da 12 colonne, larghezza massima 1200px, gutter `space-6`. Su mobile margini `space-4` e una colonna. `space-16` tra sezioni su desktop, `space-12` su mobile.
 

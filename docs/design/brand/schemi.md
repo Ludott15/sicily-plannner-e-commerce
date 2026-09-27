@@ -67,7 +67,7 @@ Ogni itinerario pronto, attività e luogo ha un'immagine di anteprima (1200×630
 
 - I punti compaiono dove li guadagni e nella pillola dell'intestazione, non in ogni pagina.
 - La classifica mostra prima il gruppo, poi la stagione. Nell'itinerario sta sotto le tappe e sotto "Da prenotare", mai sopra la piega.
-- Voti con icone pollice su e pollice giù più il numero, `aria-pressed` sul proprio voto; mai solo colore. Il saldo negativo si scrive "2 su 4 preferirebbero altro". Chi è in fondo vede la distanza dal prossimo ("ti mancano 40 punti per salire"), non la propria posizione in rosso.
+- Voti con icone pollice su e pollice giù più il numero, `aria-pressed` sul proprio voto; mai solo colore. Quando i voti contrari sono almeno la metà dei membri attuali del gruppo, la tappa lo dice così: "2 su 4 preferirebbero altro". Chi è in fondo vede la distanza dal prossimo ("ti mancano 40 punti per salire"), non la propria posizione in rosso.
 - Nessuna notifica push per i punti. Email solo per inviti, ordini e un riepilogo a fine viaggio.
 
 ## Tema scuro

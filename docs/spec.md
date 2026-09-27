@@ -402,7 +402,7 @@ Un gruppo è un viaggio condiviso: un itinerario, più membri, voti sulle attivi
 
 **Ospiti:** un ospite che apre un invito deve prima creare l'account con il codice email; i suoi dati da ospite restano.
 
-**Voti:** ogni membro vota +1 o -1 su ogni voce dell'itinerario. L'interfaccia mostra il saldo e segnala le voci con saldo negativo come candidate alla sostituzione, proponendo alternative con lo scoring di gruppo. Solo l'owner applica le sostituzioni; ogni membro può proporre aggiunte.
+**Voti:** ogni membro vota +1 o -1 su ogni voce dell'itinerario. L'interfaccia mostra il saldo e segnala come candidate alla sostituzione le voci con voti contrari pari ad almeno la metà dei membri attuali del gruppo ("2 su 4 preferirebbero altro. Ecco 2 alternative vicine."), proponendo alternative con lo scoring di gruppo. Solo l'owner applica le sostituzioni; ogni membro può proporre aggiunte.
 
 **Realtime:** sottoscrizione Supabase Realtime a `itinerary_items` e `item_votes` filtrata per itinerario, così modifiche e voti compaiono subito a tutti i membri aperti sulla pagina.
 
