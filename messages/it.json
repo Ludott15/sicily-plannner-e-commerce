@@ -1,0 +1,36 @@
+{
+  "Metadata": {
+    "title": "Sicilia Planner",
+    "description": "Pianifica il tuo viaggio in Sicilia e porta a casa i sapori dei produttori locali."
+  },
+  "Nav": {
+    "home": "Home",
+    "profile": "Profilo",
+    "login": "Accedi",
+    "logout": "Esci"
+  },
+  "Home": {
+    "title": "Il tuo viaggio in Sicilia, su misura",
+    "subtitle": "Itinerari costruiti sulle tue preferenze e prodotti spediti direttamente dai produttori.",
+    "cta": "Inizia ora",
+    "greeting": "Ciao, {name}"
+  },
+  "Login": {
+    "title": "Accedi",
+    "description": "Ti inviamo un link di accesso via email, oppure entra con Google.",
+    "email": "Email",
+    "submit": "Inviami il link",
+    "or": "oppure",
+    "google": "Continua con Google",
+    "sent": "Controlla la posta: ti abbiamo inviato un link per accedere a {email}.",
+    "invalidEmail": "Inserisci un indirizzo email valido.",
+    "error": "Accesso non riuscito. Riprova."
+  },
+  "Profile": {
+    "title": "Il tuo profilo",
+    "email": "Email",
+    "displayName": "Nome",
+    "role": "Ruolo",
+    "memberSince": "Iscritto dal"
+  }
+}
