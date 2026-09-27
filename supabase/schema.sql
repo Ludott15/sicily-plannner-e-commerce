@@ -39,6 +39,36 @@ CREATE TYPE "public"."event_type" AS ENUM (
 ALTER TYPE "public"."event_type" OWNER TO "postgres";
 
 
+CREATE TYPE "public"."group_role" AS ENUM (
+    'owner',
+    'member'
+);
+
+
+ALTER TYPE "public"."group_role" OWNER TO "postgres";
+
+
+CREATE TYPE "public"."invite_status" AS ENUM (
+    'active',
+    'revoked',
+    'expired'
+);
+
+
+ALTER TYPE "public"."invite_status" OWNER TO "postgres";
+
+
+CREATE TYPE "public"."itinerary_status" AS ENUM (
+    'draft',
+    'planned',
+    'in_progress',
+    'completed'
+);
+
+
+ALTER TYPE "public"."itinerary_status" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."partner" AS ENUM (
     'travelpayouts',
     'getyourguide',
@@ -81,6 +111,163 @@ CREATE TYPE "public"."user_role" AS ENUM (
 ALTER TYPE "public"."user_role" OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."accept_invite"("p_token" "text") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_invite public.group_invites;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+
+  select * into v_invite
+  from public.group_invites
+  where token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex')
+  for update;
+
+  if not found then
+    raise exception 'invite_not_found' using errcode = 'P0001';
+  end if;
+  if v_invite.status = 'revoked' then
+    raise exception 'invite_revoked' using errcode = 'P0001';
+  end if;
+  if v_invite.status = 'expired' or v_invite.expires_at <= now() then
+    raise exception 'invite_expired' using errcode = 'P0001';
+  end if;
+  if v_invite.uses >= v_invite.max_uses then
+    raise exception 'invite_exhausted' using errcode = 'P0001';
+  end if;
+  if exists (
+    select 1 from public.group_members
+    where group_id = v_invite.group_id and user_id = v_uid
+  ) then
+    raise exception 'already_member' using errcode = 'P0001';
+  end if;
+
+  insert into public.group_members (group_id, user_id, role)
+  values (v_invite.group_id, v_uid, 'member');
+
+  update public.group_invites set uses = uses + 1 where id = v_invite.id;
+
+  return v_invite.group_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."accept_invite"("p_token" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."can_access_itinerary"("iid" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select exists (
+    select 1 from public.itineraries i
+    where i.id = iid
+      and (
+        i.is_template
+        or i.owner_id = auth.uid()
+        or (i.group_id is not null and public.is_group_member(i.group_id))
+      )
+  );
+$$;
+
+
+ALTER FUNCTION "public"."can_access_itinerary"("iid" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."can_edit_itinerary"("iid" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select exists (
+    select 1 from public.itineraries i
+    where i.id = iid
+      and (
+        i.owner_id = auth.uid()
+        or (i.group_id is not null and public.is_group_member(i.group_id))
+        or (i.is_template and public.is_admin())
+      )
+  );
+$$;
+
+
+ALTER FUNCTION "public"."can_edit_itinerary"("iid" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."can_vote_item"("item_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select exists (
+    select 1
+    from public.itinerary_items ii
+    join public.itineraries i on i.id = ii.itinerary_id
+    where ii.id = item_id
+      and i.group_id is not null
+      and public.is_group_member(i.group_id)
+  );
+$$;
+
+
+ALTER FUNCTION "public"."can_vote_item"("item_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_group_id uuid;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+
+  if p_itinerary_id is not null then
+    perform 1 from public.itineraries
+    where id = p_itinerary_id and owner_id = v_uid and group_id is null
+    for update;
+    if not found then
+      raise exception 'itinerary_not_available' using errcode = 'P0001';
+    end if;
+  end if;
+
+  insert into public.groups (name, owner_id, itinerary_id)
+  values (p_name, v_uid, p_itinerary_id)
+  returning id into v_group_id;
+
+  if p_itinerary_id is not null then
+    update public.itineraries set group_id = v_group_id where id = p_itinerary_id;
+  end if;
+
+  return v_group_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."groups_add_owner_member"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  insert into public.group_members (group_id, user_id, role)
+  values (new.id, new.owner_id, 'owner');
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."groups_add_owner_member"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -100,6 +287,25 @@ $$;
 ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."invite_preview"("p_token" "text") RETURNS TABLE("group_id" "uuid", "group_name" "text", "owner_display_name" "text", "owner_avatar_url" "text", "itinerary_id" "uuid", "itinerary_title" "text", "itinerary_days" smallint, "expires_at" timestamp with time zone)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select g.id, g.name, p.display_name, p.avatar_url, i.id, i.title, i.days, gi.expires_at
+  from public.group_invites gi
+  join public.groups g on g.id = gi.group_id
+  join public.profiles p on p.id = g.owner_id
+  left join public.itineraries i on i.id = g.itinerary_id
+  where gi.token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex')
+    and gi.status = 'active'
+    and gi.expires_at > now()
+    and gi.uses < gi.max_uses;
+$$;
+
+
+ALTER FUNCTION "public"."invite_preview"("p_token" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."is_admin"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -112,6 +318,65 @@ $$;
 
 
 ALTER FUNCTION "public"."is_admin"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."is_group_member"("gid" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select exists (
+    select 1 from public.group_members
+    where group_id = gid and user_id = auth.uid()
+  );
+$$;
+
+
+ALTER FUNCTION "public"."is_group_member"("gid" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."is_group_owner"("gid" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select exists (
+    select 1 from public.groups
+    where id = gid and owner_id = auth.uid()
+  );
+$$;
+
+
+ALTER FUNCTION "public"."is_group_owner"("gid" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_group public.groups;
+begin
+  select * into v_group from public.groups where id = p_group_id for update;
+  if not found or v_group.owner_id is distinct from v_uid then
+    raise exception 'not_group_owner' using errcode = 'P0001';
+  end if;
+
+  if p_new_owner = v_uid or not exists (
+    select 1 from public.group_members where group_id = p_group_id and user_id = p_new_owner
+  ) then
+    raise exception 'new_owner_not_member' using errcode = 'P0001';
+  end if;
+
+  update public.groups set owner_id = p_new_owner where id = p_group_id;
+  update public.group_members set role = 'member' where group_id = p_group_id and user_id = v_uid;
+  update public.group_members set role = 'owner' where group_id = p_group_id and user_id = p_new_owner;
+  update public.itineraries set owner_id = p_new_owner
+  where id = v_group.itinerary_id and owner_id = v_uid;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") OWNER TO "postgres";
 
 SET default_tablespace = '';
 
@@ -159,6 +424,84 @@ CREATE TABLE IF NOT EXISTS "public"."activity_interests" (
 ALTER TABLE "public"."activity_interests" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."group_invites" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "group_id" "uuid" NOT NULL,
+    "token_hash" "text" NOT NULL,
+    "email" "text",
+    "invited_by" "uuid" NOT NULL,
+    "expires_at" timestamp with time zone DEFAULT ("now"() + '7 days'::interval) NOT NULL,
+    "max_uses" smallint DEFAULT 10 NOT NULL,
+    "uses" smallint DEFAULT 0 NOT NULL,
+    "status" "public"."invite_status" DEFAULT 'active'::"public"."invite_status" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "group_invites_expiry_max_7_days" CHECK (("expires_at" <= ("created_at" + '7 days'::interval))),
+    CONSTRAINT "group_invites_max_uses_range" CHECK ((("max_uses" >= 1) AND ("max_uses" <= 10))),
+    CONSTRAINT "group_invites_token_hash_format" CHECK (("token_hash" ~ '^[0-9a-f]{64}$'::"text")),
+    CONSTRAINT "group_invites_uses_range" CHECK ((("uses" >= 0) AND ("uses" <= "max_uses")))
+);
+
+
+ALTER TABLE "public"."group_invites" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."group_members" (
+    "group_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "role" "public"."group_role" DEFAULT 'member'::"public"."group_role" NOT NULL,
+    "joined_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."group_members" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."profiles" (
+    "id" "uuid" NOT NULL,
+    "display_name" "text",
+    "avatar_url" "text",
+    "locale" "text" DEFAULT 'it'::"text" NOT NULL,
+    "role" "public"."user_role" DEFAULT 'user'::"public"."user_role" NOT NULL,
+    "home_airport_iata" character(3),
+    "pace" "public"."trip_pace",
+    "party" "public"."travel_party",
+    "onboarding_completed_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."profiles" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."group_member_profiles" WITH ("security_barrier"='true') AS
+ SELECT "gm"."group_id",
+    "gm"."user_id",
+    "gm"."role",
+    "gm"."joined_at",
+    "p"."display_name",
+    "p"."avatar_url"
+   FROM ("public"."group_members" "gm"
+     JOIN "public"."profiles" "p" ON (("p"."id" = "gm"."user_id")))
+  WHERE "public"."is_group_member"("gm"."group_id");
+
+
+ALTER VIEW "public"."group_member_profiles" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."groups" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" "text" NOT NULL,
+    "owner_id" "uuid" NOT NULL,
+    "itinerary_id" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "groups_name_length" CHECK ((("char_length"("btrim"("name")) >= 1) AND ("char_length"("btrim"("name")) <= 80)))
+);
+
+
+ALTER TABLE "public"."groups" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."interests" (
     "key" "text" NOT NULL,
     "label_it" "text" NOT NULL,
@@ -169,6 +512,74 @@ CREATE TABLE IF NOT EXISTS "public"."interests" (
 
 
 ALTER TABLE "public"."interests" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."item_votes" (
+    "itinerary_item_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "value" smallint NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "item_votes_value_valid" CHECK (("value" = ANY (ARRAY['-1'::integer, 1])))
+);
+
+
+ALTER TABLE "public"."item_votes" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."itineraries" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "owner_id" "uuid",
+    "group_id" "uuid",
+    "title" "text" NOT NULL,
+    "slug" "text",
+    "is_template" boolean DEFAULT false NOT NULL,
+    "template_id" "uuid",
+    "start_date" "date",
+    "days" smallint NOT NULL,
+    "status" "public"."itinerary_status" DEFAULT 'draft'::"public"."itinerary_status" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "itineraries_days_range" CHECK ((("days" >= 1) AND ("days" <= 60))),
+    CONSTRAINT "itineraries_template_iff_editorial" CHECK ((("owner_id" IS NULL) = "is_template")),
+    CONSTRAINT "itineraries_title_length" CHECK ((("char_length"("btrim"("title")) >= 1) AND ("char_length"("btrim"("title")) <= 200)))
+);
+
+
+ALTER TABLE "public"."itineraries" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."itinerary_items" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "itinerary_id" "uuid" NOT NULL,
+    "day_index" smallint NOT NULL,
+    "position" smallint NOT NULL,
+    "activity_id" "uuid",
+    "place_id" "uuid",
+    "custom_title" "text",
+    "start_time" time without time zone,
+    "notes" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "itinerary_items_day_index_non_negative" CHECK (("day_index" >= 0)),
+    CONSTRAINT "itinerary_items_has_subject" CHECK ((("activity_id" IS NOT NULL) OR ("place_id" IS NOT NULL) OR ("custom_title" IS NOT NULL))),
+    CONSTRAINT "itinerary_items_position_non_negative" CHECK (("position" >= 0))
+);
+
+
+ALTER TABLE "public"."itinerary_items" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."item_vote_balances" WITH ("security_invoker"='true') AS
+ SELECT "v"."itinerary_item_id",
+    ("sum"("v"."value"))::integer AS "balance",
+    ("count"(*) FILTER (WHERE ("v"."value" = 1)))::integer AS "up_votes",
+    ("count"(*) FILTER (WHERE ("v"."value" = '-1'::integer)))::integer AS "down_votes"
+   FROM ((("public"."item_votes" "v"
+     JOIN "public"."itinerary_items" "ii" ON (("ii"."id" = "v"."itinerary_item_id")))
+     JOIN "public"."itineraries" "i" ON (("i"."id" = "ii"."itinerary_id")))
+     JOIN "public"."group_members" "gm" ON ((("gm"."group_id" = "i"."group_id") AND ("gm"."user_id" = "v"."user_id"))))
+  GROUP BY "v"."itinerary_item_id";
+
+
+ALTER VIEW "public"."item_vote_balances" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."places" (
@@ -202,23 +613,6 @@ CREATE TABLE IF NOT EXISTS "public"."preference_weights" (
 
 
 ALTER TABLE "public"."preference_weights" OWNER TO "postgres";
-
-
-CREATE TABLE IF NOT EXISTS "public"."profiles" (
-    "id" "uuid" NOT NULL,
-    "display_name" "text",
-    "avatar_url" "text",
-    "locale" "text" DEFAULT 'it'::"text" NOT NULL,
-    "role" "public"."user_role" DEFAULT 'user'::"public"."user_role" NOT NULL,
-    "home_airport_iata" character(3),
-    "pace" "public"."trip_pace",
-    "party" "public"."travel_party",
-    "onboarding_completed_at" timestamp with time zone,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
-);
-
-
-ALTER TABLE "public"."profiles" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."user_constraints" (
@@ -305,8 +699,48 @@ ALTER TABLE ONLY "public"."activity_interests"
 
 
 
+ALTER TABLE ONLY "public"."group_invites"
+    ADD CONSTRAINT "group_invites_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."group_invites"
+    ADD CONSTRAINT "group_invites_token_hash_unique" UNIQUE ("token_hash");
+
+
+
+ALTER TABLE ONLY "public"."group_members"
+    ADD CONSTRAINT "group_members_group_id_user_id_pk" PRIMARY KEY ("group_id", "user_id");
+
+
+
+ALTER TABLE ONLY "public"."groups"
+    ADD CONSTRAINT "groups_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."interests"
     ADD CONSTRAINT "interests_pkey" PRIMARY KEY ("key");
+
+
+
+ALTER TABLE ONLY "public"."item_votes"
+    ADD CONSTRAINT "item_votes_itinerary_item_id_user_id_pk" PRIMARY KEY ("itinerary_item_id", "user_id");
+
+
+
+ALTER TABLE ONLY "public"."itineraries"
+    ADD CONSTRAINT "itineraries_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."itineraries"
+    ADD CONSTRAINT "itineraries_slug_unique" UNIQUE ("slug");
+
+
+
+ALTER TABLE ONLY "public"."itinerary_items"
+    ADD CONSTRAINT "itinerary_items_pkey" PRIMARY KEY ("id");
 
 
 
@@ -361,11 +795,43 @@ CREATE INDEX "activity_interests_interest_key_idx" ON "public"."activity_interes
 
 
 
+CREATE INDEX "group_invites_group_id_idx" ON "public"."group_invites" USING "btree" ("group_id");
+
+
+
+CREATE INDEX "group_members_user_id_idx" ON "public"."group_members" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "groups_owner_id_idx" ON "public"."groups" USING "btree" ("owner_id");
+
+
+
+CREATE INDEX "item_votes_user_id_idx" ON "public"."item_votes" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "itineraries_group_id_idx" ON "public"."itineraries" USING "btree" ("group_id");
+
+
+
+CREATE INDEX "itineraries_owner_id_idx" ON "public"."itineraries" USING "btree" ("owner_id");
+
+
+
+CREATE INDEX "itinerary_items_itinerary_day_position_idx" ON "public"."itinerary_items" USING "btree" ("itinerary_id", "day_index", "position");
+
+
+
 CREATE INDEX "user_events_unprocessed_idx" ON "public"."user_events" USING "btree" ("user_id") WHERE ("processed_at" IS NULL);
 
 
 
 CREATE INDEX "user_taste_embedding_idx" ON "public"."user_taste" USING "hnsw" ("embedding" "extensions"."vector_cosine_ops");
+
+
+
+CREATE OR REPLACE TRIGGER "groups_add_owner_member" AFTER INSERT ON "public"."groups" FOR EACH ROW EXECUTE FUNCTION "public"."groups_add_owner_member"();
 
 
 
@@ -381,6 +847,76 @@ ALTER TABLE ONLY "public"."activity_interests"
 
 ALTER TABLE ONLY "public"."activity_interests"
     ADD CONSTRAINT "activity_interests_interest_key_interests_key_fk" FOREIGN KEY ("interest_key") REFERENCES "public"."interests"("key") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."group_invites"
+    ADD CONSTRAINT "group_invites_group_id_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."groups"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."group_invites"
+    ADD CONSTRAINT "group_invites_invited_by_profiles_id_fk" FOREIGN KEY ("invited_by") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."group_members"
+    ADD CONSTRAINT "group_members_group_id_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."groups"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."group_members"
+    ADD CONSTRAINT "group_members_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."groups"
+    ADD CONSTRAINT "groups_itinerary_id_itineraries_id_fk" FOREIGN KEY ("itinerary_id") REFERENCES "public"."itineraries"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."groups"
+    ADD CONSTRAINT "groups_owner_id_profiles_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."item_votes"
+    ADD CONSTRAINT "item_votes_itinerary_item_id_itinerary_items_id_fk" FOREIGN KEY ("itinerary_item_id") REFERENCES "public"."itinerary_items"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."item_votes"
+    ADD CONSTRAINT "item_votes_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."itineraries"
+    ADD CONSTRAINT "itineraries_group_id_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."groups"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."itineraries"
+    ADD CONSTRAINT "itineraries_owner_id_profiles_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."itineraries"
+    ADD CONSTRAINT "itineraries_template_id_itineraries_id_fk" FOREIGN KEY ("template_id") REFERENCES "public"."itineraries"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_items"
+    ADD CONSTRAINT "itinerary_items_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE RESTRICT;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_items"
+    ADD CONSTRAINT "itinerary_items_itinerary_id_itineraries_id_fk" FOREIGN KEY ("itinerary_id") REFERENCES "public"."itineraries"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_items"
+    ADD CONSTRAINT "itinerary_items_place_id_places_id_fk" FOREIGN KEY ("place_id") REFERENCES "public"."places"("id") ON DELETE RESTRICT;
 
 
 
@@ -406,6 +942,11 @@ ALTER TABLE ONLY "public"."user_constraints"
 
 ALTER TABLE ONLY "public"."user_events"
     ADD CONSTRAINT "user_events_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."user_events"
+    ADD CONSTRAINT "user_events_itinerary_id_itineraries_id_fk" FOREIGN KEY ("itinerary_id") REFERENCES "public"."itineraries"("id") ON DELETE SET NULL;
 
 
 
@@ -469,6 +1010,51 @@ CREATE POLICY "activity_interests_update_admin" ON "public"."activity_interests"
 
 
 
+ALTER TABLE "public"."group_invites" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "group_invites_delete_owner" ON "public"."group_invites" FOR DELETE TO "authenticated" USING ("public"."is_group_owner"("group_id"));
+
+
+
+CREATE POLICY "group_invites_insert_owner" ON "public"."group_invites" FOR INSERT TO "authenticated" WITH CHECK ((("invited_by" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."is_group_owner"("group_id")));
+
+
+
+CREATE POLICY "group_invites_select_owner" ON "public"."group_invites" FOR SELECT TO "authenticated" USING ("public"."is_group_owner"("group_id"));
+
+
+
+CREATE POLICY "group_invites_update_owner" ON "public"."group_invites" FOR UPDATE TO "authenticated" USING ("public"."is_group_owner"("group_id")) WITH CHECK (("public"."is_group_owner"("group_id") AND ("status" = 'revoked'::"public"."invite_status")));
+
+
+
+ALTER TABLE "public"."group_members" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "group_members_delete" ON "public"."group_members" FOR DELETE TO "authenticated" USING (((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (NOT "public"."is_group_owner"("group_id"))) OR ("public"."is_group_owner"("group_id") AND ("user_id" <> ( SELECT "auth"."uid"() AS "uid")))));
+
+
+
+CREATE POLICY "group_members_select_members" ON "public"."group_members" FOR SELECT TO "authenticated" USING ("public"."is_group_member"("group_id"));
+
+
+
+ALTER TABLE "public"."groups" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "groups_delete_owner" ON "public"."groups" FOR DELETE TO "authenticated" USING (("owner_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+CREATE POLICY "groups_select_members" ON "public"."groups" FOR SELECT TO "authenticated" USING ("public"."is_group_member"("id"));
+
+
+
+CREATE POLICY "groups_update_owner" ON "public"."groups" FOR UPDATE TO "authenticated" USING (("owner_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("owner_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
 ALTER TABLE "public"."interests" ENABLE ROW LEVEL SECURITY;
 
 
@@ -485,6 +1071,67 @@ CREATE POLICY "interests_select_all" ON "public"."interests" FOR SELECT TO "auth
 
 
 CREATE POLICY "interests_update_admin" ON "public"."interests" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."item_votes" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "item_votes_delete_own" ON "public"."item_votes" FOR DELETE TO "authenticated" USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_vote_item"("itinerary_item_id")));
+
+
+
+CREATE POLICY "item_votes_insert_own" ON "public"."item_votes" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_vote_item"("itinerary_item_id")));
+
+
+
+CREATE POLICY "item_votes_select_members" ON "public"."item_votes" FOR SELECT TO "authenticated" USING ("public"."can_vote_item"("itinerary_item_id"));
+
+
+
+CREATE POLICY "item_votes_update_own" ON "public"."item_votes" FOR UPDATE TO "authenticated" USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_vote_item"("itinerary_item_id"))) WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_vote_item"("itinerary_item_id")));
+
+
+
+ALTER TABLE "public"."itineraries" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "itineraries_delete" ON "public"."itineraries" FOR DELETE TO "authenticated" USING ((("owner_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("is_template" AND ( SELECT "public"."is_admin"() AS "is_admin"))));
+
+
+
+CREATE POLICY "itineraries_insert" ON "public"."itineraries" FOR INSERT TO "authenticated" WITH CHECK ((((("owner_id" = ( SELECT "auth"."uid"() AS "uid")) AND (NOT "is_template") AND ("slug" IS NULL)) OR (("owner_id" IS NULL) AND "is_template" AND ( SELECT "public"."is_admin"() AS "is_admin"))) AND (("template_id" IS NULL) OR "public"."can_access_itinerary"("template_id"))));
+
+
+
+CREATE POLICY "itineraries_select_authenticated" ON "public"."itineraries" FOR SELECT TO "authenticated" USING (("is_template" OR ("owner_id" = ( SELECT "auth"."uid"() AS "uid")) OR (("group_id" IS NOT NULL) AND "public"."is_group_member"("group_id"))));
+
+
+
+CREATE POLICY "itineraries_select_template_anon" ON "public"."itineraries" FOR SELECT TO "anon" USING ("is_template");
+
+
+
+CREATE POLICY "itineraries_update" ON "public"."itineraries" FOR UPDATE TO "authenticated" USING ((("owner_id" = ( SELECT "auth"."uid"() AS "uid")) OR (("group_id" IS NOT NULL) AND "public"."is_group_member"("group_id")) OR ("is_template" AND ( SELECT "public"."is_admin"() AS "is_admin")))) WITH CHECK ((("owner_id" = ( SELECT "auth"."uid"() AS "uid")) OR (("group_id" IS NOT NULL) AND "public"."is_group_member"("group_id")) OR ("is_template" AND ( SELECT "public"."is_admin"() AS "is_admin"))));
+
+
+
+ALTER TABLE "public"."itinerary_items" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "itinerary_items_delete" ON "public"."itinerary_items" FOR DELETE TO "authenticated" USING ("public"."can_edit_itinerary"("itinerary_id"));
+
+
+
+CREATE POLICY "itinerary_items_insert" ON "public"."itinerary_items" FOR INSERT TO "authenticated" WITH CHECK ("public"."can_edit_itinerary"("itinerary_id"));
+
+
+
+CREATE POLICY "itinerary_items_select" ON "public"."itinerary_items" FOR SELECT TO "authenticated", "anon" USING ("public"."can_access_itinerary"("itinerary_id"));
+
+
+
+CREATE POLICY "itinerary_items_update" ON "public"."itinerary_items" FOR UPDATE TO "authenticated" USING ("public"."can_edit_itinerary"("itinerary_id")) WITH CHECK ("public"."can_edit_itinerary"("itinerary_id"));
 
 
 
@@ -577,8 +1224,55 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."accept_invite"("p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."accept_invite"("p_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."accept_invite"("p_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."accept_invite"("p_token" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."can_access_itinerary"("iid" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."can_access_itinerary"("iid" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."can_access_itinerary"("iid" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."can_access_itinerary"("iid" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."can_edit_itinerary"("iid" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."can_edit_itinerary"("iid" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."can_edit_itinerary"("iid" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."can_edit_itinerary"("iid" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."can_vote_item"("item_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."can_vote_item"("item_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."can_vote_item"("item_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."can_vote_item"("item_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."groups_add_owner_member"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."groups_add_owner_member"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."handle_new_user"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."invite_preview"("p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."invite_preview"("p_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."invite_preview"("p_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."invite_preview"("p_token" "text") TO "service_role";
 
 
 
@@ -586,6 +1280,27 @@ REVOKE ALL ON FUNCTION "public"."is_admin"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."is_admin"() TO "anon";
 GRANT ALL ON FUNCTION "public"."is_admin"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."is_admin"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."is_group_member"("gid" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."is_group_member"("gid" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."is_group_member"("gid" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."is_group_member"("gid" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."is_group_owner"("gid" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."is_group_owner"("gid" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."is_group_owner"("gid" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."is_group_owner"("gid" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") TO "service_role";
 
 
 
@@ -601,36 +1316,41 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."activity_interests" TO "aut
 
 
 
-GRANT ALL ON TABLE "public"."interests" TO "service_role";
-GRANT SELECT ON TABLE "public"."interests" TO "anon";
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."interests" TO "authenticated";
+GRANT ALL ON TABLE "public"."group_invites" TO "service_role";
+GRANT SELECT,DELETE ON TABLE "public"."group_invites" TO "authenticated";
 
 
 
-GRANT ALL ON TABLE "public"."places" TO "service_role";
-GRANT SELECT ON TABLE "public"."places" TO "anon";
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."places" TO "authenticated";
+GRANT INSERT("group_id") ON TABLE "public"."group_invites" TO "authenticated";
 
 
 
-GRANT ALL ON TABLE "public"."preference_weights" TO "service_role";
-GRANT SELECT,DELETE ON TABLE "public"."preference_weights" TO "authenticated";
+GRANT INSERT("token_hash") ON TABLE "public"."group_invites" TO "authenticated";
 
 
 
-GRANT INSERT("user_id") ON TABLE "public"."preference_weights" TO "authenticated";
+GRANT INSERT("email") ON TABLE "public"."group_invites" TO "authenticated";
 
 
 
-GRANT INSERT("interest_key") ON TABLE "public"."preference_weights" TO "authenticated";
+GRANT INSERT("invited_by") ON TABLE "public"."group_invites" TO "authenticated";
 
 
 
-GRANT INSERT("explicit"),UPDATE("explicit") ON TABLE "public"."preference_weights" TO "authenticated";
+GRANT INSERT("expires_at") ON TABLE "public"."group_invites" TO "authenticated";
 
 
 
-GRANT UPDATE("updated_at") ON TABLE "public"."preference_weights" TO "authenticated";
+GRANT INSERT("max_uses") ON TABLE "public"."group_invites" TO "authenticated";
+
+
+
+GRANT UPDATE("status") ON TABLE "public"."group_invites" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."group_members" TO "service_role";
+GRANT SELECT,DELETE ON TABLE "public"."group_members" TO "authenticated";
 
 
 
@@ -664,6 +1384,159 @@ GRANT UPDATE("party") ON TABLE "public"."profiles" TO "authenticated";
 
 
 GRANT UPDATE("onboarding_completed_at") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."group_member_profiles" TO "service_role";
+GRANT SELECT ON TABLE "public"."group_member_profiles" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."groups" TO "service_role";
+GRANT SELECT,DELETE ON TABLE "public"."groups" TO "authenticated";
+
+
+
+GRANT UPDATE("name") ON TABLE "public"."groups" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."interests" TO "service_role";
+GRANT SELECT ON TABLE "public"."interests" TO "anon";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."interests" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."item_votes" TO "service_role";
+GRANT SELECT,DELETE ON TABLE "public"."item_votes" TO "authenticated";
+
+
+
+GRANT INSERT("itinerary_item_id") ON TABLE "public"."item_votes" TO "authenticated";
+
+
+
+GRANT INSERT("user_id") ON TABLE "public"."item_votes" TO "authenticated";
+
+
+
+GRANT INSERT("value"),UPDATE("value") ON TABLE "public"."item_votes" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."itineraries" TO "service_role";
+GRANT SELECT ON TABLE "public"."itineraries" TO "anon";
+GRANT SELECT,DELETE ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("id") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("owner_id") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("title"),UPDATE("title") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("slug") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("is_template") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("template_id") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("start_date"),UPDATE("start_date") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("days"),UPDATE("days") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("status"),UPDATE("status") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."itinerary_items" TO "service_role";
+GRANT SELECT ON TABLE "public"."itinerary_items" TO "anon";
+GRANT SELECT,DELETE ON TABLE "public"."itinerary_items" TO "authenticated";
+
+
+
+GRANT INSERT("id") ON TABLE "public"."itinerary_items" TO "authenticated";
+
+
+
+GRANT INSERT("itinerary_id") ON TABLE "public"."itinerary_items" TO "authenticated";
+
+
+
+GRANT INSERT("day_index"),UPDATE("day_index") ON TABLE "public"."itinerary_items" TO "authenticated";
+
+
+
+GRANT INSERT("position"),UPDATE("position") ON TABLE "public"."itinerary_items" TO "authenticated";
+
+
+
+GRANT INSERT("activity_id"),UPDATE("activity_id") ON TABLE "public"."itinerary_items" TO "authenticated";
+
+
+
+GRANT INSERT("place_id"),UPDATE("place_id") ON TABLE "public"."itinerary_items" TO "authenticated";
+
+
+
+GRANT INSERT("custom_title"),UPDATE("custom_title") ON TABLE "public"."itinerary_items" TO "authenticated";
+
+
+
+GRANT INSERT("start_time"),UPDATE("start_time") ON TABLE "public"."itinerary_items" TO "authenticated";
+
+
+
+GRANT INSERT("notes"),UPDATE("notes") ON TABLE "public"."itinerary_items" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."item_vote_balances" TO "service_role";
+GRANT SELECT ON TABLE "public"."item_vote_balances" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."places" TO "service_role";
+GRANT SELECT ON TABLE "public"."places" TO "anon";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."places" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."preference_weights" TO "service_role";
+GRANT SELECT,DELETE ON TABLE "public"."preference_weights" TO "authenticated";
+
+
+
+GRANT INSERT("user_id") ON TABLE "public"."preference_weights" TO "authenticated";
+
+
+
+GRANT INSERT("interest_key") ON TABLE "public"."preference_weights" TO "authenticated";
+
+
+
+GRANT INSERT("explicit"),UPDATE("explicit") ON TABLE "public"."preference_weights" TO "authenticated";
+
+
+
+GRANT UPDATE("updated_at") ON TABLE "public"."preference_weights" TO "authenticated";
 
 
 

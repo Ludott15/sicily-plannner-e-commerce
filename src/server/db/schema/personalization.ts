@@ -17,6 +17,7 @@ import {
 import { activities, interests } from "./catalog";
 import { eventType } from "./enums";
 import { profiles } from "./profiles";
+import { itineraries } from "./trips";
 
 // Vincoli rigidi: filtrano le attività prima dello scoring.
 export const userConstraints = pgTable(
@@ -77,7 +78,6 @@ export const userTaste = pgTable(
   (t) => [index("user_taste_embedding_idx").using("hnsw", t.embedding.op("vector_cosine_ops"))],
 );
 
-// itinerary_id riceve la foreign key quando esiste la tabella itineraries (PR 2b).
 export const userEvents = pgTable(
   "user_events",
   {
@@ -87,7 +87,7 @@ export const userEvents = pgTable(
       .references(() => profiles.id, { onDelete: "cascade" }),
     type: eventType("type").notNull(),
     activityId: uuid("activity_id").references(() => activities.id, { onDelete: "cascade" }),
-    itineraryId: uuid("itinerary_id"),
+    itineraryId: uuid("itinerary_id").references(() => itineraries.id, { onDelete: "set null" }),
     processedAt: timestamp("processed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

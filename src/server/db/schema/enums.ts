@@ -21,3 +21,11 @@ export const eventType = pgEnum("event_type", [
   "vote_down",
   "review",
 ]);
+export const itineraryStatus = pgEnum("itinerary_status", [
+  "draft",
+  "planned",
+  "in_progress",
+  "completed",
+]);
+export const groupRole = pgEnum("group_role", ["owner", "member"]);
+export const inviteStatus = pgEnum("invite_status", ["active", "revoked", "expired"]);
