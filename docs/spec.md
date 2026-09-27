@@ -1,6 +1,8 @@
 # Specifica tecnica — Planner Sicilia + E-commerce
 
-Sep 27, 2026 · @Ludovico
+Sep 27, 2026 · @Ludovico · aggiornata il 28 settembre 2026
+
+Nome di lavoro del brand: **Isula** (da verificare prima del lancio). Design system, manuale del brand, schemi di interazione e mockup sono in `docs/design/`: il punto di partenza è `docs/design/README.md`, e manuale, schemi e README dei componenti sono vincolanti. Il lavoro di design e contenuti rimandato è in `docs/design/BACKLOG.md`.
 
 ## Obiettivo e perimetro
 
@@ -34,7 +36,7 @@ Ogni chiamata a Claude, ai partner e a Stripe parte dal server. Il click affilia
 | Framework | Next.js (ultima stabile), App Router, TypeScript strict | Server Components di default, Server Actions per le mutazioni |
 | Hosting | Vercel | Cron per import catalogo e ricalcolo pesi |
 | Database | Supabase Postgres + Drizzle ORM | Migrazioni SQL versionate, RLS su ogni tabella |
-| Auth | Supabase Auth | Magic link email + Google |
+| Auth | Supabase Auth | Codice a 6 cifre via email (principale), magic link (alternativa), Google (nascosto nei browser interni delle app), accesso anonimo per gli ospiti con CAPTCHA Turnstile. Vedi "Accesso, ospiti e browser interni" |
 | Vettori | pgvector | Embedding di attività e profili; provider di embedding esterno (es. Voyage AI) |
 | AI | Claude API via SDK Anthropic | Streaming, tool calling |
 | Pagamenti | Stripe Checkout + webhook | Nessun dato carta sul nostro server |
@@ -183,6 +185,20 @@ order_shipments: order_id, producer_id, token_hash unique, carrier null, trackin
   shipped_at null; pk(order_id, producer_id)
 admin_audit_log: actor_id, action text, entity text, entity_id uuid, diff jsonb
 
+-- CONSIGLI LOCALI (schema 2e)
+local_tip_author_kind: editorial | person
+local_tip_authors: kind local_tip_author_kind, display_name, bio, photo_url null, profile_id null,
+  consent_at null, is_active; check (kind = person richiede consent_at)
+local_tips: author_id, activity_id null, place_id null, body (max 280 caratteri), author_relation null,
+  verified_at date, is_active; check (activity_id o place_id non null);
+  trigger: author_relation obbligatoria se l'autore è di tipo person
+
+-- PRENOTAZIONI DELL'ITINERARIO (schema 2e)
+booking_kind: activity | lodging | car | flight
+booking_status: to_book | booked
+itinerary_bookings: itinerary_id, kind booking_kind, activity_id null, partner, status booking_status,
+  updated_by, updated_at
+
 -- AI
 chat_sessions: user_id, itinerary_id null, title
 chat_messages: session_id (fk, cascade), role text, content jsonb, tool_calls jsonb null
@@ -226,6 +242,10 @@ Funzioni di supporto, tutte `SECURITY DEFINER` con `SET search_path = public, pg
 | products | Pubblica se attivo | Solo admin |
 | orders, order\_items | Proprietario | Solo webhook Stripe (service role) |
 | chat\_sessions, chat\_messages | Proprietario | Proprietario (sessioni); messaggi solo server |
+| local\_tip\_authors, local\_tips | Pubblica tramite la vista `public_local_tips` (solo consigli attivi e verificati negli ultimi 12 mesi, con i campi pubblici dell'autore); vista admin dei consigli che scadono entro 30 giorni | Solo admin |
+| itinerary\_bookings | `can_access_itinerary` | `can_edit_itinerary`; lo stato lo segna l'utente, non riceviamo conferme dai partner |
+
+**Ospiti (accesso anonimo):** possono creare e modificare i propri itinerari e prenotazioni; non possono creare o entrare in gruppi, invitare, recensire, fare check-in né accumulare punti. Nelle policy interessate la condizione è `not coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false)`, con un test pgTAP per ogni restrizione.
 
 Altre regole:
 
@@ -234,6 +254,18 @@ Altre regole:
 - **Webhook Stripe:** verifica della firma obbligatoria; elaborazione idempotente sulla chiave `stripe_session_id`.
 - **Rate limit:** su `/api/chat`, `/api/go` e creazione inviti, per utente e per IP.
 - **Test:** una suite SQL che verifichi per ogni tabella che un utente non possa leggere o scrivere dati di altri, incluso il caso di un ex membro di gruppo.
+
+## Accesso, ospiti e browser interni
+
+Il traffico arriva in buona parte dai browser interni di TikTok e Instagram: lì Google blocca l'OAuth, e un magic link si apre in un altro browser, dove la sessione non serve. Le regole di interazione sono in `docs/design/brand/schemi.md` ("Arrivi dai social"). Questa sezione modifica la milestone 1.
+
+- **Ospite:** chi usa il sito senza account riceve una sessione anonima (`signInAnonymously`), protetta da CAPTCHA Turnstile come raccomanda Supabase. Può creare, salvare e modificare i propri itinerari.
+- **Accesso principale con codice a 6 cifre via email** (`signInWithOtp` + `verifyOtp`, template email con il codice), digitato nella stessa pagina. Il magic link resta come alternativa.
+- **Da ospite ad account:** `updateUser` con l'email e verifica del codice. L'user id resta lo stesso, quindi itinerari, preferenze e ogni altro dato restano suoi.
+- **Google nascosto nei browser interni** (Instagram, Facebook, TikTok), con l'invito "Apri nel browser". Il rilevamento dallo user agent sta in un modulo con test unitari.
+- **Limiti degli ospiti (RLS):** niente gruppi (né creazione né ingresso), inviti, recensioni, check-in e punti. Vedi la sezione RLS.
+- **Pulizia:** un cron elimina gli ospiti inattivi da 30 giorni con i loro dati.
+- **Test e2e:** ospite → crea un itinerario → registrazione con codice → l'itinerario è ancora suo.
 
 ## Motore di personalizzazione
 
@@ -282,7 +314,7 @@ I vincoli filtrano, i pesi ordinano, il comportamento corregge i pesi ogni notte
 
 Prima di sommare, `implicit` decade del 5% a ogni ricalcolo e resta tra -2 e +2: il comportamento recente pesa più di quello vecchio e non può mai azzerare quello che l'utente ha dichiarato. Lo stesso cron ricalcola `user_taste.embedding` come media degli embedding delle attività con interazioni positive negli ultimi 90 giorni.
 
-**Utente non registrato:** le risposte dell'onboarding restano nello stato del browser e si usano con lo stesso algoritmo; alla registrazione vengono salvate nel profilo.
+**Utente non registrato:** usa il sito come ospite, con una sessione anonima di Supabase: onboarding, preferenze e itinerari si salvano nel database sotto il suo user id e si usano con lo stesso algoritmo. Alla registrazione l'account mantiene lo stesso user id e quindi tutti i dati (vedi "Accesso, ospiti e browser interni").
 
 ## Chatbot AI
 
@@ -311,6 +343,8 @@ Il chatbot è un'interfaccia conversazionale sopra il motore di personalizzazion
 - Nessuna modifica a itinerari o preferenze senza passare dagli strumenti che richiedono conferma.
 - Risposte brevi, nella lingua dell'utente, con al massimo 5 proposte per volta.
 - Lo shop si propone solo se pertinente alla conversazione, non come chiusura fissa.
+- Parole vietate del manuale (`docs/design/brand/manuale.md`, "Voce e contenuti"): valgono anche per le risposte del chatbot.
+- Nei viaggi di gruppo gli strumenti restituiscono solo preferenze aggregate e il modello cita solo motivi aggregati; con meno di 3 membri solo motivi logistici. Nessuno strumento restituisce le preferenze di un altro membro.
 
 **Costi:** limite giornaliero di messaggi per utente in configurazione; log di token in ingresso e in uscita per sessione, così si misura il costo per utente attivo prima di decidere se renderlo un servizio a pagamento.
 
@@ -364,6 +398,10 @@ Un gruppo è un viaggio condiviso: un itinerario, più membri, voti sulle attivi
 - **Vincoli:** vince il più restrittivo. Budget minimo tra i membri, mobilità ridotta se almeno un membro la indica, unione delle diete, auto solo se almeno un membro ce l'ha.
 - **Pesi:** media dei pesi effettivi dei membri, con un minimo: un interesse a cui almeno un membro ha dato 5 non scende sotto 2, così nessuno resta senza qualcosa che ama.
 
+**Motivi "Per il gruppo":** ogni suggerimento in un viaggio di gruppo spiega perché è adatto con motivi **solo aggregati** ("Natura tra i primi interessi di 3 su 4 · 25 min dalla base"). Con meno di 3 membri si mostra solo il motivo logistico, perché con 2 persone l'aggregato rivelerebbe le risposte dell'altro. **Nessuna API restituisce le preferenze di un altro membro:** `aggregate.ts` restituisce solo valori aggregati. Vale per lo scoring di gruppo (milestone 4) e per il chatbot (milestone 7).
+
+**Ospiti:** un ospite che apre un invito deve prima creare l'account con il codice email; i suoi dati da ospite restano.
+
 **Voti:** ogni membro vota +1 o -1 su ogni voce dell'itinerario. L'interfaccia mostra il saldo e segnala le voci con saldo negativo come candidate alla sostituzione, proponendo alternative con lo scoring di gruppo. Solo l'owner applica le sostituzioni; ogni membro può proporre aggiunte.
 
 **Realtime:** sottoscrizione Supabase Realtime a `itinerary_items` e `item_votes` filtrata per itinerario, così modifiche e voti compaiono subito a tutti i membri aperti sulla pagina.
@@ -391,6 +429,10 @@ Decisioni per la milestone 9 (Gamification):
 
 - **Recensioni solo tramite `submit_review`:** l'insert diretto in `reviews` dal client viene revocato. Il requisito "attività presente in un tuo itinerario o cliccata" vale per pubblicare la recensione, non solo per ottenere i punti; il minimo di 80 caratteri resta una condizione dei punti.
 - **Utente ricavato da `auth.uid()`:** `record_check_in` e `submit_review` leggono l'utente dentro la funzione, mai da un parametro. Test obbligatorio: un utente non può fare check-in o recensioni a nome di un altro.
+
+**Recensione con premio:** `public_reviews` espone `rewarded` (vero per le recensioni che hanno generato punti) e l'interfaccia mostra l'etichetta "Recensione con premio". Il premio non dipende dal voto dato.
+
+**Ospiti:** non accumulano punti né recensiscono o fanno check-in; lo fanno dopo aver creato l'account.
 
 **Conversione in sconto:** 100 punti = 1 euro, massimo 15% del totale dell'ordine. Al checkout il server crea un coupon Stripe monouso e registra una riga `redeem` con delta negativo; se l'ordine viene annullato, una riga redeem\_refund con delta positivo restituisce i punti.
 
@@ -454,32 +496,37 @@ Ogni azione dell'admin che modifica punti, ordini o stato delle attività viene 
 
 ## Ordine di sviluppo per Antigravity
 
-Dodici milestone in sequenza; ognuna è chiusa solo quando i criteri verificabili passano, non quando l'agente dichiara di aver finito. Ogni milestone parte da un branch dedicato e finisce con i test verdi in CI.
+Tredici milestone in sequenza (le dodici originali più il design system tra la 2 e la 3); ognuna è chiusa solo quando i criteri verificabili passano, non quando l'agente dichiara di aver finito. Ogni milestone parte da un branch dedicato e finisce con i test verdi in CI.
 
-1. **Fondamenta.** Next.js, TypeScript strict, Tailwind, shadcn/ui, next-intl, Supabase, Drizzle, Auth con magic link e Google, tabella `profiles`.
-   - Fatto quando: login e logout funzionano; la CI esegue lint, typecheck e il controllo di drift dello schema.
-2. **Schema e sicurezza.** Tutte le tabelle, enum, indici, funzioni `SECURITY DEFINER`, policy RLS e trigger di immutabilità.
-   - Fatto quando: migrazioni applicate da zero senza errori; la suite SQL dimostra per ogni tabella che un utente non accede ai dati di un altro.
-3. **Catalogo.** Pagine pubbliche di luoghi, attività e itinerari; admin del catalogo; seed di 30 attività curate con tag.
-   - Fatto quando: le pagine sono renderizzate lato server con metadati SEO; un'attività senza tag non può essere attivata.
-4. **Profilo e personalizzazione.** Onboarding, pagina preferenze, filtro, scoring, algoritmo greedy.
-   - Fatto quando: test Vitest con profili e cataloghi fissi producono sempre lo stesso itinerario; nessun itinerario viola un vincolo rigido.
-5. **Itinerary builder.** Creazione, copia da predefinito, modifica giorno per giorno con drag and drop, salvataggio.
-   - Fatto quando: un utente non può aprire o modificare l'itinerario di un altro (test e2e).
-6. **Affiliati e voli.** Import del catalogo, coda di approvazione, `/api/go/[id]`, ricerca voli, `/api/go/flight`.
-   - Fatto quando: ogni click crea una riga con subid univoco; un test dimostra che nessuna route redirige verso un URL arbitrario.
-7. **Chatbot.** `/api/chat`, strumenti, system prompt, interfaccia con schede attività e conferme.
-   - Fatto quando: su un set di 20 richieste di prova, ogni `[[activity:id]]` nelle risposte corrisponde a un id restituito da uno strumento nella stessa sessione (controllo automatico).
-8. **Gruppi.** Creazione, inviti, accettazione, voti, realtime, uscita.
-   - Fatto quando: un ex membro perde l'accesso immediatamente (test RLS); due sessioni aperte vedono le modifiche dell'altra entro 2 secondi.
-9. **Gamification.** `award_points`, badge, leaderboard di gruppo e stagionale.
-   - Fatto quando: la stessa azione inviata due volte accredita i punti una volta sola; la vista della classifica non espone lo storico.
-10. **Shop.** Catalogo prodotti, carrello, Stripe Checkout, webhook, spedizioni del produttore, rimborsi, uso dei punti.
-    - Fatto quando: flusso completo in modalità test di Stripe; lo stesso webhook ricevuto due volte crea un solo ordine.
-11. **Apprendimento e analisi.** Cron dei pesi impliciti e degli embedding del profilo, import conversioni, dashboard admin.
-    - Fatto quando: dopo una serie di eventi di prova i pesi cambiano nella direzione attesa e restano tra -2 e +2.
-12. **Rifinitura.** PWA, performance, pagine legali, cookie banner, analytics, pagine di errore.
-    - Fatto quando: Lighthouse mobile sopra 90 su home, attività e prodotto; nessun cookie non tecnico prima del consenso.
+- **M1 — Fondamenta.** Next.js, TypeScript strict, Tailwind, shadcn/ui, next-intl, Supabase, Drizzle, Auth, tabella `profiles`.
+  - Fatto quando: login e logout funzionano; la CI esegue lint, typecheck e il controllo di drift dello schema. *(Chiusa.)*
+  - **Modifica successiva — accesso ospite e codice email:** sessione anonima con Turnstile, codice a 6 cifre come accesso principale, conversione da ospite ad account con lo stesso user id, Google nascosto nei browser interni, limiti RLS per gli ospiti, cron di pulizia a 30 giorni. Fatto quando: il test e2e ospite → itinerario → registrazione con codice conferma che l'itinerario resta suo; test pgTAP per ogni restrizione degli ospiti; test unitari sul rilevamento dei browser interni.
+- **M2 — Schema e sicurezza.** Tutte le tabelle, enum, indici, funzioni `SECURITY DEFINER`, policy RLS e trigger di immutabilità, in PR 2a-2d; lo **schema 2e** aggiunge consigli locali (`local_tip_authors`, `local_tips`, `public_local_tips`), prenotazioni dell'itinerario (`itinerary_bookings`) e `public_reviews.rewarded`.
+  - Fatto quando: migrazioni applicate da zero senza errori; la suite SQL dimostra per ogni tabella che un utente non accede ai dati di un altro.
+- **DS — Design system** (tra la milestone 2 e la 3). Variabili CSS generate da `docs/design/tokens.json` con uno script (tema chiaro in `:root`, scuro in `[data-theme="dark"]` e `prefers-color-scheme`; alias `"{nome}"` → `var(--nome)`), usate anche da Tailwind. Font con `next/font/google`: Fraunces (assi `opsz` e `SOFT`, peso 600) e Instrument Sans. Componenti React dai README in `docs/design/components/`, con `riferimento.css` come riferimento: Button, InterestChip, PreferenceScale, ActivityCard, ItineraryStop, DayTabs, VoteButton, BookingList, LocalTip, AffiliateOffer, Rewards, ProductCard, TabBar. Pagina `/dev/design`, visibile solo in sviluppo, con tutti i componenti nei due temi.
+  - Fatto quando: lo script è deterministico (test); un controllo in CI fallisce se trova colori esadecimali o nomi di font scritti a mano in `src/`; i contrasti dichiarati nel manuale sono verificati da un test sui valori dei token.
+- **M3 — Catalogo.** Pagine pubbliche di luoghi, attività e itinerari costruite con i componenti del design system; la scheda attività mostra i consigli di `public_local_tips` con `LocalTip`; admin del catalogo; seed di prova con slug `demo-`, mai in produzione.
+  - Fatto quando: le pagine sono renderizzate lato server con metadati SEO; un'attività senza tag non può essere attivata.
+- **M4 — Profilo e personalizzazione.** Onboarding, pagina preferenze, filtro, scoring, algoritmo greedy. Nello scoring di gruppo i motivi "Per il gruppo" sono solo aggregati, e con meno di 3 membri solo logistici.
+  - Fatto quando: test Vitest con profili e cataloghi fissi producono sempre lo stesso itinerario; nessun itinerario viola un vincolo rigido.
+- **M5 — Itinerary builder.** Creazione, copia da predefinito, modifica giorno per giorno con drag and drop, salvataggio, checklist "Da prenotare" su `itinerary_bookings`.
+  - Fatto quando: un utente non può aprire o modificare l'itinerario di un altro (test e2e).
+- **M6 — Affiliati e voli.** Import del catalogo, coda di approvazione, `/api/go/[id]`, ricerca voli, `/api/go/flight`.
+  - Fatto quando: ogni click crea una riga con subid univoco; un test dimostra che nessuna route redirige verso un URL arbitrario.
+- **M7 — Chatbot.** `/api/chat`, strumenti, system prompt, interfaccia con schede attività e conferme. Nei viaggi di gruppo solo motivi aggregati; nessuno strumento restituisce le preferenze di un altro membro.
+  - Fatto quando: su un set di 20 richieste di prova, ogni `[[activity:id]]` nelle risposte corrisponde a un id restituito da uno strumento nella stessa sessione (controllo automatico).
+- **M8 — Gruppi.** Creazione, inviti, accettazione, voti, realtime, uscita.
+  - Fatto quando: un ex membro perde l'accesso immediatamente (test RLS); due sessioni aperte vedono le modifiche dell'altra entro 2 secondi.
+- **M9 — Gamification.** `award_points`, badge, leaderboard di gruppo e stagionale, `record_check_in`, `submit_review`.
+  - Fatto quando: la stessa azione inviata due volte accredita i punti una volta sola; la vista della classifica non espone lo storico.
+- **M10 — Shop.** Catalogo prodotti, carrello, Stripe Checkout, webhook, spedizioni del produttore, rimborsi, uso dei punti.
+  - Fatto quando: flusso completo in modalità test di Stripe; lo stesso webhook ricevuto due volte crea un solo ordine.
+- **M11 — Apprendimento e analisi.** Cron dei pesi impliciti e degli embedding del profilo, import conversioni, dashboard admin.
+  - Fatto quando: dopo una serie di eventi di prova i pesi cambiano nella direzione attesa e restano tra -2 e +2.
+- **M12 — Rifinitura.** PWA, performance, pagine legali, cookie banner, analytics, pagine di errore; le voci di M12 in `docs/design/BACKLOG.md` (Fraunces come istanza fissa, `text-wrap: balance`).
+  - Fatto quando: Lighthouse mobile sopra 90 su home, attività e prodotto; nessun cookie non tecnico prima del consenso.
+
+Il lavoro di design e contenuti rimandato (schermate da progettare, voci del design system, contenuti a carico di Ludovico, decisioni aperte) è tracciato in `docs/design/BACKLOG.md`.
 
 ## Vincoli esterni e rischi
 

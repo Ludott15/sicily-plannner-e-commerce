@@ -4,6 +4,7 @@
 
 Planner di viaggi in Sicilia con link affiliati + shop di prodotti spediti dai produttori.
 La specifica completa è in [docs/spec.md](docs/spec.md): leggerla prima di iniziare una milestone.
+Design system, manuale del brand ("Isula", nome di lavoro), schemi e mockup: [docs/design/README.md](docs/design/README.md). Manuale, schemi e README dei componenti sono vincolanti: niente colori o font scritti a mano (solo token), niente parole vietate del manuale nei testi, mai contenuti o autori inventati (i testi tra parentesi quadre nei mockup vengono dal database).
 
 ## Comandi
 

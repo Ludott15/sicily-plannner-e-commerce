@@ -1,0 +1,10 @@
+<!-- @dsCard group="Preferenze" height=150 subtitle="Selezione degli interessi, con colore di dominio" -->
+<div class="is-root" style="padding:24px;display:flex;flex-wrap:wrap;gap:10px">
+  <button class="is-chip is-chip--mare" aria-pressed="true"><svg class="is-chip__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Mare</button>
+  <button class="is-chip is-chip--pistacchio" aria-pressed="true"><svg class="is-chip__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Cibo e vino</button>
+  <button class="is-chip" aria-pressed="false"><svg class="is-chip__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Storia e archeologia</button>
+  <button class="is-chip is-chip--mare" aria-pressed="false"><svg class="is-chip__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Natura ed escursioni</button>
+  <button class="is-chip" aria-pressed="false"><svg class="is-chip__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Borghi</button>
+  <button class="is-chip" aria-pressed="false"><svg class="is-chip__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Vita notturna</button>
+</div>
+<script>document.querySelectorAll('.is-chip').forEach(function(c){c.addEventListener('click',function(){c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')==='true'?'false':'true')})})</script>
