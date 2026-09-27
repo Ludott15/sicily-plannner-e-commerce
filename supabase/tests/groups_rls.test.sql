@@ -300,10 +300,15 @@ select is_empty(
 reset role;
 select tests.authenticate_as('owner');
 delete from public.group_members where group_id = tests.gid() and user_id = tests.uid('owner');
+delete from public.groups where id = tests.gid();
 reset role;
 select isnt_empty(
   format($$select 1 from public.group_members where user_id = %L and group_id = %L$$, tests.uid('owner'), tests.gid()),
   'owner: non può uscire senza cedere la proprietà'
+);
+select isnt_empty(
+  format($$select 1 from public.groups where id = %L$$, tests.gid()),
+  'owner con altri membri: eliminazione del gruppo rifiutata'
 );
 
 select tests.authenticate_as('member');
@@ -332,6 +337,18 @@ select is(
   (select owner_id from public.itineraries where id = 'dddddddd-0000-0000-0000-000000000001'),
   tests.uid('member'),
   'transfer: passa anche l''itinerario collegato'
+);
+
+-- Dopo la cessione il vecchio owner è uscito: il nuovo owner è l'unico membro e può eliminare.
+select tests.authenticate_as('member');
+select lives_ok(
+  format($$delete from public.groups where id = %L$$, tests.gid()),
+  'nuovo owner rimasto unico membro: elimina il gruppo'
+);
+reset role;
+select is_empty(
+  format($$select 1 from public.groups where id = %L$$, tests.gid()),
+  'nuovo owner rimasto unico membro: il gruppo non esiste più'
 );
 
 ----------------------------------------------------------------------------

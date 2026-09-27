@@ -253,6 +253,22 @@ $$;
 ALTER FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."group_has_other_members"("gid" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select exists (
+    select 1
+    from public.group_members gm
+    join public.groups g on g.id = gm.group_id
+    where gm.group_id = gid and gm.user_id <> g.owner_id
+  );
+$$;
+
+
+ALTER FUNCTION "public"."group_has_other_members"("gid" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."groups_add_owner_member"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -1043,7 +1059,7 @@ CREATE POLICY "group_members_select_members" ON "public"."group_members" FOR SEL
 ALTER TABLE "public"."groups" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "groups_delete_owner" ON "public"."groups" FOR DELETE TO "authenticated" USING (("owner_id" = ( SELECT "auth"."uid"() AS "uid")));
+CREATE POLICY "groups_delete_sole_owner" ON "public"."groups" FOR DELETE TO "authenticated" USING ((("owner_id" = ( SELECT "auth"."uid"() AS "uid")) AND (NOT "public"."group_has_other_members"("id"))));
 
 
 
@@ -1256,6 +1272,13 @@ REVOKE ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id"
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."group_has_other_members"("gid" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."group_has_other_members"("gid" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."group_has_other_members"("gid" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."group_has_other_members"("gid" "uuid") TO "service_role";
 
 
 
