@@ -1,0 +1,36 @@
+{
+  "Metadata": {
+    "title": "Sicily Planner",
+    "description": "Plan your trip to Sicily and bring home flavours from local producers."
+  },
+  "Nav": {
+    "home": "Home",
+    "profile": "Profile",
+    "login": "Sign in",
+    "logout": "Sign out"
+  },
+  "Home": {
+    "title": "Your trip to Sicily, made to measure",
+    "subtitle": "Itineraries built on your preferences and products shipped straight from the producers.",
+    "cta": "Get started",
+    "greeting": "Hi, {name}"
+  },
+  "Login": {
+    "title": "Sign in",
+    "description": "We'll email you a sign-in link, or continue with Google.",
+    "email": "Email",
+    "submit": "Send me the link",
+    "or": "or",
+    "google": "Continue with Google",
+    "sent": "Check your inbox: we sent a sign-in link to {email}.",
+    "invalidEmail": "Enter a valid email address.",
+    "error": "Sign-in failed. Please try again."
+  },
+  "Profile": {
+    "title": "Your profile",
+    "email": "Email",
+    "displayName": "Name",
+    "role": "Role",
+    "memberSince": "Member since"
+  }
+}
