@@ -1,4 +1,4 @@
-import { char, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, char, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { authUsers } from "drizzle-orm/supabase";
 import { travelParty, tripPace, userRole } from "./enums";
 
@@ -15,6 +15,8 @@ export const profiles = pgTable("profiles", {
   pace: tripPace("pace"),
   party: travelParty("party"),
   onboardingCompletedAt: timestamp("onboarding_completed_at", { withTimezone: true }),
+  // Esclude l'utente dalla classifica stagionale (non da quella di gruppo).
+  leaderboardOptOut: boolean("leaderboard_opt_out").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
