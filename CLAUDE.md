@@ -35,3 +35,8 @@ La specifica completa è in [docs/spec.md](docs/spec.md): leggerla prima di iniz
 - Testi dell'interfaccia solo in `messages/it.json` e `messages/en.json`.
 - Redirect verso percorsi ricevuti in input solo tramite `safeNextPath`.
 - Una milestone = un branch `milestone/NN-nome`; chiusa solo con i criteri di docs/spec.md verificati e la CI verde.
+
+## Git (regola permanente)
+
+- Mai push diretto su `main`, mai force push (`--force`, `--force-with-lease`), mai merge di PR.
+- Si lavora su un branch, si fa push del branch e si apre la PR verso `main`; il merge lo fa sempre Ludovico dopo aver visto la CI.
