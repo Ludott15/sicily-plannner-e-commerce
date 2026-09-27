@@ -19,13 +19,19 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       )}
       <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">{t("title")}</h1>
       <p className="text-lg text-pretty text-muted-foreground">{t("subtitle")}</p>
-      {!user && (
-        <div>
+      <div className="flex flex-wrap gap-3">
+        {!user && (
           <Link href="/login" className={buttonVariants({ size: "lg" })}>
             {t("cta")}
           </Link>
-        </div>
-      )}
+        )}
+        <Link href="/attivita" className={buttonVariants({ size: "lg", variant: "outline" })}>
+          {t("exploreActivities")}
+        </Link>
+        <Link href="/itinerari" className={buttonVariants({ size: "lg", variant: "outline" })}>
+          {t("exploreItineraries")}
+        </Link>
+      </div>
     </section>
   );
 }

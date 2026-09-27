@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { SiteHeader } from "@/components/layout/site-header";
+import { publicEnv } from "@/lib/env";
 import { routing } from "@/lib/i18n/routing";
 import "../globals.css";
 
@@ -22,7 +23,12 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Omit<Props, "children">): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Metadata" });
-  return { title: t("title"), description: t("description") };
+  return {
+    metadataBase: new URL(publicEnv.NEXT_PUBLIC_SITE_URL),
+    title: { default: t("title"), template: `%s · ${t("title")}` },
+    description: t("description"),
+    openGraph: { siteName: t("title"), locale, type: "website" },
+  };
 }
 
 export default async function LocaleLayout({ children, params }: Props) {

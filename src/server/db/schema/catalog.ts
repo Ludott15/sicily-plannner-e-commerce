@@ -69,7 +69,8 @@ export const activities = pgTable(
     affiliateUrl: text("affiliate_url"),
     rating: numeric("rating", { precision: 2, scale: 1 }),
     embedding: vector("embedding", { dimensions: 1024 }),
-    isActive: boolean("is_active").notNull().default(true),
+    // Nasce inattiva: si attiva solo con almeno un tag di interesse (trigger activities_require_tags).
+    isActive: boolean("is_active").notNull().default(false),
     syncedAt: timestamp("synced_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
