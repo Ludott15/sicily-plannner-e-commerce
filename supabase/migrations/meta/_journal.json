@@ -78,6 +78,13 @@
       "when": 1790543272042,
       "tag": "20260927210752_gamification_affiliates_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790544155638,
+      "tag": "20260927212235_public_reviews_author",
+      "breakpoints": true
     }
   ]
 }

@@ -871,7 +871,8 @@ CREATE OR REPLACE VIEW "public"."public_reviews" WITH ("security_barrier"='true'
     "r"."rating",
     "r"."body",
     "r"."created_at",
-    "p"."display_name" AS "author_name"
+    "p"."display_name",
+    "p"."avatar_url"
    FROM (("public"."reviews" "r"
      JOIN "public"."activities" "a" ON ((("a"."id" = "r"."activity_id") AND "a"."is_active")))
      JOIN "public"."profiles" "p" ON (("p"."id" = "r"."user_id")));

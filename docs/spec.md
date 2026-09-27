@@ -218,8 +218,9 @@ Funzioni di supporto, tutte `SECURITY DEFINER` con `SET search_path = public, pg
 | groups, group\_members | Membri | Owner per modifiche e rimozioni; ingresso solo via `accept_invite` |
 | group\_invites | Owner del gruppo | Owner del gruppo |
 | item\_votes | Membri del gruppo dell'itinerario | Il votante, solo sul proprio voto |
-| points\_ledger, user\_badges | Proprietario; aggregati via vista leaderboard | Solo `award_points` e codice server; nessun update o delete (trigger di immutabilità) |
-| check\_ins, reviews | Proprietario; reviews pubbliche | Proprietario |
+| points\_ledger, user\_badges | Proprietario; aggregati via vista leaderboard | Solo `award_points` e codice server; nessun update o delete per nessun ruolo, `postgres` compreso (trigger di immutabilità). Unica eccezione: la cancellazione a cascata quando si elimina l'account |
+| check\_ins | Proprietario | Solo tramite funzione server (distanza, un check-in per luogo al giorno, massimo 5 al giorno); nessun insert diretto dal client |
+| reviews | Proprietario sulla tabella; lettura pubblica tramite la vista `public_reviews` (nome e avatar dell'autore, mai `user_id`) | Proprietario |
 | affiliate\_clicks, affiliate\_conversions | Solo admin | Solo server |
 | producers | Solo admin | Solo admin |
 | products | Pubblica se attivo | Solo admin |
@@ -229,7 +230,7 @@ Funzioni di supporto, tutte `SECURITY DEFINER` con `SET search_path = public, pg
 Altre regole:
 
 - **Token di invito:** generati con 32 byte casuali, salvati solo come hash SHA-256. Il token in chiaro esiste solo nel link.
-- **Leaderboard:** esposta tramite una vista che mostra solo nome visualizzato, avatar e totale punti, mai lo storico del ledger.
+- **Leaderboard:** esposta tramite una vista, leggibile solo dagli utenti autenticati, che mostra solo nome visualizzato, avatar e totale punti, mai lo storico del ledger.
 - **Webhook Stripe:** verifica della firma obbligatoria; elaborazione idempotente sulla chiave `stripe_session_id`.
 - **Rate limit:** su `/api/chat`, `/api/go` e creazione inviti, per utente e per IP.
 - **Test:** una suite SQL che verifichi per ogni tabella che un utente non possa leggere o scrivere dati di altri, incluso il caso di un ex membro di gruppo.
@@ -383,6 +384,8 @@ I punti premiano azioni che fanno crescere la piattaforma o arricchiscono il cat
 | Ordine nello shop | 1 per euro | Accreditati solo quando l'ordine risulta consegnato |
 
 Tutti i valori stanno in configurazione. Ogni assegnazione passa da `award_points`, che grazie al vincolo `unique(user_id, reason, ref_id)` non può accreditare due volte la stessa azione.
+
+`award_points` non è eseguibile dal client. Le azioni dell'utente che danno punti (check-in, recensione) passano da funzioni SQL `SECURITY DEFINER` dedicate, chiamate dal server con `dbAsUser`: la funzione verifica le condizioni anti-abuso, scrive la riga (check-in o recensione) e chiama `award_points` nella stessa transazione. I punti che dipendono da eventi esterni (ordine consegnato, invito accettato dopo l'onboarding, itinerario completato) li accredita il codice server con `dbAdmin`.
 
 **Conversione in sconto:** 100 punti = 1 euro, massimo 15% del totale dell'ordine. Al checkout il server crea un coupon Stripe monouso e registra una riga `redeem` con delta negativo; se l'ordine viene annullato, una riga redeem\_refund con delta positivo restituisce i punti.
 

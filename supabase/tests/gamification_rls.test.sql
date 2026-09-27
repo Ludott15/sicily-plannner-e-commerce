@@ -284,7 +284,7 @@ select is_empty(
 update public.reviews set rating = 1 where activity_id = 'bbbbbbbb-0000-0000-0000-000000000001';
 delete from public.reviews where activity_id = 'bbbbbbbb-0000-0000-0000-000000000001';
 select results_eq(
-  $$select author_name, rating from public.public_reviews where activity_id::text like 'bbbbbbbb-%'$$,
+  $$select display_name, rating from public.public_reviews where activity_id::text like 'bbbbbbbb-%'$$,
   $$values ('alice', 4::smallint)$$,
   'altro utente: legge la recensione di alice tramite public_reviews, non quelle di attività inattive'
 );
@@ -303,9 +303,11 @@ select isnt_empty(
   'anon: legge le recensioni pubbliche'
 );
 select throws_ok($$select * from public.reviews$$, '42501', null, 'anon: non legge la tabella reviews');
-select is_empty(
-  $$select 1 from information_schema.columns where table_schema = 'public' and table_name = 'public_reviews' and column_name = 'user_id'$$,
-  'public_reviews: non espone user_id'
+select results_eq(
+  $$select column_name::text collate "default" from information_schema.columns
+    where table_schema = 'public' and table_name = 'public_reviews' order by ordinal_position$$,
+  $$values ('id'), ('activity_id'), ('rating'), ('body'), ('created_at'), ('display_name'), ('avatar_url')$$,
+  'public_reviews: espone nome e avatar dell''autore, senza user_id'
 );
 
 ----------------------------------------------------------------------------
