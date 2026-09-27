@@ -40,3 +40,12 @@ export const pointReason = pgEnum("point_reason", [
   "redeem_refund",
   "admin_adjust",
 ]);
+export const orderStatus = pgEnum("order_status", [
+  "pending",
+  "paid",
+  "sent_to_producer",
+  "shipped",
+  "delivered",
+  "cancelled",
+  "refunded",
+]);
