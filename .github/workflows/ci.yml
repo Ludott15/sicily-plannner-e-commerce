@@ -56,6 +56,9 @@ jobs:
           } > .env.local
           echo "MAILPIT_URL=$MAILPIT_URL" >> "$GITHUB_ENV"
 
+      - name: Test di integrazione (dbAsUser, RLS via Drizzle)
+        run: npm run test:int
+
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - name: Test e2e

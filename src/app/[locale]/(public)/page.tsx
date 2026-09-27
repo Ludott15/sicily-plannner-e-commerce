@@ -8,13 +8,13 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   setRequestLocale(locale);
 
   const [t, user] = await Promise.all([getTranslations("Home"), getUser()]);
-  const profile = user ? await getProfile(user.id) : null;
+  const profile = user ? await getProfile(user) : null;
 
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-6 px-4 py-16">
       {user && (
         <p className="text-muted-foreground">
-          {t("greeting", { name: profile?.display_name ?? user.email ?? "" })}
+          {t("greeting", { name: profile?.displayName ?? user.email ?? "" })}
         </p>
       )}
       <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">{t("title")}</h1>
