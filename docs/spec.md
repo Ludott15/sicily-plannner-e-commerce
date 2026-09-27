@@ -220,7 +220,7 @@ Funzioni di supporto, tutte `SECURITY DEFINER` con `SET search_path = public, pg
 | item\_votes | Membri del gruppo dell'itinerario | Il votante, solo sul proprio voto |
 | points\_ledger, user\_badges | Proprietario; aggregati via vista leaderboard | Solo `award_points` e codice server; nessun update o delete per nessun ruolo, `postgres` compreso (trigger di immutabilità). Unica eccezione: la cancellazione a cascata quando si elimina l'account |
 | check\_ins | Proprietario | Solo tramite funzione server (distanza, un check-in per luogo al giorno, massimo 5 al giorno); nessun insert diretto dal client |
-| reviews | Proprietario sulla tabella; lettura pubblica tramite la vista `public_reviews` (nome e avatar dell'autore, mai `user_id`) | Proprietario |
+| reviews | Proprietario sulla tabella; lettura pubblica tramite la vista `public_reviews` (nome e avatar dell'autore, mai `user_id`) | Solo tramite `submit_review` (dalla milestone 9); modifica e cancellazione del proprietario |
 | affiliate\_clicks, affiliate\_conversions | Solo admin | Solo server |
 | producers | Solo admin | Solo admin |
 | products | Pubblica se attivo | Solo admin |
@@ -386,6 +386,11 @@ I punti premiano azioni che fanno crescere la piattaforma o arricchiscono il cat
 Tutti i valori stanno in configurazione. Ogni assegnazione passa da `award_points`, che grazie al vincolo `unique(user_id, reason, ref_id)` non può accreditare due volte la stessa azione.
 
 `award_points` non è eseguibile dal client. Le azioni dell'utente che danno punti (check-in, recensione) passano da funzioni SQL `SECURITY DEFINER` dedicate, chiamate dal server con `dbAsUser`: la funzione verifica le condizioni anti-abuso, scrive la riga (check-in o recensione) e chiama `award_points` nella stessa transazione. I punti che dipendono da eventi esterni (ordine consegnato, invito accettato dopo l'onboarding, itinerario completato) li accredita il codice server con `dbAdmin`.
+
+Decisioni per la milestone 9 (Gamification):
+
+- **Recensioni solo tramite `submit_review`:** l'insert diretto in `reviews` dal client viene revocato. Il requisito "attività presente in un tuo itinerario o cliccata" vale per pubblicare la recensione, non solo per ottenere i punti; il minimo di 80 caratteri resta una condizione dei punti.
+- **Utente ricavato da `auth.uid()`:** `record_check_in` e `submit_review` leggono l'utente dentro la funzione, mai da un parametro. Test obbligatorio: un utente non può fare check-in o recensioni a nome di un altro.
 
 **Conversione in sconto:** 100 punti = 1 euro, massimo 15% del totale dell'ordine. Al checkout il server crea un coupon Stripe monouso e registra una riga `redeem` con delta negativo; se l'ordine viene annullato, una riga redeem\_refund con delta positivo restituisce i punti.
 
