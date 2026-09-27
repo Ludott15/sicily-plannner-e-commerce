@@ -50,6 +50,13 @@ select throws_ok(
   format($$update public.preference_weights set implicit = 2 where user_id = %L$$, tests.uid('alice')),
   '42501', null, 'proprietario: non modifica il peso implicito'
 );
+reset role;
+select is(
+  (select implicit from public.preference_weights where user_id = tests.uid('alice') and interest_key = 'sea'),
+  0::real,
+  'proprietario: implicit resta al valore del server dopo il tentativo'
+);
+select tests.authenticate_as('alice');
 select throws_ok(
   format($$insert into public.preference_weights (user_id, interest_key, explicit) values (%L, 'sea', 1)$$, tests.uid('bob')),
   '42501', null, 'proprietario: non inserisce pesi per un altro utente'

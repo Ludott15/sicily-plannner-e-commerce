@@ -28,7 +28,7 @@ select lives_ok(
   'proprietario: crea un itinerario proprio'
 );
 select lives_ok(
-  $$insert into public.itinerary_items (itinerary_id, day_index, position, custom_title) values ('cccccccc-0000-0000-0000-000000000002', 0, 0, 'Arrivo')$$,
+  $$insert into public.itinerary_items (id, itinerary_id, day_index, position, custom_title) values ('ffffffff-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000002', 0, 0, 'Arrivo')$$,
   'proprietario: aggiunge una voce'
 );
 select lives_ok(
@@ -95,6 +95,17 @@ select is_empty(
 select throws_ok(
   $$insert into public.itinerary_items (itinerary_id, day_index, position, custom_title) values ('cccccccc-0000-0000-0000-000000000002', 1, 0, 'hack')$$,
   '42501', null, 'altro utente: non aggiunge voci all''itinerario di alice'
+);
+-- id scelto dal client: un upsert su una riga altrui deve fallire, non sovrascriverla.
+select throws_ok(
+  format($$insert into public.itineraries (id, owner_id, title, days) values ('cccccccc-0000-0000-0000-000000000002', %L, 'hack', 1)
+    on conflict (id) do update set title = excluded.title$$, tests.uid('bob')),
+  '42501', null, 'altro utente: upsert sull''itinerario di alice rifiutato'
+);
+select throws_ok(
+  $$insert into public.itinerary_items (id, itinerary_id, day_index, position, custom_title) values ('ffffffff-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000002', 0, 0, 'hack')
+    on conflict (id) do update set custom_title = excluded.custom_title$$,
+  '42501', null, 'altro utente: upsert su una voce di alice rifiutato'
 );
 update public.itineraries set title = 'hack' where id = 'cccccccc-0000-0000-0000-000000000002';
 update public.itinerary_items set custom_title = 'hack' where itinerary_id = 'cccccccc-0000-0000-0000-000000000002';
