@@ -81,6 +81,22 @@ CREATE TYPE "public"."partner" AS ENUM (
 ALTER TYPE "public"."partner" OWNER TO "postgres";
 
 
+CREATE TYPE "public"."point_reason" AS ENUM (
+    'profile_completed',
+    'invite_accepted',
+    'review',
+    'check_in',
+    'itinerary_completed',
+    'order',
+    'redeem',
+    'redeem_refund',
+    'admin_adjust'
+);
+
+
+ALTER TYPE "public"."point_reason" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."travel_party" AS ENUM (
     'solo',
     'couple',
@@ -158,6 +174,26 @@ $$;
 
 
 ALTER FUNCTION "public"."accept_invite"("p_token" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_inserted integer;
+begin
+  insert into public.points_ledger (user_id, delta, reason, ref_type, ref_id, season)
+  values (p_user_id, p_delta, p_reason, p_ref_type, p_ref_id, public.season_for(now()))
+  on conflict on constraint points_ledger_user_reason_ref_unique do nothing;
+
+  get diagnostics v_inserted = row_count;
+  return v_inserted = 1;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."can_access_itinerary"("iid" "uuid") RETURNS boolean
@@ -251,6 +287,51 @@ $$;
 
 
 ALTER FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."group_has_other_members"("gid" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select exists (
+    select 1
+    from public.group_members gm
+    join public.groups g on g.id = gm.group_id
+    where gm.group_id = gid and gm.user_id <> g.owner_id
+  );
+$$;
+
+
+ALTER FUNCTION "public"."group_has_other_members"("gid" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."group_leaderboard"("gid" "uuid") RETURNS TABLE("display_name" "text", "avatar_url" "text", "total_points" integer, "is_me" boolean)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select
+    p.display_name,
+    p.avatar_url,
+    coalesce(sum(l.delta) filter (
+      where l.reason not in ('redeem', 'redeem_refund')
+        and i.start_date is not null
+        and (l.created_at at time zone 'Europe/Rome')::date >= i.start_date
+        and (l.created_at at time zone 'Europe/Rome')::date < i.start_date + i.days
+    ), 0)::int as total_points,
+    gm.user_id = auth.uid() as is_me
+  from public.group_members gm
+  join public.groups g on g.id = gm.group_id
+  join public.profiles p on p.id = gm.user_id
+  left join public.itineraries i on i.id = g.itinerary_id
+  left join public.points_ledger l on l.user_id = gm.user_id
+  where gm.group_id = gid
+    and public.is_group_member(gid)
+  group by gm.user_id, p.display_name, p.avatar_url
+  order by total_points desc;
+$$;
+
+
+ALTER FUNCTION "public"."group_leaderboard"("gid" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."groups_add_owner_member"() RETURNS "trigger"
@@ -348,6 +429,50 @@ $$;
 ALTER FUNCTION "public"."is_group_owner"("gid" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."prevent_mutation"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if tg_op = 'DELETE' and pg_trigger_depth() > 1 then
+    return old;
+  end if;
+  raise exception '%_immutable', tg_table_name using errcode = 'P0001';
+end;
+$$;
+
+
+ALTER FUNCTION "public"."prevent_mutation"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."refresh_leaderboard"() RETURNS "void"
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  refresh materialized view concurrently public.leaderboard_season_totals;
+$$;
+
+
+ALTER FUNCTION "public"."refresh_leaderboard"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."season_for"("ts" timestamp with time zone) RETURNS "text"
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select case
+    when extract(month from ts at time zone 'Europe/Rome') between 4 and 9
+      then extract(year from ts at time zone 'Europe/Rome')::int || '-estate'
+    when extract(month from ts at time zone 'Europe/Rome') >= 10
+      then extract(year from ts at time zone 'Europe/Rome')::int || '-inverno'
+    else (extract(year from ts at time zone 'Europe/Rome')::int - 1) || '-inverno'
+  end;
+$$;
+
+
+ALTER FUNCTION "public"."season_for"("ts" timestamp with time zone) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -424,6 +549,70 @@ CREATE TABLE IF NOT EXISTS "public"."activity_interests" (
 ALTER TABLE "public"."activity_interests" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."affiliate_clicks" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid",
+    "activity_id" "uuid",
+    "partner" "public"."partner" NOT NULL,
+    "target_url" "text" NOT NULL,
+    "subid" "text" NOT NULL,
+    "context" "text" NOT NULL,
+    "itinerary_id" "uuid",
+    "anon_id" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "affiliate_clicks_context_valid" CHECK (("context" = ANY (ARRAY['page'::"text", 'itinerary'::"text", 'chat'::"text", 'flights'::"text"]))),
+    CONSTRAINT "affiliate_clicks_target_url_https" CHECK (("target_url" ~ '^https://'::"text"))
+);
+
+
+ALTER TABLE "public"."affiliate_clicks" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."affiliate_conversions" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "partner" "public"."partner" NOT NULL,
+    "subid" "text" NOT NULL,
+    "amount_eur" numeric(10,2),
+    "commission_eur" numeric(10,2),
+    "status" "text" NOT NULL,
+    "reported_at" timestamp with time zone NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."affiliate_conversions" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."badges" (
+    "key" "text" NOT NULL,
+    "name_it" "text" NOT NULL,
+    "name_en" "text" NOT NULL,
+    "description" "text",
+    "criteria" "jsonb" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."badges" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."check_ins" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "place_id" "uuid" NOT NULL,
+    "itinerary_id" "uuid",
+    "lat" double precision NOT NULL,
+    "lng" double precision NOT NULL,
+    "local_date" "date" DEFAULT (("now"() AT TIME ZONE 'Europe/Rome'::"text"))::"date" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "check_ins_lat_range" CHECK ((("lat" >= ('-90'::integer)::double precision) AND ("lat" <= (90)::double precision))),
+    CONSTRAINT "check_ins_lng_range" CHECK ((("lng" >= ('-180'::integer)::double precision) AND ("lng" <= (180)::double precision)))
+);
+
+
+ALTER TABLE "public"."check_ins" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."group_invites" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "group_id" "uuid" NOT NULL,
@@ -467,7 +656,8 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "pace" "public"."trip_pace",
     "party" "public"."travel_party",
     "onboarding_completed_at" timestamp with time zone,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "leaderboard_opt_out" boolean DEFAULT false NOT NULL
 );
 
 
@@ -582,6 +772,36 @@ CREATE OR REPLACE VIEW "public"."item_vote_balances" WITH ("security_invoker"='t
 ALTER VIEW "public"."item_vote_balances" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."points_ledger" (
+    "id" bigint NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "delta" integer NOT NULL,
+    "reason" "public"."point_reason" NOT NULL,
+    "ref_type" "text" NOT NULL,
+    "ref_id" "uuid" NOT NULL,
+    "season" "text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "points_ledger_delta_non_zero" CHECK (("delta" <> 0)),
+    CONSTRAINT "points_ledger_season_format" CHECK (("season" ~ '^[0-9]{4}-(estate|inverno)$'::"text"))
+);
+
+
+ALTER TABLE "public"."points_ledger" OWNER TO "postgres";
+
+
+CREATE MATERIALIZED VIEW "public"."leaderboard_season_totals" AS
+ SELECT "season",
+    "user_id",
+    ("sum"("delta"))::integer AS "total_points"
+   FROM "public"."points_ledger"
+  WHERE ("reason" <> ALL (ARRAY['redeem'::"public"."point_reason", 'redeem_refund'::"public"."point_reason"]))
+  GROUP BY "season", "user_id"
+  WITH NO DATA;
+
+
+ALTER MATERIALIZED VIEW "public"."leaderboard_season_totals" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."places" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "slug" "text" NOT NULL,
@@ -600,6 +820,21 @@ CREATE TABLE IF NOT EXISTS "public"."places" (
 ALTER TABLE "public"."places" OWNER TO "postgres";
 
 
+CREATE SEQUENCE IF NOT EXISTS "public"."points_ledger_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."points_ledger_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."points_ledger_id_seq" OWNED BY "public"."points_ledger"."id";
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."preference_weights" (
     "user_id" "uuid" NOT NULL,
     "interest_key" "text" NOT NULL,
@@ -613,6 +848,62 @@ CREATE TABLE IF NOT EXISTS "public"."preference_weights" (
 
 
 ALTER TABLE "public"."preference_weights" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."reviews" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "activity_id" "uuid" NOT NULL,
+    "rating" smallint NOT NULL,
+    "body" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "reviews_body_length" CHECK (("char_length"("body") <= 4000)),
+    CONSTRAINT "reviews_rating_range" CHECK ((("rating" >= 1) AND ("rating" <= 5)))
+);
+
+
+ALTER TABLE "public"."reviews" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."public_reviews" WITH ("security_barrier"='true') AS
+ SELECT "r"."id",
+    "r"."activity_id",
+    "r"."rating",
+    "r"."body",
+    "r"."created_at",
+    "p"."display_name" AS "author_name"
+   FROM (("public"."reviews" "r"
+     JOIN "public"."activities" "a" ON ((("a"."id" = "r"."activity_id") AND "a"."is_active")))
+     JOIN "public"."profiles" "p" ON (("p"."id" = "r"."user_id")));
+
+
+ALTER VIEW "public"."public_reviews" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."seasonal_leaderboard" WITH ("security_barrier"='true') AS
+ SELECT "t"."season",
+    ("rank"() OVER (PARTITION BY "t"."season" ORDER BY "t"."total_points" DESC))::integer AS "rank",
+    "p"."display_name",
+    "p"."avatar_url",
+    "t"."total_points",
+    ("t"."user_id" = "auth"."uid"()) AS "is_me"
+   FROM ("public"."leaderboard_season_totals" "t"
+     JOIN "public"."profiles" "p" ON (("p"."id" = "t"."user_id")))
+  WHERE ((NOT "p"."leaderboard_opt_out") AND ("t"."total_points" > 0));
+
+
+ALTER VIEW "public"."seasonal_leaderboard" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."user_badges" (
+    "user_id" "uuid" NOT NULL,
+    "badge_key" "text" NOT NULL,
+    "awarded_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."user_badges" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."user_constraints" (
@@ -675,6 +966,10 @@ CREATE TABLE IF NOT EXISTS "public"."user_taste" (
 ALTER TABLE "public"."user_taste" OWNER TO "postgres";
 
 
+ALTER TABLE ONLY "public"."points_ledger" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."points_ledger_id_seq"'::"regclass");
+
+
+
 ALTER TABLE ONLY "public"."user_events" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."user_events_id_seq"'::"regclass");
 
 
@@ -696,6 +991,36 @@ ALTER TABLE ONLY "public"."activities"
 
 ALTER TABLE ONLY "public"."activity_interests"
     ADD CONSTRAINT "activity_interests_activity_id_interest_key_pk" PRIMARY KEY ("activity_id", "interest_key");
+
+
+
+ALTER TABLE ONLY "public"."affiliate_clicks"
+    ADD CONSTRAINT "affiliate_clicks_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."affiliate_clicks"
+    ADD CONSTRAINT "affiliate_clicks_subid_unique" UNIQUE ("subid");
+
+
+
+ALTER TABLE ONLY "public"."affiliate_conversions"
+    ADD CONSTRAINT "affiliate_conversions_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."badges"
+    ADD CONSTRAINT "badges_pkey" PRIMARY KEY ("key");
+
+
+
+ALTER TABLE ONLY "public"."check_ins"
+    ADD CONSTRAINT "check_ins_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."check_ins"
+    ADD CONSTRAINT "check_ins_user_place_day_unique" UNIQUE ("user_id", "place_id", "local_date");
 
 
 
@@ -754,6 +1079,16 @@ ALTER TABLE ONLY "public"."places"
 
 
 
+ALTER TABLE ONLY "public"."points_ledger"
+    ADD CONSTRAINT "points_ledger_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."points_ledger"
+    ADD CONSTRAINT "points_ledger_user_reason_ref_unique" UNIQUE ("user_id", "reason", "ref_id");
+
+
+
 ALTER TABLE ONLY "public"."preference_weights"
     ADD CONSTRAINT "preference_weights_user_id_interest_key_pk" PRIMARY KEY ("user_id", "interest_key");
 
@@ -761,6 +1096,21 @@ ALTER TABLE ONLY "public"."preference_weights"
 
 ALTER TABLE ONLY "public"."profiles"
     ADD CONSTRAINT "profiles_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."reviews"
+    ADD CONSTRAINT "reviews_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."reviews"
+    ADD CONSTRAINT "reviews_user_activity_unique" UNIQUE ("user_id", "activity_id");
+
+
+
+ALTER TABLE ONLY "public"."user_badges"
+    ADD CONSTRAINT "user_badges_user_id_badge_key_pk" PRIMARY KEY ("user_id", "badge_key");
 
 
 
@@ -795,6 +1145,18 @@ CREATE INDEX "activity_interests_interest_key_idx" ON "public"."activity_interes
 
 
 
+CREATE INDEX "affiliate_clicks_created_at_idx" ON "public"."affiliate_clicks" USING "btree" ("created_at");
+
+
+
+CREATE INDEX "affiliate_conversions_subid_idx" ON "public"."affiliate_conversions" USING "btree" ("subid");
+
+
+
+CREATE INDEX "check_ins_user_date_idx" ON "public"."check_ins" USING "btree" ("user_id", "local_date");
+
+
+
 CREATE INDEX "group_invites_group_id_idx" ON "public"."group_invites" USING "btree" ("group_id");
 
 
@@ -823,6 +1185,18 @@ CREATE INDEX "itinerary_items_itinerary_day_position_idx" ON "public"."itinerary
 
 
 
+CREATE UNIQUE INDEX "leaderboard_season_totals_season_user_idx" ON "public"."leaderboard_season_totals" USING "btree" ("season", "user_id");
+
+
+
+CREATE INDEX "points_ledger_season_user_idx" ON "public"."points_ledger" USING "btree" ("season", "user_id");
+
+
+
+CREATE INDEX "reviews_activity_id_idx" ON "public"."reviews" USING "btree" ("activity_id");
+
+
+
 CREATE INDEX "user_events_unprocessed_idx" ON "public"."user_events" USING "btree" ("user_id") WHERE ("processed_at" IS NULL);
 
 
@@ -832,6 +1206,22 @@ CREATE INDEX "user_taste_embedding_idx" ON "public"."user_taste" USING "hnsw" ("
 
 
 CREATE OR REPLACE TRIGGER "groups_add_owner_member" AFTER INSERT ON "public"."groups" FOR EACH ROW EXECUTE FUNCTION "public"."groups_add_owner_member"();
+
+
+
+CREATE OR REPLACE TRIGGER "points_ledger_immutable" BEFORE DELETE OR UPDATE ON "public"."points_ledger" FOR EACH ROW EXECUTE FUNCTION "public"."prevent_mutation"();
+
+
+
+CREATE OR REPLACE TRIGGER "points_ledger_no_truncate" BEFORE TRUNCATE ON "public"."points_ledger" FOR EACH STATEMENT EXECUTE FUNCTION "public"."prevent_mutation"();
+
+
+
+CREATE OR REPLACE TRIGGER "user_badges_immutable" BEFORE DELETE OR UPDATE ON "public"."user_badges" FOR EACH ROW EXECUTE FUNCTION "public"."prevent_mutation"();
+
+
+
+CREATE OR REPLACE TRIGGER "user_badges_no_truncate" BEFORE TRUNCATE ON "public"."user_badges" FOR EACH STATEMENT EXECUTE FUNCTION "public"."prevent_mutation"();
 
 
 
@@ -847,6 +1237,36 @@ ALTER TABLE ONLY "public"."activity_interests"
 
 ALTER TABLE ONLY "public"."activity_interests"
     ADD CONSTRAINT "activity_interests_interest_key_interests_key_fk" FOREIGN KEY ("interest_key") REFERENCES "public"."interests"("key") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."affiliate_clicks"
+    ADD CONSTRAINT "affiliate_clicks_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."affiliate_clicks"
+    ADD CONSTRAINT "affiliate_clicks_itinerary_id_itineraries_id_fk" FOREIGN KEY ("itinerary_id") REFERENCES "public"."itineraries"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."affiliate_clicks"
+    ADD CONSTRAINT "affiliate_clicks_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."check_ins"
+    ADD CONSTRAINT "check_ins_itinerary_id_itineraries_id_fk" FOREIGN KEY ("itinerary_id") REFERENCES "public"."itineraries"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."check_ins"
+    ADD CONSTRAINT "check_ins_place_id_places_id_fk" FOREIGN KEY ("place_id") REFERENCES "public"."places"("id") ON DELETE RESTRICT;
+
+
+
+ALTER TABLE ONLY "public"."check_ins"
+    ADD CONSTRAINT "check_ins_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -920,6 +1340,11 @@ ALTER TABLE ONLY "public"."itinerary_items"
 
 
 
+ALTER TABLE ONLY "public"."points_ledger"
+    ADD CONSTRAINT "points_ledger_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."preference_weights"
     ADD CONSTRAINT "preference_weights_interest_key_interests_key_fk" FOREIGN KEY ("interest_key") REFERENCES "public"."interests"("key") ON UPDATE CASCADE ON DELETE CASCADE;
 
@@ -932,6 +1357,26 @@ ALTER TABLE ONLY "public"."preference_weights"
 
 ALTER TABLE ONLY "public"."profiles"
     ADD CONSTRAINT "profiles_id_users_id_fk" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."reviews"
+    ADD CONSTRAINT "reviews_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."reviews"
+    ADD CONSTRAINT "reviews_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."user_badges"
+    ADD CONSTRAINT "user_badges_badge_key_badges_key_fk" FOREIGN KEY ("badge_key") REFERENCES "public"."badges"("key") ON UPDATE CASCADE ON DELETE RESTRICT;
+
+
+
+ALTER TABLE ONLY "public"."user_badges"
+    ADD CONSTRAINT "user_badges_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -1010,6 +1455,46 @@ CREATE POLICY "activity_interests_update_admin" ON "public"."activity_interests"
 
 
 
+ALTER TABLE "public"."affiliate_clicks" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "affiliate_clicks_select_admin" ON "public"."affiliate_clicks" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."affiliate_conversions" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "affiliate_conversions_select_admin" ON "public"."affiliate_conversions" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."badges" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "badges_delete_admin" ON "public"."badges" FOR DELETE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "badges_insert_admin" ON "public"."badges" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "badges_select_all" ON "public"."badges" FOR SELECT TO "authenticated", "anon" USING (true);
+
+
+
+CREATE POLICY "badges_update_admin" ON "public"."badges" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."check_ins" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "check_ins_select_own" ON "public"."check_ins" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
 ALTER TABLE "public"."group_invites" ENABLE ROW LEVEL SECURITY;
 
 
@@ -1043,7 +1528,7 @@ CREATE POLICY "group_members_select_members" ON "public"."group_members" FOR SEL
 ALTER TABLE "public"."groups" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "groups_delete_owner" ON "public"."groups" FOR DELETE TO "authenticated" USING (("owner_id" = ( SELECT "auth"."uid"() AS "uid")));
+CREATE POLICY "groups_delete_sole_owner" ON "public"."groups" FOR DELETE TO "authenticated" USING ((("owner_id" = ( SELECT "auth"."uid"() AS "uid")) AND (NOT "public"."group_has_other_members"("id"))));
 
 
 
@@ -1154,6 +1639,13 @@ CREATE POLICY "places_update_admin" ON "public"."places" FOR UPDATE TO "authenti
 
 
 
+ALTER TABLE "public"."points_ledger" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "points_ledger_select_own" ON "public"."points_ledger" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
 ALTER TABLE "public"."preference_weights" ENABLE ROW LEVEL SECURITY;
 
 
@@ -1181,6 +1673,32 @@ CREATE POLICY "profiles_select_own" ON "public"."profiles" FOR SELECT TO "authen
 
 
 CREATE POLICY "profiles_update_own" ON "public"."profiles" FOR UPDATE TO "authenticated" USING (("id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+ALTER TABLE "public"."reviews" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "reviews_delete_own" ON "public"."reviews" FOR DELETE TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+CREATE POLICY "reviews_insert_own" ON "public"."reviews" FOR INSERT TO "authenticated" WITH CHECK (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+CREATE POLICY "reviews_select_own" ON "public"."reviews" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+CREATE POLICY "reviews_update_own" ON "public"."reviews" FOR UPDATE TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+ALTER TABLE "public"."user_badges" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "user_badges_select_own" ON "public"."user_badges" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -1231,6 +1749,11 @@ GRANT ALL ON FUNCTION "public"."accept_invite"("p_token" "text") TO "service_rol
 
 
 
+REVOKE ALL ON FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."can_access_itinerary"("iid" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."can_access_itinerary"("iid" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."can_access_itinerary"("iid" "uuid") TO "authenticated";
@@ -1256,6 +1779,20 @@ REVOKE ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id"
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."group_has_other_members"("gid" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."group_has_other_members"("gid" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."group_has_other_members"("gid" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."group_has_other_members"("gid" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."group_leaderboard"("gid" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."group_leaderboard"("gid" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."group_leaderboard"("gid" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."group_leaderboard"("gid" "uuid") TO "service_role";
 
 
 
@@ -1297,6 +1834,23 @@ GRANT ALL ON FUNCTION "public"."is_group_owner"("gid" "uuid") TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "anon";
+GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."refresh_leaderboard"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."refresh_leaderboard"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."season_for"("ts" timestamp with time zone) TO "anon";
+GRANT ALL ON FUNCTION "public"."season_for"("ts" timestamp with time zone) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."season_for"("ts" timestamp with time zone) TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") TO "authenticated";
@@ -1313,6 +1867,27 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."activities" TO "authenticat
 GRANT ALL ON TABLE "public"."activity_interests" TO "service_role";
 GRANT SELECT ON TABLE "public"."activity_interests" TO "anon";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."activity_interests" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."affiliate_clicks" TO "service_role";
+GRANT SELECT ON TABLE "public"."affiliate_clicks" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."affiliate_conversions" TO "service_role";
+GRANT SELECT ON TABLE "public"."affiliate_conversions" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."badges" TO "service_role";
+GRANT SELECT ON TABLE "public"."badges" TO "anon";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."badges" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."check_ins" TO "service_role";
+GRANT SELECT ON TABLE "public"."check_ins" TO "authenticated";
 
 
 
@@ -1384,6 +1959,10 @@ GRANT UPDATE("party") ON TABLE "public"."profiles" TO "authenticated";
 
 
 GRANT UPDATE("onboarding_completed_at") ON TABLE "public"."profiles" TO "authenticated";
+
+
+
+GRANT UPDATE("leaderboard_opt_out") ON TABLE "public"."profiles" TO "authenticated";
 
 
 
@@ -1513,9 +2092,24 @@ GRANT SELECT ON TABLE "public"."item_vote_balances" TO "authenticated";
 
 
 
+GRANT ALL ON TABLE "public"."points_ledger" TO "service_role";
+GRANT SELECT ON TABLE "public"."points_ledger" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."leaderboard_season_totals" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."places" TO "service_role";
 GRANT SELECT ON TABLE "public"."places" TO "anon";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."places" TO "authenticated";
+
+
+
+GRANT ALL ON SEQUENCE "public"."points_ledger_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."points_ledger_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."points_ledger_id_seq" TO "service_role";
 
 
 
@@ -1537,6 +2131,43 @@ GRANT INSERT("explicit"),UPDATE("explicit") ON TABLE "public"."preference_weight
 
 
 GRANT UPDATE("updated_at") ON TABLE "public"."preference_weights" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."reviews" TO "service_role";
+GRANT SELECT,DELETE ON TABLE "public"."reviews" TO "authenticated";
+
+
+
+GRANT INSERT("user_id") ON TABLE "public"."reviews" TO "authenticated";
+
+
+
+GRANT INSERT("activity_id") ON TABLE "public"."reviews" TO "authenticated";
+
+
+
+GRANT INSERT("rating"),UPDATE("rating") ON TABLE "public"."reviews" TO "authenticated";
+
+
+
+GRANT INSERT("body"),UPDATE("body") ON TABLE "public"."reviews" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."public_reviews" TO "service_role";
+GRANT SELECT ON TABLE "public"."public_reviews" TO "anon";
+GRANT SELECT ON TABLE "public"."public_reviews" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."seasonal_leaderboard" TO "service_role";
+GRANT SELECT ON TABLE "public"."seasonal_leaderboard" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."user_badges" TO "service_role";
+GRANT SELECT ON TABLE "public"."user_badges" TO "authenticated";
 
 
 

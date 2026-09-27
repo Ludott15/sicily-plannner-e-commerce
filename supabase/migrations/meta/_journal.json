@@ -57,6 +57,27 @@
       "when": 1790541272789,
       "tag": "20260927203432_itineraries_groups_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790543075396,
+      "tag": "20260927210435_groups_delete_sole_owner",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790543267897,
+      "tag": "20260927210747_gamification_affiliates",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790543272042,
+      "tag": "20260927210752_gamification_affiliates_rls",
+      "breakpoints": true
     }
   ]
 }

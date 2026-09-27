@@ -29,3 +29,14 @@ export const itineraryStatus = pgEnum("itinerary_status", [
 ]);
 export const groupRole = pgEnum("group_role", ["owner", "member"]);
 export const inviteStatus = pgEnum("invite_status", ["active", "revoked", "expired"]);
+export const pointReason = pgEnum("point_reason", [
+  "profile_completed",
+  "invite_accepted",
+  "review",
+  "check_in",
+  "itinerary_completed",
+  "order",
+  "redeem",
+  "redeem_refund",
+  "admin_adjust",
+]);
