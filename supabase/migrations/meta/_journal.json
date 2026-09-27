@@ -15,6 +15,34 @@
       "when": 1790537052253,
       "tag": "20260927192412_profiles_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790540138167,
+      "tag": "20260927201538_extensions",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790540213464,
+      "tag": "20260927201653_user_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790540233027,
+      "tag": "20260927201713_user_catalog_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790540238226,
+      "tag": "20260927201718_seed_interests",
+      "breakpoints": true
     }
   ]
 }
