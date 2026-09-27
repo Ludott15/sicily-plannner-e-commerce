@@ -334,5 +334,56 @@ select is(
   'transfer: passa anche l''itinerario collegato'
 );
 
+----------------------------------------------------------------------------
+-- VISTE: modalità di sicurezza
+----------------------------------------------------------------------------
+select ok(
+  (select 'security_invoker=true' = any(reloptions) from pg_class where oid = 'public.item_vote_balances'::regclass),
+  'item_vote_balances è security_invoker: si applica la RLS di item_votes e group_members del chiamante'
+);
+select ok(
+  (select not coalesce('security_invoker=true' = any(reloptions), false)
+      and 'security_barrier=true' = any(reloptions)
+   from pg_class where oid = 'public.group_member_profiles'::regclass),
+  'group_member_profiles non è security_invoker: filtra internamente con is_group_member del chiamante'
+);
+
+----------------------------------------------------------------------------
+-- OWNER UNICO MEMBRO: può eliminare il gruppo
+----------------------------------------------------------------------------
+select tests.authenticate_as('other');
+select set_config('tests.solo_gid',
+  public.create_group('Da solo', 'dddddddd-0000-0000-0000-000000000009')::text, true);
+select results_eq(
+  $$select count(*)::int from public.group_members where group_id = current_setting('tests.solo_gid')::uuid$$,
+  $$values (1)$$,
+  'owner unico membro: il gruppo ha solo l''owner'
+);
+delete from public.group_members where group_id = current_setting('tests.solo_gid')::uuid;
+reset role;
+select isnt_empty(
+  $$select 1 from public.group_members where group_id = current_setting('tests.solo_gid')::uuid$$,
+  'owner unico membro: non esce lasciando un gruppo senza owner'
+);
+select tests.authenticate_as('other');
+select lives_ok(
+  $$delete from public.groups where id = current_setting('tests.solo_gid')::uuid$$,
+  'owner unico membro: elimina il gruppo'
+);
+reset role;
+select is_empty(
+  $$select 1 from public.groups where id = current_setting('tests.solo_gid')::uuid$$,
+  'owner unico membro: il gruppo non esiste più'
+);
+select is_empty(
+  $$select 1 from public.group_members where group_id = current_setting('tests.solo_gid')::uuid$$,
+  'owner unico membro: le righe dei membri sono eliminate a cascata'
+);
+select results_eq(
+  $$select owner_id, group_id from public.itineraries where id = 'dddddddd-0000-0000-0000-000000000009'$$,
+  format($$values (%L::uuid, null::uuid)$$, tests.uid('other')),
+  'owner unico membro: l''itinerario resta suo e torna personale'
+);
+
 select * from finish();
 rollback;
