@@ -13,9 +13,12 @@ if ! diff -u --strip-trailing-cr supabase/schema.sql "$tmp/schema.sql"; then
   exit 1
 fi
 
+# Confronto prima/dopo: in locale le migrazioni nuove non ancora committate non sono drift.
+before="$(git status --porcelain --untracked-files=all -- supabase/migrations)"
 npx drizzle-kit generate --name=drift-check >/dev/null
-if [ -n "$(git status --porcelain -- supabase/migrations)" ]; then
-  git status --porcelain -- supabase/migrations
+after="$(git status --porcelain --untracked-files=all -- supabase/migrations)"
+if [ "$before" != "$after" ]; then
+  diff <(echo "$before") <(echo "$after") || true
   echo "::error::Lo schema Drizzle ha modifiche senza migrazione: esegui 'npm run db:generate'" >&2
   exit 1
 fi

@@ -12,7 +12,7 @@ La specifica completa è in [docs/spec.md](docs/spec.md): leggerla prima di iniz
 - `npm run lint`, `npm run typecheck`, `npm test` (Vitest unit), `npm run test:int` (Vitest su Postgres locale, file `*.int.test.ts`), `npx playwright test` (e2e)
 - `npm run db:generate` — migrazione dallo schema Drizzle; `-- --custom --name=x` per SQL a mano (RLS, funzioni, trigger)
 - `npm run db:reset` — riapplica tutte le migrazioni da zero
-- `npm run db:test` — test RLS in pgTAP (`supabase/tests/*.test.sql`)
+- `npm run db:test` — test RLS in pgTAP (`supabase/tests/*.test.sql`); gli helper (`tests.create_user`, `tests.authenticate_as`, `tests.as_anon`) si includono con `\ir helpers/setup.psql` dopo `begin;`
 - `npm run db:snapshot` — aggiorna `supabase/schema.sql` dopo ogni migrazione
 - `npm run db:drift` — lo stesso controllo della CI
 
@@ -29,7 +29,7 @@ La specifica completa è in [docs/spec.md](docs/spec.md): leggerla prima di iniz
   - Prepared statement disattivati di default (`DATABASE_PREPARED_STATEMENTS`, default `false`): in produzione `DATABASE_URL` punta al pooler Supabase in modalità transaction (porta 6543), che non li supporta. Metterla a `true` solo con connessione diretta o session mode.
 - Il client Supabase serve solo per auth e realtime: niente `supabase.from()` o `supabase.rpc()` (bloccati da ESLint).
 - Sul server l'utente si verifica con `supabase.auth.getUser()` (tramite `getUser`/`requireUser`) o `getClaims()`; mai `getSession()`, che legge il cookie senza verificarlo (bloccato da ESLint).
-- Ogni tabella nuova: RLS attiva nella stessa migrazione + test pgTAP che dimostri che un utente non vede né modifica i dati di un altro. Le policy devono funzionare sia per il client Supabase sia per `dbAsUser` (si basano su `auth.uid()`).
+- Ogni tabella nuova: RLS attiva nella stessa migrazione, prima `revoke all ... from anon, authenticated` e poi grant minimi per colonna. Test pgTAP con almeno anonimo, proprietario, altro utente e admin; per le tabelle di gruppo anche membro ed ex membro. I test non devono dipendere dai dati già presenti nel database locale. Le policy devono funzionare sia per il client Supabase sia per `dbAsUser` (si basano su `auth.uid()`).
 - Nelle policy RLS scrivere `(select auth.uid())` e `(select public.is_admin())`, mai `auth.uid()` diretto: con la subquery Postgres la valuta una volta per query invece che per ogni riga.
 - Migrazioni in `supabase/migrations/` (generate da drizzle-kit con prefisso timestamp). Non modificare migrazioni già committate su `main`.
 - Testi dell'interfaccia solo in `messages/it.json` e `messages/en.json`.
