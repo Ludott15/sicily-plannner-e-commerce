@@ -40,3 +40,5 @@ La specifica completa è in [docs/spec.md](docs/spec.md): leggerla prima di iniz
 
 - Mai push diretto su `main`, mai force push (`--force`, `--force-with-lease`), mai merge di PR.
 - Si lavora su un branch, si fa push del branch e si apre la PR verso `main`; il merge lo fa sempre Ludovico dopo aver visto la CI.
+- Ogni modifica a `.github/workflows/` va dichiarata esplicitamente nel riepilogo della PR, con il motivo.
+- Mai rimuovere, saltare o indebolire step o job della CI (`continue-on-error`, `if: false`, test esclusi o saltati, soglie abbassate) senza approvazione esplicita di Ludovico.
