@@ -36,6 +36,10 @@ La specifica completa è in [docs/spec.md](docs/spec.md): leggerla prima di iniz
 - Redirect verso percorsi ricevuti in input solo tramite `safeNextPath`.
 - Una milestone = un branch `milestone/NN-nome`; chiusa solo con i criteri di docs/spec.md verificati e la CI verde.
 
+## Resoconti
+
+- Per ogni suite (unit, integrazione, pgTAP, e2e) riportare il conteggio passati/totali preso dai log della CI: `bash scripts/ci-test-counts.sh <run-id>`. "Step verde" senza numero non vale come verifica.
+
 ## Git (regola permanente)
 
 - Mai push diretto su `main`, mai force push (`--force`, `--force-with-lease`), mai merge di PR.
