@@ -288,6 +288,36 @@ $$;
 ALTER FUNCTION "public"."can_vote_item"("item_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."check_activity_has_tags"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_activity_id uuid;
+begin
+  if tg_table_name = 'activities' then
+    v_activity_id := new.id;
+  else
+    v_activity_id := old.activity_id;
+  end if;
+
+  if exists (
+    select 1 from public.activities a
+    where a.id = v_activity_id
+      and a.is_active
+      and not exists (select 1 from public.activity_interests ai where ai.activity_id = a.id)
+  ) then
+    raise exception 'activity_without_tags' using errcode = 'P0001';
+  end if;
+
+  return null;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."check_activity_has_tags"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -560,7 +590,7 @@ CREATE TABLE IF NOT EXISTS "public"."activities" (
     "affiliate_url" "text",
     "rating" numeric(2,1),
     "embedding" "extensions"."vector"(1024),
-    "is_active" boolean DEFAULT true NOT NULL,
+    "is_active" boolean DEFAULT false NOT NULL,
     "synced_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     CONSTRAINT "activities_duration_positive" CHECK (("duration_min" > 0)),
@@ -1481,6 +1511,14 @@ CREATE INDEX "user_taste_embedding_idx" ON "public"."user_taste" USING "hnsw" ("
 
 
 
+CREATE CONSTRAINT TRIGGER "activities_require_tags" AFTER INSERT OR UPDATE OF "is_active" ON "public"."activities" DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN ("new"."is_active") EXECUTE FUNCTION "public"."check_activity_has_tags"();
+
+
+
+CREATE CONSTRAINT TRIGGER "activity_interests_keep_active_tagged" AFTER DELETE OR UPDATE OF "activity_id" ON "public"."activity_interests" DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION "public"."check_activity_has_tags"();
+
+
+
 CREATE OR REPLACE TRIGGER "admin_audit_log_immutable" BEFORE DELETE OR UPDATE ON "public"."admin_audit_log" FOR EACH ROW EXECUTE FUNCTION "public"."admin_audit_log_immutable"();
 
 
@@ -2219,6 +2257,11 @@ REVOKE ALL ON FUNCTION "public"."can_vote_item"("item_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."can_vote_item"("item_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."can_vote_item"("item_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."can_vote_item"("item_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."check_activity_has_tags"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."check_activity_has_tags"() TO "service_role";
 
 
 
