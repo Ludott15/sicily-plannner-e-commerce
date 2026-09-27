@@ -5,3 +5,6 @@ export * from "./personalization";
 export * from "./trips";
 export * from "./gamification";
 export * from "./affiliates";
+export * from "./shop";
+export * from "./ai";
+export * from "./audit";

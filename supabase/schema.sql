@@ -69,6 +69,20 @@ CREATE TYPE "public"."itinerary_status" AS ENUM (
 ALTER TYPE "public"."itinerary_status" OWNER TO "postgres";
 
 
+CREATE TYPE "public"."order_status" AS ENUM (
+    'pending',
+    'paid',
+    'sent_to_producer',
+    'shipped',
+    'delivered',
+    'cancelled',
+    'refunded'
+);
+
+
+ALTER TYPE "public"."order_status" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."partner" AS ENUM (
     'travelpayouts',
     'getyourguide',
@@ -174,6 +188,28 @@ $$;
 
 
 ALTER FUNCTION "public"."accept_invite"("p_token" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."admin_audit_log_immutable"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if tg_op = 'UPDATE'
+    and pg_trigger_depth() > 1
+    and old.actor_id is not null
+    and new.actor_id is null
+    and (new.id, new.action, new.entity, new.entity_id, new.diff, new.created_at)
+      is not distinct from (old.id, old.action, old.entity, old.entity_id, old.diff, old.created_at)
+  then
+    return new;
+  end if;
+  raise exception 'admin_audit_log_immutable' using errcode = 'P0001';
+end;
+$$;
+
+
+ALTER FUNCTION "public"."admin_audit_log_immutable"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") RETURNS boolean
@@ -549,6 +585,35 @@ CREATE TABLE IF NOT EXISTS "public"."activity_interests" (
 ALTER TABLE "public"."activity_interests" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."admin_audit_log" (
+    "id" bigint NOT NULL,
+    "actor_id" "uuid",
+    "action" "text" NOT NULL,
+    "entity" "text" NOT NULL,
+    "entity_id" "uuid",
+    "diff" "jsonb",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."admin_audit_log" OWNER TO "postgres";
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."admin_audit_log_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."admin_audit_log_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."admin_audit_log_id_seq" OWNED BY "public"."admin_audit_log"."id";
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."affiliate_clicks" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid",
@@ -594,6 +659,35 @@ CREATE TABLE IF NOT EXISTS "public"."badges" (
 
 
 ALTER TABLE "public"."badges" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."chat_messages" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "session_id" "uuid" NOT NULL,
+    "role" "text" NOT NULL,
+    "content" "jsonb" NOT NULL,
+    "tool_calls" "jsonb",
+    "input_tokens" integer,
+    "output_tokens" integer,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "chat_messages_role_valid" CHECK (("role" = ANY (ARRAY['user'::"text", 'assistant'::"text", 'tool'::"text"]))),
+    CONSTRAINT "chat_messages_tokens_non_negative" CHECK (((COALESCE("input_tokens", 0) >= 0) AND (COALESCE("output_tokens", 0) >= 0)))
+);
+
+
+ALTER TABLE "public"."chat_messages" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."chat_sessions" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "itinerary_id" "uuid",
+    "title" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."chat_sessions" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."check_ins" (
@@ -802,6 +896,59 @@ CREATE MATERIALIZED VIEW "public"."leaderboard_season_totals" AS
 ALTER MATERIALIZED VIEW "public"."leaderboard_season_totals" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."order_items" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "order_id" "uuid" NOT NULL,
+    "product_id" "uuid" NOT NULL,
+    "producer_id" "uuid" NOT NULL,
+    "quantity" integer NOT NULL,
+    "unit_price_cents" integer NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "order_items_quantity_positive" CHECK (("quantity" > 0)),
+    CONSTRAINT "order_items_unit_price_non_negative" CHECK (("unit_price_cents" >= 0))
+);
+
+
+ALTER TABLE "public"."order_items" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."order_shipments" (
+    "order_id" "uuid" NOT NULL,
+    "producer_id" "uuid" NOT NULL,
+    "token_hash" "text" NOT NULL,
+    "carrier" "text",
+    "tracking_number" "text",
+    "shipped_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "order_shipments_token_hash_format" CHECK (("token_hash" ~ '^[0-9a-f]{64}$'::"text"))
+);
+
+
+ALTER TABLE "public"."order_shipments" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."orders" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid",
+    "email" "text" NOT NULL,
+    "status" "public"."order_status" DEFAULT 'pending'::"public"."order_status" NOT NULL,
+    "subtotal_cents" integer NOT NULL,
+    "discount_cents" integer DEFAULT 0 NOT NULL,
+    "shipping_cents" integer DEFAULT 0 NOT NULL,
+    "total_cents" integer NOT NULL,
+    "points_redeemed" integer DEFAULT 0 NOT NULL,
+    "stripe_session_id" "text" NOT NULL,
+    "shipping_address" "jsonb",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "orders_amounts_non_negative" CHECK ((("subtotal_cents" >= 0) AND ("discount_cents" >= 0) AND ("shipping_cents" >= 0) AND ("points_redeemed" >= 0))),
+    CONSTRAINT "orders_discount_max_15_percent" CHECK ((("discount_cents" * 100) <= ("subtotal_cents" * 15))),
+    CONSTRAINT "orders_total_consistent" CHECK (("total_cents" = (("subtotal_cents" - "discount_cents") + "shipping_cents")))
+);
+
+
+ALTER TABLE "public"."orders" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."places" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "slug" "text" NOT NULL,
@@ -850,6 +997,43 @@ CREATE TABLE IF NOT EXISTS "public"."preference_weights" (
 ALTER TABLE "public"."preference_weights" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."producers" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" "text" NOT NULL,
+    "email" "text" NOT NULL,
+    "vat_number" "text",
+    "address" "text",
+    "lead_time_days" smallint DEFAULT 3 NOT NULL,
+    "is_active" boolean DEFAULT true NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "producers_lead_time_positive" CHECK (("lead_time_days" > 0))
+);
+
+
+ALTER TABLE "public"."producers" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."products" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "slug" "text" NOT NULL,
+    "producer_id" "uuid" NOT NULL,
+    "title" "text" NOT NULL,
+    "description" "text",
+    "price_cents" integer NOT NULL,
+    "weight_g" integer NOT NULL,
+    "images" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "is_box" boolean DEFAULT false NOT NULL,
+    "is_active" boolean DEFAULT true NOT NULL,
+    "stripe_price_id" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "products_price_non_negative" CHECK (("price_cents" >= 0)),
+    CONSTRAINT "products_weight_positive" CHECK (("weight_g" > 0))
+);
+
+
+ALTER TABLE "public"."products" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."reviews" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
@@ -871,7 +1055,8 @@ CREATE OR REPLACE VIEW "public"."public_reviews" WITH ("security_barrier"='true'
     "r"."rating",
     "r"."body",
     "r"."created_at",
-    "p"."display_name" AS "author_name"
+    "p"."display_name",
+    "p"."avatar_url"
    FROM (("public"."reviews" "r"
      JOIN "public"."activities" "a" ON ((("a"."id" = "r"."activity_id") AND "a"."is_active")))
      JOIN "public"."profiles" "p" ON (("p"."id" = "r"."user_id")));
@@ -966,6 +1151,10 @@ CREATE TABLE IF NOT EXISTS "public"."user_taste" (
 ALTER TABLE "public"."user_taste" OWNER TO "postgres";
 
 
+ALTER TABLE ONLY "public"."admin_audit_log" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."admin_audit_log_id_seq"'::"regclass");
+
+
+
 ALTER TABLE ONLY "public"."points_ledger" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."points_ledger_id_seq"'::"regclass");
 
 
@@ -994,6 +1183,11 @@ ALTER TABLE ONLY "public"."activity_interests"
 
 
 
+ALTER TABLE ONLY "public"."admin_audit_log"
+    ADD CONSTRAINT "admin_audit_log_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."affiliate_clicks"
     ADD CONSTRAINT "affiliate_clicks_pkey" PRIMARY KEY ("id");
 
@@ -1011,6 +1205,16 @@ ALTER TABLE ONLY "public"."affiliate_conversions"
 
 ALTER TABLE ONLY "public"."badges"
     ADD CONSTRAINT "badges_pkey" PRIMARY KEY ("key");
+
+
+
+ALTER TABLE ONLY "public"."chat_messages"
+    ADD CONSTRAINT "chat_messages_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."chat_sessions"
+    ADD CONSTRAINT "chat_sessions_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1069,6 +1273,31 @@ ALTER TABLE ONLY "public"."itinerary_items"
 
 
 
+ALTER TABLE ONLY "public"."order_items"
+    ADD CONSTRAINT "order_items_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."order_shipments"
+    ADD CONSTRAINT "order_shipments_order_id_producer_id_pk" PRIMARY KEY ("order_id", "producer_id");
+
+
+
+ALTER TABLE ONLY "public"."order_shipments"
+    ADD CONSTRAINT "order_shipments_token_hash_unique" UNIQUE ("token_hash");
+
+
+
+ALTER TABLE ONLY "public"."orders"
+    ADD CONSTRAINT "orders_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."orders"
+    ADD CONSTRAINT "orders_stripe_session_id_unique" UNIQUE ("stripe_session_id");
+
+
+
 ALTER TABLE ONLY "public"."places"
     ADD CONSTRAINT "places_pkey" PRIMARY KEY ("id");
 
@@ -1091,6 +1320,21 @@ ALTER TABLE ONLY "public"."points_ledger"
 
 ALTER TABLE ONLY "public"."preference_weights"
     ADD CONSTRAINT "preference_weights_user_id_interest_key_pk" PRIMARY KEY ("user_id", "interest_key");
+
+
+
+ALTER TABLE ONLY "public"."producers"
+    ADD CONSTRAINT "producers_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."products"
+    ADD CONSTRAINT "products_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."products"
+    ADD CONSTRAINT "products_slug_unique" UNIQUE ("slug");
 
 
 
@@ -1145,11 +1389,27 @@ CREATE INDEX "activity_interests_interest_key_idx" ON "public"."activity_interes
 
 
 
+CREATE INDEX "admin_audit_log_created_at_idx" ON "public"."admin_audit_log" USING "btree" ("created_at");
+
+
+
+CREATE INDEX "admin_audit_log_entity_idx" ON "public"."admin_audit_log" USING "btree" ("entity", "entity_id");
+
+
+
 CREATE INDEX "affiliate_clicks_created_at_idx" ON "public"."affiliate_clicks" USING "btree" ("created_at");
 
 
 
 CREATE INDEX "affiliate_conversions_subid_idx" ON "public"."affiliate_conversions" USING "btree" ("subid");
+
+
+
+CREATE INDEX "chat_messages_session_created_idx" ON "public"."chat_messages" USING "btree" ("session_id", "created_at");
+
+
+
+CREATE INDEX "chat_sessions_user_id_idx" ON "public"."chat_sessions" USING "btree" ("user_id");
 
 
 
@@ -1189,7 +1449,23 @@ CREATE UNIQUE INDEX "leaderboard_season_totals_season_user_idx" ON "public"."lea
 
 
 
+CREATE INDEX "order_items_order_id_idx" ON "public"."order_items" USING "btree" ("order_id");
+
+
+
+CREATE INDEX "orders_status_idx" ON "public"."orders" USING "btree" ("status");
+
+
+
+CREATE INDEX "orders_user_id_idx" ON "public"."orders" USING "btree" ("user_id");
+
+
+
 CREATE INDEX "points_ledger_season_user_idx" ON "public"."points_ledger" USING "btree" ("season", "user_id");
+
+
+
+CREATE INDEX "products_producer_id_idx" ON "public"."products" USING "btree" ("producer_id");
 
 
 
@@ -1202,6 +1478,14 @@ CREATE INDEX "user_events_unprocessed_idx" ON "public"."user_events" USING "btre
 
 
 CREATE INDEX "user_taste_embedding_idx" ON "public"."user_taste" USING "hnsw" ("embedding" "extensions"."vector_cosine_ops");
+
+
+
+CREATE OR REPLACE TRIGGER "admin_audit_log_immutable" BEFORE DELETE OR UPDATE ON "public"."admin_audit_log" FOR EACH ROW EXECUTE FUNCTION "public"."admin_audit_log_immutable"();
+
+
+
+CREATE OR REPLACE TRIGGER "admin_audit_log_no_truncate" BEFORE TRUNCATE ON "public"."admin_audit_log" FOR EACH STATEMENT EXECUTE FUNCTION "public"."prevent_mutation"();
 
 
 
@@ -1240,6 +1524,11 @@ ALTER TABLE ONLY "public"."activity_interests"
 
 
 
+ALTER TABLE ONLY "public"."admin_audit_log"
+    ADD CONSTRAINT "admin_audit_log_actor_id_profiles_id_fk" FOREIGN KEY ("actor_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
 ALTER TABLE ONLY "public"."affiliate_clicks"
     ADD CONSTRAINT "affiliate_clicks_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE SET NULL;
 
@@ -1252,6 +1541,21 @@ ALTER TABLE ONLY "public"."affiliate_clicks"
 
 ALTER TABLE ONLY "public"."affiliate_clicks"
     ADD CONSTRAINT "affiliate_clicks_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."chat_messages"
+    ADD CONSTRAINT "chat_messages_session_id_chat_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."chat_sessions"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."chat_sessions"
+    ADD CONSTRAINT "chat_sessions_itinerary_id_itineraries_id_fk" FOREIGN KEY ("itinerary_id") REFERENCES "public"."itineraries"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."chat_sessions"
+    ADD CONSTRAINT "chat_sessions_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -1340,6 +1644,36 @@ ALTER TABLE ONLY "public"."itinerary_items"
 
 
 
+ALTER TABLE ONLY "public"."order_items"
+    ADD CONSTRAINT "order_items_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."order_items"
+    ADD CONSTRAINT "order_items_producer_id_producers_id_fk" FOREIGN KEY ("producer_id") REFERENCES "public"."producers"("id") ON DELETE RESTRICT;
+
+
+
+ALTER TABLE ONLY "public"."order_items"
+    ADD CONSTRAINT "order_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE RESTRICT;
+
+
+
+ALTER TABLE ONLY "public"."order_shipments"
+    ADD CONSTRAINT "order_shipments_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."order_shipments"
+    ADD CONSTRAINT "order_shipments_producer_id_producers_id_fk" FOREIGN KEY ("producer_id") REFERENCES "public"."producers"("id") ON DELETE RESTRICT;
+
+
+
+ALTER TABLE ONLY "public"."orders"
+    ADD CONSTRAINT "orders_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
 ALTER TABLE ONLY "public"."points_ledger"
     ADD CONSTRAINT "points_ledger_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -1352,6 +1686,11 @@ ALTER TABLE ONLY "public"."preference_weights"
 
 ALTER TABLE ONLY "public"."preference_weights"
     ADD CONSTRAINT "preference_weights_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."products"
+    ADD CONSTRAINT "products_producer_id_producers_id_fk" FOREIGN KEY ("producer_id") REFERENCES "public"."producers"("id") ON DELETE RESTRICT;
 
 
 
@@ -1455,6 +1794,13 @@ CREATE POLICY "activity_interests_update_admin" ON "public"."activity_interests"
 
 
 
+ALTER TABLE "public"."admin_audit_log" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "admin_audit_log_select_admin" ON "public"."admin_audit_log" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
 ALTER TABLE "public"."affiliate_clicks" ENABLE ROW LEVEL SECURITY;
 
 
@@ -1485,6 +1831,34 @@ CREATE POLICY "badges_select_all" ON "public"."badges" FOR SELECT TO "authentica
 
 
 CREATE POLICY "badges_update_admin" ON "public"."badges" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."chat_messages" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "chat_messages_select_own" ON "public"."chat_messages" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."chat_sessions" "s"
+  WHERE (("s"."id" = "chat_messages"."session_id") AND ("s"."user_id" = ( SELECT "auth"."uid"() AS "uid"))))));
+
+
+
+ALTER TABLE "public"."chat_sessions" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "chat_sessions_delete_own" ON "public"."chat_sessions" FOR DELETE TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+CREATE POLICY "chat_sessions_insert_own" ON "public"."chat_sessions" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("itinerary_id" IS NULL) OR "public"."can_access_itinerary"("itinerary_id"))));
+
+
+
+CREATE POLICY "chat_sessions_select_own" ON "public"."chat_sessions" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+CREATE POLICY "chat_sessions_update_own" ON "public"."chat_sessions" FOR UPDATE TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -1620,6 +1994,31 @@ CREATE POLICY "itinerary_items_update" ON "public"."itinerary_items" FOR UPDATE 
 
 
 
+ALTER TABLE "public"."order_items" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "order_items_select_own" ON "public"."order_items" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."orders" "o"
+  WHERE (("o"."id" = "order_items"."order_id") AND ("o"."user_id" = ( SELECT "auth"."uid"() AS "uid"))))));
+
+
+
+ALTER TABLE "public"."order_shipments" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "order_shipments_select_own" ON "public"."order_shipments" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."orders" "o"
+  WHERE (("o"."id" = "order_shipments"."order_id") AND ("o"."user_id" = ( SELECT "auth"."uid"() AS "uid"))))));
+
+
+
+ALTER TABLE "public"."orders" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "orders_select_own" ON "public"."orders" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
 ALTER TABLE "public"."places" ENABLE ROW LEVEL SECURITY;
 
 
@@ -1662,6 +2061,48 @@ CREATE POLICY "preference_weights_select_own" ON "public"."preference_weights" F
 
 
 CREATE POLICY "preference_weights_update_own" ON "public"."preference_weights" FOR UPDATE TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+ALTER TABLE "public"."producers" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "producers_delete_admin" ON "public"."producers" FOR DELETE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "producers_insert_admin" ON "public"."producers" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "producers_select_admin" ON "public"."producers" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "producers_update_admin" ON "public"."producers" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."products" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "products_delete_admin" ON "public"."products" FOR DELETE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "products_insert_admin" ON "public"."products" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "products_select_active_anon" ON "public"."products" FOR SELECT TO "anon" USING ("is_active");
+
+
+
+CREATE POLICY "products_select_active_or_admin" ON "public"."products" FOR SELECT TO "authenticated" USING (("is_active" OR ( SELECT "public"."is_admin"() AS "is_admin")));
+
+
+
+CREATE POLICY "products_update_admin" ON "public"."products" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
 
 
 
@@ -1746,6 +2187,12 @@ REVOKE ALL ON FUNCTION "public"."accept_invite"("p_token" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."accept_invite"("p_token" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."accept_invite"("p_token" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."accept_invite"("p_token" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."admin_audit_log_immutable"() TO "anon";
+GRANT ALL ON FUNCTION "public"."admin_audit_log_immutable"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."admin_audit_log_immutable"() TO "service_role";
 
 
 
@@ -1870,6 +2317,17 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."activity_interests" TO "aut
 
 
 
+GRANT ALL ON TABLE "public"."admin_audit_log" TO "service_role";
+GRANT SELECT ON TABLE "public"."admin_audit_log" TO "authenticated";
+
+
+
+GRANT ALL ON SEQUENCE "public"."admin_audit_log_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."admin_audit_log_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."admin_audit_log_id_seq" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."affiliate_clicks" TO "service_role";
 GRANT SELECT ON TABLE "public"."affiliate_clicks" TO "authenticated";
 
@@ -1883,6 +2341,32 @@ GRANT SELECT ON TABLE "public"."affiliate_conversions" TO "authenticated";
 GRANT ALL ON TABLE "public"."badges" TO "service_role";
 GRANT SELECT ON TABLE "public"."badges" TO "anon";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."badges" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."chat_messages" TO "service_role";
+GRANT SELECT ON TABLE "public"."chat_messages" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."chat_sessions" TO "service_role";
+GRANT SELECT,DELETE ON TABLE "public"."chat_sessions" TO "authenticated";
+
+
+
+GRANT INSERT("id") ON TABLE "public"."chat_sessions" TO "authenticated";
+
+
+
+GRANT INSERT("user_id") ON TABLE "public"."chat_sessions" TO "authenticated";
+
+
+
+GRANT INSERT("itinerary_id") ON TABLE "public"."chat_sessions" TO "authenticated";
+
+
+
+GRANT INSERT("title"),UPDATE("title") ON TABLE "public"."chat_sessions" TO "authenticated";
 
 
 
@@ -2101,6 +2585,44 @@ GRANT ALL ON TABLE "public"."leaderboard_season_totals" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."order_items" TO "service_role";
+GRANT SELECT ON TABLE "public"."order_items" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."order_shipments" TO "service_role";
+
+
+
+GRANT SELECT("order_id") ON TABLE "public"."order_shipments" TO "authenticated";
+
+
+
+GRANT SELECT("producer_id") ON TABLE "public"."order_shipments" TO "authenticated";
+
+
+
+GRANT SELECT("carrier") ON TABLE "public"."order_shipments" TO "authenticated";
+
+
+
+GRANT SELECT("tracking_number") ON TABLE "public"."order_shipments" TO "authenticated";
+
+
+
+GRANT SELECT("shipped_at") ON TABLE "public"."order_shipments" TO "authenticated";
+
+
+
+GRANT SELECT("created_at") ON TABLE "public"."order_shipments" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."orders" TO "service_role";
+GRANT SELECT ON TABLE "public"."orders" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."places" TO "service_role";
 GRANT SELECT ON TABLE "public"."places" TO "anon";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."places" TO "authenticated";
@@ -2131,6 +2653,17 @@ GRANT INSERT("explicit"),UPDATE("explicit") ON TABLE "public"."preference_weight
 
 
 GRANT UPDATE("updated_at") ON TABLE "public"."preference_weights" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."producers" TO "service_role";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."products" TO "service_role";
+GRANT SELECT ON TABLE "public"."products" TO "anon";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."products" TO "authenticated";
 
 
 
