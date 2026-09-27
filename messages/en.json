@@ -7,13 +7,17 @@
     "home": "Home",
     "profile": "Profile",
     "login": "Sign in",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "activities": "Activities",
+    "itineraries": "Itineraries"
   },
   "Home": {
     "title": "Your trip to Sicily, made to measure",
     "subtitle": "Itineraries built on your preferences and products shipped straight from the producers.",
     "cta": "Get started",
-    "greeting": "Hi, {name}"
+    "greeting": "Hi, {name}",
+    "exploreActivities": "Explore activities",
+    "exploreItineraries": "Ready-made itineraries"
   },
   "Login": {
     "title": "Sign in",
@@ -32,5 +36,31 @@
     "displayName": "Name",
     "role": "Role",
     "memberSince": "Member since"
+  },
+  "Catalog": {
+    "activitiesTitle": "Things to do in Sicily",
+    "activitiesDescription": "Experiences, visits and excursions across Sicily, with duration, indicative price and interests.",
+    "itinerariesTitle": "Sicily itineraries",
+    "itinerariesDescription": "Day-by-day itineraries to use as a starting point for your trip.",
+    "priceFrom": "from {price}",
+    "free": "Free",
+    "duration": "Duration",
+    "price": "Price",
+    "rating": "Rating",
+    "ratingValue": "{rating} out of 5",
+    "season": "Season",
+    "allYear": "All year",
+    "requiresCar": "Car needed",
+    "accessible": "Accessible for reduced mobility",
+    "place": "Place",
+    "province": "Province of {province}",
+    "interests": "Interests",
+    "activitiesIn": "Things to do in {place}",
+    "noActivities": "No activities available yet.",
+    "noItineraries": "No itineraries available yet.",
+    "day": "Day {n}",
+    "days": "{count, plural, one {# day} other {# days}}",
+    "placeDescription": "Things to do in {place}: activities, visits and experiences.",
+    "itineraryDescription": "A {days} itinerary in Sicily, day by day."
   }
 }

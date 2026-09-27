@@ -7,13 +7,17 @@
     "home": "Home",
     "profile": "Profilo",
     "login": "Accedi",
-    "logout": "Esci"
+    "logout": "Esci",
+    "activities": "Attività",
+    "itineraries": "Itinerari"
   },
   "Home": {
     "title": "Il tuo viaggio in Sicilia, su misura",
     "subtitle": "Itinerari costruiti sulle tue preferenze e prodotti spediti direttamente dai produttori.",
     "cta": "Inizia ora",
-    "greeting": "Ciao, {name}"
+    "greeting": "Ciao, {name}",
+    "exploreActivities": "Esplora le attività",
+    "exploreItineraries": "Itinerari pronti"
   },
   "Login": {
     "title": "Accedi",
@@ -32,5 +36,31 @@
     "displayName": "Nome",
     "role": "Ruolo",
     "memberSince": "Iscritto dal"
+  },
+  "Catalog": {
+    "activitiesTitle": "Attività in Sicilia",
+    "activitiesDescription": "Esperienze, visite ed escursioni in tutta la Sicilia, con durata, prezzo indicativo e interessi.",
+    "itinerariesTitle": "Itinerari in Sicilia",
+    "itinerariesDescription": "Itinerari giorno per giorno da usare come punto di partenza per il tuo viaggio.",
+    "priceFrom": "da {price}",
+    "free": "Gratis",
+    "duration": "Durata",
+    "price": "Prezzo",
+    "rating": "Valutazione",
+    "ratingValue": "{rating} su 5",
+    "season": "Stagione",
+    "allYear": "Tutto l'anno",
+    "requiresCar": "Serve l'auto",
+    "accessible": "Accessibile a mobilità ridotta",
+    "place": "Luogo",
+    "province": "Provincia di {province}",
+    "interests": "Interessi",
+    "activitiesIn": "Attività a {place}",
+    "noActivities": "Nessuna attività disponibile per ora.",
+    "noItineraries": "Nessun itinerario disponibile per ora.",
+    "day": "Giorno {n}",
+    "days": "{count, plural, one {# giorno} other {# giorni}}",
+    "placeDescription": "Cosa fare a {place}: attività, visite ed esperienze.",
+    "itineraryDescription": "Itinerario di {days} in Sicilia, giorno per giorno."
   }
 }

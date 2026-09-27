@@ -11,7 +11,7 @@ La specifica completa è in [docs/spec.md](docs/spec.md): leggerla prima di iniz
 - `npm run dev` — app su http://localhost:3000
 - `npm run lint`, `npm run typecheck`, `npm test` (Vitest unit), `npm run test:int` (Vitest su Postgres locale, file `*.int.test.ts`), `npx playwright test` (e2e)
 - `npm run db:generate` — migrazione dallo schema Drizzle; `-- --custom --name=x` per SQL a mano (RLS, funzioni, trigger)
-- `npm run db:reset` — riapplica tutte le migrazioni da zero
+- `npm run db:reset` — riapplica tutte le migrazioni da zero e carica `supabase/seed.sql`
 - `npm run db:test` — test RLS in pgTAP (`supabase/tests/*.test.sql`); gli helper (`tests.create_user`, `tests.authenticate_as`, `tests.as_anon`) si includono con `\ir helpers/setup.psql` dopo `begin;`
 - `npm run db:snapshot` — aggiorna `supabase/schema.sql` dopo ogni migrazione
 - `npm run db:drift` — lo stesso controllo della CI
@@ -23,6 +23,7 @@ La specifica completa è in [docs/spec.md](docs/spec.md): leggerla prima di iniz
 - Ogni mutazione: validazione Zod → `requireUser`/`requireAdmin` → scrittura. La RLS è la seconda difesa.
 - Accesso ai dati solo con Drizzle, tramite due client:
   - `dbAsUser(user, (tx) => ...)` da `@/server/db/user`: transazione con `set local role authenticated` e `request.jwt.claims` dell'utente, quindi la RLS si applica. È il default. `user` deve arrivare da `getUser`/`requireUser`, mai da input del client.
+  - `dbPublic((tx) => ...)` da `@/server/db/public`: ruolo `anon`, per le pagine pubbliche e i visitatori senza account (vede solo ciò che la RLS concede agli anonimi).
   - `dbAdmin` da `@/server/db/admin`: ruolo `postgres`, bypassa la RLS. Consentito solo in `src/app/api/cron/**`, `src/app/api/stripe/**`, `src/app/[locale]/(admin)/**` e nei file `src/server/**/*.admin.ts` (funzioni server riservate), più i test `*.int.test.ts`. Lo impone `no-restricted-imports` in `eslint.config.mjs`: non disattivare la regola, spostare il codice in un file `.admin.ts`.
   - `src/server/db/connection.ts`, `postgres` e `drizzle-orm/postgres-js` non si importano fuori da `src/server/db`.
   - I file `*.admin.ts` non si importano da `(app)`, `(public)`, `components`, `lib` né da file server non `.admin.ts` (ESLint). Un'azione utente che tocca dati riservati usa una funzione SQL `SECURITY DEFINER` (con `set search_path = public, pg_temp`) chiamata tramite `dbAsUser`, non un modulo `.admin.ts`.
@@ -38,6 +39,11 @@ La specifica completa è in [docs/spec.md](docs/spec.md): leggerla prima di iniz
 - Testi dell'interfaccia solo in `messages/it.json` e `messages/en.json`.
 - Redirect verso percorsi ricevuti in input solo tramite `safeNextPath`.
 - Una milestone = un branch `milestone/NN-nome`; chiusa solo con i criteri di docs/spec.md verificati e la CI verde.
+
+## Seed
+
+- `supabase/seed.sql` contiene **solo dati demo** per sviluppo locale, CI ed e2e: slug con prefisso `demo-`, descrizioni con `[DEMO]`. Non caricarlo mai in produzione: `supabase db push` non esegue il seed, e non si usa `--include-seed` verso il progetto di produzione. Il catalogo reale lo inserisce Ludovico dall'admin.
+- I test pgTAP e di integrazione non devono dipendere dal seed; gli e2e possono usarlo.
 
 ## Resoconti
 

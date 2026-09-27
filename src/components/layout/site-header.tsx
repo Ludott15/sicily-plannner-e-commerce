@@ -10,9 +10,17 @@ export async function SiteHeader() {
   return (
     <header className="border-b">
       <nav className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
-        <Link href="/" className="font-semibold">
-          Sicilia Planner
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/" className="font-semibold">
+            Sicilia Planner
+          </Link>
+          <Link href="/attivita" className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline">
+            {t("activities")}
+          </Link>
+          <Link href="/itinerari" className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline">
+            {t("itineraries")}
+          </Link>
+        </div>
         <div className="flex items-center gap-2">
           {user ? (
             <>

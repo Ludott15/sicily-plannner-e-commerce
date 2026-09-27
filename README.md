@@ -15,6 +15,8 @@ cp .env.example .env.local  # e compilare con i valori di `npx supabase status`
 npm run dev
 ```
 
+`npm run db:start` e `npm run db:reset` caricano `supabase/seed.sql`: sono **solo dati demo** (slug `demo-`), da non caricare mai in produzione.
+
 - App: http://localhost:3000
 - Supabase Studio: http://127.0.0.1:55323
 - Email di test (magic link): http://127.0.0.1:55324
