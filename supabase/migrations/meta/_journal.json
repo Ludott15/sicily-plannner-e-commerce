@@ -43,6 +43,20 @@
       "when": 1790540238226,
       "tag": "20260927201718_seed_interests",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790541268520,
+      "tag": "20260927203428_itineraries_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790541272789,
+      "tag": "20260927203432_itineraries_groups_rls",
+      "breakpoints": true
     }
   ]
 }

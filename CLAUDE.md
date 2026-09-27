@@ -30,6 +30,7 @@ La specifica completa è in [docs/spec.md](docs/spec.md): leggerla prima di iniz
 - Il client Supabase serve solo per auth e realtime: niente `supabase.from()` o `supabase.rpc()` (bloccati da ESLint).
 - Sul server l'utente si verifica con `supabase.auth.getUser()` (tramite `getUser`/`requireUser`) o `getClaims()`; mai `getSession()`, che legge il cookie senza verificarlo (bloccato da ESLint).
 - Ogni tabella nuova: RLS attiva nella stessa migrazione, prima `revoke all ... from anon, authenticated` e poi grant minimi per colonna. Test pgTAP con almeno anonimo, proprietario, altro utente e admin; per le tabelle di gruppo anche membro ed ex membro. I test non devono dipendere dai dati già presenti nel database locale. Le policy devono funzionare sia per il client Supabase sia per `dbAsUser` (si basano su `auth.uid()`).
+- Funzioni SQL con errori di dominio: `raise exception '<codice_snake_case>' using errcode = 'P0001'` (es. `invite_expired`); mancata autenticazione con `42501`. L'app mappa il messaggio, i test lo verificano con `throws_ok(..., 'P0001', '<codice>')`.
 - Nelle policy RLS scrivere `(select auth.uid())` e `(select public.is_admin())`, mai `auth.uid()` diretto: con la subquery Postgres la valuta una volta per query invece che per ogni riga.
 - Migrazioni in `supabase/migrations/` (generate da drizzle-kit con prefisso timestamp). Non modificare migrazioni già committate su `main`.
 - Testi dell'interfaccia solo in `messages/it.json` e `messages/en.json`.
