@@ -8,16 +8,16 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
 
   const user = await requireUser();
   const [profile, t, format] = await Promise.all([
-    getProfile(user.id),
+    getProfile(user),
     getTranslations("Profile"),
     getFormatter(),
   ]);
 
   const rows = [
     [t("email"), user.email],
-    [t("displayName"), profile?.display_name],
+    [t("displayName"), profile?.displayName],
     [t("role"), profile?.role],
-    [t("memberSince"), profile && format.dateTime(new Date(profile.created_at), { dateStyle: "long" })],
+    [t("memberSince"), profile && format.dateTime(profile.createdAt, { dateStyle: "long" })],
   ] as const;
 
   return (

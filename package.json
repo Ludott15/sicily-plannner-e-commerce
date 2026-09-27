@@ -8,14 +8,15 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run --project unit --passWithNoTests",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:generate": "drizzle-kit generate",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
     "db:snapshot": "supabase db dump --local --schema public -f supabase/schema.sql",
-    "db:drift": "bash scripts/check-schema-drift.sh"
+    "db:drift": "bash scripts/check-schema-drift.sh",
+    "test:int": "vitest run --project integration"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
