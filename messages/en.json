@@ -1,15 +1,19 @@
 {
   "Metadata": {
-    "title": "Sicily Planner",
-    "description": "Plan your trip to Sicily and bring home flavours from local producers."
+    "title": "Isula",
+    "description": "Sicily as locals know it, made for you: itineraries built on your preferences and products shipped by the producers.",
+    "tagline": "Sicily as locals know it, made for you."
   },
   "Nav": {
-    "home": "Home",
+    "home": "Isula, home page",
     "profile": "Profile",
     "login": "Sign in",
     "logout": "Sign out",
     "activities": "Activities",
-    "itineraries": "Itineraries"
+    "itineraries": "Ready-made itineraries",
+    "main": "Main",
+    "footer": "Footer",
+    "travel": "Travel"
   },
   "Home": {
     "title": "Your trip to Sicily, made to measure",
@@ -62,5 +66,47 @@
     "days": "{count, plural, one {# day} other {# days}}",
     "placeDescription": "Things to do in {place}: activities, visits and experiences.",
     "itineraryDescription": "A {days} itinerary in Sicily, day by day."
+  },
+  "Design": {
+    "forYou": "For you",
+    "forGroup": "For the group",
+    "save": "Save",
+    "saved": "Saved",
+    "add": "Add",
+    "localTipAria": "Local tip",
+    "localTipLabel": "From someone who lives here",
+    "localTipLabelPlace": "From someone who lives here · {place}",
+    "editorial": "Isula editors",
+    "verifiedAt": "Checked in {date}",
+    "relationVerifiedAt": "{relation} · checked in {date}",
+    "offerFrom": "from",
+    "offerCta": "See availability on {partner}",
+    "offerDisclose": "You book on the {partner} website. We earn a commission; your price doesn't change.",
+    "offerRating": "{rating} out of 5 · {count, plural, one {# review} other {# reviews}}",
+    "freeCancellation": "Free cancellation",
+    "priceUpdated": "updated {when}",
+    "addToTrip": "Add to trip",
+    "voteUp": "Like, {count, plural, one {# vote} other {# votes}}",
+    "voteDown": "Rather do something else, {count, plural, one {# vote} other {# votes}}",
+    "voteNote": "{against} of {members} would rather do something else.",
+    "voteAlternatives": "{count, plural, one {Here is # nearby alternative.} other {Here are # nearby alternatives.}}",
+    "bookingsTitle": "To book",
+    "bookingsCount": "{todo} to book · {done} done",
+    "markBooked": "Mark as booked: {name}",
+    "onPartner": "On {partner}",
+    "bookingsDisclose": "You book on the partner websites listed. We earn a commission; your price doesn't change.",
+    "days": "Days",
+    "dayShort": "D{n} · {name}",
+    "dayLong": "Day {n} · {name}",
+    "tabNav": "Main",
+    "tabTrips": "Trips",
+    "tabActivities": "Activities",
+    "tabShop": "Shop",
+    "tabProfile": "Profile",
+    "pointsAria": "{points} points",
+    "scaleValue": "{n} out of 5",
+    "rewardedReview": "Rewarded review",
+    "stampLocked": "Stamp to unlock",
+    "editorialMonogram": "I"
   }
 }

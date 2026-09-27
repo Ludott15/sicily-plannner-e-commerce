@@ -1,6 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { buttonVariants } from "@/components/ui/button";
-import { Link } from "@/lib/i18n/navigation";
+import { ButtonLink } from "@/components/design";
 import { getProfile, getUser } from "@/server/auth";
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
@@ -11,26 +10,23 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const profile = user ? await getProfile(user) : null;
 
   return (
-    <section className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-6 px-4 py-16">
-      {user && (
-        <p className="text-muted-foreground">
-          {t("greeting", { name: profile?.displayName ?? user.email ?? "" })}
-        </p>
-      )}
-      <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">{t("title")}</h1>
-      <p className="text-lg text-pretty text-muted-foreground">{t("subtitle")}</p>
+    <section className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col justify-center gap-6 px-4 py-12 md:px-16 md:py-24">
+      {user && <p className="text-body text-lava-muted">{t("greeting", { name: profile?.displayName ?? user.email ?? "" })}</p>}
+      <h1 className="is-display max-w-3xl text-display-xl">{t("title")}</h1>
+      <p className="max-w-2xl text-body-l text-pretty text-lava-muted">{t("subtitle")}</p>
+      {/* Un solo bottone principale per vista (Button/README.md). */}
       <div className="flex flex-wrap gap-3">
         {!user && (
-          <Link href="/login" className={buttonVariants({ size: "lg" })}>
+          <ButtonLink href="/login" variant="primary">
             {t("cta")}
-          </Link>
+          </ButtonLink>
         )}
-        <Link href="/attivita" className={buttonVariants({ size: "lg", variant: "outline" })}>
+        <ButtonLink href="/attivita" variant="secondary">
           {t("exploreActivities")}
-        </Link>
-        <Link href="/itinerari" className={buttonVariants({ size: "lg", variant: "outline" })}>
+        </ButtonLink>
+        <ButtonLink href="/itinerari" variant="secondary">
           {t("exploreItineraries")}
-        </Link>
+        </ButtonLink>
       </div>
     </section>
   );

@@ -1,46 +1,55 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/design";
 import { Link } from "@/lib/i18n/navigation";
 import { getUser } from "@/server/auth";
 import { signOut } from "@/server/auth/actions";
 
+// Intestazione (mockup Home e Attività): marchio "Isula" in Fraunces 600 lava, navigazione,
+// "Accedi" secondario. Il bottone principale della vista sta nella pagina, non qui.
+// Le voci "I miei viaggi" e "Shop" arrivano con le rispettive milestone.
 export async function SiteHeader() {
   const [user, locale, t] = await Promise.all([getUser(), getLocale(), getTranslations("Nav")]);
 
   return (
-    <header className="border-b">
-      <nav className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="font-semibold">
-            Sicilia Planner
+    <header className="border-b border-divider bg-calce">
+      <div className="mx-auto flex h-15 max-w-[1200px] items-center justify-between gap-4 px-4 md:h-18 md:px-16">
+        <div className="flex items-center gap-12">
+          <Link
+            href="/"
+            aria-label={t("home")}
+            className="is-display text-[26px] leading-none tracking-[-0.02em] text-lava no-underline md:text-[30px]"
+          >
+            Isula
           </Link>
-          <Link href="/attivita" className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline">
-            {t("activities")}
-          </Link>
-          <Link href="/itinerari" className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline">
-            {t("itineraries")}
-          </Link>
+          <nav aria-label={t("main")} className="hidden gap-8 text-[15px] font-medium md:flex">
+            <Link href="/attivita" className="text-lava no-underline hover:underline hover:underline-offset-[6px]">
+              {t("activities")}
+            </Link>
+            <Link href="/itinerari" className="text-lava no-underline hover:underline hover:underline-offset-[6px]">
+              {t("itineraries")}
+            </Link>
+          </nav>
         </div>
         <div className="flex items-center gap-2">
           {user ? (
             <>
-              <Link href="/profilo" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+              <ButtonLink href="/profilo" variant="ghost" size="sm">
                 {t("profile")}
-              </Link>
+              </ButtonLink>
               <form action={signOut}>
                 <input type="hidden" name="locale" value={locale} />
-                <Button type="submit" variant="outline" size="sm">
+                <Button type="submit" variant="secondary" size="sm">
                   {t("logout")}
                 </Button>
               </form>
             </>
           ) : (
-            <Link href="/login" className={buttonVariants({ size: "sm" })}>
+            <ButtonLink href="/login" variant="secondary" size="sm">
               {t("login")}
-            </Link>
+            </ButtonLink>
           )}
         </div>
-      </nav>
+      </div>
     </header>
   );
 }
