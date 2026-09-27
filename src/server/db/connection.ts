@@ -7,8 +7,11 @@ import * as schema from "./schema";
 // il codice applicativo usa dbAsUser (RLS applicata) o dbAdmin (percorsi riservati).
 const globalForDb = globalThis as unknown as { pg?: ReturnType<typeof postgres> };
 
-const client =
-  globalForDb.pg ?? postgres(process.env.DATABASE_URL!, { prepare: false, max: 5 });
+// Il pooler Supabase in modalità transaction (porta 6543) non supporta i prepared
+// statement: disattivati di default, riattivabili solo con connessione diretta o session mode.
+const prepare = process.env.DATABASE_PREPARED_STATEMENTS === "true";
+
+const client = globalForDb.pg ?? postgres(process.env.DATABASE_URL!, { prepare, max: 5 });
 if (process.env.NODE_ENV !== "production") globalForDb.pg = client;
 
 export const connection = drizzle(client, { schema, casing: "snake_case" });
