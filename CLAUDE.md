@@ -53,6 +53,7 @@ Design system, manuale del brand ("Isula", nome di lavoro), schemi e mockup: [do
 - Nelle policy RLS scrivere `(select auth.uid())` e `(select public.is_admin())`, mai `auth.uid()` diretto: con la subquery Postgres la valuta una volta per query invece che per ogni riga.
 - Migrazioni in `supabase/migrations/` (generate da drizzle-kit con prefisso timestamp). Non modificare migrazioni già committate su `main`.
 - Testi dell'interfaccia solo in `messages/it.json` e `messages/en.json`.
+- Form con azione server che può restituire un errore: l'azione parte da `onSubmit` con `startTransition` (vedi `src/components/admin/use-admin-form.ts`), non da `<form action>`, perché React 19 azzera i campi dopo l'azione e l'utente perderebbe quello che ha scritto.
 - Redirect verso percorsi ricevuti in input solo tramite `safeNextPath`.
 - Una milestone = un branch `milestone/NN-nome`; chiusa solo con i criteri di docs/spec.md verificati e la CI verde.
 

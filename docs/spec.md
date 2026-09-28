@@ -530,7 +530,7 @@ Tredici milestone in sequenza (le dodici originali più il design system tra la 
 - **M12 — Rifinitura.** PWA, performance, pagine legali, cookie banner, analytics, pagine di errore; le voci di M12 in `docs/design/BACKLOG.md` (Fraunces come istanza fissa, `text-wrap: balance`).
   - Fatto quando: Lighthouse mobile sopra 90 su home, attività e prodotto; nessun cookie non tecnico prima del consenso.
 
-**Ordine di lavoro dopo la milestone 2** (deciso il 28 settembre 2026): 1) DS — Design system; 2) modifica alla M1, accesso ospite e codice email; 3) schema 2e; 4) M3 — Catalogo con i componenti del design system; poi M4 e successive nell'ordine dell'elenco. La 3a (regola dei tag, seed demo, prime pagine pubbliche) è già in `main`: la M3 rifà quelle pagine con i componenti del design system.
+**Ordine di lavoro dopo la milestone 2** (deciso il 28 settembre 2026, poi aggiornato lo stesso giorno): 1) DS — Design system (fatta); 2) M3 — Catalogo con i componenti del design system; 3) modifica alla M1, accesso ospite e codice email; 4) schema 2e; poi M4 e successive nell'ordine dell'elenco. La 3a (regola dei tag, seed demo, prime pagine pubbliche) è già in `main`: la M3 rifà quelle pagine con i componenti del design system.
 
 Il lavoro di design e contenuti rimandato (schermate da progettare, voci del design system, contenuti a carico di Ludovico, decisioni aperte) è tracciato in `docs/design/BACKLOG.md`.
 
