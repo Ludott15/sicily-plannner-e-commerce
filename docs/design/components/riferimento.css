@@ -99,7 +99,8 @@
 /* Tappa di itinerario, con la linea del percorso: una sola linea sulla lista */
 .is-route { position: relative; list-style: none; margin: 0; padding: 0; }
 .is-route { --stop-time-w: 52px; }
-.is-route::before { content: ""; position: absolute; top: 26px; bottom: 26px; left: calc(var(--stop-time-w) + var(--space-3) + 11px); width: 2px; background-image: repeating-linear-gradient(to bottom, var(--lava-muted) 0 2px, transparent 2px 8px); }
+/* Dal centro del primo punto al centro dell'ultimo: Route misura --route-start e --route-end; senza JavaScript restano i 26px. */
+.is-route::before { content: ""; position: absolute; top: var(--route-start, 26px); bottom: var(--route-end, 26px); left: calc(var(--stop-time-w) + var(--space-3) + 11px); width: 2px; background-image: repeating-linear-gradient(to bottom, var(--lava-muted) 0 2px, transparent 2px 8px); }
 .is-route--draw::before { animation: is-route var(--dur-route) var(--ease-in-out) both; }
 @keyframes is-route { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0); } }
 .is-stop { position: relative; display: grid; grid-template-columns: var(--stop-time-w, 52px) 24px 1fr; column-gap: var(--space-3); }
@@ -122,9 +123,9 @@
 .is-scale__pip[aria-checked="true"] { background: var(--lava); border-color: var(--lava); }
 
 /* Punti e timbri */
-.is-points { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px 6px 8px; border-radius: var(--radius-pill); background: var(--zagara-tint); color: var(--on-zagara); border: 1.5px solid var(--zagara); font-family: var(--font-display); font-weight: 600; font-size: 17px; line-height: 1; }
-.is-points--earned { background: var(--zagara); }
-.is-points__coin { width: 18px; height: 18px; border-radius: var(--radius-pill); border: 2px dashed var(--on-zagara); }
+.is-points { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px 6px 8px; border-radius: var(--radius-pill); background: var(--zagara-tint); color: var(--lava); border: 1.5px solid var(--zagara); font-family: var(--font-display); font-weight: 600; font-size: 17px; line-height: 1; }
+.is-points--earned { background: var(--zagara); color: var(--on-zagara); }
+.is-points__coin { width: 18px; height: 18px; border-radius: var(--radius-pill); border: 2px dashed currentColor; }
 .is-stamp { width: 120px; height: 120px; border-radius: var(--radius-pill); background: var(--zagara); color: var(--on-zagara); display: grid; place-items: center; text-align: center; position: relative; transform: rotate(-4deg); }
 .is-stamp::before { content: ""; position: absolute; inset: 7px; border-radius: var(--radius-pill); border: 1.5px dashed var(--on-zagara); }
 .is-stamp__name { font-size: 12px; line-height: 15px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; max-width: 96px; hyphens: none; }

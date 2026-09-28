@@ -27,39 +27,41 @@ insert into public.places (slug, name, province, lat, lng, description) values
   ('demo-piazza-armerina', 'Piazza Armerina', 'EN', 37.3663, 14.3336, '[DEMO] Villa Romana del Casale.');
 
 -- Attività: create inattive, poi taggate, poi attivate (regola activity_without_tags).
+-- price_from_eur è il prezzo pagato in loco (ingresso, biglietto), un metadato: null per tour ed
+-- esperienze, che sono offerte dei partner (schema 2e), 0 per quelle libere.
 insert into public.activities
   (slug, place_id, title, description, duration_min, price_from_eur, requires_car, accessible, season_months, partner, rating, is_active)
 select v.slug, p.id, v.title, v.description, v.duration_min, v.price, v.requires_car, v.accessible, v.months, 'internal', v.rating, false
 from (values
-  ('demo-mercato-ballaro', 'demo-palermo', 'Street food al mercato di Ballarò', '[DEMO] Tour guidato tra panelle, arancine e sfincione.', 150, 35.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}'::smallint[], 4.8),
+  ('demo-mercato-ballaro', 'demo-palermo', 'Street food al mercato di Ballarò', '[DEMO] Tour guidato tra panelle, arancine e sfincione.', 150, null, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}'::smallint[], 4.8),
   ('demo-palazzo-normanni', 'demo-palermo', 'Palazzo dei Normanni e Cappella Palatina', '[DEMO] Visita con mosaici bizantini.', 120, 19.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.7),
   ('demo-teatro-massimo', 'demo-palermo', 'Visita al Teatro Massimo', '[DEMO] Visita guidata al teatro lirico.', 45, 12.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.6),
-  ('demo-palermo-notte', 'demo-palermo', 'Aperitivo e vita notturna alla Vucciria', '[DEMO] Serata tra i locali del centro storico.', 180, 25.00, false, false, '{4,5,6,7,8,9,10}', 4.3),
+  ('demo-palermo-notte', 'demo-palermo', 'Aperitivo e vita notturna alla Vucciria', '[DEMO] Serata tra i locali del centro storico.', 180, null, false, false, '{4,5,6,7,8,9,10}', 4.3),
   ('demo-duomo-monreale', 'demo-monreale', 'Duomo e chiostro di Monreale', '[DEMO] Mosaici dorati e chiostro benedettino.', 90, 10.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.8),
   ('demo-rocca-cefalu', 'demo-cefalu', 'Salita alla Rocca di Cefalù', '[DEMO] Sentiero panoramico al Tempio di Diana.', 150, 5.00, false, false, '{3,4,5,6,9,10,11}', 4.6),
   ('demo-spiaggia-cefalu', 'demo-cefalu', 'Mare e borgo di Cefalù', '[DEMO] Giornata tra spiaggia e vicoli.', 300, 0.00, false, true, '{6,7,8,9}', 4.5),
-  ('demo-catania-barocca', 'demo-catania', 'Catania barocca a piedi', '[DEMO] Piazza Duomo, via Crociferi e pescheria.', 150, 20.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.6),
-  ('demo-pescheria-catania', 'demo-catania', 'Colazione alla pescheria di Catania', '[DEMO] Mercato del pesce e granita con brioche.', 90, 18.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.7),
-  ('demo-crateri-etna', 'demo-etna-sud', 'Escursione ai crateri sommitali dell''Etna', '[DEMO] Con guida vulcanologica.', 360, 85.00, true, false, '{5,6,7,8,9,10}', 4.9),
-  ('demo-grotta-etna', 'demo-etna-sud', 'Grotte di scorrimento lavico', '[DEMO] Esplorazione con caschetto e torcia.', 180, 45.00, true, false, '{4,5,6,7,8,9,10,11}', 4.6),
-  ('demo-cantina-etna', 'demo-etna-sud', 'Degustazione in una cantina dell''Etna', '[DEMO] Vini di vulcano e prodotti locali.', 120, 40.00, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.8),
-  ('demo-pistacchio-bronte', 'demo-bronte', 'Pistacchieti e laboratorio a Bronte', '[DEMO] Raccolta e assaggio del pistacchio verde.', 180, 30.00, true, false, '{8,9,10}', 4.7),
+  ('demo-catania-barocca', 'demo-catania', 'Catania barocca a piedi', '[DEMO] Piazza Duomo, via Crociferi e pescheria.', 150, 0.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.6),
+  ('demo-pescheria-catania', 'demo-catania', 'Colazione alla pescheria di Catania', '[DEMO] Mercato del pesce e granita con brioche.', 90, null, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.7),
+  ('demo-crateri-etna', 'demo-etna-sud', 'Escursione ai crateri sommitali dell''Etna', '[DEMO] Con guida vulcanologica.', 360, null, true, false, '{5,6,7,8,9,10}', 4.9),
+  ('demo-grotta-etna', 'demo-etna-sud', 'Grotte di scorrimento lavico', '[DEMO] Esplorazione con caschetto e torcia.', 180, null, true, false, '{4,5,6,7,8,9,10,11}', 4.6),
+  ('demo-cantina-etna', 'demo-etna-sud', 'Degustazione in una cantina dell''Etna', '[DEMO] Vini di vulcano e prodotti locali.', 120, null, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.8),
+  ('demo-pistacchio-bronte', 'demo-bronte', 'Pistacchieti e laboratorio a Bronte', '[DEMO] Raccolta e assaggio del pistacchio verde.', 180, null, true, false, '{8,9,10}', 4.7),
   ('demo-teatro-taormina', 'demo-taormina', 'Teatro Antico di Taormina', '[DEMO] Teatro greco-romano con vista sull''Etna.', 90, 14.00, false, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.8),
-  ('demo-isola-bella', 'demo-taormina', 'Isola Bella in kayak', '[DEMO] Grotte marine e snorkeling.', 180, 45.00, false, false, '{5,6,7,8,9,10}', 4.7),
-  ('demo-ortigia-tour', 'demo-ortigia', 'Ortigia a piedi', '[DEMO] Duomo, Fonte Aretusa e mercato.', 150, 18.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.7),
+  ('demo-isola-bella', 'demo-taormina', 'Isola Bella in kayak', '[DEMO] Grotte marine e snorkeling.', 180, null, false, false, '{5,6,7,8,9,10}', 4.7),
+  ('demo-ortigia-tour', 'demo-ortigia', 'Ortigia a piedi', '[DEMO] Duomo, Fonte Aretusa e mercato.', 150, 0.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.7),
   ('demo-neapolis', 'demo-ortigia', 'Parco archeologico della Neapolis', '[DEMO] Teatro greco e Orecchio di Dionisio.', 150, 18.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.6),
-  ('demo-barca-ortigia', 'demo-ortigia', 'Giro in barca intorno a Ortigia', '[DEMO] Grotte e bagno in mare.', 90, 25.00, false, false, '{5,6,7,8,9,10}', 4.5),
+  ('demo-barca-ortigia', 'demo-ortigia', 'Giro in barca intorno a Ortigia', '[DEMO] Grotte e bagno in mare.', 90, null, false, false, '{5,6,7,8,9,10}', 4.5),
   ('demo-noto-barocco', 'demo-noto', 'Noto barocca e granita', '[DEMO] Cattedrale e palazzi, pausa con granita.', 120, 0.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.7),
   ('demo-vendicari', 'demo-noto', 'Riserva di Vendicari', '[DEMO] Sentieri tra fenicotteri e calette.', 240, 0.00, true, false, '{4,5,6,7,8,9,10}', 4.8),
-  ('demo-ibla-cioccolato', 'demo-ragusa-ibla', 'Ibla e cioccolato di Modica', '[DEMO] Passeggiata e laboratorio di cioccolato.', 180, 28.00, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.6),
-  ('demo-valle-templi', 'demo-agrigento', 'Valle dei Templi al tramonto', '[DEMO] Visita guidata tra i templi dorici.', 180, 25.00, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.9),
+  ('demo-ibla-cioccolato', 'demo-ragusa-ibla', 'Ibla e cioccolato di Modica', '[DEMO] Passeggiata e laboratorio di cioccolato.', 180, null, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.6),
+  ('demo-valle-templi', 'demo-agrigento', 'Valle dei Templi al tramonto', '[DEMO] Visita guidata tra i templi dorici.', 180, null, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.9),
   ('demo-scala-turchi', 'demo-scala-dei-turchi', 'Scala dei Turchi', '[DEMO] Scogliera bianca e bagno al tramonto.', 150, 0.00, true, false, '{5,6,7,8,9,10}', 4.6),
   ('demo-saline-trapani', 'demo-trapani', 'Saline e mulini di Trapani', '[DEMO] Riserva delle saline al tramonto.', 120, 10.00, true, true, '{4,5,6,7,8,9,10}', 4.6),
-  ('demo-egadi-barca', 'demo-trapani', 'Favignana e Levanzo in barca', '[DEMO] Giornata in barca con pranzo a bordo.', 480, 90.00, false, false, '{5,6,7,8,9}', 4.8),
-  ('demo-cous-cous', 'demo-trapani', 'Corso di cous cous trapanese', '[DEMO] Cucina con una famiglia locale.', 180, 55.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.9),
-  ('demo-erice-borgo', 'demo-erice', 'Erice e dolci di badia', '[DEMO] Borgo medievale e pasticceria storica.', 150, 9.00, true, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.7),
+  ('demo-egadi-barca', 'demo-trapani', 'Favignana e Levanzo in barca', '[DEMO] Giornata in barca con pranzo a bordo.', 480, null, false, false, '{5,6,7,8,9}', 4.8),
+  ('demo-cous-cous', 'demo-trapani', 'Corso di cous cous trapanese', '[DEMO] Cucina con una famiglia locale.', 180, null, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.9),
+  ('demo-erice-borgo', 'demo-erice', 'Erice e dolci di badia', '[DEMO] Borgo medievale e pasticceria storica.', 150, null, true, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.7),
   ('demo-zingaro', 'demo-san-vito', 'Riserva dello Zingaro', '[DEMO] Sentiero costiero tra calette.', 300, 5.00, true, false, '{3,4,5,6,9,10,11}', 4.8),
-  ('demo-san-vito-relax', 'demo-san-vito', 'Giornata di relax a San Vito', '[DEMO] Spiaggia bianca e lettino.', 360, 20.00, false, true, '{6,7,8,9}', 4.4),
+  ('demo-san-vito-relax', 'demo-san-vito', 'Giornata di relax a San Vito', '[DEMO] Spiaggia bianca e lettino.', 360, null, false, true, '{6,7,8,9}', 4.4),
   ('demo-villa-casale', 'demo-piazza-armerina', 'Villa Romana del Casale', '[DEMO] Mosaici romani patrimonio UNESCO.', 150, 12.00, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.8)
 ) as v(slug, place_slug, title, description, duration_min, price, requires_car, accessible, months, rating)
 join public.places p on p.slug = v.place_slug;
@@ -102,11 +104,25 @@ join public.activities a on a.slug = t.activity_slug;
 
 update public.activities set is_active = true where slug like 'demo-%';
 
+-- Due attività demo con link affiliato, solo per /api/go (e2e): le offerte non compaiono in pagina
+-- fino allo schema 2e (activity_offers). URL di ricerca pubblica del partner, non prodotti specifici.
+update public.activities
+set partner = 'getyourguide',
+    partner_product_id = slug,
+    affiliate_url = case slug
+      when 'demo-zingaro' then 'https://www.getyourguide.com/s/?q=Riserva%20dello%20Zingaro'
+      when 'demo-egadi-barca' then 'https://www.getyourguide.com/s/?q=Favignana%20Levanzo'
+    end
+where slug in ('demo-zingaro', 'demo-egadi-barca');
+
 -- Itinerari predefiniti (template editoriali)
 insert into public.itineraries (owner_id, title, slug, is_template, days, status)
 values
   (null, '[DEMO] Weekend a Palermo e dintorni', 'demo-weekend-palermo', true, 3, 'planned'),
   (null, '[DEMO] Sicilia orientale in cinque giorni', 'demo-sicilia-orientale', true, 5, 'planned');
+
+update public.itineraries set day_titles = '{"Palermo","Monreale e Palermo","Cefalù"}' where slug = 'demo-weekend-palermo';
+update public.itineraries set day_titles = '{"Catania","Etna","Taormina","Ortigia"}' where slug = 'demo-sicilia-orientale';
 
 insert into public.itinerary_items (itinerary_id, day_index, position, activity_id, start_time)
 select i.id, v.day_index, v.position, a.id, v.start_time::time

@@ -127,6 +127,11 @@ describe("contrasti del manuale", () => {
     }
   });
 
+  it.each(["light", "dark"] as const)("ricompense: lava su zagara-tint e on-zagara su zagara (%s)", (theme) => {
+    expect(contrast("lava", "zagara-tint", theme)).toBeGreaterThanOrEqual(theme === "light" ? 14.5 : 11.2);
+    expect(contrast("on-zagara", "zagara", theme)).toBeGreaterThanOrEqual(9.3);
+  });
+
   it.each(["light", "dark"] as const)("border-control almeno 3 sullo sfondo (%s)", (theme) => {
     expect(contrast("border-control", "calce", theme)).toBeGreaterThanOrEqual(3);
   });

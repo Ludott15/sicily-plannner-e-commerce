@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { SiteHeader } from "@/components/layout/site-header";
 import { fontVariables } from "@generated/design/fonts";
 import { publicEnv } from "@/lib/env";
@@ -37,13 +38,16 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <html lang={locale} className={`${fontVariables} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">
+      {/* Su mobile la barra in basso copre il fondo della pagina: la TabBar 56px più l'area sicura,
+          la barra delle azioni (ActionBar) l'altezza che misura in --bottom-bar-h. Il footer resta sopra. */}
+      <body className="flex min-h-full flex-col pb-[var(--bottom-bar-h,calc(56px+env(safe-area-inset-bottom)))] md:pb-0">
         <NextIntlClientProvider>
           <SiteHeader />
           <main id="contenuto" className="flex flex-1 flex-col">
             {children}
           </main>
           <SiteFooter />
+          <MobileTabBar />
         </NextIntlClientProvider>
       </body>
     </html>

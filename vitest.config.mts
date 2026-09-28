@@ -25,6 +25,7 @@ export default defineConfig({
           name: "integration",
           include: ["src/**/*.int.test.ts"],
           setupFiles: ["./test/setup-integration.ts"],
+          globalSetup: ["./test/global-cleanup.ts"],
           fileParallelism: false,
         },
       },

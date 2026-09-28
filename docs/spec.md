@@ -145,11 +145,19 @@ activities: slug unique, place_id (fk), title, description, duration_min int, pr
   requires_car bool, accessible bool, season_months smallint[], partner partner,
   partner_product_id text, affiliate_url text, rating numeric(2,1), embedding vector(1024),
   is_active bool default true, synced_at; unique(partner, partner_product_id)
+  -- schema 2e: il catalogo è editoriale, le offerte sono dei partner. Da activities spariscono
+  -- partner, partner_product_id e affiliate_url; price_from_eur diventa on_site_price_eur
+  -- (prezzo pagato in loco: ingresso, biglietto), mostrato solo come metadato, mai come offerta.
+activity_offers (schema 2e): activity_id (fk), partner partner, partner_product_id text, title,
+  price_from_eur numeric(8,2), currency char(3), affiliate_url text, rating numeric(2,1) null,
+  reviews_count int null, free_cancellation bool null, price_updated_at, is_active bool;
+  unique(partner, partner_product_id); più offerte per attività
 activity_interests: activity_id, interest_key, strength smallint 1-3; pk(activity_id, interest_key)
 
 -- ITINERARI
 itineraries: owner_id null (null = predefinito editoriale), group_id null, title, slug null unique,
-  is_template bool, template_id null (fk itineraries), start_date date, days smallint, status itinerary_status
+  is_template bool, template_id null (fk itineraries), start_date date, days smallint, status itinerary_status,
+  day_titles text[] (titolo editoriale di ogni giorno, al massimo days)
 itinerary_items: itinerary_id (fk, cascade), day_index smallint, position smallint,
   activity_id null, place_id null, custom_title null, start_time time null, notes;
   check (activity_id or place_id or custom_title non null)
@@ -170,7 +178,7 @@ check_ins: user_id, place_id, itinerary_id null, lat, lng
 reviews: user_id, activity_id, rating smallint 1-5, body; unique(user_id, activity_id)
 
 -- AFFILIATI
-affiliate_clicks: user_id null, activity_id null, partner, target_url, subid text unique,
+affiliate_clicks: user_id null, activity_id null, offer_id null (schema 2e), partner, target_url, subid text unique,
   context text (page | itinerary | chat | flights), itinerary_id null, anon_id text
 affiliate_conversions: partner, subid, amount_eur, commission_eur, status, reported_at
 
@@ -361,18 +369,18 @@ Ogni link in uscita verso un partner passa da una route nostra che registra il c
 
 **Import del catalogo attività**
 
-1. Cron notturno `import-catalog`: scarica le attività dei partner per le destinazioni siciliane e fa upsert su `(partner, partner_product_id)`.
+1. Cron notturno `import-catalog`: scarica i prodotti dei partner per le destinazioni siciliane e fa upsert delle **offerte** (`activity_offers`) su `(partner, partner_product_id)`. Ogni prodotto si collega a un'attività esistente del catalogo; solo se non corrisponde a nessuna, l'import crea un'attività nuova, inattiva e da rivedere nella coda dell'admin.
 2. Le attività nuove entrano con `is_active = false`. Un modello Haiku propone i tag di interesse con la forza; l'admin li conferma. Senza tag lo scoring non funziona, quindi nessuna attività va online senza.
-3. Le attività non più restituite dal partner per 3 import consecutivi vengono disattivate.
+3. Le offerte non più restituite dal partner per 3 import consecutivi vengono disattivate; l'attività resta, perché è editoriale.
 4. Cron `embed-activities`: calcola l'embedding per le attività nuove o modificate.
-5. Le attività curate a mano (`partner = internal`) usano gli stessi campi e possono non avere link affiliato.
+5. Le attività curate a mano usano gli stessi campi e possono non avere offerte: in quel caso la pagina non mostra né `AffiliateOffer` né l'offerta nella barra mobile.
 
 **Route di uscita `/api/go/[id]`**
 
-1. Risolve l'attività; se non esiste o non è attiva, rimanda alla pagina dell'attività con un avviso.
+1. Risolve l'offerta (dallo schema 2e; prima l'attività); se non esiste o non è attiva, rimanda alla pagina dell'attività con un avviso.
 2. Genera un subid breve e univoco.
 3. Costruisce l'URL finale aggiungendo il subid nel parametro previsto da quel partner; la mappatura dei parametri vive in `server/affiliates/links.ts`.
-4. Registra la riga in `affiliate_clicks` con utente o identificativo anonimo (cookie `anon_id`), contesto e itinerario.
+4. Registra la riga in `affiliate_clicks` con utente o identificativo anonimo (cookie `anon_id`), offerta, contesto e itinerario.
 5. Registra l'evento `affiliate_click` in `user_events` se l'utente è autenticato.
 6. Risponde con redirect 302.
 
@@ -501,17 +509,22 @@ Tredici milestone in sequenza (le dodici originali più il design system tra la 
 - **M1 — Fondamenta.** Next.js, TypeScript strict, Tailwind, shadcn/ui, next-intl, Supabase, Drizzle, Auth, tabella `profiles`.
   - Fatto quando: login e logout funzionano; la CI esegue lint, typecheck e il controllo di drift dello schema. *(Chiusa.)*
   - **Modifica successiva — accesso ospite e codice email:** sessione anonima con Turnstile, codice a 6 cifre come accesso principale, conversione da ospite ad account con lo stesso user id, Google nascosto nei browser interni, limiti RLS per gli ospiti, cron di pulizia a 30 giorni. Fatto quando: il test e2e ospite → itinerario → registrazione con codice conferma che l'itinerario resta suo; test pgTAP per ogni restrizione degli ospiti; test unitari sul rilevamento dei browser interni.
-- **M2 — Schema e sicurezza.** Tutte le tabelle, enum, indici, funzioni `SECURITY DEFINER`, policy RLS e trigger di immutabilità, in PR 2a-2d; lo **schema 2e** aggiunge consigli locali (`local_tip_authors`, `local_tips`, `public_local_tips`), prenotazioni dell'itinerario (`itinerary_bookings`) e `public_reviews.rewarded`.
+- **M2 — Schema e sicurezza.** Tutte le tabelle, enum, indici, funzioni `SECURITY DEFINER`, policy RLS e trigger di immutabilità, in PR 2a-2d; lo **schema 2e** aggiunge consigli locali (`local_tip_authors`, `local_tips`, `public_local_tips`), prenotazioni dell'itinerario (`itinerary_bookings`), `public_reviews.rewarded` e le offerte dei partner (`activity_offers`, vedi lo schema del catalogo): da `activities` escono `partner`, `partner_product_id` e `affiliate_url`, `price_from_eur` diventa `on_site_price_eur`, `/api/go` punta a un'offerta e `affiliate_clicks` riceve `offer_id`. Admin delle offerte per attività; RLS e pgTAP come le altre tabelle del catalogo. Le offerte entrano prima della M6.
   - Fatto quando: migrazioni applicate da zero senza errori; la suite SQL dimostra per ogni tabella che un utente non accede ai dati di un altro.
 - **DS — Design system** (tra la milestone 2 e la 3). Variabili CSS generate da `docs/design/tokens.json` con uno script (tema chiaro in `:root`, scuro in `[data-theme="dark"]` e `prefers-color-scheme`; alias `"{nome}"` → `var(--nome)`), usate anche da Tailwind. Font con `next/font/google`: Fraunces (assi `opsz` e `SOFT`, peso 600) e Instrument Sans. Componenti React dai README in `docs/design/components/`, con `riferimento.css` come riferimento: Button, InterestChip, PreferenceScale, ActivityCard, ItineraryStop, DayTabs, VoteButton, BookingList, LocalTip, AffiliateOffer, Rewards, ProductCard, TabBar. Pagina `/dev/design`, visibile solo in sviluppo, con tutti i componenti nei due temi.
   - Fatto quando: lo script è deterministico (test); un controllo in CI fallisce se trova colori esadecimali o nomi di font scritti a mano in `src/`; i contrasti dichiarati nel manuale sono verificati da un test sui valori dei token.
 - **M3 — Catalogo.** Pagine pubbliche di luoghi, attività e itinerari costruite con i componenti del design system; la scheda attività mostra i consigli di `public_local_tips` con `LocalTip`; admin del catalogo; seed di prova con slug `demo-`, mai in produzione.
   - Fatto quando: le pagine sono renderizzate lato server con metadati SEO; un'attività senza tag non può essere attivata.
+  - Anticipato dalla M6: `/api/go/[id]` minimo (click registrato con `record_affiliate_click`, subid univoco, cookie `anon_id`, nessun URL arbitrario), così offerta affiliata e barra di prenotazione mobile funzionano.
+  - Titoli dei giorni degli itinerari (`itineraries.day_titles`), scritti dall'admin; un giorno senza titolo mostra i luoghi delle sue tappe.
+  - **Lista attività con filtri:** per interesse (`InterestChip`, basta uno dei selezionati) e per provincia, con lo stato nell'URL (`?interessi=sea,food_wine&provincia=TP`) e la lista renderizzata lato server; il canonical resta la lista completa. Stato vuoto con "Togli i filtri".
+  - **Offerte affiliate non in pagina fino allo schema 2e:** il prezzo dell'attività è quello pagato in loco (ingresso, biglietto), un metadato e mai un'offerta. Niente `AffiliateOffer` e niente offerta nella barra mobile, che mostra solo "Aggiungi al viaggio"; il punto è marcato `data-pending="2e"` (`activity.offer`, nascosto).
+  - **Azioni in sospeso:** le azioni dei mockup che dipendono da milestone successive ("Crea il tuo viaggio" M4; "Aggiungi al viaggio", Salva, "Usa questo itinerario", Viaggi nella barra mobile M5; Shop M10) sono visibili ma disabilitate (quelle che non devono comparire, come i punti della M9 e le offerte dello schema 2e, sono solo un segnaposto nascosto), marcate con `data-pending` e `data-pending-id` ed elencate in `src/lib/pending-actions.ts`. Un test e2e confronta le azioni nelle pagine con l'elenco; ogni milestone che ne implementa una la toglie. "Disponibile a breve" compare solo in sviluppo. Prima del lancio l'elenco deve essere vuoto: lo verifica il test con `PRE_LAUNCH=1` sulla build di produzione.
 - **M4 — Profilo e personalizzazione.** Onboarding, pagina preferenze, filtro, scoring, algoritmo greedy. Nello scoring di gruppo i motivi "Per il gruppo" sono solo aggregati, e con meno di 3 membri solo logistici.
   - Fatto quando: test Vitest con profili e cataloghi fissi producono sempre lo stesso itinerario; nessun itinerario viola un vincolo rigido.
-- **M5 — Itinerary builder.** Creazione, copia da predefinito, modifica giorno per giorno con drag and drop, salvataggio, checklist "Da prenotare" su `itinerary_bookings`.
+- **M5 — Itinerary builder.** Creazione, copia da predefinito, modifica giorno per giorno con drag and drop, salvataggio, checklist "Da prenotare" su `itinerary_bookings`. Chi crea il proprio itinerario da uno pronto eredita i titoli dei giorni (`day_titles`); se poi modifica le tappe di un giorno, il titolo resta finché non lo cambia lui, e il ripiego sui luoghi vale solo per i giorni senza titolo.
   - Fatto quando: un utente non può aprire o modificare l'itinerario di un altro (test e2e).
-- **M6 — Affiliati e voli.** Import del catalogo, coda di approvazione, `/api/go/[id]`, ricerca voli, `/api/go/flight`.
+- **M6 — Affiliati e voli.** Import del catalogo: crea e aggiorna offerte (`activity_offers`, dallo schema 2e), e crea un'attività (inattiva, da rivedere) solo se il prodotto non corrisponde a nessuna attività esistente; coda di approvazione, `/api/go/[id]` (la versione minima è in M3: restano rate limit, verifica dei parametri del subid con i termini di ogni partner e contesto dal chatbot), ricerca voli, `/api/go/flight`.
   - Fatto quando: ogni click crea una riga con subid univoco; un test dimostra che nessuna route redirige verso un URL arbitrario.
 - **M7 — Chatbot.** `/api/chat`, strumenti, system prompt, interfaccia con schede attività e conferme. Nei viaggi di gruppo solo motivi aggregati; nessuno strumento restituisce le preferenze di un altro membro.
   - Fatto quando: su un set di 20 richieste di prova, ogni `[[activity:id]]` nelle risposte corrisponde a un id restituito da uno strumento nella stessa sessione (controllo automatico).
@@ -526,7 +539,7 @@ Tredici milestone in sequenza (le dodici originali più il design system tra la 
 - **M12 — Rifinitura.** PWA, performance, pagine legali, cookie banner, analytics, pagine di errore; le voci di M12 in `docs/design/BACKLOG.md` (Fraunces come istanza fissa, `text-wrap: balance`).
   - Fatto quando: Lighthouse mobile sopra 90 su home, attività e prodotto; nessun cookie non tecnico prima del consenso.
 
-**Ordine di lavoro dopo la milestone 2** (deciso il 28 settembre 2026): 1) DS — Design system; 2) modifica alla M1, accesso ospite e codice email; 3) schema 2e; 4) M3 — Catalogo con i componenti del design system; poi M4 e successive nell'ordine dell'elenco. La 3a (regola dei tag, seed demo, prime pagine pubbliche) è già in `main`: la M3 rifà quelle pagine con i componenti del design system.
+**Ordine di lavoro dopo la milestone 2** (deciso il 28 settembre 2026, poi aggiornato lo stesso giorno): 1) DS — Design system (fatta); 2) M3 — Catalogo con i componenti del design system; 3) modifica alla M1, accesso ospite e codice email; 4) schema 2e; poi M4 e successive nell'ordine dell'elenco. La 3a (regola dei tag, seed demo, prime pagine pubbliche) è già in `main`: la M3 rifà quelle pagine con i componenti del design system.
 
 Il lavoro di design e contenuti rimandato (schermate da progettare, voci del design system, contenuti a carico di Ludovico, decisioni aperte) è tracciato in `docs/design/BACKLOG.md`.
 

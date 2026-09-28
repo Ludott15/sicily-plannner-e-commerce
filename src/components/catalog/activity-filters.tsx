@@ -1,0 +1,78 @@
+"use client";
+
+import { useOptimistic, useTransition } from "react";
+import { useTranslations } from "next-intl";
+import { InterestChip, type Domain } from "@/components/design";
+import { activityFiltersQuery, type ActivityFilters as Filters } from "@/lib/activity-filters";
+import { useRouter } from "@/lib/i18n/navigation";
+
+// Filtri della lista attività: interessi con InterestChip (basta uno dei selezionati) e
+// provincia con un select nativo. Lo stato è nell'URL e la lista la renderizza il server:
+// qui si cambia solo l'URL. La selezione si aggiorna subito (useOptimistic) mentre il
+// server prepara la lista.
+export function ActivityFilters({
+  interests,
+  provinces,
+  selected,
+}: {
+  interests: { key: string; label: string; domain?: Domain }[];
+  provinces: { code: string; name: string }[];
+  selected: Filters;
+}) {
+  const t = useTranslations("Catalog");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [filters, setFilters] = useOptimistic(selected);
+
+  function apply(next: Filters) {
+    startTransition(() => {
+      setFilters(next);
+      router.replace({ pathname: "/attivita", query: activityFiltersQuery(next) }, { scroll: false });
+    });
+  }
+
+  function toggleInterest(key: string, pressed: boolean) {
+    const keys = new Set(filters.interests);
+    if (pressed) keys.add(key);
+    else keys.delete(key);
+    apply({ ...filters, interests: interests.map((i) => i.key).filter((k) => keys.has(k)) });
+  }
+
+  return (
+    <div className="mt-8 flex flex-col gap-6" aria-busy={pending}>
+      <fieldset>
+        <legend className="text-body-s font-semibold">{t("filterInterests")}</legend>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {interests.map((interest) => (
+            <InterestChip
+              key={interest.key}
+              label={interest.label}
+              domain={interest.domain}
+              pressed={filters.interests.includes(interest.key)}
+              onPressedChange={(pressed) => toggleInterest(interest.key, pressed)}
+            />
+          ))}
+        </div>
+      </fieldset>
+
+      <div className="flex flex-col gap-1.5 sm:max-w-xs">
+        <label htmlFor="filtro-provincia" className="text-body-s font-semibold">
+          {t("filterProvince")}
+        </label>
+        <select
+          id="filtro-provincia"
+          className="min-h-11 w-full rounded-sm border-[1.5px] border-border-control bg-calce-raised px-3 text-body text-lava"
+          value={filters.province ?? ""}
+          onChange={(e) => apply({ ...filters, province: e.target.value || null })}
+        >
+          <option value="">{t("filterAllProvinces")}</option>
+          {provinces.map((p) => (
+            <option key={p.code} value={p.code}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { ActionBar } from "./action-bar";
 import { ButtonAnchor } from "./button";
 
 // AffiliateOffer (docs/design/components/AffiliateOffer/README.md)
@@ -10,12 +11,18 @@ import { ButtonAnchor } from "./button";
 // - Il click passa sempre da /api/go/[id] (affiliateHref).
 // - Su mobile l'offerta principale compare anche nella barra fissa in basso (BookingBar).
 
-export function affiliateHref(activityId: string) {
-  return `/api/go/${activityId}`;
+export function affiliateHref(
+  activityId: string,
+  { context = "page", locale }: { context?: "page" | "itinerary" | "chat"; locale?: string } = {},
+) {
+  const params = new URLSearchParams({ c: context });
+  if (locale) params.set("l", locale);
+  return `/api/go/${activityId}?${params}`;
 }
 
 export type AffiliateOfferProps = {
   activityId: string;
+  locale?: string;
   title: string;
   partner: string;
   price?: string | null;
@@ -26,6 +33,7 @@ export type AffiliateOfferProps = {
 
 export function AffiliateOffer({
   activityId,
+  locale,
   title,
   partner,
   price,
@@ -51,7 +59,7 @@ export function AffiliateOffer({
         {freeCancellation && <b>{t("freeCancellation")}</b>}
         {priceUpdated && <span>{t("priceUpdated", { when: priceUpdated })}</span>}
       </div>
-      <ButtonAnchor variant="secondary" href={affiliateHref(activityId)} rel="sponsored nofollow">
+      <ButtonAnchor variant="secondary" href={affiliateHref(activityId, { locale })} rel="sponsored nofollow">
         {t("offerCta", { partner })}
       </ButtonAnchor>
       <span className="is-offer__disclose">{t("offerDisclose", { partner })}</span>
@@ -59,13 +67,14 @@ export function AffiliateOffer({
   );
 }
 
-// Barra fissa della scheda attività su mobile: "Aggiungi al viaggio" (principale)
-// e l'offerta affiliata principale ("Con guida da 35 €"). Sostituisce la TabBar.
+// Barra fissa della scheda attività su mobile: l'offerta affiliata principale
+// ("GetYourGuide da 35 €") e "Aggiungi al viaggio" (principale). Sostituisce la TabBar.
 export function BookingBar({ addToTrip, offer }: { addToTrip: ReactNode; offer?: ReactNode }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-divider bg-calce-raised px-4 pt-2 pb-[max(env(safe-area-inset-bottom),8px)] md:hidden">
-      <div className="flex-1 [&>*]:w-full">{addToTrip}</div>
+    <ActionBar>
+      {/* Come nel mockup AttivitaMobile: offerta a sinistra, azione principale a destra. */}
       {offer && <div className="flex-1 [&>*]:w-full">{offer}</div>}
-    </div>
+      <div className="flex-1 [&>*]:w-full">{addToTrip}</div>
+    </ActionBar>
   );
 }

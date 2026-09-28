@@ -6,8 +6,8 @@ import { closeConnection } from "./connection";
 import { profiles } from "./schema";
 import { dbAsUser } from "./user";
 
-const alice = { id: randomUUID(), email: `alice-${Date.now()}@example.com` };
-const bob = { id: randomUUID(), email: `bob-${Date.now()}@example.com` };
+const alice = { id: randomUUID(), email: `int-alice-${Date.now()}@example.com` };
+const bob = { id: randomUUID(), email: `int-bob-${Date.now()}@example.com` };
 
 beforeAll(async () => {
   // Il trigger on_auth_user_created crea i profili.
