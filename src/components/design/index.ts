@@ -1,4 +1,5 @@
 // Componenti del design system Isula. Regole in docs/design/components/*/README.md.
+export { ActionBar } from "./action-bar";
 export { ActivityCard, type ActivityCardProps } from "./activity-card";
 export { AffiliateOffer, BookingBar, affiliateHref, type AffiliateOfferProps } from "./affiliate-offer";
 export { BookingList, bookingCounts, useBookingCountLabel, type BookingItem } from "./booking-list";
@@ -8,6 +9,8 @@ export { interestDomain, type Domain } from "./domains";
 export { InterestChip } from "./interest-chip";
 export { ItineraryStop, TransferStop } from "./itinerary-stop";
 export { LocalTip, type LocalTipAuthor } from "./local-tip";
+export { PendingButton } from "./pending-button";
+export { PendingSaveButton } from "./pending-save-button";
 export { PreferenceScale } from "./preference-scale";
 export { ProductCard } from "./product-card";
 export { PointsPill, RewardedReviewLabel, Stamp, stampRotation } from "./rewards";

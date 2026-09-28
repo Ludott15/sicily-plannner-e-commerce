@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { ActivityCard } from "@/components/catalog/activity-card";
+import { CatalogActivityCard } from "@/components/catalog/catalog-activity-card";
 import { JsonLd } from "@/components/catalog/json-ld";
+import { ButtonLink } from "@/components/design";
 import { publicEnv } from "@/lib/env";
 import { localizedAlternates } from "@/lib/seo";
 import { interestLabels } from "@/server/catalog/labels";
 import { listActivities } from "@/server/catalog/queries";
+
+// Lista delle attività: griglia di ActivityCard, come le sezioni a card dei mockup.
+// Stato vuoto (schemi.md): una frase che dice cosa fare e un'azione.
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -31,16 +35,23 @@ export default async function ActivitiesPage({ params }: Props) {
   ]);
 
   return (
-    <section className="mx-auto w-full max-w-5xl px-4 py-10">
-      <h1 className="text-3xl font-semibold tracking-tight">{t("activitiesTitle")}</h1>
-      <p className="mt-2 max-w-2xl text-muted-foreground">{t("activitiesDescription")}</p>
+    <section className="mx-auto w-full max-w-[1200px] px-4 py-12 md:px-16 md:py-16">
+      <h1 className="is-display text-display-l">{t("activitiesTitle")}</h1>
+      <p className="mt-3 max-w-2xl text-body-l text-lava-muted">{t("activitiesDescription")}</p>
 
       {activities.length === 0 ? (
-        <p className="mt-8 text-muted-foreground">{t("noActivities")}</p>
+        <div className="mt-12 flex flex-col items-start gap-4">
+          <p className="text-body-l">{t("activitiesEmpty")}</p>
+          <ButtonLink href="/itinerari" variant="primary">
+            {t("itinerariesTitle")}
+          </ButtonLink>
+        </div>
       ) : (
-        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {activities.map((activity) => (
-            <ActivityCard key={activity.id} activity={activity} locale={locale} interestLabels={labels} />
+            <li key={activity.id}>
+              <CatalogActivityCard activity={activity} locale={locale} interestLabels={labels} />
+            </li>
           ))}
         </ul>
       )}

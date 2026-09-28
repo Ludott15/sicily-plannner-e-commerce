@@ -1,6 +1,7 @@
 import { Compass, Map, ShoppingBag, User, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/lib/i18n/navigation";
+import { pendingAttributes, type PendingId } from "@/lib/pending-actions";
 
 // TabBar (docs/design/components/TabBar/README.md)
 // Barra inferiore mobile: Viaggi, Attività, Shop, Profilo. Etichette sempre visibili,
@@ -17,16 +18,29 @@ const TABS: { key: TabKey; href: string; label: "tabTrips" | "tabActivities" | "
   { key: "profile", href: "/profilo", label: "tabProfile", icon: User },
 ];
 
-export function TabBar({ current }: { current?: TabKey }) {
+// pending: voci le cui pagine non esistono ancora (src/lib/pending-actions.ts).
+export function TabBar({ current, pending = {} }: { current?: TabKey; pending?: Partial<Record<TabKey, PendingId>> }) {
   const t = useTranslations("Design");
   return (
     <nav className="is-tabbar" aria-label={t("tabNav")}>
-      {TABS.map(({ key, href, label, icon: Icon }) => (
-        <Link key={key} href={href} className="is-tabbar__item" aria-current={key === current ? "page" : undefined}>
-          <Icon size={24} strokeWidth={1.5} aria-hidden="true" />
-          {t(label)}
-        </Link>
-      ))}
+      {TABS.map(({ key, href, label, icon: Icon }) => {
+        const pendingId = pending[key];
+        const content = (
+          <>
+            <Icon size={24} strokeWidth={1.5} aria-hidden="true" />
+            {t(label)}
+          </>
+        );
+        return pendingId ? (
+          <span key={key} role="link" className="is-tabbar__item" {...pendingAttributes(pendingId)}>
+            {content}
+          </span>
+        ) : (
+          <Link key={key} href={href} className="is-tabbar__item" aria-current={key === current ? "page" : undefined}>
+            {content}
+          </Link>
+        );
+      })}
     </nav>
   );
 }

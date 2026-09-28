@@ -6,6 +6,10 @@
  * annidati in un <a>) e le animazioni descritte in docs/design/brand/movimento.md.
  */
 
+/* Nel layer components di Tailwind: le classi di utilità (layer utilities) possono rifinire
+   un componente, come in qualunque progetto Tailwind. */
+@layer components {
+
 .is-root { background: var(--calce); color: var(--lava); font-family: var(--font-sans); font-size: 16px; line-height: 24px; }
 .is-display { font-family: var(--font-display); font-weight: 600; font-optical-sizing: auto; font-variation-settings: "SOFT" 50; letter-spacing: -0.015em; text-wrap: balance; }
 
@@ -25,6 +29,8 @@
 .is-btn--sm { min-height: 36px; padding: 0 14px; font-size: 14px; position: relative; }
 .is-btn--sm::after { content: ""; position: absolute; inset: -4px 0; }
 .is-btn[disabled], .is-btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+/* Azioni dei mockup non ancora attive (src/lib/pending-actions.ts). */
+.is-card__save[aria-disabled="true"], .is-tabbar__item[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
 
 /* Chip di interesse */
 .is-chip { --chip-c: var(--lava); --chip-t: var(--calce-sunk); display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 16px; border-radius: var(--radius-pill); border: 1.5px solid var(--border-control); background: var(--calce-raised); color: var(--lava); font-family: var(--font-sans); font-size: 15px; font-weight: 500; cursor: pointer; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
@@ -207,4 +213,5 @@ a.is-tabbar__item { color: var(--lava-muted); }
   .is-stamp--new, .is-route--draw::before, .is-route--draw .is-stop__dot, .is-vote__count, .is-chip[aria-pressed="true"] .is-chip__check { animation: none; }
   .is-points__gain { animation: is-fade var(--dur-fast) linear forwards; }
   @keyframes is-fade { from { opacity: 1; } to { opacity: 0; } }
+}
 }
