@@ -113,6 +113,20 @@
       "when": 1790544943960,
       "tag": "20260927213543_activities_require_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1790554668066,
+      "tag": "20260928001748_itinerary_day_titles",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790554672146,
+      "tag": "20260928001752_day_titles_affiliate_click",
+      "breakpoints": true
     }
   ]
 }

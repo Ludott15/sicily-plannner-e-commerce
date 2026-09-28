@@ -35,6 +35,9 @@ export const itineraries = pgTable(
     }),
     startDate: date("start_date"),
     days: smallint("days").notNull(),
+    // Titolo editoriale di ogni giorno ("Noto e costa"), per indice. Un giorno senza titolo
+    // mostra i luoghi delle sue tappe. Chi copia un itinerario pronto eredita i titoli.
+    dayTitles: text("day_titles").array().notNull().default(sql`'{}'`),
     status: itineraryStatus("status").notNull().default("draft"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -44,6 +47,7 @@ export const itineraries = pgTable(
     check("itineraries_days_range", sql`${t.days} between 1 and 60`),
     check("itineraries_title_length", sql`char_length(btrim(${t.title})) between 1 and 200`),
     check("itineraries_template_iff_editorial", sql`(${t.ownerId} is null) = ${t.isTemplate}`),
+    check("itineraries_day_titles_within_days", sql`cardinality(${t.dayTitles}) <= ${t.days}`),
   ],
 );
 

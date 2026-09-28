@@ -511,6 +511,49 @@ $$;
 ALTER FUNCTION "public"."prevent_mutation"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."record_affiliate_click"("p_activity_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text" DEFAULT NULL::"text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $_$
+declare
+  v_uid uuid := auth.uid();
+  v_activity public.activities;
+begin
+  select * into v_activity from public.activities where id = p_activity_id;
+  if not found or not v_activity.is_active or v_activity.affiliate_url is null then
+    raise exception 'activity_not_bookable' using errcode = 'P0001';
+  end if;
+
+  if left(p_target_url, length(v_activity.affiliate_url)) <> v_activity.affiliate_url then
+    raise exception 'target_mismatch' using errcode = 'P0001';
+  end if;
+
+  if p_subid !~ '^[a-z0-9]{12,32}$' then
+    raise exception 'invalid_subid' using errcode = 'P0001';
+  end if;
+
+  if p_anon_id is not null and p_anon_id !~ '^[0-9a-f-]{36}$' then
+    raise exception 'invalid_anon_id' using errcode = 'P0001';
+  end if;
+
+  if p_itinerary_id is not null and not public.can_access_itinerary(p_itinerary_id) then
+    raise exception 'itinerary_not_accessible' using errcode = 'P0001';
+  end if;
+
+  insert into public.affiliate_clicks (user_id, activity_id, partner, target_url, subid, context, itinerary_id, anon_id)
+  values (v_uid, p_activity_id, v_activity.partner, p_target_url, p_subid, p_context, p_itinerary_id, p_anon_id);
+
+  if v_uid is not null then
+    insert into public.user_events (user_id, type, activity_id, itinerary_id)
+    values (v_uid, 'affiliate_click', p_activity_id, p_itinerary_id);
+  end if;
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."record_affiliate_click"("p_activity_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."refresh_leaderboard"() RETURNS "void"
     LANGUAGE "sql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -852,6 +895,8 @@ CREATE TABLE IF NOT EXISTS "public"."itineraries" (
     "days" smallint NOT NULL,
     "status" "public"."itinerary_status" DEFAULT 'draft'::"public"."itinerary_status" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "day_titles" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    CONSTRAINT "itineraries_day_titles_within_days" CHECK (("cardinality"("day_titles") <= "days")),
     CONSTRAINT "itineraries_days_range" CHECK ((("days" >= 1) AND ("days" <= 60))),
     CONSTRAINT "itineraries_template_iff_editorial" CHECK ((("owner_id" IS NULL) = "is_template")),
     CONSTRAINT "itineraries_title_length" CHECK ((("char_length"("btrim"("title")) >= 1) AND ("char_length"("btrim"("title")) <= 200)))
@@ -2330,6 +2375,13 @@ GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."record_affiliate_click"("p_activity_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_activity_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_activity_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_activity_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."refresh_leaderboard"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."refresh_leaderboard"() TO "service_role";
 
@@ -2569,6 +2621,10 @@ GRANT INSERT("days"),UPDATE("days") ON TABLE "public"."itineraries" TO "authenti
 
 
 GRANT INSERT("status"),UPDATE("status") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("day_titles"),UPDATE("day_titles") ON TABLE "public"."itineraries" TO "authenticated";
 
 
 

@@ -102,11 +102,25 @@ join public.activities a on a.slug = t.activity_slug;
 
 update public.activities set is_active = true where slug like 'demo-%';
 
+-- Due attività demo con link affiliato, per vedere offerta e /api/go in locale.
+-- URL di ricerca pubblica del partner, non prodotti specifici.
+update public.activities
+set partner = 'getyourguide',
+    partner_product_id = slug,
+    affiliate_url = case slug
+      when 'demo-zingaro' then 'https://www.getyourguide.com/s/?q=Riserva%20dello%20Zingaro'
+      when 'demo-egadi-barca' then 'https://www.getyourguide.com/s/?q=Favignana%20Levanzo'
+    end
+where slug in ('demo-zingaro', 'demo-egadi-barca');
+
 -- Itinerari predefiniti (template editoriali)
 insert into public.itineraries (owner_id, title, slug, is_template, days, status)
 values
   (null, '[DEMO] Weekend a Palermo e dintorni', 'demo-weekend-palermo', true, 3, 'planned'),
   (null, '[DEMO] Sicilia orientale in cinque giorni', 'demo-sicilia-orientale', true, 5, 'planned');
+
+update public.itineraries set day_titles = '{"Palermo","Monreale e Palermo","Cefalù"}' where slug = 'demo-weekend-palermo';
+update public.itineraries set day_titles = '{"Catania","Etna","Taormina","Ortigia"}' where slug = 'demo-sicilia-orientale';
 
 insert into public.itinerary_items (itinerary_id, day_index, position, activity_id, start_time)
 select i.id, v.day_index, v.position, a.id, v.start_time::time

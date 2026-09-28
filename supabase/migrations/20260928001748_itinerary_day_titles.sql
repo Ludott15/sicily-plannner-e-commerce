@@ -1,0 +1,2 @@
+ALTER TABLE "itineraries" ADD COLUMN "day_titles" text[] DEFAULT '{}' NOT NULL;--> statement-breakpoint
+ALTER TABLE "itineraries" ADD CONSTRAINT "itineraries_day_titles_within_days" CHECK (cardinality("itineraries"."day_titles") <= "itineraries"."days");
