@@ -16,7 +16,7 @@ test("attività: titolo, descrizione, canonical, hreflang e dati strutturati", a
   await page.goto("/it/attivita/demo-valle-templi");
 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Valle dei Templi al tramonto");
-  await expect(page).toHaveTitle("Valle dei Templi al tramonto · Agrigento · Sicilia Planner");
+  await expect(page).toHaveTitle("Valle dei Templi al tramonto · Agrigento · Isula");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /templi dorici/);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",

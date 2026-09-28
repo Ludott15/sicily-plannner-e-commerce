@@ -402,7 +402,7 @@ Un gruppo è un viaggio condiviso: un itinerario, più membri, voti sulle attivi
 
 **Ospiti:** un ospite che apre un invito deve prima creare l'account con il codice email; i suoi dati da ospite restano.
 
-**Voti:** ogni membro vota +1 o -1 su ogni voce dell'itinerario. L'interfaccia mostra il saldo e segnala le voci con saldo negativo come candidate alla sostituzione, proponendo alternative con lo scoring di gruppo. Solo l'owner applica le sostituzioni; ogni membro può proporre aggiunte.
+**Voti:** ogni membro vota +1 o -1 su ogni voce dell'itinerario. L'interfaccia mostra il saldo e segnala come candidate alla sostituzione le voci con voti contrari pari ad almeno la metà dei membri attuali del gruppo ("2 su 4 preferirebbero altro. Ecco 2 alternative vicine."), proponendo alternative con lo scoring di gruppo. Solo l'owner applica le sostituzioni; ogni membro può proporre aggiunte.
 
 **Realtime:** sottoscrizione Supabase Realtime a `itinerary_items` e `item_votes` filtrata per itinerario, così modifiche e voti compaiono subito a tutti i membri aperti sulla pagina.
 
@@ -525,6 +525,8 @@ Tredici milestone in sequenza (le dodici originali più il design system tra la 
   - Fatto quando: dopo una serie di eventi di prova i pesi cambiano nella direzione attesa e restano tra -2 e +2.
 - **M12 — Rifinitura.** PWA, performance, pagine legali, cookie banner, analytics, pagine di errore; le voci di M12 in `docs/design/BACKLOG.md` (Fraunces come istanza fissa, `text-wrap: balance`).
   - Fatto quando: Lighthouse mobile sopra 90 su home, attività e prodotto; nessun cookie non tecnico prima del consenso.
+
+**Ordine di lavoro dopo la milestone 2** (deciso il 28 settembre 2026): 1) DS — Design system; 2) modifica alla M1, accesso ospite e codice email; 3) schema 2e; 4) M3 — Catalogo con i componenti del design system; poi M4 e successive nell'ordine dell'elenco. La 3a (regola dei tag, seed demo, prime pagine pubbliche) è già in `main`: la M3 rifà quelle pagine con i componenti del design system.
 
 Il lavoro di design e contenuti rimandato (schermate da progettare, voci del design system, contenuti a carico di Ludovico, decisioni aperte) è tracciato in `docs/design/BACKLOG.md`.
 

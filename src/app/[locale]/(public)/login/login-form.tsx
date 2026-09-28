@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/design";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInWithEmail, signInWithGoogle, type EmailSignInState } from "@/server/auth/actions";
@@ -44,11 +44,11 @@ export function LoginForm({ locale, hasError }: { locale: string; hasError: bool
           />
         </div>
         {errorMessage && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-body-s text-danger">
             {errorMessage}
           </p>
         )}
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" variant="primary" disabled={pending}>
           {t("submit")}
         </Button>
       </form>
@@ -61,7 +61,7 @@ export function LoginForm({ locale, hasError }: { locale: string; hasError: bool
 
       <form action={signInWithGoogle}>
         <input type="hidden" name="locale" value={locale} />
-        <Button type="submit" variant="outline" className="w-full">
+        <Button type="submit" variant="secondary" className="w-full">
           {t("google")}
         </Button>
       </form>

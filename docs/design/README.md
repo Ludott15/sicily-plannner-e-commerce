@@ -27,3 +27,13 @@ Questa cartella contiene il design system e i mockup di riferimento. "Isula" è 
    - Consigli locali solo da autori reali o dalla redazione, con data di verifica; scadenza a 12 mesi.
    - Recensioni con l'etichetta "Recensione con premio".
    - Accesso e salvataggio pensati per i browser interni di TikTok e Instagram (vedi `brand/schemi.md`).
+
+## Implementazione nel codice
+
+| Cosa | Dove |
+| --- | --- |
+| Generatore dei token | `scripts/design/generate-tokens.mjs` (`npm run design:tokens`) |
+| Variabili CSS, tema Tailwind, font | `generated/design/` (file generati, non modificare a mano) |
+| Componenti React | `src/components/design/`, stili in `isula.css` |
+| Controllo in CI | `npm run design:check` |
+| Catalogo dei componenti | `/it/dev/design`, solo in sviluppo; screenshot in `screenshots/` |

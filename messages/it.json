@@ -1,15 +1,19 @@
 {
   "Metadata": {
-    "title": "Sicilia Planner",
-    "description": "Pianifica il tuo viaggio in Sicilia e porta a casa i sapori dei produttori locali."
+    "title": "Isula",
+    "description": "La Sicilia di chi ci vive, su misura per te: itinerari costruiti sulle tue preferenze e prodotti spediti dai produttori.",
+    "tagline": "La Sicilia di chi ci vive, su misura per te."
   },
   "Nav": {
-    "home": "Home",
+    "home": "Isula, pagina iniziale",
     "profile": "Profilo",
     "login": "Accedi",
     "logout": "Esci",
     "activities": "Attività",
-    "itineraries": "Itinerari"
+    "itineraries": "Itinerari pronti",
+    "main": "Principale",
+    "footer": "Piè di pagina",
+    "travel": "Viaggia"
   },
   "Home": {
     "title": "Il tuo viaggio in Sicilia, su misura",
@@ -62,5 +66,47 @@
     "days": "{count, plural, one {# giorno} other {# giorni}}",
     "placeDescription": "Cosa fare a {place}: attività, visite ed esperienze.",
     "itineraryDescription": "Itinerario di {days} in Sicilia, giorno per giorno."
+  },
+  "Design": {
+    "forYou": "Per te",
+    "forGroup": "Per il gruppo",
+    "save": "Salva",
+    "saved": "Salvato",
+    "add": "Aggiungi",
+    "localTipAria": "Consiglio locale",
+    "localTipLabel": "Consiglio di chi ci vive",
+    "localTipLabelPlace": "Consiglio di chi ci vive · {place}",
+    "editorial": "Redazione di Isula",
+    "verifiedAt": "Verificato a {date}",
+    "relationVerifiedAt": "{relation} · verificato a {date}",
+    "offerFrom": "da",
+    "offerCta": "Vedi disponibilità su {partner}",
+    "offerDisclose": "Prenoti sul sito di {partner}. Riceviamo una commissione, il prezzo per te non cambia.",
+    "offerRating": "{rating} su 5 · {count, plural, one {# recensione} other {# recensioni}}",
+    "freeCancellation": "Cancellazione gratuita",
+    "priceUpdated": "aggiornato {when}",
+    "addToTrip": "Aggiungi al viaggio",
+    "voteUp": "Mi piace, {count, plural, one {# voto} other {# voti}}",
+    "voteDown": "Preferirei altro, {count, plural, one {# voto} other {# voti}}",
+    "voteNote": "{against} su {members} preferirebbero altro.",
+    "voteAlternatives": "{count, plural, one {Ecco # alternativa vicina.} other {Ecco # alternative vicine.}}",
+    "bookingsTitle": "Da prenotare",
+    "bookingsCount": "{todo} da prenotare · {done, plural, one {# fatto} other {# fatti}}",
+    "markBooked": "Segna come prenotato: {name}",
+    "onPartner": "Su {partner}",
+    "bookingsDisclose": "Prenoti sui siti dei partner indicati. Riceviamo una commissione, il prezzo per te non cambia.",
+    "days": "Giorni",
+    "dayShort": "G{n} · {name}",
+    "dayLong": "Giorno {n} · {name}",
+    "tabNav": "Principale",
+    "tabTrips": "Viaggi",
+    "tabActivities": "Attività",
+    "tabShop": "Shop",
+    "tabProfile": "Profilo",
+    "pointsAria": "{points} punti",
+    "scaleValue": "{n} su 5",
+    "rewardedReview": "Recensione con premio",
+    "stampLocked": "Timbro da sbloccare",
+    "editorialMonogram": "I"
   }
 }

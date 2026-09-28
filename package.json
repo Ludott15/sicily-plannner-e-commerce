@@ -16,7 +16,9 @@
     "db:test": "supabase test db",
     "db:snapshot": "supabase db dump --local --schema public -f supabase/schema.sql",
     "db:drift": "bash scripts/check-schema-drift.sh",
-    "test:int": "vitest run --project integration"
+    "test:int": "vitest run --project integration",
+    "design:tokens": "node scripts/design/generate-tokens.mjs",
+    "design:check": "node scripts/design/generate-tokens.mjs --check && node scripts/design/check-src.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

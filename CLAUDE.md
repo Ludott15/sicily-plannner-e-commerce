@@ -17,6 +17,16 @@ Design system, manuale del brand ("Isula", nome di lavoro), schemi e mockup: [do
 - `npm run db:snapshot` — aggiorna `supabase/schema.sql` dopo ogni migrazione
 - `npm run db:drift` — lo stesso controllo della CI
 
+## Design system
+
+- Fonte unica: `docs/design/tokens.json`. `npm run design:tokens` rigenera `generated/design/` (`tokens.css` con le variabili nei due temi, `theme.css` per Tailwind, `fonts.ts` con `next/font/google`); i file generati si committano e non si modificano a mano.
+- `npm run design:check` (anche in CI): file generati aggiornati e nessun colore (esadecimale, `rgb()`, `oklch()`, nomi di colore, tavolozze Tailwind) o nome di font scritto a mano in `src/`. I commenti sono esclusi.
+- Tailwind usa solo i token: `bg-calce`, `text-lava-muted`, `border-divider`, `text-display-l`, `rounded-lg`, `shadow-card`… Le tavolozze predefinite sono azzerate.
+- Componenti in `src/components/design/` (import da `@/components/design`), stili in `src/components/design/isula.css`, porting di `docs/design/components/riferimento.css`. Regole di ogni componente nel suo README: se una regola non si può rispettare, fermarsi e chiedere, non adattare.
+- Fraunces: `font-optical-sizing: auto`; in `font-variation-settings` solo `"SOFT" 50`, mai `opsz`.
+- Catalogo dei componenti nei due temi: `/it/dev/design`, solo in sviluppo. Screenshot: con `npm run dev` avviato, `node scripts/design/screenshots.mjs`.
+- Tema: segue il sistema; `data-theme="light"` o `"dark"` su un elemento lo forza per quel sottoalbero.
+
 ## Regole
 
 - Next.js 16: il middleware si chiama `proxy` (`src/proxy.ts`). Consultare `node_modules/next/dist/docs/` prima di usare API di Next.
