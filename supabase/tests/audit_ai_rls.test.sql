@@ -20,7 +20,7 @@ values
 
 select tests.authenticate_as('admin');
 select results_eq(
-  $$select action from public.admin_audit_log order by id$$,
+  format($$select action from public.admin_audit_log where actor_id in (%L, %L) order by id$$, tests.uid('admin'), tests.uid('admin2')),
   $$values ('points.adjust'), ('order.refund')$$,
   'admin: legge il registro'
 );

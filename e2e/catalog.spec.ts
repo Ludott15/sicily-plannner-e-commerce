@@ -33,31 +33,65 @@ test("attività: titolo, descrizione, canonical, hreflang e dati strutturati", a
   expect(data.location.address.addressRegion).toBe("AG");
 });
 
-test("elenco attività e pagina del luogo", async ({ page }) => {
+test("nessun testo tra parentesi quadre dei mockup nelle pagine", async ({ request }) => {
+  for (const path of ["/it", "/it/attivita", "/it/attivita/demo-zingaro", "/it/itinerari", "/it/itinerari/demo-sicilia-orientale", "/it/luoghi/demo-trapani"]) {
+    const html = await (await request.get(path)).text();
+    const body = html.slice(html.indexOf("<body"));
+    // I titoli del seed iniziano con [DEMO]: sono dati di prova, non segnaposto dei mockup.
+    const placeholders = body.replace(/\[DEMO\]/g, "").match(/\[(?:Foto|€|Partner|Nome|Durata|durata|PREZZO|mese anno|km|distanza)[^\]]*\]/g);
+    expect(placeholders, path).toBeNull();
+  }
+});
+
+test("elenco attività, scheda e pagina del luogo", async ({ page }) => {
   await page.goto("/it/attivita");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Attività in Sicilia");
   await page.getByRole("link", { name: "Street food al mercato di Ballarò" }).click();
   await expect(page).toHaveURL(/\/it\/attivita\/demo-mercato-ballaro$/);
 
-  await page.getByRole("link", { name: "Palermo", exact: true }).first().click();
+  await page.getByRole("navigation", { name: "Percorso" }).getByRole("link", { name: "Palermo" }).click();
   await expect(page).toHaveURL(/\/it\/luoghi\/demo-palermo$/);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Attività a Palermo");
+  await expect(page.getByRole("heading", { name: "Attività a Palermo" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Visita al Teatro Massimo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Itinerari pronti che passano da qui" })).toBeVisible();
 });
 
-test("itinerario predefinito giorno per giorno", async ({ page }) => {
+test("scheda attività: offerta affiliata con il partner nominato e trasparenza", async ({ page }) => {
+  await page.goto("/it/attivita/demo-zingaro");
+  // Su desktop l'offerta sta nel riquadro laterale; la copia nel contenuto è per il mobile.
+  const offer = page.getByRole("link", { name: "Vedi disponibilità su GetYourGuide" }).filter({ visible: true });
+  await expect(offer).toHaveAttribute("href", /^\/api\/go\/[0-9a-f-]{36}\?c=page&l=it$/);
+  await expect(
+    page.getByText("Prenoti sul sito di GetYourGuide. Riceviamo una commissione").filter({ visible: true }),
+  ).toBeVisible();
+});
+
+test("scheda attività senza link affiliato: nessuna offerta", async ({ page }) => {
+  await page.goto("/it/attivita/demo-valle-templi");
+  await expect(page.getByText("Vedi disponibilità su")).toHaveCount(0);
+});
+
+test("itinerario pronto giorno per giorno, con i titoli dei giorni", async ({ page }) => {
   await page.goto("/it/itinerari");
   await page.getByRole("link", { name: "[DEMO] Sicilia orientale in cinque giorni" }).click();
   await expect(page).toHaveURL(/\/it\/itinerari\/demo-sicilia-orientale$/);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveCount(5);
-  await expect(page.getByRole("heading", { name: "Giorno 2" })).toBeVisible();
+
+  const days = page.getByRole("navigation", { name: "Giorni" }).getByRole("button");
+  await expect(days).toHaveCount(5);
+  await expect(days.nth(0)).toHaveAttribute("aria-current", "true");
+  await expect(days.nth(1)).toHaveText(/Giorno 2 · Etna/);
+  // Il quinto giorno non ha un titolo: mostra i luoghi delle sue tappe.
+  await expect(days.nth(4)).toHaveText(/Giorno 5 · Noto/);
+
+  await days.nth(1).click();
+  await expect(days.nth(1)).toHaveAttribute("aria-current", "true");
   await expect(page.getByRole("link", { name: "Escursione ai crateri sommitali dell'Etna" })).toBeVisible();
 });
 
 test("versione inglese: lang, interfaccia e canonical", async ({ page }) => {
   await page.goto("/en/attivita/demo-valle-templi");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.getByText("Duration")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What to expect" })).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
     "http://localhost:3000/en/attivita/demo-valle-templi",

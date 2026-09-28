@@ -27,6 +27,10 @@ Design system, manuale del brand ("Isula", nome di lavoro), schemi e mockup: [do
 - Fraunces: `font-optical-sizing: auto`; in `font-variation-settings` solo `"SOFT" 50`, mai `opsz`.
 - Catalogo dei componenti nei due temi: `/it/dev/design`, solo in sviluppo. Screenshot: con `npm run dev` avviato, `node scripts/design/screenshots.mjs`.
 - Tema: segue il sistema; `data-theme="light"` o `"dark"` su un elemento lo forza per quel sottoalbero.
+- `isula.css` sta nel layer `components` di Tailwind: una classe di utilità sullo stesso elemento (`w-full`, `aspect-[4/3]`…) vince sulle regole del componente.
+- Pagine confrontate con i mockup: con `npm run dev` avviato, `node scripts/design/compare-mockups.mjs` scrive in `docs/design/screenshots/m3/` le coppie mockup/pagina (1280 e 390, tema chiaro) e la pagina in tema scuro.
+- Azioni dei mockup che dipendono da milestone future: visibili ma disabilitate con `PendingButton` (o `pendingAttributes`), elencate in `src/lib/pending-actions.ts`. Implementando un'azione la si toglie dall'elenco: l'e2e `pending-actions.spec.ts` confronta pagine ed elenco. Prima del lancio l'elenco è vuoto (`PRE_LAUNCH=1`).
+- Nelle pagine non compaiono mai i segnaposto tra parentesi quadre dei mockup: se un dato manca, la sezione non c'è o mostra lo stato vuoto di `schemi.md` (lo verifica l'e2e del catalogo).
 
 ## Regole
 
@@ -56,7 +60,8 @@ Design system, manuale del brand ("Isula", nome di lavoro), schemi e mockup: [do
 
 - `supabase/seed.sql` contiene **solo dati demo** per sviluppo locale, CI ed e2e: slug con prefisso `demo-`, descrizioni con `[DEMO]`. Non caricarlo mai in produzione: `supabase db push` non esegue il seed, e non si usa `--include-seed` verso il progetto di produzione. Il catalogo reale lo inserisce Ludovico dall'admin.
 - I test pgTAP e di integrazione non devono dipendere dal seed; gli e2e possono usarlo.
-- Tutto ciò che un test crea fuori da una transazione annullata usa il prefisso `int-` (integrazione) o `e2e-` (Playwright), in slug, titoli ed email: `scripts/db/clean-test-data.mjs` lo elimina.
+- Tutto ciò che un test crea fuori da una transazione annullata usa il prefisso `int-` (integrazione) o `e2e-` (Playwright), in slug, titoli ed email: `scripts/db/clean-test-data.mjs` lo elimina. Le righe di `admin_audit_log` scritte dagli e2e restano (il registro è immutabile): i test che lo leggono filtrano sui propri utenti.
+- Gli e2e che devono leggere o preparare il database usano `withDb` da `e2e/db.mjs` con `await import("./db.mjs")`: Playwright compila gli spec in CommonJS e non importa staticamente un modulo ES.
 
 ## Resoconti
 

@@ -149,7 +149,8 @@ activity_interests: activity_id, interest_key, strength smallint 1-3; pk(activit
 
 -- ITINERARI
 itineraries: owner_id null (null = predefinito editoriale), group_id null, title, slug null unique,
-  is_template bool, template_id null (fk itineraries), start_date date, days smallint, status itinerary_status
+  is_template bool, template_id null (fk itineraries), start_date date, days smallint, status itinerary_status,
+  day_titles text[] (titolo editoriale di ogni giorno, al massimo days)
 itinerary_items: itinerary_id (fk, cascade), day_index smallint, position smallint,
   activity_id null, place_id null, custom_title null, start_time time null, notes;
   check (activity_id or place_id or custom_title non null)
@@ -507,11 +508,14 @@ Tredici milestone in sequenza (le dodici originali più il design system tra la 
   - Fatto quando: lo script è deterministico (test); un controllo in CI fallisce se trova colori esadecimali o nomi di font scritti a mano in `src/`; i contrasti dichiarati nel manuale sono verificati da un test sui valori dei token.
 - **M3 — Catalogo.** Pagine pubbliche di luoghi, attività e itinerari costruite con i componenti del design system; la scheda attività mostra i consigli di `public_local_tips` con `LocalTip`; admin del catalogo; seed di prova con slug `demo-`, mai in produzione.
   - Fatto quando: le pagine sono renderizzate lato server con metadati SEO; un'attività senza tag non può essere attivata.
+  - Anticipato dalla M6: `/api/go/[id]` minimo (click registrato con `record_affiliate_click`, subid univoco, cookie `anon_id`, nessun URL arbitrario), così offerta affiliata e barra di prenotazione mobile funzionano.
+  - Titoli dei giorni degli itinerari (`itineraries.day_titles`), scritti dall'admin; un giorno senza titolo mostra i luoghi delle sue tappe.
+  - **Azioni in sospeso:** le azioni dei mockup che dipendono da milestone successive ("Crea il tuo viaggio" M4; "Aggiungi al viaggio", Salva, "Usa questo itinerario", Viaggi nella barra mobile M5; Shop M10) sono visibili ma disabilitate, marcate con `data-pending` e `data-pending-id` ed elencate in `src/lib/pending-actions.ts`. Un test e2e confronta le azioni nelle pagine con l'elenco; ogni milestone che ne implementa una la toglie. "Disponibile a breve" compare solo in sviluppo. Prima del lancio l'elenco deve essere vuoto: lo verifica il test con `PRE_LAUNCH=1` sulla build di produzione.
 - **M4 — Profilo e personalizzazione.** Onboarding, pagina preferenze, filtro, scoring, algoritmo greedy. Nello scoring di gruppo i motivi "Per il gruppo" sono solo aggregati, e con meno di 3 membri solo logistici.
   - Fatto quando: test Vitest con profili e cataloghi fissi producono sempre lo stesso itinerario; nessun itinerario viola un vincolo rigido.
-- **M5 — Itinerary builder.** Creazione, copia da predefinito, modifica giorno per giorno con drag and drop, salvataggio, checklist "Da prenotare" su `itinerary_bookings`.
+- **M5 — Itinerary builder.** Creazione, copia da predefinito, modifica giorno per giorno con drag and drop, salvataggio, checklist "Da prenotare" su `itinerary_bookings`. Chi crea il proprio itinerario da uno pronto eredita i titoli dei giorni (`day_titles`); se poi modifica le tappe di un giorno, il titolo resta finché non lo cambia lui, e il ripiego sui luoghi vale solo per i giorni senza titolo.
   - Fatto quando: un utente non può aprire o modificare l'itinerario di un altro (test e2e).
-- **M6 — Affiliati e voli.** Import del catalogo, coda di approvazione, `/api/go/[id]`, ricerca voli, `/api/go/flight`.
+- **M6 — Affiliati e voli.** Import del catalogo, coda di approvazione, `/api/go/[id]` (la versione minima è in M3: restano rate limit, verifica dei parametri del subid con i termini di ogni partner e contesto dal chatbot), ricerca voli, `/api/go/flight`.
   - Fatto quando: ogni click crea una riga con subid univoco; un test dimostra che nessuna route redirige verso un URL arbitrario.
 - **M7 — Chatbot.** `/api/chat`, strumenti, system prompt, interfaccia con schede attività e conferme. Nei viaggi di gruppo solo motivi aggregati; nessuno strumento restituisce le preferenze di un altro membro.
   - Fatto quando: su un set di 20 richieste di prova, ogni `[[activity:id]]` nelle risposte corrisponde a un id restituito da uno strumento nella stessa sessione (controllo automatico).
