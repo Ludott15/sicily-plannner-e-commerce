@@ -1,5 +1,5 @@
 // Screenshot delle pagine affiancati ai mockup (docs/design/mockups), tema chiaro a 1280 e
-// 390px, più la pagina in tema scuro. Uso: con `npm run dev` avviato,
+// 390px, più la pagina in tema scuro alle due larghezze. Uso: con `npm run dev` avviato,
 //   node scripts/design/compare-mockups.mjs [base-url]
 // Scrive in docs/design/screenshots/m3/.
 import { chromium } from "@playwright/test";
@@ -15,6 +15,7 @@ const mockups = resolve("docs/design/mockups");
 const PAGES = [
   { name: "home", path: "/it", desktop: "Home.html", mobile: "HomeMobile.html" },
   { name: "attivita-lista", path: "/it/attivita" },
+  { name: "attivita-lista-filtri", path: "/it/attivita?interessi=sea&provincia=TP" },
   { name: "attivita-scheda", path: "/it/attivita/demo-zingaro", desktop: "Attivita.html", mobile: "AttivitaMobile.html" },
   { name: "itinerari-lista", path: "/it/itinerari" },
   {
@@ -77,9 +78,11 @@ for (const p of PAGES) {
     }
     console.log(target);
   }
-  const dark = join(out, `${p.name}-desktop-scuro.png`);
-  await shot(`${base}${p.path}`, VIEWPORTS.desktop, "dark", dark);
-  console.log(dark);
+  for (const [vpName, viewport] of Object.entries(VIEWPORTS)) {
+    const dark = join(out, `${p.name}-${vpName}-scuro.png`);
+    await shot(`${base}${p.path}`, viewport, "dark", dark);
+    console.log(dark);
+  }
 }
 
 await browser.close();

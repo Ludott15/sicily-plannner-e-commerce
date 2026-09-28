@@ -10,6 +10,7 @@ export { InterestChip } from "./interest-chip";
 export { ItineraryStop, TransferStop } from "./itinerary-stop";
 export { LocalTip, type LocalTipAuthor } from "./local-tip";
 export { PendingButton } from "./pending-button";
+export { PendingMarker } from "./pending-marker";
 export { PendingSaveButton } from "./pending-save-button";
 export { PreferenceScale } from "./preference-scale";
 export { ProductCard } from "./product-card";

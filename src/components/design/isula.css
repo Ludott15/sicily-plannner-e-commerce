@@ -120,7 +120,8 @@ a.is-tabbar__item { color: var(--lava-muted); }
 .is-route { position: relative; list-style: none; margin: 0; padding: 0; }
 /* Colonne della tappa in variabili: la linea (2px, centrata sul punto da 14px) si allinea da sola. */
 .is-route { --stop-time-w: 52px; --stop-gap: var(--space-3); --stop-dot-col: 24px; --stop-dot-left: 5px; --stop-dot-top: 18px; }
-.is-route::before { content: ""; position: absolute; top: 26px; bottom: 26px; left: calc(var(--stop-time-w) + var(--stop-gap) + var(--stop-dot-left) + 6px); width: 2px; background-image: repeating-linear-gradient(to bottom, var(--lava-muted) 0 2px, transparent 2px 8px); }
+/* Dal centro del primo punto al centro dell'ultimo: Route misura --route-start e --route-end; senza JavaScript restano i 26px. */
+.is-route::before { content: ""; position: absolute; top: var(--route-start, 26px); bottom: var(--route-end, 26px); left: calc(var(--stop-time-w) + var(--stop-gap) + var(--stop-dot-left) + 6px); width: 2px; background-image: repeating-linear-gradient(to bottom, var(--lava-muted) 0 2px, transparent 2px 8px); }
 .is-route--draw::before { animation: is-route var(--dur-route) var(--ease-in-out) both; }
 @keyframes is-route { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0); } }
 /* Alla prima apertura ogni punto compare quando la linea lo raggiunge (ritardo calcolato in JS). */
@@ -163,10 +164,10 @@ a.is-tabbar__item { color: var(--lava-muted); }
 .is-scale__pip[aria-checked="true"], .is-scale__pip[data-filled="true"] { background: var(--lava); border-color: var(--lava); }
 
 /* Punti e timbri */
-.is-points { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px 6px 8px; border-radius: var(--radius-pill); background: var(--zagara-tint); color: var(--on-zagara); border: 1.5px solid var(--zagara); font-family: var(--font-display); font-weight: 600; font-size: 17px; line-height: 1; position: relative; font-variant-numeric: tabular-nums; transition: background-color var(--dur-slow) var(--ease-out); }
-.is-points--earned { background: var(--zagara); }
-.is-points__coin { width: 18px; height: 18px; border-radius: var(--radius-pill); border: 2px dashed var(--on-zagara); }
-.is-points__gain { position: absolute; right: 0; top: -4px; padding: 2px 8px; border-radius: var(--radius-pill); background: var(--zagara-tint); color: var(--on-zagara); font-size: 13px; pointer-events: none; animation: is-gain var(--dur-slow) var(--ease-out) forwards; }
+.is-points { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px 6px 8px; border-radius: var(--radius-pill); background: var(--zagara-tint); color: var(--lava); border: 1.5px solid var(--zagara); font-family: var(--font-display); font-weight: 600; font-size: 17px; line-height: 1; position: relative; font-variant-numeric: tabular-nums; transition: background-color var(--dur-slow) var(--ease-out), color var(--dur-slow) var(--ease-out); }
+.is-points--earned { background: var(--zagara); color: var(--on-zagara); }
+.is-points__coin { width: 18px; height: 18px; border-radius: var(--radius-pill); border: 2px dashed currentColor; }
+.is-points__gain { position: absolute; right: 0; top: -4px; padding: 2px 8px; border-radius: var(--radius-pill); background: var(--zagara-tint); color: var(--lava); font-size: 13px; pointer-events: none; animation: is-gain var(--dur-slow) var(--ease-out) forwards; }
 @keyframes is-gain { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-12px); opacity: 0; } }
 .is-stamp { width: 120px; height: 120px; border-radius: var(--radius-pill); background: var(--zagara); color: var(--on-zagara); display: grid; place-items: center; text-align: center; position: relative; transform: rotate(var(--stamp-rot, -4deg)); }
 .is-stamp::before { content: ""; position: absolute; inset: 7px; border-radius: var(--radius-pill); border: 1.5px dashed var(--on-zagara); }

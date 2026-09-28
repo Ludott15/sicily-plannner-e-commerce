@@ -1,11 +1,15 @@
-// Azioni dei mockup visibili ma non ancora attive: compaiono disabilitate, marcate con
-// data-pending="<milestone>" e data-pending-id="<id>", per giudicare la gerarchia reale.
+// Azioni dei mockup non ancora attive, marcate con data-pending="<milestone>" e
+// data-pending-id="<id>". Di solito sono visibili e disabilitate (PendingButton), per giudicare
+// la gerarchia reale; quelle che non devono comparire affatto (punti, offerte) sono solo un
+// segnaposto nascosto (PendingMarker).
 // Ogni milestone che implementa un'azione la toglie da qui: il test e2e
 // (e2e/pending-actions.spec.ts) confronta questo elenco con quello che trova nelle pagine.
 // Prima del lancio l'elenco deve essere vuoto (controllo attivo con PRE_LAUNCH=1).
 
 export const PENDING_ACTIONS = {
   "home.create-trip": "M4",
+  "home.points": "M9",
+  "activity.offer": "2e",
   "activity.add-to-trip": "M5",
   "activity.save": "M5",
   "card.save": "M5",

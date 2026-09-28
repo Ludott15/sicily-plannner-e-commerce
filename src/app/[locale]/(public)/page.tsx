@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ItineraryCard } from "@/components/catalog/itinerary-card";
-import { ButtonLink, interestDomain, PendingButton } from "@/components/design";
+import { ButtonLink, interestDomain, PendingButton, PendingMarker } from "@/components/design";
 import { Link } from "@/lib/i18n/navigation";
 import { localizedAlternates } from "@/lib/seo";
 import { interestLabels } from "@/server/catalog/labels";
@@ -9,7 +9,8 @@ import { listTemplates } from "@/server/catalog/queries";
 
 // Home (mockup Home.html e HomeMobile.html). Sezioni del mockup non ancora in pagina,
 // perché mancano i dati o la funzione: voce locale (consigli, schema 2e), shop (milestone 10),
-// viaggi di gruppo (milestone 8). "Crea il tuo viaggio" è in sospeso fino all'onboarding (M4).
+// viaggi di gruppo (milestone 8). "Crea il tuo viaggio" è in sospeso fino all'onboarding (M4);
+// la pillola "+100 punti a viaggio completato" è in sospeso e nascosta fino alla gamification (M9).
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -37,9 +38,7 @@ export default async function HomePage({ params }: Props) {
           <div className="relative aspect-[4/3] overflow-hidden bg-calce-sunk md:aspect-[4/5] md:rounded-xl">
             <span className="is-display absolute bottom-4 left-4 text-heading-2 text-lava-muted">{t("heroPhoto")}</span>
           </div>
-          <p className="absolute top-6 right-6 hidden rounded-pill border-[1.5px] border-zagara bg-zagara-tint px-3 py-1.5 text-body-s font-semibold text-on-zagara md:block">
-            {t("heroPoints")}
-          </p>
+          <PendingMarker id="home.points" />
           <div className="absolute top-12 -left-12 hidden w-[320px] rounded-lg bg-calce-raised p-6 shadow-lift md:block">
             <p className="text-label uppercase text-coccio-text">{t("heroDayLabel")}</p>
             <p className="is-display mt-1 text-heading-2">{t("heroDayPlace")}</p>

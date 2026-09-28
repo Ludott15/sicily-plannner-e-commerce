@@ -38,8 +38,9 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <html lang={locale} className={`${fontVariables} h-full antialiased`}>
-      {/* Su mobile la barra in basso (TabBar o BookingBar) copre 56px più l'area sicura: il footer resta sopra. */}
-      <body className="flex min-h-full flex-col pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
+      {/* Su mobile la barra in basso copre il fondo della pagina: la TabBar 56px più l'area sicura,
+          la barra delle azioni (ActionBar) l'altezza che misura in --bottom-bar-h. Il footer resta sopra. */}
+      <body className="flex min-h-full flex-col pb-[var(--bottom-bar-h,calc(56px+env(safe-area-inset-bottom)))] md:pb-0">
         <NextIntlClientProvider>
           <SiteHeader />
           <main id="contenuto" className="flex flex-1 flex-col">

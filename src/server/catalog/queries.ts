@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, exists, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { dbPublic } from "@/server/db/public";
 import type { UserTx } from "@/server/db/user";
 import {
@@ -23,8 +23,6 @@ const activityCardColumns = {
   priceFromEur: activities.priceFromEur,
   rating: activities.rating,
   requiresCar: activities.requiresCar,
-  partner: activities.partner,
-  affiliateUrl: activities.affiliateUrl,
   placeName: places.name,
   placeSlug: places.slug,
   placeProvince: places.province,
@@ -67,14 +65,56 @@ async function withTags<T extends { id: string }>(tx: UserTx, rows: T[]) {
   return rows.map((r) => ({ ...r, tags: tags.get(r.id) ?? [] }));
 }
 
-export const listActivities = cache(() =>
+// Filtri della lista attività: interessi (basta uno dei selezionati) e provincia.
+// I valori arrivano dall'URL già validati (parseActivityFilters in src/lib/activity-filters.ts).
+
+export const listActivities = cache((interestKeys: readonly string[] = [], province: string | null = null) =>
   dbPublic(async (tx) => {
     const rows = await tx
       .select(activityCardColumns)
       .from(activities)
       .innerJoin(places, eq(places.id, activities.placeId))
+      .where(
+        and(
+          province ? eq(places.province, province) : undefined,
+          interestKeys.length > 0
+            ? exists(
+                tx
+                  .select({ one: sql`1` })
+                  .from(activityInterests)
+                  .where(
+                    and(
+                      eq(activityInterests.activityId, activities.id),
+                      inArray(activityInterests.interestKey, [...interestKeys]),
+                    ),
+                  ),
+              )
+            : undefined,
+        ),
+      )
       .orderBy(desc(activities.rating), asc(activities.title));
     return withTags(tx, rows);
+  }),
+);
+
+// Valori possibili dei filtri: solo interessi e province con almeno un'attività visibile,
+// così nessun filtro porta a una lista vuota da solo.
+export const listActivityFilterOptions = cache(() =>
+  dbPublic(async (tx) => {
+    const [interestRows, provinceRows] = await Promise.all([
+      tx
+        .selectDistinct({ key: interests.key, sort: interests.sort })
+        .from(interests)
+        .innerJoin(activityInterests, eq(activityInterests.interestKey, interests.key))
+        .innerJoin(activities, eq(activities.id, activityInterests.activityId))
+        .orderBy(asc(interests.sort)),
+      tx
+        .selectDistinct({ province: places.province })
+        .from(places)
+        .innerJoin(activities, eq(activities.placeId, places.id))
+        .orderBy(asc(places.province)),
+    ]);
+    return { interests: interestRows.map((r) => r.key), provinces: provinceRows.map((r) => r.province) };
   }),
 );
 

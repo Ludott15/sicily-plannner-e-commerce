@@ -6,19 +6,11 @@ import { Breadcrumb } from "@/components/catalog/breadcrumb";
 import { CatalogActivityCard } from "@/components/catalog/catalog-activity-card";
 import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
-import {
-  AffiliateOffer,
-  affiliateHref,
-  BookingBar,
-  ButtonAnchor,
-  interestDomain,
-  PendingButton,
-} from "@/components/design";
+import { BookingBar, interestDomain, PendingButton, PendingMarker } from "@/components/design";
 import { publicEnv } from "@/lib/env";
 import { formatDuration, formatEur, formatSeason } from "@/lib/format";
 import { provinceName } from "@/lib/provinces";
 import { localizedAlternates, truncate } from "@/lib/seo";
-import { partnerName, type Partner } from "@/server/affiliates/links";
 import { interestLabels } from "@/server/catalog/labels";
 import { getActivity, listNearbyActivities } from "@/server/catalog/queries";
 
@@ -27,6 +19,8 @@ import { getActivity, listNearbyActivities } from "@/server/catalog/queries";
 // segnaposto), "Perché è per te" (M4), consiglio locale (schema 2e), "Da sapere",
 // recensioni (M9), prodotti della zona (M10), "+10 punti con il check-in" (M9).
 // In sospeso (visibili e disabilitate): Salva e "Aggiungi al viaggio" (M5).
+// Offerte affiliate in sospeso e nascoste fino allo schema 2e (activity_offers): il prezzo
+// dell'attività è quello pagato in loco (ingresso, biglietto), un metadato e mai un'offerta.
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -62,23 +56,18 @@ export default async function ActivityPage({ params, searchParams }: Props) {
     searchParams,
   ]);
 
-  const partner = activity.affiliateUrl ? partnerName(activity.partner as Partner) : null;
   const price = formatEur(activity.priceFromEur, locale);
   const season = formatSeason(activity.seasonMonths, locale);
   const url = `${publicEnv.NEXT_PUBLIC_SITE_URL}/${locale}/attivita/${activity.slug}`;
 
-  // Metadati del titolo: numeri concreti, il prezzo qui solo se non è un'offerta affiliata.
+  // Metadati del titolo: numeri concreti, compreso il prezzo in loco.
   const meta = [
     formatDuration(activity.durationMin),
     activity.requiresCar ? t("carNeeded") : null,
-    !partner && price !== null ? (Number(activity.priceFromEur) === 0 ? t("freeMeta") : t("priceMeta", { price })) : null,
+    price !== null ? (Number(activity.priceFromEur) === 0 ? t("freeMeta") : t("priceMeta", { price })) : null,
     season,
     activity.accessible ? t("accessible") : null,
   ].filter((m): m is string => Boolean(m));
-
-  const offer = partner ? (
-    <AffiliateOffer activityId={activity.id} locale={locale} title={activity.title} partner={partner} price={price} />
-  ) : null;
 
   const photo = (
     <div className="relative -mx-4 aspect-[4/3] overflow-hidden bg-calce-sunk md:mx-0 md:aspect-[21/9] md:rounded-xl">
@@ -157,14 +146,6 @@ export default async function ActivityPage({ params, searchParams }: Props) {
                 <p className="mt-3 text-body-l text-pretty">{activity.description}</p>
               </section>
             )}
-            {offer && (
-              <section aria-labelledby="con-guida" className="md:hidden">
-                <h2 id="con-guida" className="is-display text-heading-2">
-                  {t("withGuide")}
-                </h2>
-                <div className="mt-4">{offer}</div>
-              </section>
-            )}
           </div>
 
           <aside className="hidden md:col-span-5 md:block">
@@ -177,7 +158,7 @@ export default async function ActivityPage({ params, searchParams }: Props) {
                   </PendingButton>
                 </div>
               </div>
-              {offer}
+              <PendingMarker id="activity.offer" />
             </div>
           </aside>
         </div>
@@ -218,27 +199,12 @@ export default async function ActivityPage({ params, searchParams }: Props) {
         />
       </article>
 
-      {/* Mobile: la barra di prenotazione sostituisce la TabBar */}
+      {/* Mobile: la barra di prenotazione sostituisce la TabBar; per ora solo "Aggiungi al viaggio" */}
       <BookingBar
         addToTrip={
           <PendingButton id="activity.add-to-trip" variant="primary" fullWidth>
             {t("addToTrip")}
           </PendingButton>
-        }
-        offer={
-          partner ? (
-            <ButtonAnchor
-              variant="secondary"
-              href={affiliateHref(activity.id, { locale })}
-              rel="sponsored nofollow"
-            >
-              {/* Due righe come nel mockup ("Con guida / da 35 €"), con il nome del partner. */}
-              <span className="flex flex-col items-center gap-0.5 leading-tight">
-                <span>{partner}</span>
-                {price !== null && <span className="text-caption font-normal">{t("priceMeta", { price })}</span>}
-              </span>
-            </ButtonAnchor>
-          ) : undefined
         }
       />
     </>

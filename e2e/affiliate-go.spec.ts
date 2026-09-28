@@ -1,16 +1,18 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 // /api/go/[id]: click registrato con subid univoco, 302 verso il partner, mai un URL arbitrario.
+// Le offerte non sono in pagina fino allo schema 2e: il link si costruisce come AffiliateOffer
+// (affiliateHref) sull'attività demo con link affiliato.
 
-async function offerHref(page: Page) {
-  await page.goto("/it/attivita/demo-zingaro");
-  const href = await page.getByRole("link", { name: "Vedi disponibilità su GetYourGuide" }).first().getAttribute("href");
-  expect(href).toBeTruthy();
-  return href!;
+async function offerHref() {
+  const { withDb } = await import("./db.mjs");
+  const [row] = await withDb((sql) => sql`select id from activities where slug = 'demo-zingaro'`);
+  expect(row).toBeTruthy();
+  return `/api/go/${row!.id}?c=page&l=it`;
 }
 
-test("ogni click crea una riga con subid univoco e reindirizza al partner", async ({ page, request }) => {
-  const href = await offerHref(page);
+test("ogni click crea una riga con subid univoco e reindirizza al partner", async ({ request }) => {
+  const href = await offerHref();
   const { withDb } = await import("./db.mjs");
 
   const subids: string[] = [];
@@ -32,8 +34,8 @@ test("ogni click crea una riga con subid univoco e reindirizza al partner", asyn
   await withDb((sql) => sql`delete from affiliate_clicks where subid = any(${subids})`);
 });
 
-test("nessun open redirect: i parametri della richiesta non cambiano la destinazione", async ({ page, request }) => {
-  const href = await offerHref(page);
+test("nessun open redirect: i parametri della richiesta non cambiano la destinazione", async ({ request }) => {
+  const href = await offerHref();
   for (const extra of ["&url=https://evil.example", "&target=https://evil.example", "&l=https://evil.example"]) {
     const res = await request.get(`${href}${extra}`, { maxRedirects: 0 });
     const location = res.headers()["location"]!;

@@ -1,19 +1,24 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { ActivityFilters } from "@/components/catalog/activity-filters";
 import { CatalogActivityCard } from "@/components/catalog/catalog-activity-card";
 import { JsonLd } from "@/components/catalog/json-ld";
-import { ButtonLink } from "@/components/design";
+import { ButtonLink, interestDomain } from "@/components/design";
+import { parseActivityFilters, type ActivitySearchParams } from "@/lib/activity-filters";
 import { publicEnv } from "@/lib/env";
+import { provinceName } from "@/lib/provinces";
 import { localizedAlternates } from "@/lib/seo";
 import { interestLabels } from "@/server/catalog/labels";
-import { listActivities } from "@/server/catalog/queries";
+import { listActivities, listActivityFilterOptions } from "@/server/catalog/queries";
 
 // Lista delle attività: griglia di ActivityCard, come le sezioni a card dei mockup.
+// Filtri per interesse e provincia nell'URL (?interessi=sea,food_wine&provincia=TP): la
+// lista filtrata la renderizza il server, il canonical resta la lista completa.
 // Stato vuoto (schemi.md): una frase che dice cosa fare e un'azione.
 
-type Props = { params: Promise<{ locale: string }> };
+type Props = { params: Promise<{ locale: string }>; searchParams: Promise<ActivitySearchParams> };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Omit<Props, "searchParams">): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Catalog" });
   return {
@@ -24,30 +29,57 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function ActivitiesPage({ params }: Props) {
+export default async function ActivitiesPage({ params, searchParams }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [t, activities, labels] = await Promise.all([
+  const [t, labels, options, search] = await Promise.all([
     getTranslations("Catalog"),
-    listActivities(),
     interestLabels(locale),
+    listActivityFilterOptions(),
+    searchParams,
   ]);
+  const filters = parseActivityFilters(search, options);
+  const filtered = filters.interests.length > 0 || filters.province !== null;
+  const activities = await listActivities(filters.interests, filters.province);
 
   return (
     <section className="mx-auto w-full max-w-[1200px] px-4 py-12 md:px-16 md:py-16">
-      <h1 className="is-display text-display-l">{t("activitiesTitle")}</h1>
+      <h1 id="titolo-attivita" className="is-display text-display-l">
+        {t("activitiesTitle")}
+      </h1>
       <p className="mt-3 max-w-2xl text-body-l text-lava-muted">{t("activitiesDescription")}</p>
 
+      {options.interests.length + options.provinces.length > 0 && (
+        <ActivityFilters
+          interests={options.interests.map((key) => ({ key, label: labels.get(key) ?? key, domain: interestDomain(key) }))}
+          provinces={options.provinces.map((code) => ({ code, name: provinceName(code) }))}
+          selected={filters}
+        />
+      )}
+
+      <p role="status" className="mt-8 text-body-s text-lava-muted">
+        {t("activitiesCount", { count: activities.length })}
+      </p>
+
       {activities.length === 0 ? (
-        <div className="mt-12 flex flex-col items-start gap-4">
-          <p className="text-body-l">{t("activitiesEmpty")}</p>
-          <ButtonLink href="/itinerari" variant="primary">
-            {t("itinerariesTitle")}
-          </ButtonLink>
-        </div>
+        filtered ? (
+          <div className="mt-6 flex flex-col items-start gap-4">
+            <p className="text-body-l">{t("activitiesFilteredEmpty")}</p>
+            <ButtonLink href="/attivita" variant="primary">
+              {t("filterClear")}
+            </ButtonLink>
+          </div>
+        ) : (
+          <div className="mt-6 flex flex-col items-start gap-4">
+            <p className="text-body-l">{t("activitiesEmpty")}</p>
+            <ButtonLink href="/itinerari" variant="primary">
+              {t("itinerariesTitle")}
+            </ButtonLink>
+          </div>
+        )
       ) : (
-        <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <ul aria-labelledby="titolo-attivita" className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {activities.map((activity) => (
             <li key={activity.id}>
               <CatalogActivityCard activity={activity} locale={locale} interestLabels={labels} />
