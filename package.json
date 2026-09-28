@@ -18,7 +18,8 @@
     "db:drift": "bash scripts/check-schema-drift.sh",
     "test:int": "vitest run --project integration",
     "design:tokens": "node scripts/design/generate-tokens.mjs",
-    "design:check": "node scripts/design/generate-tokens.mjs --check && node scripts/design/check-src.mjs"
+    "design:check": "node scripts/design/generate-tokens.mjs --check && node scripts/design/check-src.mjs",
+    "db:clean": "node scripts/db/clean-test-data.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

@@ -25,10 +25,14 @@ beforeAll(async () => {
 
 afterAll(async () => {
   // I tag si eliminano a cascata con l'attività (togliere prima i tag di un'attività
-  // attiva violerebbe activities_require_tags).
-  await dbAdmin.delete(activities).where(inArray(activities.id, [activeId, inactiveId]));
-  await dbAdmin.delete(places).where(eq(places.id, placeId));
-  await closeConnection();
+  // attiva violerebbe activities_require_tags). Se qualcosa fallisce, la pulizia
+  // globale (test/global-cleanup.ts, prefisso int-) rimuove comunque i residui.
+  try {
+    await dbAdmin.delete(activities).where(inArray(activities.id, [activeId, inactiveId]));
+    await dbAdmin.delete(places).where(eq(places.id, placeId));
+  } finally {
+    await closeConnection();
+  }
 });
 
 describe("dbPublic", () => {

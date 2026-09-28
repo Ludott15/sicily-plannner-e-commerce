@@ -3,6 +3,9 @@ import { defineConfig, devices } from "@playwright/test";
 // Richiede Supabase locale avviato (npm run db:start).
 export default defineConfig({
   testDir: "./e2e",
+  // Elimina i dati creati dai test (prefisso e2e-) prima e dopo la suite.
+  globalSetup: "./e2e/global-cleanup.mjs",
+  globalTeardown: "./e2e/global-cleanup.mjs",
   fullyParallel: true,
   // In locale il server di sviluppo compila le route al primo accesso: in parallelo le
   // navigazioni superano i timeout. In CI (build di produzione) si usa il default.

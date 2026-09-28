@@ -12,7 +12,8 @@ Design system, manuale del brand ("Isula", nome di lavoro), schemi e mockup: [do
 - `npm run dev` — app su http://localhost:3000
 - `npm run lint`, `npm run typecheck`, `npm test` (Vitest unit), `npm run test:int` (Vitest su Postgres locale, file `*.int.test.ts`), `npx playwright test` (e2e)
 - `npm run db:generate` — migrazione dallo schema Drizzle; `-- --custom --name=x` per SQL a mano (RLS, funzioni, trigger)
-- `npm run db:reset` — riapplica tutte le migrazioni da zero e carica `supabase/seed.sql`
+- `npm run db:reset` — riporta il database locale allo stato del seed: migrazioni da zero più `supabase/seed.sql`
+- `npm run db:clean` — elimina solo i dati lasciati dai test (slug e titoli `int-`/`e2e-`, utenti `int-…@example.com` ed `e2e-…@example.com`); gira anche prima e dopo le suite di integrazione ed e2e
 - `npm run db:test` — test RLS in pgTAP (`supabase/tests/*.test.sql`); gli helper (`tests.create_user`, `tests.authenticate_as`, `tests.as_anon`) si includono con `\ir helpers/setup.psql` dopo `begin;`
 - `npm run db:snapshot` — aggiorna `supabase/schema.sql` dopo ogni migrazione
 - `npm run db:drift` — lo stesso controllo della CI
@@ -55,6 +56,7 @@ Design system, manuale del brand ("Isula", nome di lavoro), schemi e mockup: [do
 
 - `supabase/seed.sql` contiene **solo dati demo** per sviluppo locale, CI ed e2e: slug con prefisso `demo-`, descrizioni con `[DEMO]`. Non caricarlo mai in produzione: `supabase db push` non esegue il seed, e non si usa `--include-seed` verso il progetto di produzione. Il catalogo reale lo inserisce Ludovico dall'admin.
 - I test pgTAP e di integrazione non devono dipendere dal seed; gli e2e possono usarlo.
+- Tutto ciò che un test crea fuori da una transazione annullata usa il prefisso `int-` (integrazione) o `e2e-` (Playwright), in slug, titoli ed email: `scripts/db/clean-test-data.mjs` lo elimina.
 
 ## Resoconti
 
