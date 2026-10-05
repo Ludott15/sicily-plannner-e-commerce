@@ -63,8 +63,7 @@
     "error": "Sign-in failed. Please try again.",
     "errors": {
       "invalid_email": "Enter a valid email address.",
-      "invalid_code": "That code isn't right. Check the latest email you received.",
-      "code_expired": "The code has expired. Ask for a new one.",
+      "invalid_code": "That code is wrong or has expired. Check the latest email you received, or ask for a new one.",
       "captcha_failed": "We couldn't verify that you're a person. Reload the page and try again.",
       "rate_limited": "Too many attempts in a short time. Wait a few minutes and try again.",
       "email_taken": "This email already has an account. To use it, sign out and sign in with the code: trips created as a guest don't move to that account.",

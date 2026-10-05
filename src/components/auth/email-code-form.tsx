@@ -109,7 +109,7 @@ export function EmailCodeForm({ mode, locale }: { mode: "login" | "guest"; local
               autoFocus
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ""))}
-              aria-invalid={error === "invalid_code" || error === "code_expired"}
+              aria-invalid={error === "invalid_code"}
               className="text-heading-2 tracking-[0.3em] tabular-nums"
             />
           </div>

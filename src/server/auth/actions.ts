@@ -22,10 +22,11 @@ const emailSchema = z.email().max(254);
 const codeSchema = z.string().regex(/^\d{6}$/);
 const captchaSchema = z.string().min(1).max(4096);
 
+// Gli input arrivano dal client come stringhe: li valida Zod.
+
 export type AuthErrorCode =
   | "invalid_email"
   | "invalid_code"
-  | "code_expired"
   | "captcha_failed"
   | "rate_limited"
   | "email_taken"
@@ -37,8 +38,6 @@ export type VerifyCodeState = { status: "error"; code: AuthErrorCode };
 
 function mapAuthError(error: AuthError): AuthErrorCode {
   switch (error.code) {
-    case "otp_expired":
-      return "code_expired";
     case "captcha_failed":
       return "captcha_failed";
     case "over_email_send_rate_limit":
@@ -63,7 +62,7 @@ function callbackUrl(locale: string) {
 const sendCodeSchema = z.object({ email: emailSchema, locale: localeSchema, captchaToken: captchaSchema });
 
 // Invia il codice (e il link alternativo). Crea l'account se l'email è nuova.
-export async function sendEmailCode(input: z.input<typeof sendCodeSchema>): Promise<SendCodeState> {
+export async function sendEmailCode(input: { email: string; locale: string; captchaToken: string }): Promise<SendCodeState> {
   const parsed = sendCodeSchema.safeParse(input);
   if (!parsed.success) {
     return { status: "error", code: parsed.error.issues.some((i) => i.path[0] === "email") ? "invalid_email" : "captcha_failed" };
@@ -85,13 +84,14 @@ export async function sendEmailCode(input: z.input<typeof sendCodeSchema>): Prom
 const verifyCodeSchema = z.object({ email: emailSchema, code: codeSchema, locale: localeSchema });
 
 // Verifica il codice dell'accesso e porta al profilo.
-export async function verifyEmailCode(input: z.input<typeof verifyCodeSchema>): Promise<VerifyCodeState> {
+export async function verifyEmailCode(input: { email: string; code: string; locale: string }): Promise<VerifyCodeState> {
   const parsed = verifyCodeSchema.safeParse(input);
   if (!parsed.success) return { status: "error", code: "invalid_code" };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.verifyOtp({ email: parsed.data.email, token: parsed.data.code, type: "email" });
-  if (error) return { status: "error", code: error.code === "otp_expired" ? "code_expired" : "invalid_code" };
+  // Supabase risponde otp_expired sia al codice sbagliato sia a quello scaduto.
+  if (error) return { status: "error", code: "invalid_code" };
 
   redirect(`/${parsed.data.locale}/profilo`);
 }
@@ -99,7 +99,7 @@ export async function verifyEmailCode(input: z.input<typeof verifyCodeSchema>): 
 const guestSchema = z.object({ locale: localeSchema, captchaToken: captchaSchema, next: z.string().max(2048).optional() });
 
 // Sessione ospite: l'utente usa il sito senza account. Se c'è già una sessione, non ne crea un'altra.
-export async function startGuestSession(input: z.input<typeof guestSchema>): Promise<VerifyCodeState> {
+export async function startGuestSession(input: { locale: string; captchaToken: string; next?: string }): Promise<VerifyCodeState> {
   const parsed = guestSchema.safeParse(input);
   if (!parsed.success) return { status: "error", code: "captcha_failed" };
   const destination = safeNextPath(parsed.data.next, `/${parsed.data.locale}/profilo`);
@@ -117,7 +117,7 @@ const guestEmailSchema = z.object({ email: emailSchema });
 
 // Da ospite ad account, passo 1: l'email riceve il codice. L'account non cambia finché il
 // codice non è verificato.
-export async function sendGuestEmailCode(input: z.input<typeof guestEmailSchema>): Promise<SendCodeState> {
+export async function sendGuestEmailCode(input: { email: string }): Promise<SendCodeState> {
   const parsed = guestEmailSchema.safeParse(input);
   if (!parsed.success) return { status: "error", code: "invalid_email" };
 
@@ -134,7 +134,7 @@ const guestVerifySchema = z.object({ email: emailSchema, code: codeSchema, local
 
 // Da ospite ad account, passo 2: con il codice l'email è confermata e l'utente non è più
 // anonimo. Lo user id resta lo stesso, quindi itinerari e dati restano suoi.
-export async function verifyGuestEmailCode(input: z.input<typeof guestVerifySchema>): Promise<VerifyCodeState> {
+export async function verifyGuestEmailCode(input: { email: string; code: string; locale: string }): Promise<VerifyCodeState> {
   const parsed = guestVerifySchema.safeParse(input);
   if (!parsed.success) return { status: "error", code: "invalid_code" };
 
@@ -147,7 +147,7 @@ export async function verifyGuestEmailCode(input: z.input<typeof guestVerifySche
     token: parsed.data.code,
     type: "email_change",
   });
-  if (error) return { status: "error", code: error.code === "otp_expired" ? "code_expired" : "invalid_code" };
+  if (error) return { status: "error", code: "invalid_code" };
 
   redirect(`/${parsed.data.locale}/profilo`);
 }

@@ -1,17 +1,17 @@
 import { expect, test } from "@playwright/test";
-import { signUpWithMagicLink } from "./helpers";
+import { signUpWithCode } from "./helpers";
 
 // Admin del catalogo: solo per gli admin; un'attività senza interessi non si attiva;
 // l'attivazione compare nel registro admin_audit_log.
 
 test("un utente che non è admin non vede l'admin", async ({ page, request }) => {
-  await signUpWithMagicLink(page, request);
+  await signUpWithCode(page, request);
   const res = await page.goto("/it/admin/attivita");
   expect(res?.status()).toBe(404);
 });
 
 test("admin: crea un'attività, non la attiva senza interessi, la attiva con un interesse", async ({ page, request }) => {
-  const email = await signUpWithMagicLink(page, request);
+  const email = await signUpWithCode(page, request);
   const { withDb } = await import("./db.mjs");
   await withDb((sql) => sql`update profiles set role = 'admin' where id = (select id from auth.users where email = ${email})`);
 
@@ -43,7 +43,7 @@ test("admin: crea un'attività, non la attiva senza interessi, la attiva con un 
 });
 
 test("admin: itinerario pronto con titoli dei giorni, una tappa e pubblicazione con slug", async ({ page, request }) => {
-  const email = await signUpWithMagicLink(page, request);
+  const email = await signUpWithCode(page, request);
   const { withDb } = await import("./db.mjs");
   await withDb((sql) => sql`update profiles set role = 'admin' where id = (select id from auth.users where email = ${email})`);
 

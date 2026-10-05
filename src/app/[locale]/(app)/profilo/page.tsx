@@ -19,7 +19,9 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
       <section className="mx-auto w-full max-w-xl px-4 py-12">
         <Card>
           <CardHeader>
-            <CardTitle>{t("title")}</CardTitle>
+            <CardTitle>
+              <h1>{t("title")}</h1>
+            </CardTitle>
             <CardDescription>{t("description")}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-8">
@@ -54,7 +56,9 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
     <section className="mx-auto w-full max-w-xl px-4 py-12">
       <Card>
         <CardHeader>
-          <CardTitle>{t("title")}</CardTitle>
+          <CardTitle>
+            <h1>{t("title")}</h1>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
