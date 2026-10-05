@@ -391,5 +391,90 @@
     "errorText": "Non siamo riusciti a caricare la pagina. Riprova tra un momento.",
     "errorCode": "Codice dell'errore: {code}",
     "retry": "Riprova"
+  },
+  "Onboarding": {
+    "metaTitle": "Crea il tuo viaggio",
+    "progress": "Domanda {step} di {total}",
+    "skip": "Salta",
+    "back": "Indietro",
+    "next": "Avanti",
+    "nextChosen": "Avanti · {count, plural, =0 {nessuno scelto} one {# scelto} other {# scelti}}",
+    "finish": "Ecco tre viaggi pensati per te",
+    "privacyLink": "Informativa sulla privacy",
+    "daysTitle": "Quanti giorni, e quando?",
+    "daysHint": "Anche se non lo sai ancora con precisione: si cambia dopo.",
+    "daysLegend": "Giorni",
+    "daysOption": "{count, plural, one {# giorno} other {# giorni}}",
+    "monthsLegend": "Mesi possibili",
+    "monthsHint": "Nessun mese scelto: qualunque periodo.",
+    "months": [
+      "gen",
+      "feb",
+      "mar",
+      "apr",
+      "mag",
+      "giu",
+      "lug",
+      "ago",
+      "set",
+      "ott",
+      "nov",
+      "dic"
+    ],
+    "interestsTitle": "Cosa ti fa venire voglia di partire?",
+    "interestsHint": "Scegli tutto quello che ti interessa. Nella prossima domanda ci dici quanto.",
+    "weightsTitle": "Quanto conta ognuno?",
+    "weightsHint": "Da 0 a 5. Le tue risposte restano private, anche nei viaggi di gruppo.",
+    "weightsEmpty": "Non hai scelto interessi: torna indietro per sceglierli, oppure vai avanti.",
+    "paceTitle": "Che ritmo ti piace?",
+    "pace": {
+      "relaxed": "Rilassato",
+      "balanced": "Equilibrato",
+      "intense": "Intenso"
+    },
+    "paceDetail": {
+      "relaxed": "Circa 4 ore di attività al giorno",
+      "balanced": "Circa 6 ore al giorno",
+      "intense": "Circa 8 ore al giorno"
+    },
+    "partyTitle": "Con chi viaggi?",
+    "partyHint": "Ci aiuta a capire che tipo di giornate proporti.",
+    "party": {
+      "solo": "Da solo",
+      "couple": "In coppia",
+      "family": "In famiglia",
+      "friends": "Con amici"
+    },
+    "budgetTitle": "Budget e spostamenti",
+    "budgetHint": "Il budget è per le attività di un giorno, a persona. Senza auto ti proponiamo solo attività raggiungibili senza.",
+    "budgetLegend": "Budget giornaliero",
+    "budgetOption": "Fino a {amount} €",
+    "budgetNone": "Nessun limite",
+    "carLegend": "Hai un'auto?",
+    "carYes": "Sì",
+    "carNo": "No",
+    "errors": {
+      "invalid": "Qualche risposta non è valida. Ricarica la pagina e riprova.",
+      "captcha_failed": "Non siamo riusciti a verificare che sei una persona. Ricarica la pagina e riprova.",
+      "failed": "Non siamo riusciti a salvare le risposte. Riprova."
+    }
+  },
+  "Proposals": {
+    "title": "Ecco tre viaggi pensati per te",
+    "intro": "Costruiti dal catalogo con le tue risposte. Ogni tappa dice perché è lì.",
+    "changePreferences": "Cambia preferenze",
+    "empty": "Con queste risposte non troviamo ancora attività adatte. Prova ad allargare periodo, budget o interessi.",
+    "proposalTitle": "Viaggio {n} · {zone}",
+    "proposalMeta": "{days, plural, one {# giorno} other {# giorni}}",
+    "day": "Giorno {n} · {zone}",
+    "reasons": {
+      "combines": "{a} e {b} insieme",
+      "topForInterest": "Tra le migliori per {interest}",
+      "topRated": "Tra le più apprezzate: {rating} su 5",
+      "freeEntry": "Ingresso libero",
+      "inSeason": "Nel suo periodo dell'anno",
+      "accessible": "Accessibile",
+      "bestInZone": "Tra le più vicine ai tuoi gusti in questa zona"
+    }
   }
 }

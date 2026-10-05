@@ -33,6 +33,10 @@ export const userConstraints = pgTable(
     maxDailyTravelMin: integer("max_daily_travel_min"),
     heatTolerance: smallint("heat_tolerance"),
     crowdTolerance: smallint("crowd_tolerance"),
+    // Viaggio che sta pensando (onboarding, domanda 1): giorni e mesi possibili. Senza mesi,
+    // qualunque periodo.
+    tripDays: smallint("trip_days"),
+    tripMonths: smallint("trip_months").array().notNull().default(sql`'{}'`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -40,6 +44,8 @@ export const userConstraints = pgTable(
     check("user_constraints_travel_positive", sql`${t.maxDailyTravelMin} > 0`),
     check("user_constraints_heat_range", sql`${t.heatTolerance} between 0 and 5`),
     check("user_constraints_crowd_range", sql`${t.crowdTolerance} between 0 and 5`),
+    check("user_constraints_trip_days_range", sql`${t.tripDays} between 1 and 14`),
+    check("user_constraints_trip_months_valid", sql`${t.tripMonths} <@ '{1,2,3,4,5,6,7,8,9,10,11,12}'::smallint[]`),
   ],
 );
 

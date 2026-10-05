@@ -1390,10 +1390,14 @@ CREATE TABLE IF NOT EXISTS "public"."user_constraints" (
     "heat_tolerance" smallint,
     "crowd_tolerance" smallint,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "trip_days" smallint,
+    "trip_months" smallint[] DEFAULT '{}'::smallint[] NOT NULL,
     CONSTRAINT "user_constraints_budget_non_negative" CHECK (("budget_per_day_eur" >= 0)),
     CONSTRAINT "user_constraints_crowd_range" CHECK ((("crowd_tolerance" >= 0) AND ("crowd_tolerance" <= 5))),
     CONSTRAINT "user_constraints_heat_range" CHECK ((("heat_tolerance" >= 0) AND ("heat_tolerance" <= 5))),
-    CONSTRAINT "user_constraints_travel_positive" CHECK (("max_daily_travel_min" > 0))
+    CONSTRAINT "user_constraints_travel_positive" CHECK (("max_daily_travel_min" > 0)),
+    CONSTRAINT "user_constraints_trip_days_range" CHECK ((("trip_days" >= 1) AND ("trip_days" <= 14))),
+    CONSTRAINT "user_constraints_trip_months_valid" CHECK (("trip_months" <@ '{1,2,3,4,5,6,7,8,9,10,11,12}'::smallint[]))
 );
 
 
@@ -3294,6 +3298,14 @@ GRANT INSERT("heat_tolerance"),UPDATE("heat_tolerance") ON TABLE "public"."user_
 
 
 GRANT INSERT("crowd_tolerance"),UPDATE("crowd_tolerance") ON TABLE "public"."user_constraints" TO "authenticated";
+
+
+
+GRANT INSERT("trip_days"),UPDATE("trip_days") ON TABLE "public"."user_constraints" TO "authenticated";
+
+
+
+GRANT INSERT("trip_months"),UPDATE("trip_months") ON TABLE "public"."user_constraints" TO "authenticated";
 
 
 

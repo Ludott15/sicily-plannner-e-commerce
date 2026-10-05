@@ -391,5 +391,90 @@
     "errorText": "We couldn't load the page. Try again in a moment.",
     "errorCode": "Error code: {code}",
     "retry": "Try again"
+  },
+  "Onboarding": {
+    "metaTitle": "Create your trip",
+    "progress": "Question {step} of {total}",
+    "skip": "Skip",
+    "back": "Back",
+    "next": "Next",
+    "nextChosen": "Next · {count, plural, =0 {none chosen} one {# chosen} other {# chosen}}",
+    "finish": "Here are three trips for you",
+    "privacyLink": "Privacy notice",
+    "daysTitle": "How many days, and when?",
+    "daysHint": "Even if you don't know exactly yet: you can change it later.",
+    "daysLegend": "Days",
+    "daysOption": "{count, plural, one {# day} other {# days}}",
+    "monthsLegend": "Possible months",
+    "monthsHint": "No month chosen: any time of year.",
+    "months": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ],
+    "interestsTitle": "What makes you want to go?",
+    "interestsHint": "Pick everything you're interested in. In the next question you tell us how much.",
+    "weightsTitle": "How much does each one matter?",
+    "weightsHint": "From 0 to 5. Your answers stay private, even in group trips.",
+    "weightsEmpty": "You haven't picked any interests: go back to pick some, or carry on.",
+    "paceTitle": "What pace do you like?",
+    "pace": {
+      "relaxed": "Relaxed",
+      "balanced": "Balanced",
+      "intense": "Intense"
+    },
+    "paceDetail": {
+      "relaxed": "About 4 hours of activities a day",
+      "balanced": "About 6 hours a day",
+      "intense": "About 8 hours a day"
+    },
+    "partyTitle": "Who are you travelling with?",
+    "partyHint": "It helps us understand what kind of days to suggest.",
+    "party": {
+      "solo": "On my own",
+      "couple": "As a couple",
+      "family": "With family",
+      "friends": "With friends"
+    },
+    "budgetTitle": "Budget and getting around",
+    "budgetHint": "The budget is for one day of activities, per person. Without a car we only suggest activities you can reach without one.",
+    "budgetLegend": "Daily budget",
+    "budgetOption": "Up to €{amount}",
+    "budgetNone": "No limit",
+    "carLegend": "Do you have a car?",
+    "carYes": "Yes",
+    "carNo": "No",
+    "errors": {
+      "invalid": "Some answers aren't valid. Reload the page and try again.",
+      "captcha_failed": "We couldn't verify that you're a person. Reload the page and try again.",
+      "failed": "We couldn't save your answers. Please try again."
+    }
+  },
+  "Proposals": {
+    "title": "Here are three trips for you",
+    "intro": "Built from the catalog with your answers. Every stop says why it's there.",
+    "changePreferences": "Change preferences",
+    "empty": "With these answers we can't find suitable activities yet. Try widening the period, budget or interests.",
+    "proposalTitle": "Trip {n} · {zone}",
+    "proposalMeta": "{days, plural, one {# day} other {# days}}",
+    "day": "Day {n} · {zone}",
+    "reasons": {
+      "combines": "{a} and {b} together",
+      "topForInterest": "Among the best for {interest}",
+      "topRated": "Among the most loved: {rating} out of 5",
+      "freeEntry": "Free entry",
+      "inSeason": "In its time of year",
+      "accessible": "Accessible",
+      "bestInZone": "Among the closest to your tastes in this area"
+    }
   }
 }

@@ -162,6 +162,13 @@
       "when": 1791211668079,
       "tag": "20261005144748_local_tips",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791240049126,
+      "tag": "20261005224049_trip_preferences",
+      "breakpoints": true
     }
   ]
 }
