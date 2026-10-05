@@ -16,6 +16,7 @@ Design system, manuale del brand ("Isula", nome di lavoro), schemi e mockup: [do
 - Riepilogo PR: massimo 10 righe: cosa fa, cosa non fa, scostamenti, conteggi solo per le suite toccate.
 - Restano valide le regole su git (mai push su main, mai merge) e sui token del design system.
 - Configurazione di produzione e controlli di lancio: [docs/LANCIO.md](docs/LANCIO.md).
+- Mai `supabase config push` direttamente: `npm run supabase:push-production` (controlla `[remotes.production]` e le variabili `env()`). Il blocco di produzione in `supabase/config.toml` non contiene valori locali né segreti: lo verifica `scripts/supabase/production-config.test.ts` in CI.
 
 ## Comandi
 
