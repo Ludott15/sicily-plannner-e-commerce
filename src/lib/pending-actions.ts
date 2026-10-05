@@ -8,7 +8,6 @@
 // Prima del lancio l'elenco deve essere vuoto (controllo attivo con PRE_LAUNCH=1).
 
 export const PENDING_ACTIONS = {
-  "home.create-trip": "M4",
   "home.points": "M9",
   "activity.add-to-trip": "M5",
   "itinerary.use": "M5",
@@ -16,6 +15,7 @@ export const PENDING_ACTIONS = {
   "tabbar.shop": "M10",
   "about.editorial": "testi",
   "about.founder": "testi",
+  "onboarding.privacy": "testi",
   "legal.privacy": "legale",
   "legal.cookie": "legale",
   "legal.terms": "legale",
