@@ -6,6 +6,7 @@ import type { UserTx } from "@/server/db/user";
 import {
   activities,
   activityInterests,
+  activityOffers,
   interests,
   itineraries,
   itineraryItems,
@@ -20,7 +21,13 @@ const activityCardColumns = {
   slug: activities.slug,
   title: activities.title,
   durationMin: activities.durationMin,
-  priceFromEur: activities.priceFromEur,
+  onSitePriceEur: activities.onSitePriceEur,
+  // Prezzo "da" dell'offerta più economica (null senza offerte): solo per il prezzo in
+  // evidenza delle card, che c'è solo se l'attività è prenotabile (ActivityCard/README.md).
+  offerPriceFromEur: sql<string | null>`(
+    select min(o.price_from_eur) from public.activity_offers o
+    where o.activity_id = ${activities.id} and o.is_active
+  )`,
   rating: activities.rating,
   requiresCar: activities.requiresCar,
   placeName: places.name,
@@ -282,4 +289,26 @@ export const listPublicSlugs = cache(() =>
       itineraries: templateRows.flatMap((r) => (r.slug ? [r.slug] : [])),
     };
   }),
+);
+
+// Offerte attive di un'attività, dalla più economica (senza prezzo in fondo): la prima è
+// l'offerta principale, quella della barra mobile.
+export const listActivityOffers = cache((activityId: string) =>
+  dbPublic((tx) =>
+    tx
+      .select({
+        id: activityOffers.id,
+        partner: activityOffers.partner,
+        title: activityOffers.title,
+        priceFromEur: activityOffers.priceFromEur,
+        currency: activityOffers.currency,
+        rating: activityOffers.rating,
+        reviewsCount: activityOffers.reviewsCount,
+        freeCancellation: activityOffers.freeCancellation,
+        priceUpdatedAt: activityOffers.priceUpdatedAt,
+      })
+      .from(activityOffers)
+      .where(eq(activityOffers.activityId, activityId))
+      .orderBy(sql`${activityOffers.priceFromEur} asc nulls last`, asc(activityOffers.title)),
+  ),
 );

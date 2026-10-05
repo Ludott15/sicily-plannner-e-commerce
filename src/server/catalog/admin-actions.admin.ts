@@ -8,7 +8,7 @@ import { routing } from "@/lib/i18n/routing";
 import { PROVINCES } from "@/lib/provinces";
 import { requireAdmin } from "@/server/auth";
 import { dbAdmin } from "@/server/db/admin";
-import { activities, activityInterests, adminAuditLog, itineraries, itineraryItems, places } from "@/server/db/schema";
+import { activities, activityInterests, activityOffers, adminAuditLog, itineraries, itineraryItems, places } from "@/server/db/schema";
 
 // Azioni dell'admin del catalogo: Zod → requireAdmin → scrittura con dbAdmin in transazione.
 // Ogni cambio di stato di un'attività (attivazione, disattivazione) aggiunge una riga
@@ -62,12 +62,9 @@ const activitySchema = z.object({
   placeId: z.uuid(),
   description: optionalText,
   durationMin: z.coerce.number().int().positive().max(24 * 60),
-  priceFromEur: optionalNumber,
+  onSitePriceEur: optionalNumber,
   requiresCar: checkbox,
   accessible: checkbox,
-  partner: z.enum(["travelpayouts", "getyourguide", "viator", "car_rental", "internal"]),
-  partnerProductId: optionalText,
-  affiliateUrl: optionalText.pipe(z.url({ protocol: /^https$/ }).nullable()),
   rating: optionalNumber.pipe(z.number().max(5).nullable()),
   isActive: checkbox,
 });
@@ -96,7 +93,7 @@ export async function saveActivity(_prev: AdminFormState, formData: FormData): P
     savedId = await dbAdmin.transaction(async (tx) => {
       const values = {
         ...fields,
-        priceFromEur: fields.priceFromEur === null ? null : fields.priceFromEur.toFixed(2),
+        onSitePriceEur: fields.onSitePriceEur === null ? null : fields.onSitePriceEur.toFixed(2),
         rating: fields.rating === null ? null : fields.rating.toFixed(1),
         seasonMonths: [...new Set(months)].sort((a, b) => a - b),
         isActive,
@@ -300,4 +297,70 @@ export async function moveTemplateItem(formData: FormData) {
     await tx.update(itineraryItems).set({ position: item.position }).where(eq(itineraryItems.id, other.id));
   });
   redirect(`/${locale}/admin/itinerari/${templateId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Offerte dei partner di un'attività (activity_offers)
+// ---------------------------------------------------------------------------
+
+const OFFER_PARTNERS = ["getyourguide", "viator", "travelpayouts", "car_rental"] as const;
+
+const offerSchema = z.object({
+  id: z.uuid().optional().or(z.literal("").transform(() => undefined)),
+  activityId: z.uuid(),
+  locale: localeSchema,
+  partner: z.enum(OFFER_PARTNERS),
+  partnerProductId: z.string().trim().min(1).max(200),
+  title: z.string().trim().min(3).max(200),
+  priceFromEur: optionalNumber,
+  currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/),
+  affiliateUrl: z.url({ protocol: /^https$/ }).max(2048),
+  rating: optionalNumber.pipe(z.number().max(5).nullable()),
+  reviewsCount: optionalNumber.pipe(z.number().int().nullable()),
+  freeCancellation: z.enum(["", "yes", "no"]).transform((v) => (v === "" ? null : v === "yes")),
+  isActive: checkbox,
+});
+
+// La data del prezzo cambia solo quando cambia il prezzo: è quella mostrata nell'offerta.
+export async function saveOffer(_prev: AdminFormState, formData: FormData): Promise<AdminFormState> {
+  const parsed = offerSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { status: "error", code: "invalid" };
+  await requireAdmin();
+  const { id, activityId, locale, priceFromEur, rating, ...fields } = parsed.data;
+  const price = priceFromEur === null ? null : priceFromEur.toFixed(2);
+
+  try {
+    await dbAdmin.transaction(async (tx) => {
+      const values = { ...fields, activityId, priceFromEur: price, rating: rating === null ? null : rating.toFixed(1) };
+      if (id) {
+        const [row] = await tx
+          .select({ price: activityOffers.priceFromEur })
+          .from(activityOffers)
+          .where(and(eq(activityOffers.id, id), eq(activityOffers.activityId, activityId)));
+        if (!row) throw new Error("not_found");
+        await tx
+          .update(activityOffers)
+          .set({ ...values, ...(row.price !== price && { priceUpdatedAt: price === null ? null : new Date() }) })
+          .where(eq(activityOffers.id, id));
+      } else {
+        await tx.insert(activityOffers).values({ ...values, priceUpdatedAt: price === null ? null : new Date() });
+      }
+    });
+  } catch (error) {
+    return { status: "error", code: dbErrorCode(error) };
+  }
+  redirect(`/${locale}/admin/attivita/${activityId}?offerta=salvata#offerte`);
+}
+
+const deleteOfferSchema = z.object({ id: z.uuid(), activityId: z.uuid(), locale: localeSchema });
+
+export async function deleteOffer(_prev: AdminFormState, formData: FormData): Promise<AdminFormState> {
+  const parsed = deleteOfferSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { status: "error", code: "invalid" };
+  await requireAdmin();
+  const { id, activityId, locale } = parsed.data;
+  await dbAdmin
+    .delete(activityOffers)
+    .where(and(eq(activityOffers.id, id), eq(activityOffers.activityId, activityId)));
+  redirect(`/${locale}/admin/attivita/${activityId}?offerta=eliminata#offerte`);
 }

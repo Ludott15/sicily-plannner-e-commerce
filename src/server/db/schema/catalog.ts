@@ -57,16 +57,14 @@ export const activities = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     durationMin: integer("duration_min").notNull(),
-    priceFromEur: numeric("price_from_eur", { precision: 8, scale: 2 }),
+    // Prezzo pagato in loco (ingresso, biglietto): un metadato, mai un'offerta.
+    onSitePriceEur: numeric("on_site_price_eur", { precision: 8, scale: 2 }),
     requiresCar: boolean("requires_car").notNull().default(false),
     accessible: boolean("accessible").notNull().default(false),
     seasonMonths: smallint("season_months")
       .array()
       .notNull()
       .default(sql`'{1,2,3,4,5,6,7,8,9,10,11,12}'`),
-    partner: partner("partner").notNull().default("internal"),
-    partnerProductId: text("partner_product_id"),
-    affiliateUrl: text("affiliate_url"),
     rating: numeric("rating", { precision: 2, scale: 1 }),
     embedding: vector("embedding", { dimensions: 1024 }),
     // Nasce inattiva: si attiva solo con almeno un tag di interesse (trigger activities_require_tags).
@@ -75,12 +73,10 @@ export const activities = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    unique("activities_partner_product_unique").on(t.partner, t.partnerProductId),
     index("activities_place_id_idx").on(t.placeId),
-    index("activities_is_active_partner_idx").on(t.isActive, t.partner),
     index("activities_embedding_idx").using("hnsw", t.embedding.op("vector_cosine_ops")),
     check("activities_duration_positive", sql`${t.durationMin} > 0`),
-    check("activities_price_non_negative", sql`${t.priceFromEur} >= 0`),
+    check("activities_on_site_price_non_negative", sql`${t.onSitePriceEur} >= 0`),
     check("activities_rating_range", sql`${t.rating} between 0 and 5`),
     check(
       "activities_season_months_valid",
@@ -105,5 +101,40 @@ export const activityInterests = pgTable(
     primaryKey({ columns: [t.activityId, t.interestKey] }),
     index("activity_interests_interest_key_idx").on(t.interestKey),
     check("activity_interests_strength_range", sql`${t.strength} between 1 and 3`),
+  ],
+);
+
+// Offerte dei partner (schema 2e): il catalogo è editoriale, le offerte sono prodotti dei
+// partner collegati a un'attività, ognuna con il suo prezzo. Più offerte per attività.
+// Le crea l'admin e, dalla milestone 6, l'import del catalogo.
+export const activityOffers = pgTable(
+  "activity_offers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    activityId: uuid("activity_id")
+      .notNull()
+      .references(() => activities.id, { onDelete: "cascade" }),
+    partner: partner("partner").notNull(),
+    partnerProductId: text("partner_product_id").notNull(),
+    title: text("title").notNull(),
+    priceFromEur: numeric("price_from_eur", { precision: 8, scale: 2 }),
+    currency: char("currency", { length: 3 }).notNull().default("EUR"),
+    affiliateUrl: text("affiliate_url").notNull(),
+    rating: numeric("rating", { precision: 2, scale: 1 }),
+    reviewsCount: integer("reviews_count"),
+    freeCancellation: boolean("free_cancellation"),
+    priceUpdatedAt: timestamp("price_updated_at", { withTimezone: true }),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("activity_offers_partner_product_unique").on(t.partner, t.partnerProductId),
+    index("activity_offers_activity_id_idx").on(t.activityId),
+    check("activity_offers_partner_not_internal", sql`${t.partner} <> 'internal'`),
+    check("activity_offers_affiliate_url_https", sql`${t.affiliateUrl} ~ '^https://'`),
+    check("activity_offers_price_non_negative", sql`${t.priceFromEur} >= 0`),
+    check("activity_offers_currency_format", sql`${t.currency} ~ '^[A-Z]{3}$'`),
+    check("activity_offers_rating_range", sql`${t.rating} between 0 and 5`),
+    check("activity_offers_reviews_count_non_negative", sql`${t.reviewsCount} >= 0`),
   ],
 );

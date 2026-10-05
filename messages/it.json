@@ -138,7 +138,9 @@
     "filterAllProvinces": "Tutte le province",
     "filterClear": "Togli i filtri",
     "activitiesCount": "{count, plural, =0 {Nessuna attività} one {# attività} other {# attività}}",
-    "activitiesFilteredEmpty": "Con questi filtri non c'è ancora nessuna attività. Togli un interesse o scegli un'altra provincia."
+    "activitiesFilteredEmpty": "Con questi filtri non c'è ancora nessuna attività. Togli un interesse o scegli un'altra provincia.",
+    "bookOnline": "Prenota online",
+    "offerBarPrice": "da {price}"
   },
   "Design": {
     "forYou": "Per te",
@@ -199,7 +201,6 @@
     "colPlace": "Luogo",
     "colState": "Stato",
     "colTags": "Interessi",
-    "colPartner": "Partner",
     "colSlug": "Slug",
     "colDays": "Giorni",
     "active": "Attiva",
@@ -272,6 +273,24 @@
       "day_titles_exceed_days": "Ci sono più titoli dei giorni che giorni.",
       "failed": "Salvataggio non riuscito. Riprova."
     },
-    "fieldDayTitles": "Titoli dei giorni"
+    "fieldDayTitles": "Titoli dei giorni",
+    "colOffers": "Offerte",
+    "offersTitle": "Offerte dei partner",
+    "offersHint": "Prodotti dei partner per questa attività, ognuno con il suo prezzo. Nella scheda la prima è la più economica, anche nella barra mobile.",
+    "offersEmpty": "Nessuna offerta: la scheda non mostra offerte né il pulsante del partner nella barra mobile.",
+    "offerNew": "Nuova offerta",
+    "offerTitle": "Titolo del prodotto del partner",
+    "offerPrice": "Prezzo da",
+    "offerCurrency": "Valuta",
+    "offerReviews": "Recensioni",
+    "offerFreeCancellation": "Cancellazione gratuita",
+    "offerActive": "Offerta attiva",
+    "offerAdd": "Aggiungi l'offerta",
+    "offerDelete": "Elimina l'offerta",
+    "offerSaved": "Offerta salvata.",
+    "offerDeleted": "Offerta eliminata.",
+    "unknown": "Non indicata",
+    "yes": "Sì",
+    "no": "No"
   }
 }
