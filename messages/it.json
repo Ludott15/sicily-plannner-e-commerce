@@ -14,7 +14,13 @@
     "main": "Principale",
     "footer": "Piè di pagina",
     "travel": "Viaggia",
-    "saveAccount": "Salva l'account"
+    "saveAccount": "Salva l'account",
+    "about": "Chi siamo",
+    "affiliateLinks": "Link affiliati",
+    "legal": "Informazioni legali",
+    "privacy": "Privacy",
+    "cookie": "Cookie",
+    "terms": "Condizioni di vendita"
   },
   "Home": {
     "title": "La Sicilia di chi ci vive, su misura per te.",
@@ -41,7 +47,9 @@
     "seeAll": "Vedi tutti",
     "localEyebrow": "La voce locale",
     "localTitle": "Consigli firmati, con la data di verifica",
-    "localText": "I dettagli che trovi solo parlando con chi abita qui. Ogni consiglio ha una firma e la data dell'ultima verifica."
+    "localText": "I dettagli che trovi solo parlando con chi abita qui. Ogni consiglio ha una firma e la data dell'ultima verifica.",
+    "founder": "Ludovico, fondatore",
+    "aboutLink": "Chi siamo"
   },
   "Login": {
     "title": "Accedi",
@@ -186,7 +194,8 @@
     "rewardedReview": "Recensione con premio",
     "stampLocked": "Timbro da sbloccare",
     "editorialMonogram": "I",
-    "pendingHint": "Disponibile a breve"
+    "pendingHint": "Disponibile a breve",
+    "pendingText": "Testo in preparazione."
   },
   "Admin": {
     "title": "Admin del catalogo",
@@ -334,5 +343,53 @@
     "authorAdd": "Aggiungi l'autore",
     "newAuthor": "Nuovo autore",
     "tipInactive": "spento"
+  },
+  "Og": {
+    "activity": "Attività · {province}",
+    "place": "Luogo · {province}",
+    "itinerary": "Itinerario pronto · {days, plural, one {# giorno} other {# giorni}}",
+    "fallbackTitle": "La Sicilia di chi ci vive"
+  },
+  "About": {
+    "title": "Chi siamo",
+    "editorialTitle": "La redazione",
+    "founderTitle": "Il fondatore"
+  },
+  "Affiliates": {
+    "title": "Come funzionano i link affiliati",
+    "intro": "Alcune attività hanno offerte dei nostri partner. Qui spieghiamo cosa succede quando le apri.",
+    "commissionTitle": "Una commissione, nessun costo per te",
+    "commissionText": "Se prenoti un'offerta di un partner, il partner ci riconosce una commissione. Il prezzo che paghi è quello del partner: non cambia perché arrivi da Isula.",
+    "partnerTitle": "Il partner è sempre nominato",
+    "partnerText": "Ogni offerta dice di quale partner è, nel pulsante e nella riga sotto: \"Prenoti sul sito di …\". Le attività e i consigli del catalogo li scrive la redazione: le offerte sono dei partner.",
+    "bookingTitle": "Prenoti sul sito del partner",
+    "bookingText": "Il pulsante dell'offerta apre il sito del partner, dove scegli la data, paghi e ricevi la conferma. Condizioni, cancellazione e assistenza della prenotazione sono quelle del partner.",
+    "clickTitle": "Cosa registriamo",
+    "clickText": "Prima di aprire il sito del partner registriamo il click con un codice casuale, che passa al partner nel link: serve a sapere quali pagine portano prenotazioni e a ricevere la commissione. Come trattiamo questi dati è scritto nella <privacy>informativa sulla privacy</privacy>."
+  },
+  "Legal": {
+    "eyebrow": "Informazioni legali",
+    "privacy": "Privacy",
+    "cookie": "Cookie",
+    "terms": "Condizioni di vendita"
+  },
+  "Cookies": {
+    "title": "Cookie",
+    "text": "Usiamo cookie tecnici, necessari al funzionamento del sito. Altri cookie, per esempio per misurare le visite, solo se accetti. I dettagli sono nella pagina <cookie>Cookie</cookie>.",
+    "accept": "Accetta",
+    "reject": "Rifiuta",
+    "preferences": "Preferenze cookie"
+  },
+  "Errors": {
+    "notFoundEyebrow": "Pagina non trovata",
+    "notFoundTitle": "Qui non c'è niente",
+    "notFoundText": "La pagina non esiste o è stata spostata. Riparti da un itinerario pronto o dalla home.",
+    "toItineraries": "Itinerari pronti",
+    "toHome": "Torna alla home",
+    "errorEyebrow": "Errore",
+    "errorTitle": "Qualcosa non ha funzionato",
+    "errorText": "Non siamo riusciti a caricare la pagina. Riprova tra un momento.",
+    "errorCode": "Codice dell'errore: {code}",
+    "retry": "Riprova"
   }
 }

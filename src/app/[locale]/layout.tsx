@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { CookieBanner } from "@/components/layout/cookie-banner";
+import { CONSENT_COOKIE, parseConsent } from "@/lib/consent";
 import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { SiteHeader } from "@/components/layout/site-header";
 import { fontVariables } from "@generated/design/fonts";
@@ -47,6 +50,7 @@ export default async function LocaleLayout({ children, params }: Props) {
             {children}
           </main>
           <SiteFooter />
+          <CookieBanner initial={parseConsent((await cookies()).get(CONSENT_COOKIE)?.value)} />
           <MobileTabBar />
         </NextIntlClientProvider>
       </body>

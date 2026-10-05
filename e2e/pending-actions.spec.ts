@@ -5,7 +5,16 @@ import { PENDING_ACTIONS } from "../src/lib/pending-actions";
 // Il test confronta le azioni in sospeso trovate nelle pagine con l'elenco atteso:
 // quando una milestone implementa un'azione la toglie da entrambi.
 
-const PAGES = ["/it", "/it/attivita", "/it/attivita/demo-zingaro", "/it/itinerari/demo-sicilia-orientale"];
+const PAGES = [
+  "/it",
+  "/it/attivita",
+  "/it/attivita/demo-zingaro",
+  "/it/itinerari/demo-sicilia-orientale",
+  "/it/chi-siamo",
+  "/it/privacy",
+  "/it/cookie",
+  "/it/condizioni-di-vendita",
+];
 
 async function collectPending(page: Page) {
   const found = new Map<string, string>();

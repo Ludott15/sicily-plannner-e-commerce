@@ -14,7 +14,13 @@
     "main": "Main",
     "footer": "Footer",
     "travel": "Travel",
-    "saveAccount": "Save your account"
+    "saveAccount": "Save your account",
+    "about": "About us",
+    "affiliateLinks": "Affiliate links",
+    "legal": "Legal information",
+    "privacy": "Privacy",
+    "cookie": "Cookies",
+    "terms": "Terms of sale"
   },
   "Home": {
     "title": "Sicily as locals know it, made for you.",
@@ -41,7 +47,9 @@
     "seeAll": "See all",
     "localEyebrow": "The local voice",
     "localTitle": "Signed tips, with the date they were checked",
-    "localText": "The details you only get by talking to people who live here. Every tip has a signature and the date it was last checked."
+    "localText": "The details you only get by talking to people who live here. Every tip has a signature and the date it was last checked.",
+    "founder": "Ludovico, founder",
+    "aboutLink": "About us"
   },
   "Login": {
     "title": "Sign in",
@@ -186,7 +194,8 @@
     "rewardedReview": "Rewarded review",
     "stampLocked": "Stamp to unlock",
     "editorialMonogram": "I",
-    "pendingHint": "Coming soon"
+    "pendingHint": "Coming soon",
+    "pendingText": "Text in preparation."
   },
   "Admin": {
     "title": "Catalogue admin",
@@ -334,5 +343,53 @@
     "authorAdd": "Add the author",
     "newAuthor": "New author",
     "tipInactive": "off"
+  },
+  "Og": {
+    "activity": "Activity · {province}",
+    "place": "Place · {province}",
+    "itinerary": "Ready-made itinerary · {days, plural, one {# day} other {# days}}",
+    "fallbackTitle": "Sicily by the people who live there"
+  },
+  "About": {
+    "title": "About us",
+    "editorialTitle": "The editorial team",
+    "founderTitle": "The founder"
+  },
+  "Affiliates": {
+    "title": "How affiliate links work",
+    "intro": "Some activities have offers from our partners. Here is what happens when you open them.",
+    "commissionTitle": "A commission, no cost to you",
+    "commissionText": "If you book a partner's offer, the partner pays us a commission. The price you pay is the partner's price: it does not change because you came from Isula.",
+    "partnerTitle": "The partner is always named",
+    "partnerText": "Every offer says which partner it belongs to, on the button and in the line below: \"You book on the … website\". Activities and tips in the catalog are written by the editorial team: offers belong to the partners.",
+    "bookingTitle": "You book on the partner's website",
+    "bookingText": "The offer button opens the partner's website, where you choose the date, pay and get the confirmation. Booking terms, cancellation and support are the partner's.",
+    "clickTitle": "What we record",
+    "clickText": "Before opening the partner's website we record the click with a random code, which goes to the partner in the link: it tells us which pages lead to bookings and lets us receive the commission. How we handle this data is described in the <privacy>privacy notice</privacy>."
+  },
+  "Legal": {
+    "eyebrow": "Legal information",
+    "privacy": "Privacy",
+    "cookie": "Cookies",
+    "terms": "Terms of sale"
+  },
+  "Cookies": {
+    "title": "Cookies",
+    "text": "We use technical cookies, needed for the site to work. Other cookies, for example to measure visits, only if you accept. Details are on the <cookie>Cookies</cookie> page.",
+    "accept": "Accept",
+    "reject": "Reject",
+    "preferences": "Cookie preferences"
+  },
+  "Errors": {
+    "notFoundEyebrow": "Page not found",
+    "notFoundTitle": "Nothing here",
+    "notFoundText": "The page doesn't exist or has moved. Start again from a ready-made itinerary or the home page.",
+    "toItineraries": "Ready-made itineraries",
+    "toHome": "Back to home",
+    "errorEyebrow": "Error",
+    "errorTitle": "Something went wrong",
+    "errorText": "We couldn't load the page. Try again in a moment.",
+    "errorCode": "Error code: {code}",
+    "retry": "Try again"
   }
 }

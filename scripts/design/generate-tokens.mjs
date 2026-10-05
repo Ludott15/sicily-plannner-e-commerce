@@ -183,11 +183,39 @@ function fontsTs(tokens) {
   return lines.join("\n");
 }
 
+// Immagini Open Graph (next/og): non leggono le variabili CSS, quindi i colori arrivano qui
+// già risolti, nel tema chiaro (le anteprime dei social non hanno un tema scuro), e le
+// famiglie dei font con i loro nomi.
+function ogTs(tokens) {
+  const byName = new Map(tokens.color.tokens.map((t) => [t.name, t]));
+  const resolve = (name, seen = new Set()) => {
+    if (seen.has(name)) throw new Error(`alias circolare: ${name}`);
+    const value = themeValue(byName.get(name).value, "light");
+    const alias = aliasOf(value);
+    return alias ? resolve(alias, new Set([...seen, name])) : value;
+  };
+  const colors = tokens.color.tokens.map((t) => `  "${t.name}": "${resolve(t.name)}",`);
+  const families = Object.entries(tokens.type.families).map(([key, stack]) => `  ${key}: "${primaryFamily(stack)}",`);
+  return [
+    `// ${HEADER}`,
+    "// Per le immagini Open Graph (next/og), che non leggono le variabili CSS: tema chiaro.",
+    "export const ogColors = {",
+    ...colors,
+    "} as const;",
+    "",
+    "export const ogFamilies = {",
+    ...families,
+    "} as const;",
+    "",
+  ].join("\n");
+}
+
 export function generate(tokens) {
   return {
     "tokens.css": tokensCss(tokens),
     "theme.css": themeCss(tokens),
     "fonts.ts": fontsTs(tokens),
+    "og.ts": ogTs(tokens),
   };
 }
 
