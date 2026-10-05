@@ -74,3 +74,31 @@ test("admin: itinerario pronto con titoli dei giorni, una tappa e pubblicazione 
   await expect(days.nth(0)).toHaveText(/Giorno 1 · Palermo antica/);
   await expect(page.getByRole("link", { name: "Palazzo dei Normanni e Cappella Palatina" })).toBeVisible();
 });
+
+test("admin: coda Da riverificare, nuovo consiglio e riverifica", async ({ page, request }) => {
+  const email = await signUpWithCode(page, request);
+  const { withDb } = await import("./db.mjs");
+  await withDb((sql) => sql`update profiles set role = 'admin' where id = (select id from auth.users where email = ${email})`);
+
+  await page.goto("/it/admin/consigli");
+  const due = page.locator('section[aria-labelledby="da-riverificare"]');
+  await expect(due.getByText("scaduto, fuori dalle pagine").first()).toBeVisible();
+
+  const body = `e2e-consiglio ${Date.now()}`;
+  await page.getByRole("link", { name: "Nuovo consiglio" }).click();
+  await page.getByLabel("Consiglio", { exact: true }).fill(body);
+  await page.getByLabel("Luogo", { exact: true }).selectOption({ label: "Palermo" });
+  await page.getByRole("button", { name: "Salva" }).click();
+  await expect(page.getByRole("status")).toHaveText("Salvato.");
+  await expect(page.getByText(body)).toBeVisible();
+
+  // Riverifica di un consiglio creato scaduto: esce dalla coda.
+  await withDb((sql) => sql`update local_tips set verified_at = current_date - 400 where body = ${body}`);
+  await page.reload();
+  const row = due.getByRole("listitem").filter({ hasText: body });
+  await row.getByRole("button", { name: "Riverificato oggi" }).click();
+  await expect(page.getByRole("status")).toHaveText("Data di verifica aggiornata a oggi.");
+  await expect(due.getByText(body)).toHaveCount(0);
+
+  await withDb((sql) => sql`delete from local_tips where body = ${body}`);
+});

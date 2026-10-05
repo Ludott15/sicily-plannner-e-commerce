@@ -5,6 +5,8 @@ export type AdminErrorCode =
   | "slug_taken"
   | "partner_product_taken"
   | "day_titles_exceed_days"
+  | "person_tip_without_relation"
+  | "author_without_consent"
   | "failed";
 
 export type AdminFormState = { status: "idle" } | { status: "error"; code: AdminErrorCode };

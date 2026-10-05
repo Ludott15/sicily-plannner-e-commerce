@@ -155,6 +155,13 @@
       "when": 1791210602901,
       "tag": "20261005143002_offers_url_private",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791211668079,
+      "tag": "20261005144748_local_tips",
+      "breakpoints": true
     }
   ]
 }

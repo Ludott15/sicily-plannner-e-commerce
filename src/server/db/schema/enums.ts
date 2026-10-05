@@ -49,3 +49,4 @@ export const orderStatus = pgEnum("order_status", [
   "cancelled",
   "refunded",
 ]);
+export const localTipAuthorKind = pgEnum("local_tip_author_kind", ["editorial", "person"]);

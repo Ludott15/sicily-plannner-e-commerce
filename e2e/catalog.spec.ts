@@ -208,3 +208,18 @@ test("sitemap e robots", async ({ request }) => {
   expect(robots).toContain("Sitemap: http://localhost:3000/sitemap.xml");
   expect(robots).toContain("Disallow: /*/admin");
 });
+
+test("consigli locali: firma e data di verifica nella scheda, accanto alla tappa e in home; gli scaduti no", async ({ page }) => {
+  await page.goto("/it/attivita/demo-zingaro");
+  const tip = page.getByRole("complementary", { name: "Consiglio locale" }).first();
+  await expect(tip).toContainText("[DEMO] Entra dall'ingresso di Scopello");
+  await expect(tip).toContainText("Redazione di Isula");
+  await expect(tip).toContainText(/Verificato a \w+ \d{4}/);
+
+  await page.goto("/it/itinerari/demo-sicilia-orientale");
+  await expect(page.locator("ol.is-route").getByText("[DEMO] Arriva prima delle 8")).toBeVisible();
+
+  await page.goto("/it");
+  await expect(page.getByRole("heading", { name: "Consigli firmati, con la data di verifica" })).toBeVisible();
+  await expect(page.getByText("Consiglio scaduto")).toHaveCount(0);
+});
