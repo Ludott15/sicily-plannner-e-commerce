@@ -66,7 +66,7 @@ select lives_ok(
 ----------------------------------------------------------------------------
 reset role;
 select throws_ok(
-  $$insert into public.activities (slug, place_id, title, duration_min, is_active, partner, partner_product_id) values ('test-import', 'aaaaaaaa-0000-0000-0000-000000000001', 'Import', 90, true, 'viator', 'P-1')$$,
+  $$insert into public.activities (slug, place_id, title, duration_min, is_active) values ('test-import', 'aaaaaaaa-0000-0000-0000-000000000001', 'Import', 90, true)$$,
   'P0001', 'activity_without_tags', 'postgres: nemmeno l''import attiva attività senza tag'
 );
 select throws_ok(

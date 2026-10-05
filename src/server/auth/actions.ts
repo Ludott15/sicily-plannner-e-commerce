@@ -1,22 +1,57 @@
 "use server";
 
+import type { AuthError } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { publicEnv } from "@/lib/env";
 import { routing } from "@/lib/i18n/routing";
+import { getUser } from "@/server/auth";
+import { safeNextPath } from "@/server/auth/redirect";
 import { createClient } from "@/server/supabase/server";
 
+// Accesso (docs/spec.md, "Accesso, ospiti e browser interni"):
+// - codice a 6 cifre via email, digitato nella stessa pagina; il link nell'email resta come
+//   alternativa (stesso template);
+// - ospite: sessione anonima protetta da Turnstile;
+// - da ospite ad account: updateUser con l'email e verifica del codice, stesso user id.
+// Il CAPTCHA serve all'invio del codice e alla sessione anonima; la verifica del codice e
+// il cambio email dell'ospite (già in sessione) non lo richiedono.
+
 const localeSchema = z.enum(routing.locales);
+const emailSchema = z.email().max(254);
+const codeSchema = z.string().regex(/^\d{6}$/);
+const captchaSchema = z.string().min(1).max(4096);
 
-const emailSignInSchema = z.object({
-  email: z.email().max(254),
-  locale: localeSchema,
-});
+// Gli input arrivano dal client come stringhe: li valida Zod.
 
-export type EmailSignInState =
-  | { status: "idle" }
-  | { status: "sent"; email: string }
-  | { status: "error"; code: "invalid_email" | "failed" };
+export type AuthErrorCode =
+  | "invalid_email"
+  | "invalid_code"
+  | "captcha_failed"
+  | "rate_limited"
+  | "email_taken"
+  | "not_guest"
+  | "failed";
+
+export type SendCodeState = { status: "sent"; email: string } | { status: "error"; code: AuthErrorCode };
+export type VerifyCodeState = { status: "error"; code: AuthErrorCode };
+
+function mapAuthError(error: AuthError): AuthErrorCode {
+  switch (error.code) {
+    case "captcha_failed":
+      return "captcha_failed";
+    case "over_email_send_rate_limit":
+    case "over_request_rate_limit":
+      return "rate_limited";
+    case "email_exists":
+      return "email_taken";
+    case "email_address_invalid":
+    case "validation_failed":
+      return "invalid_email";
+    default:
+      return "failed";
+  }
+}
 
 function callbackUrl(locale: string) {
   const url = new URL("/api/auth/callback", publicEnv.NEXT_PUBLIC_SITE_URL);
@@ -24,24 +59,97 @@ function callbackUrl(locale: string) {
   return url.toString();
 }
 
-export async function signInWithEmail(
-  _prev: EmailSignInState,
-  formData: FormData,
-): Promise<EmailSignInState> {
-  const parsed = emailSignInSchema.safeParse({
-    email: formData.get("email"),
-    locale: formData.get("locale"),
-  });
-  if (!parsed.success) return { status: "error", code: "invalid_email" };
+const sendCodeSchema = z.object({ email: emailSchema, locale: localeSchema, captchaToken: captchaSchema });
+
+// Invia il codice (e il link alternativo). Crea l'account se l'email è nuova.
+export async function sendEmailCode(input: { email: string; locale: string; captchaToken: string }): Promise<SendCodeState> {
+  const parsed = sendCodeSchema.safeParse(input);
+  if (!parsed.success) {
+    return { status: "error", code: parsed.error.issues.some((i) => i.path[0] === "email") ? "invalid_email" : "captcha_failed" };
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data.email,
-    options: { emailRedirectTo: callbackUrl(parsed.data.locale) },
+    options: {
+      emailRedirectTo: callbackUrl(parsed.data.locale),
+      captchaToken: parsed.data.captchaToken,
+      shouldCreateUser: true,
+    },
   });
-  if (error) return { status: "error", code: "failed" };
-
+  if (error) return { status: "error", code: mapAuthError(error) };
   return { status: "sent", email: parsed.data.email };
+}
+
+const verifyCodeSchema = z.object({ email: emailSchema, code: codeSchema, locale: localeSchema });
+
+// Verifica il codice dell'accesso e porta al profilo.
+export async function verifyEmailCode(input: { email: string; code: string; locale: string }): Promise<VerifyCodeState> {
+  const parsed = verifyCodeSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", code: "invalid_code" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({ email: parsed.data.email, token: parsed.data.code, type: "email" });
+  // Supabase risponde otp_expired sia al codice sbagliato sia a quello scaduto.
+  if (error) return { status: "error", code: "invalid_code" };
+
+  redirect(`/${parsed.data.locale}/profilo`);
+}
+
+const guestSchema = z.object({ locale: localeSchema, captchaToken: captchaSchema, next: z.string().max(2048).optional() });
+
+// Sessione ospite: l'utente usa il sito senza account. Se c'è già una sessione, non ne crea un'altra.
+export async function startGuestSession(input: { locale: string; captchaToken: string; next?: string }): Promise<VerifyCodeState> {
+  const parsed = guestSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", code: "captcha_failed" };
+  const destination = safeNextPath(parsed.data.next, `/${parsed.data.locale}/profilo`);
+
+  if (!(await getUser())) {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.signInAnonymously({ options: { captchaToken: parsed.data.captchaToken } });
+    if (error) return { status: "error", code: mapAuthError(error) };
+  }
+
+  redirect(destination);
+}
+
+const guestEmailSchema = z.object({ email: emailSchema });
+
+// Da ospite ad account, passo 1: l'email riceve il codice. L'account non cambia finché il
+// codice non è verificato.
+export async function sendGuestEmailCode(input: { email: string }): Promise<SendCodeState> {
+  const parsed = guestEmailSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", code: "invalid_email" };
+
+  const user = await getUser();
+  if (!user?.is_anonymous) return { status: "error", code: "not_guest" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ email: parsed.data.email });
+  if (error) return { status: "error", code: mapAuthError(error) };
+  return { status: "sent", email: parsed.data.email };
+}
+
+const guestVerifySchema = z.object({ email: emailSchema, code: codeSchema, locale: localeSchema });
+
+// Da ospite ad account, passo 2: con il codice l'email è confermata e l'utente non è più
+// anonimo. Lo user id resta lo stesso, quindi itinerari e dati restano suoi.
+export async function verifyGuestEmailCode(input: { email: string; code: string; locale: string }): Promise<VerifyCodeState> {
+  const parsed = guestVerifySchema.safeParse(input);
+  if (!parsed.success) return { status: "error", code: "invalid_code" };
+
+  const user = await getUser();
+  if (!user?.is_anonymous) return { status: "error", code: "not_guest" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({
+    email: parsed.data.email,
+    token: parsed.data.code,
+    type: "email_change",
+  });
+  if (error) return { status: "error", code: "invalid_code" };
+
+  redirect(`/${parsed.data.locale}/profilo`);
 }
 
 export async function signInWithGoogle(formData: FormData) {

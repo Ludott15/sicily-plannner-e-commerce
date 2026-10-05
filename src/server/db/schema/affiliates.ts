@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, index, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { activities } from "./catalog";
+import { activities, activityOffers } from "./catalog";
 import { partner } from "./enums";
 import { profiles } from "./profiles";
 import { itineraries } from "./trips";
@@ -12,6 +12,7 @@ export const affiliateClicks = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id").references(() => profiles.id, { onDelete: "set null" }),
     activityId: uuid("activity_id").references(() => activities.id, { onDelete: "set null" }),
+    offerId: uuid("offer_id").references(() => activityOffers.id, { onDelete: "set null" }),
     partner: partner("partner").notNull(),
     targetUrl: text("target_url").notNull(),
     subid: text("subid").notNull().unique(),

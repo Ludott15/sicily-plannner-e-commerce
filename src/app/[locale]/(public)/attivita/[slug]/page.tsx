@@ -6,21 +6,30 @@ import { Breadcrumb } from "@/components/catalog/breadcrumb";
 import { CatalogActivityCard } from "@/components/catalog/catalog-activity-card";
 import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
-import { BookingBar, interestDomain, PendingButton, PendingMarker } from "@/components/design";
+import {
+  AffiliateOffer,
+  affiliateHref,
+  BookingBar,
+  ButtonAnchor,
+  interestDomain,
+  PendingButton,
+} from "@/components/design";
 import { publicEnv } from "@/lib/env";
 import { formatDuration, formatEur, formatSeason } from "@/lib/format";
 import { provinceName } from "@/lib/provinces";
 import { localizedAlternates, truncate } from "@/lib/seo";
 import { interestLabels } from "@/server/catalog/labels";
-import { getActivity, listNearbyActivities } from "@/server/catalog/queries";
+import { partnerName, type Partner } from "@/server/affiliates/links";
+import { getActivity, listActivityOffers, listNearbyActivities } from "@/server/catalog/queries";
 
 // Scheda attività (mockup Attivita.html e AttivitaMobile.html).
 // Non ancora in pagina, perché mancano dati o funzioni: galleria (una sola foto o il
 // segnaposto), "Perché è per te" (M4), consiglio locale (schema 2e), "Da sapere",
 // recensioni (M9), prodotti della zona (M10), "+10 punti con il check-in" (M9).
 // In sospeso (visibili e disabilitate): Salva e "Aggiungi al viaggio" (M5).
-// Offerte affiliate in sospeso e nascoste fino allo schema 2e (activity_offers): il prezzo
-// dell'attività è quello pagato in loco (ingresso, biglietto), un metadato e mai un'offerta.
+// Offerte: prodotti dei partner (activity_offers), dalla più economica; la prima è anche
+// nella barra mobile. Il prezzo dell'attività è quello pagato in loco (ingresso, biglietto),
+// un metadato e mai un'offerta. Senza offerte non c'è né AffiliateOffer né offerta nella barra.
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -48,15 +57,46 @@ export default async function ActivityPage({ params, searchParams }: Props) {
   const activity = await getActivity(slug);
   if (!activity) notFound();
 
-  const [t, tDesign, labels, nearby, { avviso }] = await Promise.all([
+  const [t, tDesign, labels, nearby, offerRows, { avviso }] = await Promise.all([
     getTranslations("Catalog"),
     getTranslations("Design"),
     interestLabels(locale),
     listNearbyActivities(activity.id, activity.placeId, activity.placeProvince),
+    listActivityOffers(activity.id),
     searchParams,
   ]);
 
-  const price = formatEur(activity.priceFromEur, locale);
+  const dayMonth = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" });
+  // Solo offerte di partner che si possono nominare (riga di trasparenza obbligatoria).
+  const offers = offerRows.flatMap((o) => {
+    const partner = partnerName(o.partner as Partner);
+    if (!partner) return [];
+    return [
+      {
+        ...o,
+        partner,
+        price: formatEur(o.priceFromEur, locale, o.currency),
+        rating: o.rating !== null && o.reviewsCount ? { value: o.rating, count: o.reviewsCount } : null,
+        priceUpdated: o.priceUpdatedAt ? dayMonth.format(o.priceUpdatedAt) : null,
+      },
+    ];
+  });
+  const mainOffer = offers[0];
+  const offerList = offers.map((o) => (
+    <AffiliateOffer
+      key={o.id}
+      offerId={o.id}
+      locale={locale}
+      title={o.title}
+      partner={o.partner}
+      price={o.price}
+      rating={o.rating}
+      freeCancellation={o.freeCancellation === true}
+      priceUpdated={o.priceUpdated}
+    />
+  ));
+
+  const price = formatEur(activity.onSitePriceEur, locale);
   const season = formatSeason(activity.seasonMonths, locale);
   const url = `${publicEnv.NEXT_PUBLIC_SITE_URL}/${locale}/attivita/${activity.slug}`;
 
@@ -64,7 +104,7 @@ export default async function ActivityPage({ params, searchParams }: Props) {
   const meta = [
     formatDuration(activity.durationMin),
     activity.requiresCar ? t("carNeeded") : null,
-    price !== null ? (Number(activity.priceFromEur) === 0 ? t("freeMeta") : t("priceMeta", { price })) : null,
+    price !== null ? (Number(activity.onSitePriceEur) === 0 ? t("freeMeta") : t("priceMeta", { price })) : null,
     season,
     activity.accessible ? t("accessible") : null,
   ].filter((m): m is string => Boolean(m));
@@ -146,6 +186,14 @@ export default async function ActivityPage({ params, searchParams }: Props) {
                 <p className="mt-3 text-body-l text-pretty">{activity.description}</p>
               </section>
             )}
+            {offers.length > 0 && (
+              <section aria-labelledby="prenota-online" className="md:hidden">
+                <h2 id="prenota-online" className="is-display text-heading-2">
+                  {t("bookOnline")}
+                </h2>
+                <div className="mt-4 flex flex-col gap-4">{offerList}</div>
+              </section>
+            )}
           </div>
 
           <aside className="hidden md:col-span-5 md:block">
@@ -158,7 +206,7 @@ export default async function ActivityPage({ params, searchParams }: Props) {
                   </PendingButton>
                 </div>
               </div>
-              <PendingMarker id="activity.offer" />
+              {offerList}
             </div>
           </aside>
         </div>
@@ -185,7 +233,7 @@ export default async function ActivityPage({ params, searchParams }: Props) {
             name: activity.title,
             description: activity.description ?? undefined,
             url,
-            isAccessibleForFree: Number(activity.priceFromEur) === 0,
+            isAccessibleForFree: Number(activity.onSitePriceEur) === 0,
             ...(activity.rating !== null && {
               aggregateRating: { "@type": "AggregateRating", ratingValue: activity.rating, bestRating: 5 },
             }),
@@ -199,12 +247,29 @@ export default async function ActivityPage({ params, searchParams }: Props) {
         />
       </article>
 
-      {/* Mobile: la barra di prenotazione sostituisce la TabBar; per ora solo "Aggiungi al viaggio" */}
+      {/* Mobile: la barra di prenotazione sostituisce la TabBar, con l'offerta principale */}
       <BookingBar
         addToTrip={
           <PendingButton id="activity.add-to-trip" variant="primary" fullWidth>
             {t("addToTrip")}
           </PendingButton>
+        }
+        offer={
+          mainOffer ? (
+            <ButtonAnchor
+              variant="secondary"
+              href={affiliateHref(mainOffer.id, { locale })}
+              rel="sponsored nofollow"
+            >
+              {/* Due righe come nel mockup: il partner e il prezzo "da". */}
+              <span className="flex flex-col items-center gap-0.5 leading-tight">
+                <span>{mainOffer.partner}</span>
+                {mainOffer.price && (
+                  <span className="text-caption font-normal">{t("offerBarPrice", { price: mainOffer.price })}</span>
+                )}
+              </span>
+            </ButtonAnchor>
+          ) : undefined
         }
       />
     </>

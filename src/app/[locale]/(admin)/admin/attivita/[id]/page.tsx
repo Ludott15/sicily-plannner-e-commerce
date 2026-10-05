@@ -2,27 +2,34 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { z } from "zod";
 import { ActivityForm } from "@/components/admin/activity-form";
+import { OfferForm } from "@/components/admin/offer-form";
 import { FormNotice } from "@/components/admin/fields";
 import { Link } from "@/lib/i18n/navigation";
-import { saveActivity } from "@/server/catalog/admin-actions.admin";
-import { adminGetActivity, adminListInterests, adminListPlaces } from "@/server/catalog/admin-queries.admin";
+import { deleteOffer, saveActivity, saveOffer } from "@/server/catalog/admin-actions.admin";
+import {
+  adminGetActivity,
+  adminListInterests,
+  adminListOffers,
+  adminListPlaces,
+} from "@/server/catalog/admin-queries.admin";
 
 export default async function EditActivityPage({
   params,
   searchParams,
 }: {
   params: Promise<{ locale: string; id: string }>;
-  searchParams: Promise<{ salvata?: string }>;
+  searchParams: Promise<{ salvata?: string; offerta?: string }>;
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
   if (!z.uuid().safeParse(id).success) notFound();
 
-  const [t, activity, places, interests, { salvata }] = await Promise.all([
+  const [t, activity, places, interests, offers, { salvata, offerta }] = await Promise.all([
     getTranslations("Admin"),
     adminGetActivity(id),
     adminListPlaces(),
     adminListInterests(),
+    adminListOffers(id),
     searchParams,
   ]);
   if (!activity) notFound();
@@ -49,18 +56,54 @@ export default async function EditActivityPage({
           placeId: activity.placeId,
           description: activity.description,
           durationMin: activity.durationMin,
-          priceFromEur: activity.priceFromEur,
+          onSitePriceEur: activity.onSitePriceEur,
           requiresCar: activity.requiresCar,
           accessible: activity.accessible,
           seasonMonths: activity.seasonMonths,
-          partner: activity.partner,
-          partnerProductId: activity.partnerProductId,
-          affiliateUrl: activity.affiliateUrl,
           rating: activity.rating,
           isActive: activity.isActive,
           tags: activity.tags,
         }}
       />
+
+      <section id="offerte" aria-labelledby="offerte-titolo" className="flex flex-col gap-4 border-t border-divider pt-8">
+        <h2 id="offerte-titolo" className="is-display text-heading-2">
+          {t("offersTitle")}
+        </h2>
+        <p className="text-body-s text-lava-muted">{t("offersHint")}</p>
+        <FormNotice
+          message={offerta === "salvata" ? t("offerSaved") : offerta === "eliminata" ? t("offerDeleted") : null}
+        />
+        {offers.length === 0 && <p className="text-body">{t("offersEmpty")}</p>}
+        {offers.map((o) => (
+          <OfferForm
+            key={o.id}
+            action={saveOffer}
+            deleteAction={deleteOffer}
+            locale={locale}
+            activityId={activity.id}
+            values={o}
+          />
+        ))}
+        <h3 className="text-body font-semibold">{t("offerNew")}</h3>
+        <OfferForm
+          action={saveOffer}
+          locale={locale}
+          activityId={activity.id}
+          values={{
+            partner: "getyourguide",
+            partnerProductId: "",
+            title: "",
+            priceFromEur: null,
+            currency: "EUR",
+            affiliateUrl: "",
+            rating: null,
+            reviewsCount: null,
+            freeCancellation: null,
+            isActive: true,
+          }}
+        />
+      </section>
     </section>
   );
 }

@@ -174,7 +174,8 @@ refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
 enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
-enable_anonymous_sign_ins = false
+# Ospiti: sessione anonima protetta da Turnstile (docs/spec.md, "Accesso, ospiti e browser interni").
+enable_anonymous_sign_ins = true
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
@@ -210,10 +211,13 @@ token_verifications = 30
 web3 = 30
 
 # Configure one of the supported captcha providers: `hcaptcha`, `turnstile`.
-# [auth.captcha]
-# enabled = true
-# provider = "hcaptcha"
-# secret = ""
+# In locale e in CI la chiave segreta di prova di Cloudflare, pubblica e sempre valida (con la
+# site key di prova 1x00000000000000000000AA, default di NEXT_PUBLIC_TURNSTILE_SITE_KEY).
+# In produzione chiavi vere, impostate nella dashboard di Supabase e su Vercel.
+[auth.captcha]
+enabled = true
+provider = "turnstile"
+secret = "1x0000000000000000000000000000000AA"
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
@@ -222,7 +226,9 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+# Attivo: senza conferma, updateUser di un ospite salverebbe l'email senza verificare il codice
+# (chiunque potrebbe prendersi un indirizzo altrui). Vale anche in produzione.
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
@@ -241,6 +247,20 @@ otp_expiry = 3600
 # pass = "env(SENDGRID_API_KEY)"
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
+
+# Template con il codice a 6 cifre ({{ .Token }}), digitato nella stessa pagina; il link resta
+# come alternativa. In produzione gli stessi testi vanno copiati nella dashboard di Supabase.
+[auth.email.template.magic_link]
+subject = "Il tuo codice Isula: {{ .Token }}"
+content_path = "./supabase/templates/code.html"
+
+[auth.email.template.confirmation]
+subject = "Il tuo codice Isula: {{ .Token }}"
+content_path = "./supabase/templates/code.html"
+
+[auth.email.template.email_change]
+subject = "Il tuo codice Isula: {{ .Token }}"
+content_path = "./supabase/templates/email-change.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

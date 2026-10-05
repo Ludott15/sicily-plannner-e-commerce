@@ -127,6 +127,27 @@
       "when": 1790554672146,
       "tag": "20260928001752_day_titles_affiliate_click",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790591521162,
+      "tag": "20260928103201_guest_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791208135688,
+      "tag": "20261005134855_activity_offers",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791208181020,
+      "tag": "20261005134941_activities_editorial",
+      "breakpoints": true
     }
   ]
 }

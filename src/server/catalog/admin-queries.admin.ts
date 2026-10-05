@@ -2,7 +2,7 @@ import "server-only";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { requireAdmin } from "@/server/auth";
 import { dbAdmin } from "@/server/db/admin";
-import { activities, activityInterests, interests, itineraries, itineraryItems, places } from "@/server/db/schema";
+import { activities, activityInterests, activityOffers, interests, itineraries, itineraryItems, places } from "@/server/db/schema";
 
 // Letture dell'admin del catalogo: vedono anche le attività inattive e gli itinerari non
 // pubblicati. Ogni funzione verifica l'admin prima di leggere.
@@ -16,7 +16,7 @@ export async function adminListActivities(filter: "tutte" | "attive" | "da-appro
       slug: activities.slug,
       title: activities.title,
       isActive: activities.isActive,
-      partner: activities.partner,
+      offers: sql<number>`(select count(*)::int from ${activityOffers} o where o.activity_id = ${activities.id})`,
       placeName: places.name,
       tags: tagCount,
     })
@@ -104,4 +104,13 @@ export async function adminActivityOptions() {
     .select({ id: activities.id, title: activities.title, isActive: activities.isActive })
     .from(activities)
     .orderBy(asc(activities.title));
+}
+
+export async function adminListOffers(activityId: string) {
+  await requireAdmin();
+  return dbAdmin
+    .select()
+    .from(activityOffers)
+    .where(eq(activityOffers.activityId, activityId))
+    .orderBy(desc(activityOffers.isActive), asc(activityOffers.title));
 }

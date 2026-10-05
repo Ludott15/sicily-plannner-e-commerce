@@ -6,7 +6,7 @@ import { expect, test } from "@playwright/test";
 
 async function offerHref() {
   const { withDb } = await import("./db.mjs");
-  const [row] = await withDb((sql) => sql`select id from activities where slug = 'demo-zingaro'`);
+  const [row] = await withDb((sql) => sql`select id from activity_offers where partner_product_id = 'demo-gyg-zingaro'`);
   expect(row).toBeTruthy();
   return `/api/go/${row!.id}?c=page&l=it`;
 }
@@ -45,7 +45,24 @@ test("nessun open redirect: i parametri della richiesta non cambiano la destinaz
   await withDb((sql) => sql`delete from affiliate_clicks where target_url like 'https://www.getyourguide.com/s/?q=Riserva%'`);
 });
 
-test("attività inesistente o senza link: si torna al catalogo, nessun redirect esterno", async ({ request }) => {
+test("offerta inesistente, spenta o id di un'attività: si torna al catalogo, nessun redirect esterno", async ({ request }) => {
+  const { withDb } = await import("./db.mjs");
+  const [activity] = await withDb((sql) => sql`select id from activities where slug = 'demo-zingaro'`);
+  const notOffer = await request.get(`/api/go/${activity!.id}`, { maxRedirects: 0 });
+  expect(notOffer.status()).toBe(303);
+  expect(new URL(notOffer.headers()["location"]!).host).toBe("localhost:3000");
+
+  const [offer] = await withDb(
+    (sql) => sql`update activity_offers set is_active = false where partner_product_id = 'demo-viator-zingaro' returning id`,
+  );
+  try {
+    const off = await request.get(`/api/go/${offer!.id}`, { maxRedirects: 0 });
+    expect(off.status()).toBe(303);
+    expect(new URL(off.headers()["location"]!).host).toBe("localhost:3000");
+  } finally {
+    await withDb((sql) => sql`update activity_offers set is_active = true where id = ${offer!.id}`);
+  }
+
   const unknown = await request.get("/api/go/00000000-0000-0000-0000-000000000000", { maxRedirects: 0 });
   expect(unknown.status()).toBe(303);
   expect(new URL(unknown.headers()["location"]!).pathname).toBe("/it/attivita");

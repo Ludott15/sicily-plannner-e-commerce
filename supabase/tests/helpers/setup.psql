@@ -24,13 +24,32 @@ begin
 end;
 $$;
 
+-- Crea un ospite (sessione anonima di Supabase): nessuna email, is_anonymous = true.
+create or replace function tests.create_guest(p_name text)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_id uuid := gen_random_uuid();
+begin
+  insert into auth.users (id, is_anonymous) values (v_id, true);
+  perform set_config('tests.user_' || p_name, v_id::text, true);
+  perform set_config('tests.guest_' || p_name, 'true', true);
+  return v_id;
+end;
+$$;
+
 create or replace function tests.uid(p_name text)
 returns uuid
 language sql
 stable
 as $$ select current_setting('tests.user_' || p_name)::uuid $$;
 
--- Agisce come l'utente indicato: ruolo authenticated e claim come nel JWT di Supabase.
+-- Agisce come l'utente indicato: ruolo authenticated e claim come nel JWT di Supabase,
+-- compreso is_anonymous (true per gli ospiti creati con create_guest; dopo una conversione
+-- il test lo rimette a false con set_config('tests.guest_<nome>', 'false', true)).
 -- Per tornare a postgres usare `reset role;`.
 create or replace function tests.authenticate_as(p_name text)
 returns void
@@ -38,7 +57,11 @@ language plpgsql
 as $$
 begin
   perform set_config('request.jwt.claims',
-    json_build_object('sub', tests.uid(p_name), 'role', 'authenticated')::text, true);
+    json_build_object(
+      'sub', tests.uid(p_name),
+      'role', 'authenticated',
+      'is_anonymous', coalesce(current_setting('tests.guest_' || p_name, true), '') = 'true'
+    )::text, true);
   perform set_config('role', 'authenticated', true);
 end;
 $$;
