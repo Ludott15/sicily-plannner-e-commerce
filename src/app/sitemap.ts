@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { publicEnv } from "@/lib/env";
 import { routing } from "@/lib/i18n/routing";
+import { isPending } from "@/lib/pending-actions";
 import { listPublicSlugs } from "@/server/catalog/queries";
 
 // Letta dal database a ogni richiesta: contiene solo contenuti pubblici (dbPublic).
@@ -14,11 +15,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "",
     "/attivita",
     "/itinerari",
-    "/chi-siamo",
     "/link-affiliati",
-    "/privacy",
-    "/cookie",
-    "/condizioni-di-vendita",
+    // Pagine con testi ancora in sospeso: fuori dalla sitemap (e noindex) finché non sono scritte.
+    ...(isPending("about.editorial", "about.founder") ? [] : ["/chi-siamo"]),
+    ...(isPending("legal.privacy") ? [] : ["/privacy"]),
+    ...(isPending("legal.cookie") ? [] : ["/cookie"]),
+    ...(isPending("legal.terms") ? [] : ["/condizioni-di-vendita"]),
     ...slugs.activities.map((s) => `/attivita/${s}`),
     ...slugs.places.map((s) => `/luoghi/${s}`),
     ...slugs.itineraries.map((s) => `/itinerari/${s}`),

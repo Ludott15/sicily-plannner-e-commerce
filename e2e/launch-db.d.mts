@@ -3,5 +3,6 @@ export function demoRowCounts(databaseUrl: string): Promise<{
   places: number;
   itineraries: number;
   local_tips: number;
+  local_tip_authors: number;
   activity_offers: number;
 }>;

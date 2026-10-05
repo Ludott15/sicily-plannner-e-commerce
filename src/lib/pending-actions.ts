@@ -11,9 +11,6 @@ export const PENDING_ACTIONS = {
   "home.create-trip": "M4",
   "home.points": "M9",
   "activity.add-to-trip": "M5",
-  "activity.save": "M5",
-  "card.save": "M5",
-  "card.add": "M5",
   "itinerary.use": "M5",
   "tabbar.trips": "M5",
   "tabbar.shop": "M10",
@@ -33,6 +30,12 @@ export function pendingAttributes(id: PendingId) {
     "data-pending": PENDING_ACTIONS[id],
     "data-pending-id": id,
   } as const;
+}
+
+// Una pagina con testi in sospeso non si indicizza (robots noindex) e non sta nella sitemap:
+// togliendo l'id dall'elenco quando il testo è scritto, la pagina si apre ai motori di ricerca.
+export function isPending(...ids: PendingId[]): boolean {
+  return ids.some((id) => id in PENDING_ACTIONS);
 }
 
 // "Disponibile a breve" compare solo in sviluppo.

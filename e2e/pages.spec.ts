@@ -3,14 +3,31 @@ import { expect, test } from "@playwright/test";
 // Pagine pubbliche: sitemap, immagini di anteprima, Chi siamo e link affiliati, pagine legali,
 // 404 e banner dei cookie.
 
-test("sitemap: pagine del sito e informazioni legali nelle due lingue, niente contenuti inattivi", async ({ request }) => {
+test("sitemap: link affiliati nelle due lingue; pagine con testi in sospeso, admin e profilo no", async ({ request }) => {
   const sitemap = await (await request.get("/sitemap.xml")).text();
-  for (const path of ["/chi-siamo", "/link-affiliati", "/privacy", "/cookie", "/condizioni-di-vendita"]) {
-    expect(sitemap).toContain(`http://localhost:3000/it${path}`);
-    expect(sitemap).toContain(`http://localhost:3000/en${path}`);
+  expect(sitemap).toContain("http://localhost:3000/it/link-affiliati");
+  expect(sitemap).toContain("http://localhost:3000/en/link-affiliati");
+  // Chi siamo e pagine legali hanno ancora il segnaposto: fuori dalla sitemap finché non sono scritte.
+  for (const path of ["/chi-siamo", "/privacy", "/cookie", "/condizioni-di-vendita"]) {
+    expect(sitemap, path).not.toContain(path);
   }
   expect(sitemap).not.toContain("/admin");
   expect(sitemap).not.toContain("/profilo");
+});
+
+test("pagine con testi in sospeso: noindex, \"Testo in preparazione\" e nessuna chiave di traduzione", async ({ page }) => {
+  for (const path of ["/it/privacy", "/it/cookie", "/it/condizioni-di-vendita", "/it/chi-siamo", "/en/privacy"]) {
+    await page.goto(path);
+    await expect(page.locator('meta[name="robots"]'), path).toHaveAttribute("content", /noindex/);
+    await expect(page.locator("main")).toContainText(/Testo in preparazione|Text in preparation/);
+    // Mai identificativi interni (legal.privacy, about.editorial…) né chiavi mancanti di next-intl.
+    const text = (await page.locator("main").innerText()) + (await page.locator("footer").innerText());
+    expect(text, path).not.toMatch(/\b(legal|about|home|activity)\.[a-z-]+\b/);
+    expect(text, path).not.toMatch(/(Legal|Design|About)\./);
+  }
+  // Le pagine con testo vero restano indicizzabili.
+  await page.goto("/it/link-affiliati");
+  await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
 });
 
 test("immagine di anteprima 1200×630 per attività, luoghi e itinerari", async ({ page, request }) => {

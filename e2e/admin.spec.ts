@@ -85,6 +85,9 @@ test("admin: coda Da riverificare, nuovo consiglio e riverifica", async ({ page,
   await expect(due.getByText("scaduto, fuori dalle pagine").first()).toBeVisible();
 
   const body = `e2e-consiglio ${Date.now()}`;
+  // Il consiglio di test lo elimina comunque la pulizia globale (prefisso e2e-); qui anche se il
+  // test fallisce a metà, perché un consiglio di test non deve mai restare in pagina.
+  try {
   await page.getByRole("link", { name: "Nuovo consiglio" }).click();
   await page.getByLabel("Consiglio", { exact: true }).fill(body);
   await page.getByLabel("Luogo", { exact: true }).selectOption({ label: "Palermo" });
@@ -99,6 +102,7 @@ test("admin: coda Da riverificare, nuovo consiglio e riverifica", async ({ page,
   await row.getByRole("button", { name: "Riverificato oggi" }).click();
   await expect(page.getByRole("status")).toHaveText("Data di verifica aggiornata a oggi.");
   await expect(due.getByText(body)).toHaveCount(0);
-
-  await withDb((sql) => sql`delete from local_tips where body = ${body}`);
+  } finally {
+    await withDb((sql) => sql`delete from local_tips where body = ${body}`);
+  }
 });

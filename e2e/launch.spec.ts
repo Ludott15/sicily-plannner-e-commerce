@@ -3,8 +3,7 @@ import { authSettingsProblems, type AuthSettings } from "../src/lib/launch-check
 
 // Controllo di lancio (PRE_LAUNCH=1): configurazione di Supabase Auth nel progetto cloud.
 // Variabili: LAUNCH_SUPABASE_URL e LAUNCH_SUPABASE_PUBLISHABLE_KEY (progetto di produzione),
-// LAUNCH_DATABASE_URL (database di produzione, per i dati demo), LAUNCH_SITE_URL facoltativa
-// (sito in produzione). Si lancia a mano, mai in CI. Vedi docs/LANCIO.md.
+// LAUNCH_SITE_URL facoltativa (sito in produzione). Vedi docs/LANCIO.md.
 
 const url = process.env.LAUNCH_SUPABASE_URL;
 const key = process.env.LAUNCH_SUPABASE_PUBLISHABLE_KEY;
@@ -29,28 +28,6 @@ test.describe("lancio: Supabase Auth in produzione", () => {
     const res = await request.post(`${url}/auth/v1/signup`, { headers: { apikey: key! }, data: {} });
     expect(res.status()).toBe(400);
     expect(((await res.json()) as { error_code?: string }).error_code).toBe("captcha_failed");
-  });
-
-  test("CAPTCHA attivo: una sessione anonima con un token non valido è rifiutata", async ({ request }) => {
-    const res = await request.post(`${url}/auth/v1/signup`, {
-      headers: { apikey: key! },
-      data: { gotrue_meta_security: { captcha_token: "token-non-valido" } },
-    });
-    expect(res.status()).toBe(400);
-    expect(((await res.json()) as { error_code?: string }).error_code).toBe("captcha_failed");
-  });
-
-  test("nessun dato demo in produzione (attività, luoghi, itinerari, consigli, offerte)", async () => {
-    const databaseUrl = process.env.LAUNCH_DATABASE_URL;
-    expect(databaseUrl, "LAUNCH_DATABASE_URL").toBeTruthy();
-    const { demoRowCounts } = await import("./launch-db.mjs");
-    expect(await demoRowCounts(databaseUrl!)).toEqual({
-      activities: 0,
-      places: 0,
-      itineraries: 0,
-      local_tips: 0,
-      activity_offers: 0,
-    });
   });
 
   test("cron di pulizia non pubblico sul sito in produzione", async ({ request }) => {

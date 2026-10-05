@@ -380,7 +380,7 @@ Ogni link in uscita verso un partner passa da una route nostra che registra il c
 1. Risolve l'offerta (`activity_offers`); se non esiste, è spenta o la sua attività è inattiva, rimanda al catalogo; se la registrazione fallisce, alla pagina dell'attività con un avviso.
 2. Genera un subid breve e univoco.
 3. Costruisce l'URL finale aggiungendo il subid nel parametro previsto da quel partner; la mappatura dei parametri vive in `server/affiliates/links.ts`.
-4. Registra la riga in `affiliate_clicks` con utente o identificativo anonimo (cookie `anon_id`), offerta, contesto e itinerario.
+4. Registra la riga in `affiliate_clicks` con utente o identificativo anonimo (cookie `anon_id`, solo con il consenso ai cookie non tecnici: senza consenso il click ha il solo subid), offerta, contesto e itinerario.
 5. Registra l'evento `affiliate_click` in `user_events` se l'utente è autenticato.
 6. Risponde con redirect 302.
 

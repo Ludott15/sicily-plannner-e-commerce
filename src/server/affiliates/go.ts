@@ -21,7 +21,7 @@ export async function resolveAffiliateClick(input: {
   offerId: string;
   context: ClickContext;
   itineraryId: string | null;
-  anonId: string;
+  anonId: string | null;
   user: User | null;
 }): Promise<GoResult> {
   const run = <T>(fn: (tx: UserTx) => Promise<T>) => (input.user ? dbAsUser(input.user, fn) : dbPublic(fn));

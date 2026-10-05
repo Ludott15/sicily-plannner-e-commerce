@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Heart } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Breadcrumb } from "@/components/catalog/breadcrumb";
@@ -59,9 +58,8 @@ export default async function ActivityPage({ params, searchParams }: Props) {
   const activity = await getActivity(slug);
   if (!activity) notFound();
 
-  const [t, tDesign, labels, nearby, offerRows, tip, { avviso }] = await Promise.all([
+  const [t, labels, nearby, offerRows, tip, { avviso }] = await Promise.all([
     getTranslations("Catalog"),
-    getTranslations("Design"),
     interestLabels(locale),
     listNearbyActivities(activity.id, activity.placeId, activity.placeProvince),
     listActivityOffers(activity.id),
@@ -162,16 +160,12 @@ export default async function ActivityPage({ params, searchParams }: Props) {
             </ul>
           )}
           <h1 className="is-display max-w-4xl text-display-l">{activity.title}</h1>
-          {/* Su desktop Salva e Condividi stanno a destra dei metadati; su mobile non ci sono (mockup). */}
+          {/* Su desktop Condividi sta a destra dei metadati; Salva arriva con il builder (M5). */}
           <div className="flex flex-wrap items-end justify-between gap-4">
           <p className="text-body text-lava-muted">
             {meta.join(" · ")}
           </p>
           <div className="hidden flex-wrap items-start gap-3 md:flex">
-            <PendingButton id="activity.save" variant="secondary">
-              <Heart size={20} strokeWidth={1.5} aria-hidden="true" />
-              {tDesign("save")}
-            </PendingButton>
             <ShareButton title={activity.title} />
           </div>
           </div>

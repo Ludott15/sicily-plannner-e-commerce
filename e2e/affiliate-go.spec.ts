@@ -34,6 +34,40 @@ test("ogni click crea una riga con subid univoco e reindirizza al partner", asyn
   await withDb((sql) => sql`delete from affiliate_clicks where subid = any(${subids})`);
 });
 
+test("senza consenso ai cookie nessun anon_id: né cookie né colonna, il click ha il subid", async ({ request }) => {
+  const href = await offerHref();
+  const { withDb } = await import("./db.mjs");
+  // Il contesto di test porta cookie_consent=rejected; anche un anon_id già presente si ignora.
+  const res = await request.get(href, {
+    maxRedirects: 0,
+    headers: { cookie: "cookie_consent=rejected; anon_id=11111111-2222-4333-8444-555555555555" },
+  });
+  expect(res.status()).toBe(302);
+  expect(res.headers()["set-cookie"] ?? "").not.toContain("anon_id");
+  const subid = new URL(res.headers()["location"]!).searchParams.get("cmp")!;
+  const [row] = await withDb((sql) => sql`select subid, anon_id, user_id from affiliate_clicks where subid = ${subid}`);
+  expect(row).toMatchObject({ subid, anon_id: null, user_id: null });
+
+  // Nemmeno senza alcuna scelta (primo accesso, banner non ancora usato).
+  const noChoice = await request.get(href, { maxRedirects: 0, headers: { cookie: "" } });
+  expect(noChoice.headers()["set-cookie"] ?? "").not.toContain("anon_id");
+  await withDb((sql) => sql`delete from affiliate_clicks where target_url like 'https://www.getyourguide.com/s/?q=Riserva%'`);
+});
+
+test("con il consenso l'anon_id si imposta e si registra", async ({ request }) => {
+  const href = await offerHref();
+  const { withDb } = await import("./db.mjs");
+  const res = await request.get(href, { maxRedirects: 0, headers: { cookie: "cookie_consent=accepted" } });
+  const cookie = res.headers()["set-cookie"] ?? "";
+  const anonId = /anon_id=([0-9a-f-]{36})/.exec(cookie)?.[1];
+  expect(anonId).toBeTruthy();
+  expect(cookie).toContain("HttpOnly");
+  const subid = new URL(res.headers()["location"]!).searchParams.get("cmp")!;
+  const [row] = await withDb((sql) => sql`select anon_id from affiliate_clicks where subid = ${subid}`);
+  expect(row?.anon_id).toBe(anonId);
+  await withDb((sql) => sql`delete from affiliate_clicks where target_url like 'https://www.getyourguide.com/s/?q=Riserva%'`);
+});
+
 test("nessun open redirect: i parametri della richiesta non cambiano la destinazione", async ({ request }) => {
   const href = await offerHref();
   for (const extra of ["&url=https://evil.example", "&target=https://evil.example", "&l=https://evil.example"]) {
