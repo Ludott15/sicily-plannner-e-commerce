@@ -444,24 +444,50 @@ enabled = true
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
 
-# Produzione: valori che sovrascrivono quelli locali con `supabase config push` (docs/LANCIO.md).
-# La CLI applica il blocco solo se project_id coincide con il progetto collegato. Resta
-# commentato finché non c'è il project_id vero: con un id non valido la CLI rifiuta il file.
-# [remotes.production]
-# project_id = "<20 lettere minuscole>"
-#
-# [remotes.production.auth]
-# site_url = "https://<dominio>"
-# additional_redirect_urls = ["https://<dominio>/api/auth/callback"]
-# enable_anonymous_sign_ins = true
-#
-# [remotes.production.auth.captcha]
-# enabled = true
-# provider = "turnstile"
-# secret = "env(SUPABASE_AUTH_CAPTCHA_SECRET)"
-#
-# [remotes.production.auth.email]
-# enable_confirmations = true
-#
-# [remotes.production.auth.rate_limit]
-# email_sent = 30
+# ---------------------------------------------------------------------------------------
+# PRODUZIONE (docs/LANCIO.md). La CLI applica questo blocco sopra la configurazione locale
+# solo se project_id coincide con il progetto collegato. Finché c'è il segnaposto, il push
+# verso produzione lo blocca `npm run supabase:push-production`: non usare mai
+# `supabase config push` direttamente. Nessun valore locale né segreto in chiaro: tutto ciò
+# che dipende dal dominio o è segreto viene da env() al momento del push. Il test
+# scripts/supabase/production-config.test.ts (in CI) verifica queste regole.
+# ---------------------------------------------------------------------------------------
+[remotes.production]
+# Segnaposto di 20 lettere: senza un project_id valido la CLI rifiuta tutto il file.
+# Ludovico lo sostituisce con il ref del progetto di produzione.
+project_id = "xxxxxxxxxxxxxxxxxxxx"
+
+[remotes.production.auth]
+site_url = "env(PRODUCTION_SITE_URL)"
+additional_redirect_urls = ["env(PRODUCTION_AUTH_CALLBACK_URL)"]
+enable_signup = true
+enable_anonymous_sign_ins = true
+
+[remotes.production.auth.rate_limit]
+# Con SMTP proprio (Resend): email di accesso e conversione per ora, per tutto il progetto.
+email_sent = 100
+anonymous_users = 30
+sign_in_sign_ups = 30
+token_verifications = 30
+token_refresh = 150
+
+[remotes.production.auth.captcha]
+enabled = true
+provider = "turnstile"
+secret = "env(SUPABASE_AUTH_CAPTCHA_SECRET)"
+
+[remotes.production.auth.email]
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+# In locale 1s per i test; in produzione un nuovo codice al massimo ogni 60 secondi.
+max_frequency = "60s"
+
+[remotes.production.auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(RESEND_API_KEY)"
+admin_email = "env(SMTP_SENDER_EMAIL)"
+sender_name = "env(SMTP_SENDER_NAME)"
