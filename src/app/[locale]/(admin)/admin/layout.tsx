@@ -23,6 +23,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <Link href="/admin/itinerari" className="text-body font-semibold text-lava">
           {t("templates")}
         </Link>
+        <Link href="/admin/consigli" className="text-body font-semibold text-lava">
+          {t("tips")}
+        </Link>
       </nav>
       <div className="py-8">{children}</div>
     </div>

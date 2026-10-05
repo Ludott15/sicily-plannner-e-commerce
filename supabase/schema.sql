@@ -69,6 +69,15 @@ CREATE TYPE "public"."itinerary_status" AS ENUM (
 ALTER TYPE "public"."itinerary_status" OWNER TO "postgres";
 
 
+CREATE TYPE "public"."local_tip_author_kind" AS ENUM (
+    'editorial',
+    'person'
+);
+
+
+ALTER TYPE "public"."local_tip_author_kind" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."order_status" AS ENUM (
     'pending',
     'paid',
@@ -553,6 +562,42 @@ $$;
 
 
 ALTER FUNCTION "public"."is_group_owner"("gid" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."local_tip_authors_person_relation"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if new.kind = 'person' and exists (
+    select 1 from public.local_tips t
+    where t.author_id = new.id and coalesce(btrim(t.author_relation), '') = ''
+  ) then
+    raise exception 'person_tip_without_relation' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."local_tip_authors_person_relation"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."local_tips_person_relation"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if exists (select 1 from public.local_tip_authors a where a.id = new.author_id and a.kind = 'person')
+     and coalesce(btrim(new.author_relation), '') = '' then
+    raise exception 'person_tip_without_relation' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."local_tips_person_relation"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."prevent_mutation"() RETURNS "trigger"
@@ -1070,6 +1115,57 @@ CREATE MATERIALIZED VIEW "public"."leaderboard_season_totals" AS
 ALTER MATERIALIZED VIEW "public"."leaderboard_season_totals" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."local_tip_authors" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "kind" "public"."local_tip_author_kind" NOT NULL,
+    "display_name" "text" NOT NULL,
+    "bio" "text",
+    "photo_url" "text",
+    "profile_id" "uuid",
+    "consent_at" timestamp with time zone,
+    "is_active" boolean DEFAULT true NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "local_tip_authors_person_consent" CHECK ((("kind" <> 'person'::"public"."local_tip_author_kind") OR ("consent_at" IS NOT NULL))),
+    CONSTRAINT "local_tip_authors_photo_https" CHECK (("photo_url" ~ '^https://'::"text"))
+);
+
+
+ALTER TABLE "public"."local_tip_authors" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."local_tips" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "author_id" "uuid" NOT NULL,
+    "activity_id" "uuid",
+    "place_id" "uuid",
+    "body" "text" NOT NULL,
+    "author_relation" "text",
+    "verified_at" "date" NOT NULL,
+    "is_active" boolean DEFAULT true NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "local_tips_body_length" CHECK ((("char_length"("body") >= 1) AND ("char_length"("body") <= 280))),
+    CONSTRAINT "local_tips_target" CHECK ((("activity_id" IS NOT NULL) OR ("place_id" IS NOT NULL)))
+);
+
+
+ALTER TABLE "public"."local_tips" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."local_tips_due_for_review" WITH ("security_invoker"='true') AS
+ SELECT "id",
+    "author_id",
+    "activity_id",
+    "place_id",
+    "body",
+    "verified_at",
+    (("verified_at" + '1 year'::interval))::"date" AS "expires_on"
+   FROM "public"."local_tips" "t"
+  WHERE ("is_active" AND (("verified_at" + '1 year'::interval) <= (CURRENT_DATE + '30 days'::interval)));
+
+
+ALTER VIEW "public"."local_tips_due_for_review" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."order_items" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "order_id" "uuid" NOT NULL,
@@ -1206,6 +1302,25 @@ CREATE TABLE IF NOT EXISTS "public"."products" (
 
 
 ALTER TABLE "public"."products" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."public_local_tips" WITH ("security_barrier"='true') AS
+ SELECT "t"."id",
+    "t"."activity_id",
+    "t"."place_id",
+    "t"."body",
+    "t"."author_relation",
+    "t"."verified_at",
+    "a"."kind" AS "author_kind",
+    "a"."display_name" AS "author_name",
+    "a"."photo_url" AS "author_photo_url"
+   FROM (("public"."local_tips" "t"
+     JOIN "public"."local_tip_authors" "a" ON ((("a"."id" = "t"."author_id") AND "a"."is_active")))
+     LEFT JOIN "public"."activities" "act" ON (("act"."id" = "t"."activity_id")))
+  WHERE ("t"."is_active" AND ("t"."verified_at" > (CURRENT_DATE - '1 year'::interval)) AND (("t"."activity_id" IS NULL) OR "act"."is_active"));
+
+
+ALTER VIEW "public"."public_local_tips" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."reviews" (
@@ -1452,6 +1567,16 @@ ALTER TABLE ONLY "public"."itinerary_items"
 
 
 
+ALTER TABLE ONLY "public"."local_tip_authors"
+    ADD CONSTRAINT "local_tip_authors_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."local_tips"
+    ADD CONSTRAINT "local_tips_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."order_items"
     ADD CONSTRAINT "order_items_pkey" PRIMARY KEY ("id");
 
@@ -1628,6 +1753,18 @@ CREATE UNIQUE INDEX "leaderboard_season_totals_season_user_idx" ON "public"."lea
 
 
 
+CREATE INDEX "local_tips_activity_id_idx" ON "public"."local_tips" USING "btree" ("activity_id");
+
+
+
+CREATE INDEX "local_tips_place_id_idx" ON "public"."local_tips" USING "btree" ("place_id");
+
+
+
+CREATE INDEX "local_tips_verified_at_idx" ON "public"."local_tips" USING "btree" ("verified_at");
+
+
+
 CREATE INDEX "order_items_order_id_idx" ON "public"."order_items" USING "btree" ("order_id");
 
 
@@ -1677,6 +1814,14 @@ CREATE OR REPLACE TRIGGER "admin_audit_log_no_truncate" BEFORE TRUNCATE ON "publ
 
 
 CREATE OR REPLACE TRIGGER "groups_add_owner_member" AFTER INSERT ON "public"."groups" FOR EACH ROW EXECUTE FUNCTION "public"."groups_add_owner_member"();
+
+
+
+CREATE OR REPLACE TRIGGER "local_tip_authors_person_relation" BEFORE UPDATE OF "kind" ON "public"."local_tip_authors" FOR EACH ROW EXECUTE FUNCTION "public"."local_tip_authors_person_relation"();
+
+
+
+CREATE OR REPLACE TRIGGER "local_tips_person_relation" BEFORE INSERT OR UPDATE ON "public"."local_tips" FOR EACH ROW EXECUTE FUNCTION "public"."local_tips_person_relation"();
 
 
 
@@ -1838,6 +1983,26 @@ ALTER TABLE ONLY "public"."itinerary_items"
 
 ALTER TABLE ONLY "public"."itinerary_items"
     ADD CONSTRAINT "itinerary_items_place_id_places_id_fk" FOREIGN KEY ("place_id") REFERENCES "public"."places"("id") ON DELETE RESTRICT;
+
+
+
+ALTER TABLE ONLY "public"."local_tip_authors"
+    ADD CONSTRAINT "local_tip_authors_profile_id_profiles_id_fk" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."local_tips"
+    ADD CONSTRAINT "local_tips_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."local_tips"
+    ADD CONSTRAINT "local_tips_author_id_local_tip_authors_id_fk" FOREIGN KEY ("author_id") REFERENCES "public"."local_tip_authors"("id") ON DELETE RESTRICT;
+
+
+
+ALTER TABLE ONLY "public"."local_tips"
+    ADD CONSTRAINT "local_tips_place_id_places_id_fk" FOREIGN KEY ("place_id") REFERENCES "public"."places"("id") ON DELETE CASCADE;
 
 
 
@@ -2218,6 +2383,44 @@ CREATE POLICY "itinerary_items_update" ON "public"."itinerary_items" FOR UPDATE 
 
 
 
+ALTER TABLE "public"."local_tip_authors" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "local_tip_authors_delete_admin" ON "public"."local_tip_authors" FOR DELETE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "local_tip_authors_insert_admin" ON "public"."local_tip_authors" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "local_tip_authors_select_admin" ON "public"."local_tip_authors" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "local_tip_authors_update_admin" ON "public"."local_tip_authors" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."local_tips" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "local_tips_delete_admin" ON "public"."local_tips" FOR DELETE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "local_tips_insert_admin" ON "public"."local_tips" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "local_tips_select_admin" ON "public"."local_tips" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "local_tips_update_admin" ON "public"."local_tips" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
 ALTER TABLE "public"."order_items" ENABLE ROW LEVEL SECURITY;
 
 
@@ -2517,6 +2720,18 @@ REVOKE ALL ON FUNCTION "public"."is_group_owner"("gid" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."is_group_owner"("gid" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."is_group_owner"("gid" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."is_group_owner"("gid" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."local_tip_authors_person_relation"() TO "anon";
+GRANT ALL ON FUNCTION "public"."local_tip_authors_person_relation"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."local_tip_authors_person_relation"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."local_tips_person_relation"() TO "anon";
+GRANT ALL ON FUNCTION "public"."local_tips_person_relation"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."local_tips_person_relation"() TO "service_role";
 
 
 
@@ -2905,6 +3120,21 @@ GRANT ALL ON TABLE "public"."leaderboard_season_totals" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."local_tip_authors" TO "service_role";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."local_tip_authors" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."local_tips" TO "service_role";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."local_tips" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."local_tips_due_for_review" TO "service_role";
+GRANT SELECT ON TABLE "public"."local_tips_due_for_review" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."order_items" TO "service_role";
 GRANT SELECT ON TABLE "public"."order_items" TO "authenticated";
 
@@ -2984,6 +3214,12 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."producers" TO "authenticate
 GRANT ALL ON TABLE "public"."products" TO "service_role";
 GRANT SELECT ON TABLE "public"."products" TO "anon";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."public_local_tips" TO "service_role";
+GRANT SELECT ON TABLE "public"."public_local_tips" TO "anon";
+GRANT SELECT ON TABLE "public"."public_local_tips" TO "authenticated";
 
 
 
