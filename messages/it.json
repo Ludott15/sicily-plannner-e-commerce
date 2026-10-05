@@ -13,7 +13,8 @@
     "itineraries": "Itinerari pronti",
     "main": "Principale",
     "footer": "Piè di pagina",
-    "travel": "Viaggia"
+    "travel": "Viaggia",
+    "saveAccount": "Salva l'account"
   },
   "Home": {
     "title": "La Sicilia di chi ci vive, su misura per te.",
@@ -41,14 +42,41 @@
   },
   "Login": {
     "title": "Accedi",
-    "description": "Ti inviamo un link di accesso via email, oppure entra con Google.",
+    "description": "Ti mandiamo un codice via email: lo scrivi qui e sei dentro. Se l'email è nuova, creiamo l'account.",
     "email": "Email",
-    "submit": "Inviami il link",
+    "sendCode": "Mandami il codice",
+    "code": "Codice di 6 cifre",
+    "verify": "Accedi",
+    "codeSent": "Ti abbiamo mandato un codice a {email}. Scrivilo qui sotto.",
+    "codeResent": "Codice inviato di nuovo.",
+    "resend": "Non è arrivato? Invia di nuovo",
+    "changeEmail": "Usa un'altra email",
+    "linkAlternative": "Nell'email c'è anche un link per accedere: funziona se lo apri in questo browser.",
     "or": "oppure",
     "google": "Continua con Google",
-    "sent": "Controlla la posta: ti abbiamo inviato un link per accedere a {email}.",
-    "invalidEmail": "Inserisci un indirizzo email valido.",
-    "error": "Accesso non riuscito. Riprova."
+    "openInBrowser": "Dal browser di {app, select, instagram {Instagram} facebook {Facebook} tiktok {TikTok} other {questa app}} Google non permette l'accesso. Usa il codice via email, oppure apri la pagina nel browser dal menu ⋯ in alto.",
+    "guestText": "Puoi anche usare Isula senza account: crei e salvi i tuoi viaggi, e li leghi alla tua email quando vuoi.",
+    "guestStart": "Continua senza account",
+    "guestSendCode": "Mandami il codice",
+    "guestCodeSent": "Ti abbiamo mandato un codice a {email}. Scrivilo qui sotto per salvare il tuo account.",
+    "guestVerify": "Salva il mio account",
+    "error": "Accesso non riuscito. Riprova.",
+    "errors": {
+      "invalid_email": "Scrivi un indirizzo email valido.",
+      "invalid_code": "Il codice non è giusto. Controlla l'ultima email ricevuta.",
+      "code_expired": "Il codice è scaduto. Chiedine uno nuovo.",
+      "captcha_failed": "Non siamo riusciti a verificare che sei una persona. Ricarica la pagina e riprova.",
+      "rate_limited": "Troppi tentativi ravvicinati. Aspetta qualche minuto e riprova.",
+      "email_taken": "Questa email ha già un account. Per usarlo esci e accedi con il codice: i viaggi creati da ospite non passano a quell'account.",
+      "not_guest": "Il tuo account ha già un'email.",
+      "failed": "Qualcosa non ha funzionato. Riprova."
+    }
+  },
+  "Guest": {
+    "title": "Stai usando Isula come ospite",
+    "description": "I viaggi che crei sono salvati su questo dispositivo. Aggiungi la tua email per ritrovarli ovunque: restano tuoi, non si perde nulla.",
+    "signOut": "Esci",
+    "signOutWarning": "Se esci senza salvare l'account, i viaggi creati da ospite non si possono più recuperare."
   },
   "Profile": {
     "title": "Il tuo profilo",

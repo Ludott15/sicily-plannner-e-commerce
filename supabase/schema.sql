@@ -152,6 +152,9 @@ begin
   if v_uid is null then
     raise exception 'not_authenticated' using errcode = '42501';
   end if;
+  if coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false) then
+    raise exception 'guest_not_allowed' using errcode = 'P0001';
+  end if;
 
   select * into v_invite
   from public.group_invites
@@ -219,6 +222,10 @@ CREATE OR REPLACE FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta"
 declare
   v_inserted integer;
 begin
+  if exists (select 1 from auth.users where id = p_user_id and is_anonymous) then
+    return false;
+  end if;
+
   insert into public.points_ledger (user_id, delta, reason, ref_type, ref_id, season)
   values (p_user_id, p_delta, p_reason, p_ref_type, p_ref_id, public.season_for(now()))
   on conflict on constraint points_ledger_user_reason_ref_unique do nothing;
@@ -329,6 +336,9 @@ begin
   if v_uid is null then
     raise exception 'not_authenticated' using errcode = '42501';
   end if;
+  if coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false) then
+    raise exception 'guest_not_allowed' using errcode = 'P0001';
+  end if;
 
   if p_itinerary_id is not null then
     perform 1 from public.itineraries
@@ -353,6 +363,39 @@ $$;
 
 
 ALTER FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."delete_inactive_guests"("p_days" integer DEFAULT 30) RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_deleted integer;
+begin
+  if p_days < 1 then
+    raise exception 'invalid_days' using errcode = 'P0001';
+  end if;
+
+  delete from auth.users u
+  where u.is_anonymous
+    and greatest(
+      u.created_at,
+      u.last_sign_in_at,
+      u.updated_at,
+      (
+        select max(greatest(s.updated_at, s.refreshed_at at time zone 'UTC'))
+        from auth.sessions s
+        where s.user_id = u.id
+      )
+    ) < now() - make_interval(days => p_days);
+
+  get diagnostics v_deleted = row_count;
+  return v_deleted;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."delete_inactive_guests"("p_days" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."group_has_other_members"("gid" "uuid") RETURNS boolean
@@ -1959,7 +2002,7 @@ CREATE POLICY "group_invites_delete_owner" ON "public"."group_invites" FOR DELET
 
 
 
-CREATE POLICY "group_invites_insert_owner" ON "public"."group_invites" FOR INSERT TO "authenticated" WITH CHECK ((("invited_by" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."is_group_owner"("group_id")));
+CREATE POLICY "group_invites_insert_owner" ON "public"."group_invites" FOR INSERT TO "authenticated" WITH CHECK ((("invited_by" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."is_group_owner"("group_id") AND (NOT COALESCE(( SELECT (("auth"."jwt"() ->> 'is_anonymous'::"text"))::boolean AS "bool"), false))));
 
 
 
@@ -2023,7 +2066,7 @@ CREATE POLICY "item_votes_delete_own" ON "public"."item_votes" FOR DELETE TO "au
 
 
 
-CREATE POLICY "item_votes_insert_own" ON "public"."item_votes" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_vote_item"("itinerary_item_id")));
+CREATE POLICY "item_votes_insert_own" ON "public"."item_votes" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_vote_item"("itinerary_item_id") AND (NOT COALESCE(( SELECT (("auth"."jwt"() ->> 'is_anonymous'::"text"))::boolean AS "bool"), false))));
 
 
 
@@ -2031,7 +2074,7 @@ CREATE POLICY "item_votes_select_members" ON "public"."item_votes" FOR SELECT TO
 
 
 
-CREATE POLICY "item_votes_update_own" ON "public"."item_votes" FOR UPDATE TO "authenticated" USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_vote_item"("itinerary_item_id"))) WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_vote_item"("itinerary_item_id")));
+CREATE POLICY "item_votes_update_own" ON "public"."item_votes" FOR UPDATE TO "authenticated" USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_vote_item"("itinerary_item_id"))) WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_vote_item"("itinerary_item_id") AND (NOT COALESCE(( SELECT (("auth"."jwt"() ->> 'is_anonymous'::"text"))::boolean AS "bool"), false))));
 
 
 
@@ -2207,7 +2250,7 @@ CREATE POLICY "reviews_delete_own" ON "public"."reviews" FOR DELETE TO "authenti
 
 
 
-CREATE POLICY "reviews_insert_own" ON "public"."reviews" FOR INSERT TO "authenticated" WITH CHECK (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+CREATE POLICY "reviews_insert_own" ON "public"."reviews" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (NOT COALESCE(( SELECT (("auth"."jwt"() ->> 'is_anonymous'::"text"))::boolean AS "bool"), false))));
 
 
 
@@ -2215,7 +2258,7 @@ CREATE POLICY "reviews_select_own" ON "public"."reviews" FOR SELECT TO "authenti
 
 
 
-CREATE POLICY "reviews_update_own" ON "public"."reviews" FOR UPDATE TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+CREATE POLICY "reviews_update_own" ON "public"."reviews" FOR UPDATE TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (NOT COALESCE(( SELECT (("auth"."jwt"() ->> 'is_anonymous'::"text"))::boolean AS "bool"), false))));
 
 
 
@@ -2314,6 +2357,11 @@ REVOKE ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id"
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."delete_inactive_guests"("p_days" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."delete_inactive_guests"("p_days" integer) TO "service_role";
 
 
 

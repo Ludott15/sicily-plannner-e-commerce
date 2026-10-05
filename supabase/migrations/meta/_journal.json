@@ -127,6 +127,13 @@
       "when": 1790554672146,
       "tag": "20260928001752_day_titles_affiliate_click",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790591521162,
+      "tag": "20260928103201_guest_access",
+      "breakpoints": true
     }
   ]
 }

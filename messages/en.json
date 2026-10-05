@@ -13,7 +13,8 @@
     "itineraries": "Ready-made itineraries",
     "main": "Main",
     "footer": "Footer",
-    "travel": "Travel"
+    "travel": "Travel",
+    "saveAccount": "Save your account"
   },
   "Home": {
     "title": "Sicily as locals know it, made for you.",
@@ -41,14 +42,41 @@
   },
   "Login": {
     "title": "Sign in",
-    "description": "We'll email you a sign-in link, or continue with Google.",
+    "description": "We email you a code: type it here and you're in. If the email is new, we create the account.",
     "email": "Email",
-    "submit": "Send me the link",
+    "sendCode": "Send me the code",
+    "code": "6-digit code",
+    "verify": "Sign in",
+    "codeSent": "We sent a code to {email}. Type it below.",
+    "codeResent": "Code sent again.",
+    "resend": "Didn't get it? Send again",
+    "changeEmail": "Use another email",
+    "linkAlternative": "The email also has a sign-in link: it works if you open it in this browser.",
     "or": "or",
     "google": "Continue with Google",
-    "sent": "Check your inbox: we sent a sign-in link to {email}.",
-    "invalidEmail": "Enter a valid email address.",
-    "error": "Sign-in failed. Please try again."
+    "openInBrowser": "Google doesn't allow sign-in from the {app, select, instagram {Instagram} facebook {Facebook} tiktok {TikTok} other {in-app}} browser. Use the email code, or open the page in your browser from the ⋯ menu at the top.",
+    "guestText": "You can also use Isula without an account: create and save your trips, and link them to your email whenever you like.",
+    "guestStart": "Continue without an account",
+    "guestSendCode": "Send me the code",
+    "guestCodeSent": "We sent a code to {email}. Type it below to save your account.",
+    "guestVerify": "Save my account",
+    "error": "Sign-in failed. Please try again.",
+    "errors": {
+      "invalid_email": "Enter a valid email address.",
+      "invalid_code": "That code isn't right. Check the latest email you received.",
+      "code_expired": "The code has expired. Ask for a new one.",
+      "captcha_failed": "We couldn't verify that you're a person. Reload the page and try again.",
+      "rate_limited": "Too many attempts in a short time. Wait a few minutes and try again.",
+      "email_taken": "This email already has an account. To use it, sign out and sign in with the code: trips created as a guest don't move to that account.",
+      "not_guest": "Your account already has an email.",
+      "failed": "Something went wrong. Please try again."
+    }
+  },
+  "Guest": {
+    "title": "You're using Isula as a guest",
+    "description": "The trips you create are saved on this device. Add your email to find them anywhere: they stay yours, nothing is lost.",
+    "signOut": "Sign out",
+    "signOutWarning": "If you sign out without saving the account, trips created as a guest can't be recovered."
   },
   "Profile": {
     "title": "Your profile",
