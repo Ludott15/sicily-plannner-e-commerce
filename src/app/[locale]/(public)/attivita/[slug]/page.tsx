@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Breadcrumb } from "@/components/catalog/breadcrumb";
 import { CatalogActivityCard } from "@/components/catalog/catalog-activity-card";
+import { CatalogLocalTip } from "@/components/catalog/catalog-local-tip";
 import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
 import {
@@ -21,10 +22,11 @@ import { localizedAlternates, truncate } from "@/lib/seo";
 import { interestLabels } from "@/server/catalog/labels";
 import { partnerName, type Partner } from "@/server/affiliates/links";
 import { getActivity, listActivityOffers, listNearbyActivities } from "@/server/catalog/queries";
+import { getActivityTip } from "@/server/catalog/tips";
 
 // Scheda attività (mockup Attivita.html e AttivitaMobile.html).
 // Non ancora in pagina, perché mancano dati o funzioni: galleria (una sola foto o il
-// segnaposto), "Perché è per te" (M4), consiglio locale (schema 2e), "Da sapere",
+// segnaposto), "Perché è per te" (M4), "Da sapere",
 // recensioni (M9), prodotti della zona (M10), "+10 punti con il check-in" (M9).
 // In sospeso (visibili e disabilitate): Salva e "Aggiungi al viaggio" (M5).
 // Offerte: prodotti dei partner (activity_offers), dalla più economica; la prima è anche
@@ -57,12 +59,13 @@ export default async function ActivityPage({ params, searchParams }: Props) {
   const activity = await getActivity(slug);
   if (!activity) notFound();
 
-  const [t, tDesign, labels, nearby, offerRows, { avviso }] = await Promise.all([
+  const [t, tDesign, labels, nearby, offerRows, tip, { avviso }] = await Promise.all([
     getTranslations("Catalog"),
     getTranslations("Design"),
     interestLabels(locale),
     listNearbyActivities(activity.id, activity.placeId, activity.placeProvince),
     listActivityOffers(activity.id),
+    getActivityTip(activity.id, activity.placeId),
     searchParams,
   ]);
 
@@ -178,6 +181,8 @@ export default async function ActivityPage({ params, searchParams }: Props) {
 
         <div className="mt-10 grid gap-10 md:grid-cols-12 md:gap-12">
           <div className="flex flex-col gap-10 md:col-span-7">
+            {/* Consiglio locale prima di "Cosa ti aspetta", come nei mockup ("Perché è per te" arriva con la M4) */}
+            {tip && <CatalogLocalTip tip={tip} locale={locale} />}
             {activity.description && (
               <section aria-labelledby="cosa-aspetta">
                 <h2 id="cosa-aspetta" className="is-display text-heading-2">

@@ -4,11 +4,12 @@ import type { User } from "@supabase/supabase-js";
 import { activities, activityOffers } from "@/server/db/schema";
 import { dbPublic } from "@/server/db/public";
 import { dbAsUser, type UserTx } from "@/server/db/user";
-import { buildAffiliateUrl, newSubid, type Partner } from "./links";
+import { newSubid } from "./links";
 
-// Logica di /api/go/[id] (anticipo minimo della milestone 6): risolve l'offerta del partner,
-// genera il subid, registra il click con record_affiliate_click e restituisce l'URL del partner.
-// L'URL di destinazione viene solo dal catalogo: nessun parametro della richiesta lo cambia.
+// Logica di /api/go/[id] (anticipo minimo della milestone 6): genera il subid e chiama
+// record_affiliate_click, che verifica l'offerta, costruisce l'URL del partner dal catalogo,
+// registra il click e lo restituisce. affiliate_url non è leggibile dal client: l'URL esce
+// solo da qui, e nessun parametro della richiesta lo cambia.
 
 export type ClickContext = "page" | "itinerary" | "chat" | "flights";
 
@@ -27,7 +28,7 @@ export async function resolveAffiliateClick(input: {
 
   const [offer] = await run((tx) =>
     tx
-      .select({ slug: activities.slug, partner: activityOffers.partner, affiliateUrl: activityOffers.affiliateUrl })
+      .select({ slug: activities.slug })
       .from(activityOffers)
       .innerJoin(activities, eq(activities.id, activityOffers.activityId))
       .where(eq(activityOffers.id, input.offerId)),
@@ -36,17 +37,15 @@ export async function resolveAffiliateClick(input: {
   // "non trovate", e si torna al catalogo.
   if (!offer) return { kind: "unavailable", slug: null };
 
-  const subid = newSubid();
-  const url = buildAffiliateUrl(offer.affiliateUrl, offer.partner as Partner, subid);
-
   try {
-    await run((tx) =>
-      tx.execute(
-        sql`select public.record_affiliate_click(${input.offerId}, ${subid}, ${url}, ${input.context}, ${input.user ? null : input.anonId}, ${input.itineraryId})`,
+    const [row] = await run((tx) =>
+      tx.execute<{ url: string }>(
+        sql`select public.record_affiliate_click(${input.offerId}, ${newSubid()}, ${input.context}, ${input.user ? null : input.anonId}, ${input.itineraryId}) as url`,
       ),
     );
+    if (!row?.url) return { kind: "unavailable", slug: offer.slug };
+    return { kind: "redirect", url: row.url };
   } catch {
     return { kind: "unavailable", slug: offer.slug };
   }
-  return { kind: "redirect", url };
 }

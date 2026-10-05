@@ -1,0 +1,68 @@
+# Lancio: configurazione di produzione
+
+Passi da fare una volta sul progetto Supabase di produzione e su Vercel prima di aprire il sito, più il modo di verificarli. Il controllo automatico è l'e2e `e2e/launch.spec.ts`, che parte con `PRE_LAUNCH=1` (vedi "Verifica automatica" in fondo).
+
+## 1. Configurazione di Supabase Auth con `supabase config push`
+
+`supabase config push` invia al progetto collegato le proprietà dichiarate in `supabase/config.toml`. L'ho verificato nel sorgente della CLI (`apps/cli-go/pkg/config/auth.go` e `config.go`). Le proprietà inviate sono:
+- `site_url`;
+- gli accessi anonimi (`enable_anonymous_sign_ins`);
+- il CAPTCHA, cioè attivazione, provider e segreto;
+- "Confirm email" (`enable_confirmations`, inviato come `mailer_autoconfirm = !enable_confirmations`);
+- i template email, con oggetto e contenuto letti da `content_path`.
+
+Quindi sostituisce la configurazione a mano nella dashboard.
+
+**Attenzione:** `config.toml` contiene valori locali che in produzione romperebbero il sito:
+- `site_url = localhost`;
+- la chiave segreta di prova di Turnstile;
+- `email_sent = 2` all'ora.
+
+La CLI fonde un blocco `[remotes.<nome>]` sopra la configurazione base solo quando il suo `project_id` coincide con il progetto collegato. Per la produzione serve quindi il blocco `[remotes.production]`, oggi commentato in fondo a `config.toml`:
+
+1. Togli il commento al blocco e scrivi il `project_id` del progetto di produzione (20 lettere minuscole, dalla URL della dashboard). Finché il blocco è commentato `supabase start` funziona: con un id non valido la CLI rifiuta il file.
+2. Esporta i segreti nell'ambiente, mai nel file: `SUPABASE_AUTH_CAPTCHA_SECRET` (chiave segreta di Turnstile) e, se usi Google, `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` e `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`.
+3. `npx supabase link --project-ref <ref>`, poi `npx supabase config diff --project-ref <ref>`. Leggi il diff: devono cambiare solo le voci che ti aspetti.
+4. `npx supabase config push --project-ref <ref>`. La CLI chiede conferma per ogni risorsa.
+
+Restano manuali solo i segreti (passo 2 e sezione 2) e l'SMTP di produzione, se lo vuoi configurare da file.
+
+**Cosa deve risultare, e come verificarlo**
+
+| Voce | Valore | Verifica |
+| --- | --- | --- |
+| Confirm email | attivo | `GET <url>/auth/v1/settings`: `mailer_autoconfirm` è `false`. Senza, `updateUser` di un ospite salva l'email senza il codice. |
+| Accessi anonimi | attivi | `/auth/v1/settings`: `external.anonymous_users` è `true` |
+| Accesso via email | attivo | `/auth/v1/settings`: `external.email` è `true`, `disable_signup` è `false` |
+| CAPTCHA Turnstile | attivo, con la chiave segreta vera | `POST <url>/auth/v1/signup` con body `{}` risponde 400 `captcha_failed`. A mano: "Continua senza account" sul sito funziona. |
+| Template email | `supabase/templates/code.html` (Magic Link e Confirm signup), `email-change.html` (Change Email Address) | A mano: chiedi un codice dalla pagina di accesso; l'oggetto è "Il tuo codice Isula: 123456" |
+| Site URL e redirect | dominio di produzione e `https://<dominio>/api/auth/callback` | A mano: il link nell'email porta al dominio di produzione |
+
+## 2. Vercel
+
+| Variabile | Valore | Verifica |
+| --- | --- | --- |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | site key del widget Turnstile del dominio | Se manca, la build di produzione si ferma (`src/lib/env.ts`). A mano: il widget non mostra l'avviso "testing only". |
+| `CRON_SECRET` | stringa casuale lunga (es. `openssl rand -hex 32`) | `GET https://<dominio>/api/cron/cleanup-guests` senza header risponde 401. Nei log di Vercel il cron delle 3:00 UTC risponde 200 con `{"deleted": n}`. |
+
+Il widget Turnstile si crea su Cloudflare (Turnstile → Add widget) con il dominio di produzione. Da lì vengono la site key (Vercel) e la chiave segreta (`SUPABASE_AUTH_CAPTCHA_SECRET` per `config push`).
+
+## Verifica automatica
+
+```bash
+PRE_LAUNCH=1 \
+LAUNCH_SUPABASE_URL=https://<ref>.supabase.co \
+LAUNCH_SUPABASE_PUBLISHABLE_KEY=<chiave publishable di produzione> \
+LAUNCH_SITE_URL=https://<dominio> \
+npx playwright test e2e/launch.spec.ts e2e/pending-actions.spec.ts
+```
+
+Fallisce se:
+- `mailer_autoconfirm` non è `false`;
+- gli accessi anonimi o l'email sono spenti;
+- le iscrizioni sono chiuse;
+- il CAPTCHA non è attivo;
+- il cron risponde senza segreto;
+- restano azioni in sospeso nelle pagine.
+
+I template e il link dell'email si controllano a mano, come indicato nella tabella.

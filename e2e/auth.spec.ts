@@ -121,6 +121,44 @@ test("ospite con l'email di un account esistente: errore, resta ospite", async (
   await expect(page.locator("main").getByRole("alert")).toContainText("Questa email ha già un account.");
   await expect(page.getByLabel("Email")).toHaveValue(email);
   await expect(page.getByRole("heading", { name: "Stai usando Isula come ospite" })).toBeVisible();
+
+  // Nel database: l'ospite resta senza email, l'account dell'altro utente non cambia.
+  const { withDb } = await import("./db.mjs");
+  const guestId = await sessionUserId(page);
+  const [guest] = await withDb((sql) => sql`select email, email_change, is_anonymous from auth.users where id = ${guestId}`);
+  expect(guest).toMatchObject({ email: null, is_anonymous: true });
+  expect(guest?.email_change ?? "").not.toBe(email);
+  const owners = await withDb((sql) => sql`select id from auth.users where email = ${email}`);
+  expect(owners).toHaveLength(1);
+  expect(owners[0]!.id).not.toBe(guestId);
+});
+
+test("ospite: senza il codice giusto l'email non è sua", async ({ page, request }) => {
+  const { withDb } = await import("./db.mjs");
+  await page.goto("/it/login");
+  await page.getByRole("button", { name: "Continua senza account" }).click();
+  await expect(page).toHaveURL(/\/it\/profilo$/);
+  const guestId = await sessionUserId(page);
+
+  // Chiede il codice per un'email nuova ma non lo verifica: l'email resta in attesa, non sua.
+  const email = testEmail();
+  await page.getByLabel("Email").fill(email);
+  await page.getByRole("button", { name: "Mandami il codice" }).click();
+  await expect(page.getByRole("status")).toContainText(email);
+  const code = await waitForCode(request, email);
+  const [pending] = await withDb((sql) => sql`select email, is_anonymous from auth.users where id = ${guestId}`);
+  expect(pending).toMatchObject({ email: null, is_anonymous: true });
+
+  // Codice sbagliato: errore, l'account non cambia.
+  await page.getByLabel("Codice di 6 cifre").fill(code === "000000" ? "111111" : "000000");
+  await page.getByRole("button", { name: "Salva il mio account" }).click();
+  await expect(page.locator("main").getByRole("alert")).toContainText("Il codice non è giusto o è scaduto.");
+  const [after] = await withDb((sql) => sql`select email, is_anonymous from auth.users where id = ${guestId}`);
+  expect(after).toMatchObject({ email: null, is_anonymous: true });
+
+  // Dopo un nuovo caricamento è ancora ospite.
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Stai usando Isula come ospite" })).toBeVisible();
 });
 
 test("il callback rifiuta redirect esterni", async ({ page }) => {

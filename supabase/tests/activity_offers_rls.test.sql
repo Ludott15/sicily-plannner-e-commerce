@@ -48,7 +48,13 @@ select results_eq(
   $$values ('Visibile')$$,
   'ospite: solo offerte attive di attività attive'
 );
+select tests.as_anon();
+select throws_ok($$select affiliate_url from public.activity_offers$$, '42501', null, 'anonimo: affiliate_url non leggibile');
+select tests.authenticate_as('alice');
+select throws_ok($$select affiliate_url from public.activity_offers$$, '42501', null, 'utente: affiliate_url non leggibile');
+select throws_ok($$select * from public.activity_offers$$, '42501', null, 'utente: nemmeno con select *');
 select tests.authenticate_as('admin');
+select throws_ok($$select affiliate_url from public.activity_offers$$, '42501', null, 'admin dal client: affiliate_url non leggibile (si legge solo dal server)');
 select results_eq(
   $$select count(*)::int from public.activity_offers where activity_id in ('bbbbbbbb-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000002')$$,
   $$values (3)$$,

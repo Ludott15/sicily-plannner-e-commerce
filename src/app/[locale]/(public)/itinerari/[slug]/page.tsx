@@ -9,11 +9,13 @@ import { publicEnv } from "@/lib/env";
 import { formatDuration } from "@/lib/format";
 import { localizedAlternates } from "@/lib/seo";
 import { getTemplate } from "@/server/catalog/queries";
+import { listTipsFor } from "@/server/catalog/tips";
 
 // Itinerario pronto (mockup ItinerarioProntoMobile.html; su desktop la struttura di
 // Itinerario.html senza le parti di gruppo). Non ancora in pagina: trasferimenti tra le tappe
-// e chilometri (servono le distanze), consiglio locale (schema 2e), "Cosa prenotare" (schema 2e
-// e milestone 6), mappa. "Usa questo itinerario" è in sospeso fino al builder (M5).
+// e chilometri (servono le distanze), "Cosa prenotare" (M5 e M6), mappa. "Usa questo
+// itinerario" è in sospeso fino al builder (M5). Consiglio locale accanto alla tappa: al
+// massimo uno per giorno, sulla prima tappa che ne ha uno (dell'attività o del suo luogo).
 
 type Props = { params: Promise<{ locale: string; slug: string }> };
 
@@ -39,12 +41,24 @@ export default async function ItineraryPage({ params }: Props) {
   const itinerary = await getTemplate(slug);
   if (!itinerary) notFound();
 
-  const [t, tDesign] = await Promise.all([getTranslations("Catalog"), getTranslations("Design")]);
+  const [t, tDesign, tips] = await Promise.all([
+    getTranslations("Catalog"),
+    getTranslations("Design"),
+    listTipsFor(
+      itinerary.items.flatMap((i) => (i.activityId ? [i.activityId] : [])),
+      itinerary.items.flatMap((i) => (i.placeId ? [i.placeId] : [])),
+    ),
+  ]);
+  const tipFor = (item: (typeof itinerary.items)[number]) =>
+    tips.find((tip) => item.activityId && tip.activityId === item.activityId) ??
+    tips.find((tip) => !tip.activityId && item.placeId && tip.placeId === item.placeId) ??
+    null;
 
   // Nome del giorno: il titolo editoriale; senza titolo, i luoghi delle tappe di quel giorno.
   const days: Day[] = Array.from({ length: itinerary.days }, (_, day) => {
     const items = itinerary.items.filter((item) => item.dayIndex === day);
     const places = [...new Set(items.flatMap((i) => (i.placeName ? [i.placeName] : [])))];
+    const tipItem = items.find((i) => tipFor(i));
     return {
       name: itinerary.dayTitles[day]?.trim() || places.join(" e "),
       stops: items.map((item) => ({
@@ -57,6 +71,7 @@ export default async function ItineraryPage({ params }: Props) {
             .filter(Boolean)
             .join(" · ") || item.notes,
         durationMin: item.activityDurationMin,
+        tip: item === tipItem ? tipFor(item) : null,
       })),
     };
   });

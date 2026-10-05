@@ -119,6 +119,24 @@ from (values
 ) as v(activity_slug, partner, product, title, price, url, rating, reviews, free_cancellation)
 join public.activities a on a.slug = v.activity_slug;
 
+-- Consigli locali demo, firmati "Redazione di Isula" (voce di default al lancio). Testi di prova
+-- ([DEMO]); date di verifica relative a oggi: validi, uno in scadenza (coda "Da riverificare")
+-- e uno scaduto (fuori dalle pagine, solo nella coda).
+insert into public.local_tip_authors (id, kind, display_name)
+values ('00000000-0000-4000-8000-00000000d001', 'editorial', 'Redazione di Isula');
+
+insert into public.local_tips (author_id, activity_id, place_id, body, verified_at)
+select '00000000-0000-4000-8000-00000000d001', a.id, p.id, v.body, current_date - v.days_ago
+from (values
+  ('demo-zingaro', null, '[DEMO] Entra dall''ingresso di Scopello prima delle 9: la prima cala, Capreria, è ancora vuota.', 20),
+  ('demo-pescheria-catania', null, '[DEMO] Arriva prima delle 8: i banchi del pesce spada chiudono verso mezzogiorno.', 45),
+  ('demo-vendicari', null, '[DEMO] I fenicotteri si vedono dal capanno del Pantano Grande, tra settembre e marzo.', 345),
+  (null, 'demo-noto', '[DEMO] La scalinata della cattedrale è in ombra dopo le 17: è il momento per le foto.', 60),
+  (null, 'demo-catania', '[DEMO] Consiglio scaduto: non compare più nelle pagine finché non viene riverificato.', 400)
+) as v(activity_slug, place_slug, body, days_ago)
+left join public.activities a on a.slug = v.activity_slug
+left join public.places p on p.slug = v.place_slug;
+
 -- Itinerari predefiniti (template editoriali)
 insert into public.itineraries (owner_id, title, slug, is_template, days, status)
 values

@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { CatalogLocalTip } from "@/components/catalog/catalog-local-tip";
 import { ItineraryCard } from "@/components/catalog/itinerary-card";
 import { ButtonLink, interestDomain, PendingButton, PendingMarker } from "@/components/design";
 import { Link } from "@/lib/i18n/navigation";
 import { localizedAlternates } from "@/lib/seo";
 import { interestLabels } from "@/server/catalog/labels";
 import { listTemplates } from "@/server/catalog/queries";
+import { listLatestTips } from "@/server/catalog/tips";
 
 // Home (mockup Home.html e HomeMobile.html). Sezioni del mockup non ancora in pagina,
-// perché mancano i dati o la funzione: voce locale (consigli, schema 2e), shop (milestone 10),
+// perché mancano i dati o la funzione: shop (milestone 10),
 // viaggi di gruppo (milestone 8). "Crea il tuo viaggio" è in sospeso fino all'onboarding (M4);
 // la pillola "+100 punti a viaggio completato" è in sospeso e nascosta fino alla gamification (M9).
 
@@ -27,7 +29,12 @@ export default async function HomePage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [t, labels, templates] = await Promise.all([getTranslations("Home"), interestLabels(locale), listTemplates()]);
+  const [t, labels, templates, tips] = await Promise.all([
+    getTranslations("Home"),
+    interestLabels(locale),
+    listTemplates(),
+    listLatestTips(3),
+  ]);
 
   return (
     <>
@@ -126,6 +133,27 @@ export default async function HomePage({ params }: Props) {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {/* La voce locale: i consigli verificati più di recente, con firma e data. Su mobile uno
+          solo (LocalTip/README.md: al massimo uno per vista). Senza consigli la fascia non c'è. */}
+      {tips.length > 0 && (
+        <section aria-labelledby="voce-locale" className="border-t border-divider bg-calce-raised">
+          <div className="mx-auto w-full max-w-[1200px] px-4 py-12 md:px-16 md:py-16">
+            <p className="text-label uppercase text-lava-muted">{t("localEyebrow")}</p>
+            <h2 id="voce-locale" className="is-display mt-2 text-heading-1">
+              {t("localTitle")}
+            </h2>
+            <p className="mt-3 max-w-2xl text-body-l text-pretty text-lava-muted">{t("localText")}</p>
+            <ul className="mt-8 grid gap-6 md:grid-cols-3">
+              {tips.map((tip, i) => (
+                <li key={tip.id} className={i > 0 ? "hidden md:block" : undefined}>
+                  <CatalogLocalTip tip={tip} locale={locale} showPlace />
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       )}
     </>

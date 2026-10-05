@@ -1,18 +1,10 @@
 import { randomBytes } from "node:crypto";
 
 // Link in uscita verso i partner affiliati (docs/spec.md, "Route di uscita /api/go/[id]").
-// Il subid si aggiunge nel parametro previsto da ciascun partner. I nomi dei parametri
-// sono da confermare con i termini di ogni programma prima della milestone 6.
+// L'URL finale con il parametro del subid lo costruisce record_affiliate_click in SQL
+// (affiliate_subid_param): affiliate_url non è leggibile dal client.
 
 export type Partner = "travelpayouts" | "getyourguide" | "viator" | "car_rental" | "internal";
-
-const SUBID_PARAM: Record<Partner, string | null> = {
-  getyourguide: "cmp",
-  viator: "campaign",
-  travelpayouts: "sub_id",
-  car_rental: "subid",
-  internal: null,
-};
 
 // Nome del partner mostrato nell'offerta e nella riga di trasparenza.
 // null: nessun partner da nominare, quindi nessuna offerta affiliata.
@@ -36,13 +28,4 @@ export function newSubid(): string {
   let out = "";
   for (const b of bytes) out += SUBID_ALPHABET[b % SUBID_ALPHABET.length];
   return out;
-}
-
-// URL finale: l'affiliate_url del catalogo seguito dal parametro del subid. Si aggiunge
-// in coda senza riscrivere l'URL di base, così l'URL finale inizia sempre con quello del
-// catalogo (lo verifica record_affiliate_click). Con un frammento (#) non si aggiunge nulla.
-export function buildAffiliateUrl(baseUrl: string, partner: Partner, subid: string): string {
-  const param = SUBID_PARAM[partner];
-  if (!param || baseUrl.includes("#")) return baseUrl;
-  return `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}${param}=${subid}`;
 }

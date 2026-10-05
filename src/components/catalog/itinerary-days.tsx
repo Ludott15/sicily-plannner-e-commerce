@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { Fragment } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { CatalogLocalTip } from "@/components/catalog/catalog-local-tip";
 import { DayTabs, ItineraryStop, Route } from "@/components/design";
 import { formatDuration } from "@/lib/format";
+import type { PublicTip } from "@/server/catalog/tips";
 
 // Giorni di un itinerario pronto: DayTabs e, per il giorno scelto, le tappe sulla linea del
 // percorso. La linea si disegna solo alla prima apertura (movimento.md); al cambio di giorno
@@ -17,12 +20,15 @@ export type DayStop = {
   href: string | null;
   meta: string | null;
   durationMin: number | null;
+  // Consiglio locale da mostrare accanto alla tappa (al massimo uno per giorno).
+  tip?: PublicTip | null;
 };
 
 export type Day = { name: string; stops: DayStop[] };
 
 export function ItineraryDays({ days }: { days: Day[] }) {
   const t = useTranslations("Catalog");
+  const locale = useLocale();
   const [current, setCurrent] = useState(0);
   const [firstOpen, setFirstOpen] = useState(true);
   const day = days[current]!;
@@ -42,13 +48,25 @@ export function ItineraryDays({ days }: { days: Day[] }) {
         <div className="md:col-span-8">
           <Route key={current} draw={firstOpen}>
             {day.stops.map((stop) => (
-              <ItineraryStop
-                key={stop.id}
-                time={stop.time ?? undefined}
-                title={stop.title}
-                href={stop.href ?? undefined}
-                meta={stop.meta ?? undefined}
-              />
+              <Fragment key={stop.id}>
+                <ItineraryStop
+                  time={stop.time ?? undefined}
+                  title={stop.title}
+                  href={stop.href ?? undefined}
+                  meta={stop.meta ?? undefined}
+                />
+                {stop.tip && (
+                  // Accanto alla tappa, nella colonna del contenuto: sulla linea del percorso
+                  // nessun punto, la linea prosegue.
+                  <li className="is-stop">
+                    <div />
+                    <div />
+                    <div className="mb-4">
+                      <CatalogLocalTip tip={stop.tip} locale={locale} showPlace />
+                    </div>
+                  </li>
+                )}
+              </Fragment>
             ))}
           </Route>
         </div>

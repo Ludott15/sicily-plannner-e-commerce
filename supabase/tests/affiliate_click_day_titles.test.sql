@@ -1,4 +1,5 @@
--- record_affiliate_click (usata da /api/go/[id], su un'offerta di activity_offers) e itineraries.day_titles.
+-- record_affiliate_click (usata da /api/go/[id], su un'offerta di activity_offers: costruisce e restituisce
+-- l'URL del partner) e itineraries.day_titles.
 -- Ruoli: anonimo, utente (alice), altro utente (bob), admin.
 begin;
 \ir helpers/setup.psql
@@ -22,7 +23,10 @@ insert into public.activity_offers (id, activity_id, partner, partner_product_id
 values
   ('dddddddd-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000001', 'getyourguide', 'T-1', 'Offerta', 'https://www.getyourguide.com/test-1/', true),
   ('dddddddd-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000002', 'getyourguide', 'T-2', 'Su inattiva', 'https://www.getyourguide.com/test-2/', true),
-  ('dddddddd-0000-0000-0000-000000000003', 'bbbbbbbb-0000-0000-0000-000000000001', 'viator', 'T-3', 'Offerta spenta', 'https://www.viator.com/test-3/', false);
+  ('dddddddd-0000-0000-0000-000000000003', 'bbbbbbbb-0000-0000-0000-000000000001', 'viator', 'T-3', 'Offerta spenta', 'https://www.viator.com/test-3/', false),
+  ('dddddddd-0000-0000-0000-000000000004', 'bbbbbbbb-0000-0000-0000-000000000001', 'getyourguide', 'T-4', 'Con parametri', 'https://www.getyourguide.com/s/?q=Zingaro&partner_id=ABC', true),
+  ('dddddddd-0000-0000-0000-000000000005', 'bbbbbbbb-0000-0000-0000-000000000001', 'viator', 'T-5', 'Viator', 'https://www.viator.com/tours/x', true),
+  ('dddddddd-0000-0000-0000-000000000006', 'bbbbbbbb-0000-0000-0000-000000000001', 'getyourguide', 'T-6', 'Con frammento', 'https://www.getyourguide.com/a#b', true);
 insert into public.itineraries (id, owner_id, title, days)
 values ('cccccccc-0000-0000-0000-000000000001', tests.uid('bob'), 'Di bob', 2);
 
@@ -31,7 +35,7 @@ values ('cccccccc-0000-0000-0000-000000000001', tests.uid('bob'), 'Di bob', 2);
 ----------------------------------------------------------------------------
 select tests.as_anon();
 select lives_ok(
-  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'anonsubid0001', 'https://www.getyourguide.com/test-1/?cmp=anonsubid0001', 'page', '11111111-2222-3333-4444-555555555555')$$,
+  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'anonsubid0001', 'page', '11111111-2222-3333-4444-555555555555')$$,
   'anon: registra un click su un''offerta attiva'
 );
 select throws_ok($$select * from public.affiliate_clicks$$, '42501', null, 'anon: non rilegge i click');
@@ -44,7 +48,7 @@ select results_eq(
 
 select tests.authenticate_as('alice');
 select lives_ok(
-  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'alicesubid001', 'https://www.getyourguide.com/test-1/?cmp=alicesubid001', 'itinerary')$$,
+  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'alicesubid001', 'itinerary')$$,
   'utente: registra un click'
 );
 reset role;
@@ -60,36 +64,57 @@ select is(
 );
 
 select tests.authenticate_as('alice');
-select throws_ok(
-  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'evilsubid0001', 'https://evil.example/?u=https://www.getyourguide.com/test-1/', 'page')$$,
-  'P0001', 'target_mismatch', 'nessun URL diverso da quello dell''offerta'
+select is(
+  public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'urlsubid00001', 'page'),
+  'https://www.getyourguide.com/test-1/?cmp=urlsubid00001',
+  'l''URL restituito è quello dell''offerta con il parametro del partner: nessun URL dal chiamante'
+);
+select is(
+  public.record_affiliate_click('dddddddd-0000-0000-0000-000000000004', 'urlsubid00002', 'page'),
+  'https://www.getyourguide.com/s/?q=Zingaro&partner_id=ABC&cmp=urlsubid00002',
+  'URL con parametri: il subid si aggiunge con &, senza toccare l''URL di base'
+);
+select is(
+  public.record_affiliate_click('dddddddd-0000-0000-0000-000000000005', 'urlsubid00003', 'page'),
+  'https://www.viator.com/tours/x?campaign=urlsubid00003',
+  'Viator: parametro campaign'
+);
+select is(
+  public.record_affiliate_click('dddddddd-0000-0000-0000-000000000006', 'urlsubid00004', 'page'),
+  'https://www.getyourguide.com/a#b',
+  'URL con frammento: resta com''è'
+);
+select is(
+  (select target_url from public.affiliate_clicks where subid = 'urlsubid00002'),
+  null,
+  'utente: non rilegge l''URL registrato'
 );
 select throws_ok(
-  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000002', 'inactsubid001', 'https://www.getyourguide.com/test-2/', 'page')$$,
+  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000002', 'inactsubid001', 'page')$$,
   'P0001', 'offer_not_bookable', 'offerta di un''attività inattiva: nessun click'
 );
 select throws_ok(
-  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000003', 'offsubid00001', 'https://www.viator.com/test-3/', 'page')$$,
+  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000003', 'offsubid00001', 'page')$$,
   'P0001', 'offer_not_bookable', 'offerta inattiva: nessun click'
 );
 select throws_ok(
-  $$select public.record_affiliate_click('bbbbbbbb-0000-0000-0000-000000000001', 'actsubid00001', 'https://www.getyourguide.com/test-1/', 'page')$$,
+  $$select public.record_affiliate_click('bbbbbbbb-0000-0000-0000-000000000001', 'actsubid00001', 'page')$$,
   'P0001', 'offer_not_bookable', 'l''id di un''attività non è un''offerta: nessun click'
 );
 select throws_ok(
-  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'CORTO', 'https://www.getyourguide.com/test-1/', 'page')$$,
+  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'CORTO', 'page')$$,
   'P0001', 'invalid_subid', 'subid con formato non valido'
 );
 select throws_ok(
-  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'alicesubid001', 'https://www.getyourguide.com/test-1/', 'page')$$,
+  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'alicesubid001', 'page')$$,
   '23505', null, 'subid univoco'
 );
 select throws_ok(
-  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'itinsubid0001', 'https://www.getyourguide.com/test-1/', 'itinerary', null, 'cccccccc-0000-0000-0000-000000000001')$$,
+  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'itinsubid0001', 'itinerary', null, 'cccccccc-0000-0000-0000-000000000001')$$,
   'P0001', 'itinerary_not_accessible', 'non si collega un click all''itinerario di un altro'
 );
 select throws_ok(
-  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'ctxsubid00001', 'https://www.getyourguide.com/test-1/', 'altro')$$,
+  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'ctxsubid00001', 'altro')$$,
   '23514', null, 'contesto tra quelli previsti'
 );
 select is_empty($$select 1 from public.affiliate_clicks$$, 'utente: non rilegge i click, nemmeno i propri');
