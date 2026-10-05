@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CatalogLocalTip } from "@/components/catalog/catalog-local-tip";
 import { ItineraryCard } from "@/components/catalog/itinerary-card";
-import { ButtonLink, interestDomain, PendingButton, PendingMarker } from "@/components/design";
+import { ButtonLink, interestDomain, PendingMarker } from "@/components/design";
 import { Link } from "@/lib/i18n/navigation";
 import { localizedAlternates } from "@/lib/seo";
 import { interestLabels } from "@/server/catalog/labels";
@@ -11,7 +11,7 @@ import { listLatestTips } from "@/server/catalog/tips";
 
 // Home (mockup Home.html e HomeMobile.html). Sezioni del mockup non ancora in pagina,
 // perché mancano i dati o la funzione: shop (milestone 10),
-// viaggi di gruppo (milestone 8). "Crea il tuo viaggio" è in sospeso fino all'onboarding (M4);
+// viaggi di gruppo (milestone 8). "Crea il tuo viaggio" porta all'onboarding (M4);
 // la pillola "+100 punti a viaggio completato" è in sospeso e nascosta fino alla gamification (M9).
 
 type Props = { params: Promise<{ locale: string }> };
@@ -70,9 +70,9 @@ export default async function HomePage({ params }: Props) {
           <h1 className="is-display text-display-xl">{t("title")}</h1>
           <p className="text-body-l text-pretty text-lava-muted">{t("subtitle")}</p>
           <div className="flex flex-wrap items-start gap-3">
-            <PendingButton id="home.create-trip" variant="primary">
+            <ButtonLink href="/viaggio/nuovo" variant="primary">
               {t("createTrip")}
-            </PendingButton>
+            </ButtonLink>
             <ButtonLink href="/itinerari" variant="secondary">
               {t("readyItineraries")}
             </ButtonLink>

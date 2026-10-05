@@ -96,6 +96,22 @@ test("scheda attività su mobile: la barra ha l'offerta principale e non copre i
   }).toPass();
 });
 
+test("liste e schede: niente Salva e Aggiungi finché non esistono; la card dell'hero è un esempio", async ({ page }) => {
+  for (const path of ["/it/attivita", "/it/luoghi/demo-trapani", "/it/attivita/demo-zingaro", "/it/itinerari/demo-sicilia-orientale"]) {
+    await page.goto(path);
+    await expect(page.getByRole("button", { name: /^Salva/ }), path).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Aggiungi", exact: true }), path).toHaveCount(0);
+    await expect(page.locator('[data-pending-id^="card."], [data-pending-id="activity.save"]'), path).toHaveCount(0);
+  }
+  // Resta l'azione principale della pagina, in sospeso.
+  await page.goto("/it/attivita/demo-zingaro");
+  await expect(page.locator('[data-pending-id="activity.add-to-trip"]').first()).toHaveAttribute("data-pending", "M5");
+
+  await page.goto("/it");
+  await expect(page.getByText("Esempio · Giorno 1")).toBeVisible();
+  await expect(page.getByText("Per te", { exact: true })).toHaveCount(0);
+});
+
 test("elenco attività: filtri per interesse e provincia nell'URL, lista renderizzata dal server", async ({ page, request }) => {
   // Senza JavaScript: l'URL basta a filtrare.
   const html = await (await request.get("/it/attivita?provincia=TP")).text();

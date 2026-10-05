@@ -14,6 +14,7 @@ const PAGES = [
   "/it/privacy",
   "/it/cookie",
   "/it/condizioni-di-vendita",
+  "/it/viaggio/nuovo",
 ];
 
 async function collectPending(page: Page) {
