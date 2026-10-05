@@ -215,6 +215,23 @@ $$;
 ALTER FUNCTION "public"."admin_audit_log_immutable"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."affiliate_subid_param"("p_partner" "public"."partner") RETURNS "text"
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select case p_partner
+    when 'getyourguide' then 'cmp'
+    when 'viator' then 'campaign'
+    when 'travelpayouts' then 'sub_id'
+    when 'car_rental' then 'subid'
+    else null
+  end
+$$;
+
+
+ALTER FUNCTION "public"."affiliate_subid_param"("p_partner" "public"."partner") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") RETURNS boolean
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -554,13 +571,15 @@ $$;
 ALTER FUNCTION "public"."prevent_mutation"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text" DEFAULT NULL::"text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "void"
+CREATE OR REPLACE FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_context" "text", "p_anon_id" "text" DEFAULT NULL::"text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "text"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
     AS $_$
 declare
   v_uid uuid := auth.uid();
   v_offer public.activity_offers;
+  v_param text;
+  v_target text;
 begin
   select o.* into v_offer
   from public.activity_offers o
@@ -568,10 +587,6 @@ begin
   where o.id = p_offer_id and o.is_active and a.is_active;
   if not found then
     raise exception 'offer_not_bookable' using errcode = 'P0001';
-  end if;
-
-  if left(p_target_url, length(v_offer.affiliate_url)) <> v_offer.affiliate_url then
-    raise exception 'target_mismatch' using errcode = 'P0001';
   end if;
 
   if p_subid !~ '^[a-z0-9]{12,32}$' then
@@ -586,20 +601,31 @@ begin
     raise exception 'itinerary_not_accessible' using errcode = 'P0001';
   end if;
 
+  -- Il parametro si aggiunge in coda senza riscrivere l'URL di base; con un frammento (#)
+  -- l'URL resta com'è.
+  v_param := public.affiliate_subid_param(v_offer.partner);
+  v_target := case
+    when v_param is null or position('#' in v_offer.affiliate_url) > 0 then v_offer.affiliate_url
+    when position('?' in v_offer.affiliate_url) > 0 then v_offer.affiliate_url || '&' || v_param || '=' || p_subid
+    else v_offer.affiliate_url || '?' || v_param || '=' || p_subid
+  end;
+
   insert into public.affiliate_clicks
     (user_id, activity_id, offer_id, partner, target_url, subid, context, itinerary_id, anon_id)
   values
-    (v_uid, v_offer.activity_id, v_offer.id, v_offer.partner, p_target_url, p_subid, p_context, p_itinerary_id, p_anon_id);
+    (v_uid, v_offer.activity_id, v_offer.id, v_offer.partner, v_target, p_subid, p_context, p_itinerary_id, p_anon_id);
 
   if v_uid is not null then
     insert into public.user_events (user_id, type, activity_id, itinerary_id)
     values (v_uid, 'affiliate_click', v_offer.activity_id, p_itinerary_id);
   end if;
+
+  return v_target;
 end;
 $_$;
 
 
-ALTER FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."refresh_leaderboard"() RETURNS "void"
@@ -2394,6 +2420,11 @@ GRANT ALL ON FUNCTION "public"."admin_audit_log_immutable"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."affiliate_subid_param"("p_partner" "public"."partner") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."affiliate_subid_param"("p_partner" "public"."partner") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") TO "service_role";
 
@@ -2495,10 +2526,10 @@ GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "service_role";
 
 
 
-REVOKE ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "service_role";
 
 
 
@@ -2533,8 +2564,72 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."activity_interests" TO "aut
 
 
 GRANT ALL ON TABLE "public"."activity_offers" TO "service_role";
-GRANT SELECT ON TABLE "public"."activity_offers" TO "anon";
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."activity_offers" TO "authenticated";
+GRANT INSERT,DELETE,UPDATE ON TABLE "public"."activity_offers" TO "authenticated";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."activity_offers" TO "anon";
+GRANT SELECT("id") ON TABLE "public"."activity_offers" TO "authenticated";
+
+
+
+GRANT SELECT("activity_id") ON TABLE "public"."activity_offers" TO "anon";
+GRANT SELECT("activity_id") ON TABLE "public"."activity_offers" TO "authenticated";
+
+
+
+GRANT SELECT("partner") ON TABLE "public"."activity_offers" TO "anon";
+GRANT SELECT("partner") ON TABLE "public"."activity_offers" TO "authenticated";
+
+
+
+GRANT SELECT("partner_product_id") ON TABLE "public"."activity_offers" TO "anon";
+GRANT SELECT("partner_product_id") ON TABLE "public"."activity_offers" TO "authenticated";
+
+
+
+GRANT SELECT("title") ON TABLE "public"."activity_offers" TO "anon";
+GRANT SELECT("title") ON TABLE "public"."activity_offers" TO "authenticated";
+
+
+
+GRANT SELECT("price_from_eur") ON TABLE "public"."activity_offers" TO "anon";
+GRANT SELECT("price_from_eur") ON TABLE "public"."activity_offers" TO "authenticated";
+
+
+
+GRANT SELECT("currency") ON TABLE "public"."activity_offers" TO "anon";
+GRANT SELECT("currency") ON TABLE "public"."activity_offers" TO "authenticated";
+
+
+
+GRANT SELECT("rating") ON TABLE "public"."activity_offers" TO "anon";
+GRANT SELECT("rating") ON TABLE "public"."activity_offers" TO "authenticated";
+
+
+
+GRANT SELECT("reviews_count") ON TABLE "public"."activity_offers" TO "anon";
+GRANT SELECT("reviews_count") ON TABLE "public"."activity_offers" TO "authenticated";
+
+
+
+GRANT SELECT("free_cancellation") ON TABLE "public"."activity_offers" TO "anon";
+GRANT SELECT("free_cancellation") ON TABLE "public"."activity_offers" TO "authenticated";
+
+
+
+GRANT SELECT("price_updated_at") ON TABLE "public"."activity_offers" TO "anon";
+GRANT SELECT("price_updated_at") ON TABLE "public"."activity_offers" TO "authenticated";
+
+
+
+GRANT SELECT("is_active") ON TABLE "public"."activity_offers" TO "anon";
+GRANT SELECT("is_active") ON TABLE "public"."activity_offers" TO "authenticated";
+
+
+
+GRANT SELECT("created_at") ON TABLE "public"."activity_offers" TO "anon";
+GRANT SELECT("created_at") ON TABLE "public"."activity_offers" TO "authenticated";
 
 
 

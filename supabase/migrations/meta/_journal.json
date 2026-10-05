@@ -148,6 +148,13 @@
       "when": 1791208181020,
       "tag": "20261005134941_activities_editorial",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791210602901,
+      "tag": "20261005143002_offers_url_private",
+      "breakpoints": true
     }
   ]
 }

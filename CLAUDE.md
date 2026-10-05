@@ -6,6 +6,17 @@ Planner di viaggi in Sicilia con link affiliati + shop di prodotti spediti dai p
 La specifica completa è in [docs/spec.md](docs/spec.md): leggerla prima di iniziare una milestone.
 Design system, manuale del brand ("Isula", nome di lavoro), schemi e mockup: [docs/design/README.md](docs/design/README.md). Manuale, schemi e README dei componenti sono vincolanti: niente colori o font scritti a mano (solo token), niente parole vietate del manuale nei testi, mai contenuti o autori inventati (i testi tra parentesi quadre nei mockup vengono dal database).
 
+## Modo di lavoro (priorità: velocità senza fretta)
+
+- Una PR = una feature completa in verticale (migrazione, RLS, logica, UI, test), non uno strato.
+- Rigore pieno solo su: RLS e migrazioni, autenticazione e ospiti, pagamenti e webhook Stripe, redirect e tracciamento affiliati, cancellazione dati, workflow CI. Qui valgono prova a rovescio e conteggi dai log.
+- Altrove (pagine, componenti, testi, stili, admin interno): CI verde, test solo per la logica pura, nessun confronto screenshot, nessuna prova a rovescio.
+- Decisioni: se reversibili (nomi, layout, dettagli di UI, struttura interna del codice) decidi tu e annota una riga nella PR. Chiedi solo se irreversibili (schema in produzione, soldi, testi legali, dati degli utenti, scelta di fornitori).
+- Se la PR è verde e non tocca i percorsi sensibili, scrivi "pronta al merge" e passa al lavoro successivo della milestone su un nuovo branch (da quello della PR non unita, se ne dipende, dicendolo).
+- Riepilogo PR: massimo 10 righe: cosa fa, cosa non fa, scostamenti, conteggi solo per le suite toccate.
+- Restano valide le regole su git (mai push su main, mai merge) e sui token del design system.
+- Configurazione di produzione e controlli di lancio: [docs/LANCIO.md](docs/LANCIO.md).
+
 ## Comandi
 
 - `npm run db:start` — Supabase locale (porte 553xx; le 543xx sono di Segretaria AI)
