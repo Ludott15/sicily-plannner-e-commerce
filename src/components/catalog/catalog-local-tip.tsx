@@ -15,7 +15,7 @@ export function CatalogLocalTip({ tip, locale, showPlace = false }: { tip: Publi
       author={
         tip.authorKind === "person"
           ? { kind: "person", name: tip.authorName, relation: tip.authorRelation ?? "", photoUrl: tip.authorPhotoUrl }
-          : { kind: "editorial" }
+          : { kind: "editorial", aboutHref: "/chi-siamo" }
       }
     />
   );

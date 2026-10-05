@@ -19,6 +19,23 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:3000",
     trace: "retain-on-failure",
+    // Scelta dei cookie già fatta: il banner (fisso in basso) non copre le pagine nei test.
+    // e2e/pages.spec.ts prova il banner in un contesto senza questo cookie.
+    storageState: {
+      cookies: [
+        {
+          name: "cookie_consent",
+          value: "rejected",
+          domain: "localhost",
+          path: "/",
+          expires: -1,
+          httpOnly: false,
+          secure: false,
+          sameSite: "Lax",
+        },
+      ],
+      origins: [],
+    },
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
