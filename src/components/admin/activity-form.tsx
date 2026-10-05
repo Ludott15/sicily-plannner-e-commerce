@@ -16,19 +16,14 @@ export type ActivityFormValues = {
   placeId: string;
   description: string | null;
   durationMin: number | null;
-  priceFromEur: string | null;
+  onSitePriceEur: string | null;
   requiresCar: boolean;
   accessible: boolean;
   seasonMonths: number[];
-  partner: string;
-  partnerProductId: string | null;
-  affiliateUrl: string | null;
   rating: string | null;
   isActive: boolean;
   tags: { key: string; strength: number }[];
 };
-
-const PARTNERS = ["internal", "getyourguide", "viator", "travelpayouts", "car_rental"];
 
 export function ActivityForm({
   action,
@@ -83,8 +78,8 @@ export function ActivityForm({
       </Field>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Field label={t("fieldPrice")} htmlFor="priceFromEur">
-          <TextInput id="priceFromEur" name="priceFromEur" inputMode="decimal" defaultValue={values.priceFromEur ?? ""} />
+        <Field label={t("fieldPrice")} htmlFor="onSitePriceEur">
+          <TextInput id="onSitePriceEur" name="onSitePriceEur" inputMode="decimal" defaultValue={values.onSitePriceEur ?? ""} />
         </Field>
         <Field label={t("fieldRating")} htmlFor="rating">
           <TextInput id="rating" name="rating" inputMode="decimal" defaultValue={values.rating ?? ""} />
@@ -109,24 +104,6 @@ export function ActivityForm({
           ))}
         </div>
       </fieldset>
-
-      <div className="grid gap-6 md:grid-cols-3">
-        <Field label={t("fieldPartner")} htmlFor="partner">
-          <Select id="partner" name="partner" defaultValue={values.partner}>
-            {PARTNERS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label={t("fieldPartnerProduct")} htmlFor="partnerProductId">
-          <TextInput id="partnerProductId" name="partnerProductId" defaultValue={values.partnerProductId ?? ""} />
-        </Field>
-        <Field label={t("fieldAffiliateUrl")} htmlFor="affiliateUrl">
-          <TextInput id="affiliateUrl" name="affiliateUrl" type="url" defaultValue={values.affiliateUrl ?? ""} />
-        </Field>
-      </div>
 
       <fieldset className="flex flex-col gap-3">
         <legend className="text-body-s font-semibold">{t("fieldTags")}</legend>

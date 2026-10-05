@@ -155,8 +155,8 @@ reset role;
 ----------------------------------------------------------------------------
 insert into public.places (id, slug, name, province, lat, lng)
 values ('dddddddd-0000-0000-0000-000000000001', 'int-guest-place', 'Luogo', 'SR', 37, 15);
-insert into public.activities (id, slug, place_id, title, duration_min, partner)
-values ('eeeeeeee-0000-0000-0000-000000000001', 'int-guest-activity', 'dddddddd-0000-0000-0000-000000000001', 'Attività', 60, 'internal');
+insert into public.activities (id, slug, place_id, title, duration_min)
+values ('eeeeeeee-0000-0000-0000-000000000001', 'int-guest-activity', 'dddddddd-0000-0000-0000-000000000001', 'Attività', 60);
 
 select tests.authenticate_as('guest');
 select throws_ok(

@@ -56,7 +56,7 @@ export default async function AdminActivitiesPage({
                 <th className="py-2 pr-4 font-semibold">{t("colTitle")}</th>
                 <th className="py-2 pr-4 font-semibold">{t("colPlace")}</th>
                 <th className="py-2 pr-4 font-semibold">{t("colTags")}</th>
-                <th className="py-2 pr-4 font-semibold">{t("colPartner")}</th>
+                <th className="py-2 pr-4 font-semibold">{t("colOffers")}</th>
                 <th className="py-2 font-semibold">{t("colState")}</th>
               </tr>
             </thead>
@@ -70,7 +70,7 @@ export default async function AdminActivitiesPage({
                   </td>
                   <td className="py-3 pr-4">{row.placeName}</td>
                   <td className={cn("py-3 pr-4 tabular-nums", row.tags === 0 && "font-semibold text-danger")}>{row.tags}</td>
-                  <td className="py-3 pr-4">{row.partner}</td>
+                  <td className="py-3 pr-4 tabular-nums">{row.offers}</td>
                   <td className="py-3">{row.isActive ? t("active") : t("inactive")}</td>
                 </tr>
               ))}

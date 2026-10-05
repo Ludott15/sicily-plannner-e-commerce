@@ -12,6 +12,10 @@ describe("formatDuration", () => {
 });
 
 describe("formatEur", () => {
+  it("usa la valuta dell'offerta quando non è EUR", () => {
+    expect(formatEur("45", "en", "USD")).toBe("$45");
+  });
+
   it("null resta null", () => {
     expect(formatEur(null, "it")).toBeNull();
   });

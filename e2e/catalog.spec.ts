@@ -56,23 +56,35 @@ test("elenco attività, scheda e pagina del luogo", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Itinerari pronti che passano da qui" })).toBeVisible();
 });
 
-test("scheda attività: nessuna offerta affiliata fino allo schema 2e, il prezzo in loco è un metadato", async ({ page }) => {
-  // demo-zingaro ha un link affiliato e un ingresso di 5 €: l'ingresso non è un'offerta.
+test("scheda attività: offerte dei partner dalla più economica, prezzo in loco nei metadati", async ({ page }) => {
+  // demo-zingaro: ingresso di 5 € (metadato) e due offerte, GetYourGuide da 45 € e Viator da 52 €.
   await page.goto("/it/attivita/demo-zingaro");
   await expect(page.getByText("ingresso 5 € in loco")).toBeVisible();
-  await expect(page.getByText("Vedi disponibilità su")).toHaveCount(0);
-  await expect(page.getByText("Riceviamo una commissione")).toHaveCount(0);
-  await expect(page.locator('a[href^="/api/go/"]')).toHaveCount(0);
-  await expect(page.locator('[data-pending-id="activity.offer"]')).toHaveAttribute("data-pending", "2e");
-  await expect(page.locator('[data-pending-id="activity.offer"]')).toBeHidden();
+  const offers = page.locator("aside .is-offer");
+  await expect(offers).toHaveCount(2);
+  await expect(offers.first()).toContainText("[DEMO] Escursione guidata nella Riserva dello Zingaro");
+  await expect(offers.first()).toContainText("45 €");
+  await expect(offers.first().getByRole("link", { name: "Vedi disponibilità su GetYourGuide" })).toHaveAttribute(
+    "href",
+    /^\/api\/go\/[0-9a-f-]{36}\?c=page&l=it$/,
+  );
+  await expect(offers.first()).toContainText("Prenoti sul sito di GetYourGuide. Riceviamo una commissione");
+  await expect(offers.nth(1)).toContainText("Prenoti sul sito di Viator.");
 });
 
-test("scheda attività su mobile: la barra mostra solo \"Aggiungi al viaggio\" e non copre il footer", async ({ page }) => {
+test("scheda attività senza offerte: nessuna offerta e nessun pulsante del partner", async ({ page }) => {
+  await page.goto("/it/attivita/demo-valle-templi");
+  await expect(page.locator(".is-offer")).toHaveCount(0);
+  await expect(page.locator('a[href^="/api/go/"]')).toHaveCount(0);
+});
+
+test("scheda attività su mobile: la barra ha l'offerta principale e non copre il footer", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/it/attivita/demo-zingaro");
   const bar = page.locator("div.fixed.bottom-0").filter({ has: page.locator('[data-pending-id="activity.add-to-trip"]') });
-  await expect(bar.getByRole("button")).toHaveCount(1);
-  await expect(bar.getByRole("link")).toHaveCount(0);
+  await expect(bar.getByRole("link")).toHaveCount(1);
+  await expect(bar.getByRole("link")).toContainText("GetYourGuide");
+  await expect(bar.getByRole("link")).toContainText("da 45 €");
 
   // Lo spazio in fondo arriva quando la barra è misurata: si scorre di nuovo a ogni tentativo.
   const footer = page.locator("footer").last();

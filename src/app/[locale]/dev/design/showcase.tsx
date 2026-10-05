@@ -244,7 +244,7 @@ export function DesignShowcase({ themeId, themeLabel }: { themeId: string; theme
       <Block title="AffiliateOffer" readme="AffiliateOffer">
         <div className="max-w-[420px]">
           <AffiliateOffer
-            activityId="demo"
+            offerId="demo"
             title="Escursione guidata con bagno in cala"
             partner="[Partner]"
             price="[€]"

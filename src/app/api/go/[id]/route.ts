@@ -6,7 +6,8 @@ import { routing } from "@/lib/i18n/routing";
 import { resolveAffiliateClick } from "@/server/affiliates/go";
 import { getUser } from "@/server/auth";
 
-// Uscita verso un partner affiliato: registra il click con subid e risponde con 302.
+// Uscita verso un partner affiliato: [id] è un'offerta (activity_offers). Registra il click
+// con subid e risponde con 302.
 // Mai open redirect: la destinazione viene dal catalogo, i parametri della richiesta
 // scelgono solo contesto, itinerario e lingua della pagina di ripiego.
 
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const anonId = existingAnon && z.uuid().safeParse(existingAnon).success ? existingAnon : randomUUID();
 
   const result = await resolveAffiliateClick({
-    activityId: id,
+    offerId: id,
     context: contextSchema.parse(searchParams.get("c")),
     itineraryId: itinerary.success ? itinerary.data : null,
     anonId,

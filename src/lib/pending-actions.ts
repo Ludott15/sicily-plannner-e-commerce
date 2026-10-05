@@ -9,7 +9,6 @@
 export const PENDING_ACTIONS = {
   "home.create-trip": "M4",
   "home.points": "M9",
-  "activity.offer": "2e",
   "activity.add-to-trip": "M5",
   "activity.save": "M5",
   "card.save": "M5",

@@ -27,11 +27,11 @@ insert into public.places (slug, name, province, lat, lng, description) values
   ('demo-piazza-armerina', 'Piazza Armerina', 'EN', 37.3663, 14.3336, '[DEMO] Villa Romana del Casale.');
 
 -- Attività: create inattive, poi taggate, poi attivate (regola activity_without_tags).
--- price_from_eur è il prezzo pagato in loco (ingresso, biglietto), un metadato: null per tour ed
--- esperienze, che sono offerte dei partner (schema 2e), 0 per quelle libere.
+-- on_site_price_eur è il prezzo pagato in loco (ingresso, biglietto), un metadato: null per tour ed
+-- esperienze, che sono offerte dei partner (activity_offers), 0 per quelle libere.
 insert into public.activities
-  (slug, place_id, title, description, duration_min, price_from_eur, requires_car, accessible, season_months, partner, rating, is_active)
-select v.slug, p.id, v.title, v.description, v.duration_min, v.price, v.requires_car, v.accessible, v.months, 'internal', v.rating, false
+  (slug, place_id, title, description, duration_min, on_site_price_eur, requires_car, accessible, season_months, rating, is_active)
+select v.slug, p.id, v.title, v.description, v.duration_min, v.price, v.requires_car, v.accessible, v.months, v.rating, false
 from (values
   ('demo-mercato-ballaro', 'demo-palermo', 'Street food al mercato di Ballarò', '[DEMO] Tour guidato tra panelle, arancine e sfincione.', 150, null, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}'::smallint[], 4.8),
   ('demo-palazzo-normanni', 'demo-palermo', 'Palazzo dei Normanni e Cappella Palatina', '[DEMO] Visita con mosaici bizantini.', 120, 19.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.7),
@@ -104,16 +104,20 @@ join public.activities a on a.slug = t.activity_slug;
 
 update public.activities set is_active = true where slug like 'demo-%';
 
--- Due attività demo con link affiliato, solo per /api/go (e2e): le offerte non compaiono in pagina
--- fino allo schema 2e (activity_offers). URL di ricerca pubblica del partner, non prodotti specifici.
-update public.activities
-set partner = 'getyourguide',
-    partner_product_id = slug,
-    affiliate_url = case slug
-      when 'demo-zingaro' then 'https://www.getyourguide.com/s/?q=Riserva%20dello%20Zingaro'
-      when 'demo-egadi-barca' then 'https://www.getyourguide.com/s/?q=Favignana%20Levanzo'
-    end
-where slug in ('demo-zingaro', 'demo-egadi-barca');
+-- Offerte demo dei partner: URL di ricerca pubblica, non prodotti specifici; titoli, prezzi e
+-- voti sono di prova ([DEMO]). Lo Zingaro ha due offerte: la principale è la più economica.
+insert into public.activity_offers
+  (activity_id, partner, partner_product_id, title, price_from_eur, affiliate_url, rating, reviews_count, free_cancellation, price_updated_at)
+select a.id, v.partner::public.partner, v.product, v.title, v.price, v.url, v.rating, v.reviews, v.free_cancellation, now() - interval '2 days'
+from (values
+  ('demo-zingaro', 'getyourguide', 'demo-gyg-zingaro', '[DEMO] Escursione guidata nella Riserva dello Zingaro', 45.00,
+    'https://www.getyourguide.com/s/?q=Riserva%20dello%20Zingaro', 4.7, 128, true),
+  ('demo-zingaro', 'viator', 'demo-viator-zingaro', '[DEMO] Trekking e bagno nelle calette dello Zingaro', 52.00,
+    'https://www.viator.com/searchResults/all?text=Riserva%20dello%20Zingaro', null, null, null),
+  ('demo-egadi-barca', 'getyourguide', 'demo-gyg-egadi', '[DEMO] Favignana e Levanzo in barca con pranzo', 75.00,
+    'https://www.getyourguide.com/s/?q=Favignana%20Levanzo', 4.8, 342, true)
+) as v(activity_slug, partner, product, title, price, url, rating, reviews, free_cancellation)
+join public.activities a on a.slug = v.activity_slug;
 
 -- Itinerari predefiniti (template editoriali)
 insert into public.itineraries (owner_id, title, slug, is_template, days, status)

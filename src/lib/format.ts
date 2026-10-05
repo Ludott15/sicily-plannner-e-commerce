@@ -8,13 +8,14 @@ export function formatDuration(minutes: number): string {
   return `${h} h ${m} min`;
 }
 
-// Drizzle restituisce i numeric come stringa. null = prezzo non indicato.
-export function formatEur(value: string | null, locale: string): string | null {
+// Drizzle restituisce i numeric come stringa. null = prezzo non indicato. La valuta è EUR
+// salvo le offerte dei partner, che possono averne un'altra.
+export function formatEur(value: string | null, locale: string, currency = "EUR"): string | null {
   if (value === null) return null;
   const amount = Number(value);
   return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "EUR",
+    currency,
     minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
   }).format(amount);
 }

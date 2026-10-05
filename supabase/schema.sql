@@ -554,20 +554,23 @@ $$;
 ALTER FUNCTION "public"."prevent_mutation"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."record_affiliate_click"("p_activity_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text" DEFAULT NULL::"text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "void"
+CREATE OR REPLACE FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text" DEFAULT NULL::"text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
     AS $_$
 declare
   v_uid uuid := auth.uid();
-  v_activity public.activities;
+  v_offer public.activity_offers;
 begin
-  select * into v_activity from public.activities where id = p_activity_id;
-  if not found or not v_activity.is_active or v_activity.affiliate_url is null then
-    raise exception 'activity_not_bookable' using errcode = 'P0001';
+  select o.* into v_offer
+  from public.activity_offers o
+  join public.activities a on a.id = o.activity_id
+  where o.id = p_offer_id and o.is_active and a.is_active;
+  if not found then
+    raise exception 'offer_not_bookable' using errcode = 'P0001';
   end if;
 
-  if left(p_target_url, length(v_activity.affiliate_url)) <> v_activity.affiliate_url then
+  if left(p_target_url, length(v_offer.affiliate_url)) <> v_offer.affiliate_url then
     raise exception 'target_mismatch' using errcode = 'P0001';
   end if;
 
@@ -583,18 +586,20 @@ begin
     raise exception 'itinerary_not_accessible' using errcode = 'P0001';
   end if;
 
-  insert into public.affiliate_clicks (user_id, activity_id, partner, target_url, subid, context, itinerary_id, anon_id)
-  values (v_uid, p_activity_id, v_activity.partner, p_target_url, p_subid, p_context, p_itinerary_id, p_anon_id);
+  insert into public.affiliate_clicks
+    (user_id, activity_id, offer_id, partner, target_url, subid, context, itinerary_id, anon_id)
+  values
+    (v_uid, v_offer.activity_id, v_offer.id, v_offer.partner, p_target_url, p_subid, p_context, p_itinerary_id, p_anon_id);
 
   if v_uid is not null then
     insert into public.user_events (user_id, type, activity_id, itinerary_id)
-    values (v_uid, 'affiliate_click', p_activity_id, p_itinerary_id);
+    values (v_uid, 'affiliate_click', v_offer.activity_id, p_itinerary_id);
   end if;
 end;
 $_$;
 
 
-ALTER FUNCTION "public"."record_affiliate_click"("p_activity_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."refresh_leaderboard"() RETURNS "void"
@@ -667,20 +672,17 @@ CREATE TABLE IF NOT EXISTS "public"."activities" (
     "title" "text" NOT NULL,
     "description" "text",
     "duration_min" integer NOT NULL,
-    "price_from_eur" numeric(8,2),
     "requires_car" boolean DEFAULT false NOT NULL,
     "accessible" boolean DEFAULT false NOT NULL,
     "season_months" smallint[] DEFAULT '{1,2,3,4,5,6,7,8,9,10,11,12}'::smallint[] NOT NULL,
-    "partner" "public"."partner" DEFAULT 'internal'::"public"."partner" NOT NULL,
-    "partner_product_id" "text",
-    "affiliate_url" "text",
     "rating" numeric(2,1),
     "embedding" "extensions"."vector"(1024),
     "is_active" boolean DEFAULT false NOT NULL,
     "synced_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "on_site_price_eur" numeric(8,2),
     CONSTRAINT "activities_duration_positive" CHECK (("duration_min" > 0)),
-    CONSTRAINT "activities_price_non_negative" CHECK (("price_from_eur" >= (0)::numeric)),
+    CONSTRAINT "activities_on_site_price_non_negative" CHECK (("on_site_price_eur" >= (0)::numeric)),
     CONSTRAINT "activities_rating_range" CHECK ((("rating" >= (0)::numeric) AND ("rating" <= (5)::numeric))),
     CONSTRAINT "activities_season_months_valid" CHECK (("season_months" <@ '{1,2,3,4,5,6,7,8,9,10,11,12}'::smallint[]))
 );
@@ -699,6 +701,33 @@ CREATE TABLE IF NOT EXISTS "public"."activity_interests" (
 
 
 ALTER TABLE "public"."activity_interests" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."activity_offers" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "activity_id" "uuid" NOT NULL,
+    "partner" "public"."partner" NOT NULL,
+    "partner_product_id" "text" NOT NULL,
+    "title" "text" NOT NULL,
+    "price_from_eur" numeric(8,2),
+    "currency" character(3) DEFAULT 'EUR'::"bpchar" NOT NULL,
+    "affiliate_url" "text" NOT NULL,
+    "rating" numeric(2,1),
+    "reviews_count" integer,
+    "free_cancellation" boolean,
+    "price_updated_at" timestamp with time zone,
+    "is_active" boolean DEFAULT true NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "activity_offers_affiliate_url_https" CHECK (("affiliate_url" ~ '^https://'::"text")),
+    CONSTRAINT "activity_offers_currency_format" CHECK (("currency" ~ '^[A-Z]{3}$'::"text")),
+    CONSTRAINT "activity_offers_partner_not_internal" CHECK (("partner" <> 'internal'::"public"."partner")),
+    CONSTRAINT "activity_offers_price_non_negative" CHECK (("price_from_eur" >= (0)::numeric)),
+    CONSTRAINT "activity_offers_rating_range" CHECK ((("rating" >= (0)::numeric) AND ("rating" <= (5)::numeric))),
+    CONSTRAINT "activity_offers_reviews_count_non_negative" CHECK (("reviews_count" >= 0))
+);
+
+
+ALTER TABLE "public"."activity_offers" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."admin_audit_log" (
@@ -741,6 +770,7 @@ CREATE TABLE IF NOT EXISTS "public"."affiliate_clicks" (
     "itinerary_id" "uuid",
     "anon_id" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "offer_id" "uuid",
     CONSTRAINT "affiliate_clicks_context_valid" CHECK (("context" = ANY (ARRAY['page'::"text", 'itinerary'::"text", 'chat'::"text", 'flights'::"text"]))),
     CONSTRAINT "affiliate_clicks_target_url_https" CHECK (("target_url" ~ '^https://'::"text"))
 );
@@ -1282,11 +1312,6 @@ ALTER TABLE ONLY "public"."user_events" ALTER COLUMN "id" SET DEFAULT "nextval"(
 
 
 ALTER TABLE ONLY "public"."activities"
-    ADD CONSTRAINT "activities_partner_product_unique" UNIQUE ("partner", "partner_product_id");
-
-
-
-ALTER TABLE ONLY "public"."activities"
     ADD CONSTRAINT "activities_pkey" PRIMARY KEY ("id");
 
 
@@ -1298,6 +1323,16 @@ ALTER TABLE ONLY "public"."activities"
 
 ALTER TABLE ONLY "public"."activity_interests"
     ADD CONSTRAINT "activity_interests_activity_id_interest_key_pk" PRIMARY KEY ("activity_id", "interest_key");
+
+
+
+ALTER TABLE ONLY "public"."activity_offers"
+    ADD CONSTRAINT "activity_offers_partner_product_unique" UNIQUE ("partner", "partner_product_id");
+
+
+
+ALTER TABLE ONLY "public"."activity_offers"
+    ADD CONSTRAINT "activity_offers_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1495,15 +1530,15 @@ CREATE INDEX "activities_embedding_idx" ON "public"."activities" USING "hnsw" ("
 
 
 
-CREATE INDEX "activities_is_active_partner_idx" ON "public"."activities" USING "btree" ("is_active", "partner");
-
-
-
 CREATE INDEX "activities_place_id_idx" ON "public"."activities" USING "btree" ("place_id");
 
 
 
 CREATE INDEX "activity_interests_interest_key_idx" ON "public"."activity_interests" USING "btree" ("interest_key");
+
+
+
+CREATE INDEX "activity_offers_activity_id_idx" ON "public"."activity_offers" USING "btree" ("activity_id");
 
 
 
@@ -1650,6 +1685,11 @@ ALTER TABLE ONLY "public"."activity_interests"
 
 
 
+ALTER TABLE ONLY "public"."activity_offers"
+    ADD CONSTRAINT "activity_offers_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."admin_audit_log"
     ADD CONSTRAINT "admin_audit_log_actor_id_profiles_id_fk" FOREIGN KEY ("actor_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
@@ -1662,6 +1702,11 @@ ALTER TABLE ONLY "public"."affiliate_clicks"
 
 ALTER TABLE ONLY "public"."affiliate_clicks"
     ADD CONSTRAINT "affiliate_clicks_itinerary_id_itineraries_id_fk" FOREIGN KEY ("itinerary_id") REFERENCES "public"."itineraries"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."affiliate_clicks"
+    ADD CONSTRAINT "affiliate_clicks_offer_id_activity_offers_id_fk" FOREIGN KEY ("offer_id") REFERENCES "public"."activity_offers"("id") ON DELETE SET NULL;
 
 
 
@@ -1917,6 +1962,33 @@ CREATE POLICY "activity_interests_select_authenticated" ON "public"."activity_in
 
 
 CREATE POLICY "activity_interests_update_admin" ON "public"."activity_interests" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."activity_offers" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "activity_offers_delete_admin" ON "public"."activity_offers" FOR DELETE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "activity_offers_insert_admin" ON "public"."activity_offers" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "activity_offers_select_anon" ON "public"."activity_offers" FOR SELECT TO "anon" USING (("is_active" AND (EXISTS ( SELECT 1
+   FROM "public"."activities" "a"
+  WHERE (("a"."id" = "activity_offers"."activity_id") AND "a"."is_active")))));
+
+
+
+CREATE POLICY "activity_offers_select_authenticated" ON "public"."activity_offers" FOR SELECT TO "authenticated" USING ((( SELECT "public"."is_admin"() AS "is_admin") OR ("is_active" AND (EXISTS ( SELECT 1
+   FROM "public"."activities" "a"
+  WHERE (("a"."id" = "activity_offers"."activity_id") AND "a"."is_active"))))));
+
+
+
+CREATE POLICY "activity_offers_update_admin" ON "public"."activity_offers" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
 
 
 
@@ -2423,10 +2495,10 @@ GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "service_role";
 
 
 
-REVOKE ALL ON FUNCTION "public"."record_affiliate_click"("p_activity_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_activity_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_activity_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_activity_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_target_url" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "service_role";
 
 
 
@@ -2457,6 +2529,12 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."activities" TO "authenticat
 GRANT ALL ON TABLE "public"."activity_interests" TO "service_role";
 GRANT SELECT ON TABLE "public"."activity_interests" TO "anon";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."activity_interests" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."activity_offers" TO "service_role";
+GRANT SELECT ON TABLE "public"."activity_offers" TO "anon";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."activity_offers" TO "authenticated";
 
 
 

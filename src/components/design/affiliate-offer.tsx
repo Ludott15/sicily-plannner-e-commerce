@@ -12,16 +12,16 @@ import { ButtonAnchor } from "./button";
 // - Su mobile l'offerta principale compare anche nella barra fissa in basso (BookingBar).
 
 export function affiliateHref(
-  activityId: string,
+  offerId: string,
   { context = "page", locale }: { context?: "page" | "itinerary" | "chat"; locale?: string } = {},
 ) {
   const params = new URLSearchParams({ c: context });
   if (locale) params.set("l", locale);
-  return `/api/go/${activityId}?${params}`;
+  return `/api/go/${offerId}?${params}`;
 }
 
 export type AffiliateOfferProps = {
-  activityId: string;
+  offerId: string;
   locale?: string;
   title: string;
   partner: string;
@@ -32,7 +32,7 @@ export type AffiliateOfferProps = {
 };
 
 export function AffiliateOffer({
-  activityId,
+  offerId,
   locale,
   title,
   partner,
@@ -59,7 +59,7 @@ export function AffiliateOffer({
         {freeCancellation && <b>{t("freeCancellation")}</b>}
         {priceUpdated && <span>{t("priceUpdated", { when: priceUpdated })}</span>}
       </div>
-      <ButtonAnchor variant="secondary" href={affiliateHref(activityId, { locale })} rel="sponsored nofollow">
+      <ButtonAnchor variant="secondary" href={affiliateHref(offerId, { locale })} rel="sponsored nofollow">
         {t("offerCta", { partner })}
       </ButtonAnchor>
       <span className="is-offer__disclose">{t("offerDisclose", { partner })}</span>
