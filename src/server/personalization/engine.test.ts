@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { AREA_ELIGIBILITY, DAILY_HOURS, MAX_SAME_INTEREST_PER_DAY } from "./config";
+import { AREA_ELIGIBILITY, DAILY_HOURS, MAX_SAME_INTEREST_PER_DAY, SINGLE_INTEREST } from "./config";
 import {
   effectiveWeight,
   fit,
+  interestCap,
   match,
   passesConstraints,
   propose,
+  proposeTrips,
   reasons,
   score,
   type CatalogActivity,
@@ -135,7 +137,7 @@ const hardConstraintsHold = (proposals: Proposal[], p: Profile) => {
         seen.add(a.id);
         perInterest.set(mainOf(a), (perInterest.get(mainOf(a)) ?? 0) + 1);
       }
-      for (const n of perInterest.values()) expect(n).toBeLessThanOrEqual(MAX_SAME_INTEREST_PER_DAY);
+      for (const [k, n] of perInterest) expect(n, k).toBeLessThanOrEqual(interestCap(p)(k));
     }
   }
 };
@@ -369,30 +371,63 @@ describe("motivi Per te", () => {
         }
   });
 
-  it("il motivo di ripiego compare su meno di un terzo delle tappe", () => {
-    // Profili con più interessi: su tutte e tre le proposte.
-    const mixed: Profile[] = [
+  it("il motivo di ripiego compare su meno di un terzo delle tappe, con profili diversi", () => {
+    const profiles: Profile[] = [
       profile,
-      { ...profile, weights: { nature_hiking: 5, villages: 5 }, months: [] },
-      { ...profile, weights: Object.fromEntries(["sea", "food_wine", "history_archaeology", "nature_hiking"].map((k) => [k, 3])) },
-    ];
-    // Un solo interesse: con al massimo 2 tappe dello stesso interesse al giorno, un viaggio
-    // di più giorni dentro un'area ha per forza tappe di contorno. Si misura sulla proposta
-    // migliore, quella dell'area più adatta, con il limite di un terzo incluso.
-    const single: Profile[] = [
       { ...profile, weights: { sea: 5 }, months: [] },
       { ...profile, weights: { history_archaeology: 5 }, car: "own", months: [] },
       { ...profile, weights: { food_wine: 5 }, months: [] },
+      { ...profile, weights: { nature_hiking: 5, villages: 5 }, months: [] },
+      { ...profile, weights: Object.fromEntries(["sea", "food_wine", "history_archaeology", "nature_hiking"].map((k) => [k, 3])) },
     ];
-    const ratio = (stops: { reasons: { code: string }[] }[]) => stops.filter((a) => a.reasons.some((r) => r.code === "bestInZone")).length / stops.length;
-    for (const p of mixed) {
+    for (const p of profiles) {
       const stops = propose(catalog, p).flatMap((pr) => pr.days.flatMap((d) => d.activities));
       expect(stops.length, JSON.stringify(p.weights)).toBeGreaterThan(0);
-      expect(ratio(stops), JSON.stringify(p.weights)).toBeLessThan(1 / 3);
+      const fallback = stops.filter((a) => a.reasons.some((r) => r.code === "bestInZone")).length;
+      expect(fallback / stops.length, JSON.stringify(p.weights)).toBeLessThan(1 / 3);
     }
-    for (const p of single) {
-      const stops = propose(catalog, p)[0]!.days.flatMap((d) => d.activities);
-      expect(ratio(stops), JSON.stringify(p.weights)).toBeLessThanOrEqual(1 / 3);
-    }
+  });
+});
+
+describe("un solo interesse forte", () => {
+  it("il limite per quell'interesse sale a 3; con due interessi forti o altri pesi sopra 2 resta 2", () => {
+    expect(interestCap({ ...profile, weights: { sea: 5 } })("sea")).toBe(SINGLE_INTEREST.cap);
+    expect(interestCap({ ...profile, weights: { sea: 4, art: 2, relax: 1 } })("sea")).toBe(3);
+    expect(interestCap({ ...profile, weights: { sea: 4, art: 2 } })("art")).toBe(MAX_SAME_INTEREST_PER_DAY);
+    expect(interestCap({ ...profile, weights: { sea: 5, art: 3 } })("sea")).toBe(MAX_SAME_INTEREST_PER_DAY);
+    expect(interestCap({ ...profile, weights: { sea: 5, art: 4 } })("sea")).toBe(MAX_SAME_INTEREST_PER_DAY);
+    expect(interestCap({ ...profile, weights: {} })("sea")).toBe(MAX_SAME_INTEREST_PER_DAY);
+  });
+
+  it("chi vuole solo il mare ha giorni con fino a 3 tappe di mare", () => {
+    const p = { ...profile, weights: { sea: 5 }, months: [], car: "own" as const, budgetPerDayEur: null, pace: "intense" as const };
+    const perDay = propose(catalog, p).flatMap((pr) => pr.days.map((d) => d.activities.filter((a) => mainOf(a) === "sea").length));
+    expect(Math.max(...perDay)).toBe(3);
+    hardConstraintsHold(propose(catalog, p), p);
+  });
+});
+
+describe("viaggi più lunghi di quanto copra una sola area", () => {
+  const free: Profile = { ...profile, months: [], car: "own", budgetPerDayEur: null };
+
+  it("nessuna area idonea per i giorni scelti: i viaggi migliori sul massimo di giorni coperto", () => {
+    const result = proposeTrips(catalog, { ...free, days: 14 });
+    expect(result.shortened).toBe(true);
+    expect(result.days).toBeLessThan(14);
+    expect(result.proposals.length).toBeGreaterThan(0);
+    for (const pr of result.proposals) expect(pr.days).toHaveLength(result.days);
+    // È davvero il massimo: con un giorno in più nessuna area è idonea.
+    expect(propose(catalog, { ...free, days: result.days + 1 })).toEqual([]);
+    expect(result.proposals).toEqual(propose(catalog, { ...free, days: result.days }));
+    hardConstraintsHold(result.proposals, { ...free, days: result.days });
+  });
+
+  it("giorni coperti: nessun accorciamento", () => {
+    const result = proposeTrips(catalog, free);
+    expect(result).toEqual({ proposals: propose(catalog, free), days: 3, shortened: false });
+  });
+
+  it("catalogo vuoto: nessuna proposta, nemmeno accorciata", () => {
+    expect(proposeTrips([], free)).toEqual({ proposals: [], days: 3, shortened: false });
   });
 });

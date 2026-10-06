@@ -34,18 +34,24 @@ insert into public.places (slug, name, province, lat, lng, description) values
   ('demo-marzamemi', 'Marzamemi', 'SR', 36.7400, 15.1170, '[DEMO] Borgo di pescatori con la tonnara.'),
   ('demo-modica', 'Modica', 'RG', 36.8586, 14.7608, '[DEMO] Città barocca su due colline.'),
   ('demo-scicli', 'Scicli', 'RG', 36.7922, 14.7069, '[DEMO] Barocco tra le cave.'),
-  ('demo-marina-ragusa', 'Marina di Ragusa', 'RG', 36.7836, 14.5506, '[DEMO] Spiaggia e lungomare.');
+  ('demo-marina-ragusa', 'Marina di Ragusa', 'RG', 36.7836, 14.5506, '[DEMO] Spiaggia e lungomare.'),
+  ('demo-castelbuono', 'Castelbuono', 'PA', 37.9306, 14.0883, '[DEMO] Borgo delle Madonie con il castello.'),
+  ('demo-piano-battaglia', 'Piano Battaglia', 'PA', 37.8700, 14.0300, '[DEMO] Altopiano tra i faggi delle Madonie.'),
+  ('demo-polizzi', 'Polizzi Generosa', 'PA', 37.8122, 14.0028, '[DEMO] Borgo in cima alle Madonie.'),
+  ('demo-enna', 'Enna', 'EN', 37.5670, 14.2795, '[DEMO] Città più alta della Sicilia.'),
+  ('demo-caltagirone', 'Caltagirone', 'CT', 37.2373, 14.5122, '[DEMO] Città della ceramica.'),
+  ('demo-aidone', 'Aidone', 'EN', 37.4150, 14.4460, '[DEMO] Museo e scavi di Morgantina.');
 
--- Aree di viaggio dei luoghi demo (le aree vengono dalla migrazione, non dal seed). Sei aree
--- hanno almeno 6 attività; Costa nord e Madonie e Interno ne hanno poche: restano non idonee
--- per i viaggi lunghi, come succede con un catalogo reale ancora incompleto.
+-- Aree di viaggio dei luoghi demo (le aree vengono dalla migrazione, non dal seed). Tutte le
+-- aree hanno almeno 6 attività; Costa nord e Madonie e Interno ne hanno abbastanza per un
+-- viaggio di 5 giorni (e2e pending-actions), le altre si fermano prima.
 update public.places p set area_id = a.id
 from (values
   ('demo-palermo', 'palermo'), ('demo-monreale', 'palermo'), ('demo-mondello', 'palermo'),
-  ('demo-cefalu', 'costa-nord-madonie'),
+  ('demo-cefalu', 'costa-nord-madonie'), ('demo-castelbuono', 'costa-nord-madonie'), ('demo-piano-battaglia', 'costa-nord-madonie'), ('demo-polizzi', 'costa-nord-madonie'),
   ('demo-trapani', 'ovest'), ('demo-erice', 'ovest'), ('demo-san-vito', 'ovest'), ('demo-segesta', 'ovest'),
   ('demo-agrigento', 'agrigentino'), ('demo-scala-dei-turchi', 'agrigentino'), ('demo-sciacca', 'agrigentino'), ('demo-eraclea-minoa', 'agrigentino'),
-  ('demo-piazza-armerina', 'interno'),
+  ('demo-piazza-armerina', 'interno'), ('demo-enna', 'interno'), ('demo-caltagirone', 'interno'), ('demo-aidone', 'interno'),
   ('demo-catania', 'etna-costa-ionica'), ('demo-etna-sud', 'etna-costa-ionica'), ('demo-bronte', 'etna-costa-ionica'), ('demo-taormina', 'etna-costa-ionica'),
   ('demo-ortigia', 'siracusano'), ('demo-pantalica', 'siracusano'), ('demo-fontane-bianche', 'siracusano'), ('demo-marzamemi', 'siracusano'),
   ('demo-noto', 'barocco-ibleo'), ('demo-ragusa-ibla', 'barocco-ibleo'), ('demo-modica', 'barocco-ibleo'), ('demo-scicli', 'barocco-ibleo'), ('demo-marina-ragusa', 'barocco-ibleo')
@@ -102,7 +108,30 @@ from (values
   ('demo-marzamemi-borgo', 'demo-marzamemi', 'Marzamemi e la tonnara', '[DEMO] Piazza della tonnara e conserve di tonno.', 150, null, true, true, '{4,5,6,7,8,9,10}', 4.6),
   ('demo-modica-barocca', 'demo-modica', 'Modica barocca a piedi', '[DEMO] San Giorgio e la città alta.', 150, 0.00, false, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.6),
   ('demo-scicli-chiese', 'demo-scicli', 'Scicli e via Mormino Penna', '[DEMO] Chiese e palazzi barocchi.', 120, 0.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.5),
-  ('demo-marina-ragusa', 'demo-marina-ragusa', 'Spiaggia di Marina di Ragusa', '[DEMO] Sabbia e lungomare.', 300, 0.00, false, true, '{6,7,8,9}', 4.3)
+  ('demo-marina-ragusa', 'demo-marina-ragusa', 'Spiaggia di Marina di Ragusa', '[DEMO] Sabbia e lungomare.', 300, 0.00, false, true, '{6,7,8,9}', 4.3),
+  ('demo-castelbuono-borgo', 'demo-castelbuono', 'Castelbuono e il castello dei Ventimiglia', '[DEMO] Borgo e cappella palatina.', 150, 0.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.6),
+  ('demo-manna-castelbuono', 'demo-castelbuono', 'Manna e dolci a Castelbuono', '[DEMO] Assaggi in pasticceria e storia della manna.', 120, null, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.7),
+  ('demo-madonie-faggete', 'demo-piano-battaglia', 'Faggete delle Madonie', '[DEMO] Sentiero ad anello tra i faggi.', 240, 0.00, true, false, '{4,5,6,7,8,9,10}', 4.7),
+  ('demo-duomo-cefalu', 'demo-cefalu', 'Duomo normanno di Cefalù', '[DEMO] Mosaici del Cristo Pantocratore.', 60, 5.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.7),
+  ('demo-lavatoio-cefalu', 'demo-cefalu', 'Lavatoio medievale e vicoli di Cefalù', '[DEMO] Passeggiata nel centro storico.', 60, 0.00, false, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.3),
+  ('demo-polizzi-borgo', 'demo-polizzi', 'Polizzi Generosa e lo sfoglio', '[DEMO] Borgo e dolce tipico.', 150, null, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.5),
+  ('demo-formaggi-madonie', 'demo-castelbuono', 'Caseificio delle Madonie', '[DEMO] Visita e degustazione di formaggi.', 120, null, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.6),
+  ('demo-castello-enna', 'demo-enna', 'Castello di Lombardia e Rocca di Cerere', '[DEMO] Torri e panorama sull''Etna.', 120, 3.00, false, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.5),
+  ('demo-duomo-enna', 'demo-enna', 'Duomo e museo di Enna', '[DEMO] Soffitto ligneo e tesoro.', 90, 4.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.4),
+  ('demo-pergusa', 'demo-enna', 'Lago di Pergusa', '[DEMO] Riserva naturale intorno al lago.', 150, 0.00, true, true, '{4,5,6,7,8,9,10}', 4.2),
+  ('demo-masseria-enna', 'demo-enna', 'Pranzo in masseria nell''ennese', '[DEMO] Grano antico e piatti di campagna.', 150, null, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.5),
+  ('demo-scala-caltagirone', 'demo-caltagirone', 'Scala di Santa Maria del Monte', '[DEMO] Gradini di maiolica.', 90, 0.00, false, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.7),
+  ('demo-ceramica-caltagirone', 'demo-caltagirone', 'Laboratorio di ceramica a Caltagirone', '[DEMO] Decorazione con un ceramista.', 150, null, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.6),
+  ('demo-morgantina', 'demo-aidone', 'Scavi di Morgantina e museo di Aidone', '[DEMO] Città greca e il suo museo.', 180, 10.00, true, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.6),
+  ('demo-piazza-armerina-borgo', 'demo-piazza-armerina', 'Centro storico di Piazza Armerina', '[DEMO] Cattedrale e quartieri medievali.', 90, 0.00, false, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.3),
+  ('demo-gibilmanna', 'demo-cefalu', 'Santuario di Gibilmanna', '[DEMO] Santuario tra i boschi sopra Cefalù.', 120, 0.00, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.4),
+  ('demo-barca-cefalu', 'demo-cefalu', 'Costa di Cefalù in barca', '[DEMO] Calette e bagno al largo.', 150, null, false, false, '{5,6,7,8,9,10}', 4.5),
+  ('demo-pizzo-carbonara', 'demo-polizzi', 'Salita a Pizzo Carbonara', '[DEMO] Escursione sulla vetta delle Madonie.', 300, 0.00, true, false, '{5,6,7,8,9,10}', 4.7),
+  ('demo-museo-ceramica', 'demo-caltagirone', 'Museo della ceramica di Caltagirone', '[DEMO] Maioliche dal medioevo a oggi.', 90, 4.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.4),
+  ('demo-altesina', 'demo-enna', 'Sentiero di Monte Altesina', '[DEMO] Bosco e resti antichi al centro dell''isola.', 240, 0.00, true, false, '{3,4,5,6,9,10,11}', 4.4),
+  ('demo-calascibetta', 'demo-enna', 'Calascibetta e necropoli di Realmese', '[DEMO] Borgo e tombe a grotticella.', 180, 0.00, true, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.4),
+  ('demo-cantina-entroterra', 'demo-aidone', 'Cantina nell''entroterra', '[DEMO] Vini di collina e olio.', 120, null, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.5),
+  ('demo-sperlinga', 'demo-enna', 'Castello di Sperlinga', '[DEMO] Castello scavato nella roccia.', 90, 4.00, true, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.4)
 ) as v(slug, place_slug, title, description, duration_min, price, requires_car, accessible, months, rating)
 join public.places p on p.slug = v.place_slug;
 
@@ -151,7 +180,30 @@ from (values
   ('demo-marzamemi-borgo', 'villages', 3), ('demo-marzamemi-borgo', 'food_wine', 2),
   ('demo-modica-barocca', 'art', 3), ('demo-modica-barocca', 'villages', 2),
   ('demo-scicli-chiese', 'art', 3), ('demo-scicli-chiese', 'villages', 2),
-  ('demo-marina-ragusa', 'sea', 3), ('demo-marina-ragusa', 'relax', 1)
+  ('demo-marina-ragusa', 'sea', 3), ('demo-marina-ragusa', 'relax', 1),
+  ('demo-castelbuono-borgo', 'villages', 3), ('demo-castelbuono-borgo', 'history_archaeology', 1),
+  ('demo-manna-castelbuono', 'food_wine', 3), ('demo-manna-castelbuono', 'local_experiences', 2),
+  ('demo-madonie-faggete', 'nature_hiking', 3),
+  ('demo-duomo-cefalu', 'art', 3), ('demo-duomo-cefalu', 'history_archaeology', 2),
+  ('demo-lavatoio-cefalu', 'villages', 2), ('demo-lavatoio-cefalu', 'history_archaeology', 2),
+  ('demo-polizzi-borgo', 'villages', 3), ('demo-polizzi-borgo', 'food_wine', 2),
+  ('demo-formaggi-madonie', 'food_wine', 3), ('demo-formaggi-madonie', 'local_experiences', 2),
+  ('demo-castello-enna', 'history_archaeology', 3), ('demo-castello-enna', 'nature_hiking', 1),
+  ('demo-duomo-enna', 'art', 2), ('demo-duomo-enna', 'history_archaeology', 2),
+  ('demo-pergusa', 'nature_hiking', 3), ('demo-pergusa', 'relax', 1),
+  ('demo-masseria-enna', 'food_wine', 3), ('demo-masseria-enna', 'local_experiences', 2),
+  ('demo-scala-caltagirone', 'art', 3), ('demo-scala-caltagirone', 'villages', 2),
+  ('demo-ceramica-caltagirone', 'local_experiences', 3), ('demo-ceramica-caltagirone', 'art', 2),
+  ('demo-morgantina', 'history_archaeology', 3),
+  ('demo-piazza-armerina-borgo', 'villages', 3), ('demo-piazza-armerina-borgo', 'history_archaeology', 1),
+  ('demo-gibilmanna', 'history_archaeology', 2), ('demo-gibilmanna', 'nature_hiking', 2),
+  ('demo-barca-cefalu', 'sea', 3), ('demo-barca-cefalu', 'relax', 1),
+  ('demo-pizzo-carbonara', 'nature_hiking', 3),
+  ('demo-museo-ceramica', 'art', 2), ('demo-museo-ceramica', 'history_archaeology', 2),
+  ('demo-altesina', 'nature_hiking', 3), ('demo-altesina', 'history_archaeology', 1),
+  ('demo-calascibetta', 'history_archaeology', 3), ('demo-calascibetta', 'villages', 2),
+  ('demo-cantina-entroterra', 'food_wine', 3), ('demo-cantina-entroterra', 'relax', 1),
+  ('demo-sperlinga', 'history_archaeology', 3), ('demo-sperlinga', 'villages', 1)
 ) as t(activity_slug, interest_key, strength)
 join public.activities a on a.slug = t.activity_slug;
 

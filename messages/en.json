@@ -374,7 +374,8 @@
     "coverageDays": "{days} days",
     "coverageOf": "{n} of {total}",
     "coverageYes": "Eligible",
-    "coverageNo": "Not eligible"
+    "coverageNo": "Not eligible",
+    "coveragePlacesWithoutArea": "{count, plural, =0 {Every place has an area.} one {# place without an area} other {# places without an area}}"
   },
   "Og": {
     "activity": "Activity · {province}",
@@ -550,7 +551,8 @@
       "stops": "{stops, plural, one {# stop} other {# stops}} in {days, plural, one {# day} other {# days}} without changing area"
     },
     "changeTrip": "Change the trip",
-    "editTastes": "Edit your tastes"
+    "editTastes": "Edit your tastes",
+    "shortened": "A single area covers at most {days, plural, one {# day} other {# days}}: here are the three best {days, plural, one {#-day} other {#-day}} trips. Trips across several areas are coming soon."
   },
   "Preferences": {
     "title": "Preferences",

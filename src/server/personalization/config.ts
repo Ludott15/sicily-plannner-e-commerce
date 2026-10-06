@@ -18,6 +18,10 @@ export const DAILY_HOURS = { relaxed: 4, balanced: 6, intense: 8 } as const;
 // Al massimo N attività con lo stesso interesse principale nello stesso giorno.
 export const MAX_SAME_INTEREST_PER_DAY = 2;
 
+// Un solo interesse forte (peso almeno strongWeight, tutti gli altri al massimo othersMax):
+// per quell'interesse il limite sale a cap.
+export const SINGLE_INTEREST = { strongWeight: 4, othersMax: 2, cap: 3 } as const;
+
 // Quanti itinerari proporre.
 export const PROPOSALS = 3;
 

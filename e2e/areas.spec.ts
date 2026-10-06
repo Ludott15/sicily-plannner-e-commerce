@@ -5,7 +5,7 @@ import { sessionUserId, signUpWithCode } from "./helpers";
 // il perché della zona; la riga "Indicativo" sotto le tappe ammesse dal filtro della dieta;
 // la copertura del catalogo nell'admin.
 
-async function guestWithAnswers(page: Page, extra?: { diet: string[] }) {
+async function guestWithAnswers(page: Page, extra?: { diet: string[] }, days = 3) {
   await page.goto("/it/login");
   await page.getByRole("button", { name: "Continua senza account" }).click();
   await expect(page).toHaveURL(/\/it\/profilo$/);
@@ -14,9 +14,9 @@ async function guestWithAnswers(page: Page, extra?: { diet: string[] }) {
   await withDb(async (sql) => {
     if (extra) {
       await sql`insert into public.user_constraints (user_id, trip_days, diet, sensitive_consent_at)
-        values (${id}, 3, ${extra.diet}, now())`;
+        values (${id}, ${days}, ${extra.diet}, now())`;
     } else {
-      await sql`insert into public.user_constraints (user_id, trip_days) values (${id}, 3)`;
+      await sql`insert into public.user_constraints (user_id, trip_days) values (${id}, ${days})`;
     }
     await sql`insert into public.preference_weights (user_id, interest_key, explicit) values (${id}, 'food_wine', 5)`;
     await sql`update public.profiles set onboarding_completed_at = now() where id = ${id}`;
@@ -46,14 +46,28 @@ test("dieta: le tappe di cibo ammesse dal filtro portano la riga \"Indicativo\""
   await expect(page.getByText("Indicativo: conferma sempre con chi organizza").first()).toBeVisible();
 });
 
+test("più giorni di quanti ne copra una zona: i viaggi sul massimo coperto, e la pagina lo dice", async ({ page }) => {
+  await guestWithAnswers(page, undefined, 14);
+  await page.goto("/it/viaggio/proposte");
+  const note = page.getByRole("note");
+  await expect(note).toContainText(/^Una sola zona copre al massimo \d+ giorni: ecco i tre migliori viaggi di \d+ giorni\. I viaggi su più zone arrivano presto\.$/);
+  const days = Number((await note.textContent())!.match(/al massimo (\d+) giorni/)![1]);
+  expect(days).toBeLessThan(14);
+  await expect(page.locator("li[data-area]").first()).toBeVisible();
+  await expect(page.locator("li[data-area]").first().getByRole("heading", { level: 3, name: /^Giorno \d+ · / })).toHaveCount(days);
+});
+
 test("admin: copertura del catalogo per area con l'idoneità per 3, 5 e 7 giorni", async ({ page, request }) => {
   const email = await signUpWithCode(page, request);
   const { withDb } = await import("./db.mjs");
   await withDb((sql) => sql`update profiles set role = 'admin' where id = (select id from auth.users where email = ${email})`);
   await page.goto("/it/admin/copertura");
   await expect(page.getByRole("heading", { name: "Copertura del catalogo" })).toBeVisible();
-  // Seed demo: l'Etna ha 8 attività ed è idonea per 3 giorni; l'Interno ne ha una sola e non lo è.
+  // Seed demo: l'Etna è idonea per 3 giorni ma non per 5; Costa nord e Madonie per 5; nessuna per 7.
   await expect(page.locator('tr[data-area="etna-costa-ionica"] td[data-days="3"]')).toHaveText("Idonea");
-  await expect(page.locator('tr[data-area="interno"] td[data-days="3"]')).toHaveText("Non idonea");
+  await expect(page.locator('tr[data-area="etna-costa-ionica"] td[data-days="5"]')).toHaveText("Non idonea");
+  await expect(page.locator('tr[data-area="costa-nord-madonie"] td[data-days="5"]')).toHaveText("Idonea");
+  await expect(page.locator('tr[data-area="costa-nord-madonie"] td[data-days="7"]')).toHaveText("Non idonea");
+  await expect(page.getByTestId("places-without-area")).toContainText("Tutti i luoghi hanno un'area.");
   await expect(page.locator("tr[data-area]")).toHaveCount(9);
 });

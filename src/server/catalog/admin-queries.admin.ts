@@ -1,5 +1,5 @@
 import "server-only";
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { requireAdmin } from "@/server/auth";
 import { dbAdmin } from "@/server/db/admin";
 import { activities, activityInterests, activityOffers, areas, interests, itineraries, itineraryItems, places } from "@/server/db/schema";
@@ -75,6 +75,12 @@ export type AreaCoverage = {
   withOffer: number;
   withTip: number;
 };
+
+// Luoghi ancora senza area: le loro attività non entrano nelle proposte.
+export async function adminPlacesWithoutArea() {
+  await requireAdmin();
+  return dbAdmin.select({ id: places.id, name: places.name }).from(places).where(isNull(places.areaId)).orderBy(asc(places.name));
+}
 
 export async function adminCatalogCoverage(): Promise<AreaCoverage[]> {
   await requireAdmin();

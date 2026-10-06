@@ -24,6 +24,16 @@ Fuori scope (annotati in `docs/spec.md`): distanze tra le tappe, viaggi su due a
 
 Percorso sensibile solo per la migrazione: prova a rovescio sulla RLS.
 
+## 1b. M4 parte 4: viaggi su due aree adiacenti (dopo la M6)
+
+Da fare dopo la M6. Oggi un viaggio sta dentro una sola area; se nessuna area copre i giorni scelti, la pagina mostra i viaggi sul massimo di giorni coperto (decisione del 6 ottobre).
+
+Fatto quando:
+
+1. Matrice dei tempi di guida tra gli hub delle 8 aree (28 coppie), compilabile dall'admin; i valori li fornisce Ludovico.
+2. Un viaggio può comporsi di due aree adiacenti, con i giorni ripartiti tra le due e un trasferimento tra loro.
+3. Nessuna composizione oltre una soglia di tempo di guida (in configurazione).
+
 ## 2. Itinerary builder, prima fetta (M5)
 
 Obiettivo: i viaggi si salvano, si aprono e si modificano.

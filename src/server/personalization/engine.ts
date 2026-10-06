@@ -9,6 +9,7 @@ import {
   FOOD_INTEREST,
   MAX_SAME_INTEREST_PER_DAY,
   PROPOSALS,
+  SINGLE_INTEREST,
   REASONS,
   SCORE_WEIGHTS,
   VARIANT_FOCUS_BOOST,
@@ -206,10 +207,23 @@ export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; ln
   return 2 * 6371 * Math.asin(Math.sqrt(h));
 }
 
+// Limite di tappe per interesse principale nello stesso giorno. Con un solo interesse forte
+// (peso 4 o più, tutti gli altri 2 o meno) quell'interesse arriva a 3: chi vuole solo il mare
+// non riceve giornate riempite di tappe che non cerca.
+export function interestCap(p: Profile): (interest: string) => number {
+  const strong = Object.entries(p.weights).filter(([, w]) => w >= SINGLE_INTEREST.strongWeight);
+  const single =
+    strong.length === 1 &&
+    Object.entries(p.weights).every(([k, w]) => k === strong[0]![0] || w <= SINGLE_INTEREST.othersMax)
+      ? strong[0]![0]
+      : null;
+  return (interest) => (interest === single ? SINGLE_INTEREST.cap : MAX_SAME_INTEREST_PER_DAY);
+}
+
 // Greedy giorno per giorno dentro un'area: ogni giorno prende le attività col punteggio più
-// alto che ci stanno, con al massimo N attività dello stesso interesse principale, senza
-// ripetere attività nel viaggio. `pool` è già filtrato per area e ordinato con byScore.
-function composeDays(pool: ScoredActivity[], days: number, minutes: number): Day[] {
+// alto che ci stanno, con un limite di attività dello stesso interesse principale (interestCap),
+// senza ripetere attività nel viaggio. `pool` è già filtrato per area e ordinato con byScore.
+function composeDays(pool: ScoredActivity[], days: number, minutes: number, cap: (interest: string) => number): Day[] {
   const used = new Set<string>();
   const plan: Day[] = [];
   for (let d = 0; d < days; d++) {
@@ -219,7 +233,7 @@ function composeDays(pool: ScoredActivity[], days: number, minutes: number): Day
     for (const a of pool) {
       if (used.has(a.id) || a.durationMin > left) continue;
       const main = mainInterest(a);
-      if ((perInterest.get(main) ?? 0) >= MAX_SAME_INTEREST_PER_DAY) continue;
+      if ((perInterest.get(main) ?? 0) >= cap(main)) continue;
       picked.push(a);
       left -= a.durationMin;
       perInterest.set(main, (perInterest.get(main) ?? 0) + 1);
@@ -300,19 +314,20 @@ function rankAreas(catalog: CatalogActivity[], p: Profile) {
     .sort(byScore);
   const base = new Map(eligible.map((a) => [a.id, a.score]));
   const airport = p.airport ? AIRPORTS[p.airport] : null;
+  const cap = interestCap(p);
 
   const ranked = [...new Set(eligible.map((a) => a.area))]
     .sort()
     .map((area) => {
       const pool = eligible.filter((a) => a.area === area);
-      const plan = composeDays(pool, days, minutes);
+      const plan = composeDays(pool, days, minutes, cap);
       const km = airport ? distanceKm(areaCenter(catalog.filter((a) => a.area === area)), airport) : null;
       const bonus = km === null ? 0 : AIRPORT_BONUS.max * Math.max(0, 1 - km / AIRPORT_BONUS.rangeKm);
       return { area, pool, plan, km, score: isEligible(plan, days, minutes) ? planScore(plan, base) + bonus : -1 };
     })
     .filter((x) => x.score >= 0)
     .sort((x, y) => y.score - x.score || x.area.localeCompare(y.area));
-  return { days, minutes, base, ranked };
+  return { days, minutes, base, ranked, cap };
 }
 
 // Aree idonee per il profilo (per l'admin "Copertura del catalogo").
@@ -325,7 +340,7 @@ export function eligibleAreas(catalog: CatalogActivity[], p: Profile): string[] 
 // dell'aeroporto. Con almeno 3 aree idonee: tre aree diverse. Altrimenti, dopo il viaggio
 // migliore di ogni area idonea, varianti della stessa area con un altro interesse principale.
 export function propose(catalog: CatalogActivity[], p: Profile): Proposal[] {
-  const { days, minutes, base, ranked } = rankAreas(catalog, p);
+  const { days, minutes, base, ranked, cap } = rankAreas(catalog, p);
 
   const proposals: Proposal[] = ranked.slice(0, PROPOSALS).map((x) => ({
     area: x.area,
@@ -352,7 +367,7 @@ export function propose(catalog: CatalogActivity[], p: Profile): Proposal[] {
       if (proposals.length >= PROPOSALS) break;
       const leans = (a: CatalogActivity) => a.tags.some((t) => t.key === focus && t.strength >= REASONS.strongTag);
       const boosted = x.pool.map((a) => ({ ...a, score: a.score + (leans(a) ? VARIANT_FOCUS_BOOST : 0) })).sort(byScore);
-      const plan = composeDays(boosted, days, minutes).map((d) => ({
+      const plan = composeDays(boosted, days, minutes, cap).map((d) => ({
         activities: d.activities.map((a) => ({ ...a, score: base.get(a.id)! })),
       }));
       if (!isEligible(plan, days, minutes) || signatures.has(signature(plan))) continue;
@@ -375,3 +390,17 @@ export function propose(catalog: CatalogActivity[], p: Profile): Proposal[] {
 const signature = (plan: Day[]) => plan.flatMap((d) => d.activities.map((a) => a.id)).sort().join();
 const focusMinutes = (plan: Day[], leans: (a: CatalogActivity) => boolean) =>
   plan.reduce((s, d) => s + d.activities.filter(leans).reduce((m, a) => m + a.durationMin, 0), 0);
+
+// Proposte per la pagina "Ecco tre viaggi". Se nessuna area copre i giorni scelti, invece di
+// una pagina vuota: i viaggi migliori sul massimo di giorni che una sola area copre (days),
+// e shortened = true perché la pagina lo dica. I viaggi su più aree arrivano con la parte 4.
+export function proposeTrips(catalog: CatalogActivity[], p: Profile): { proposals: Proposal[]; days: number; shortened: boolean } {
+  const days = Math.max(1, Math.min(14, p.days));
+  const proposals = propose(catalog, { ...p, days });
+  if (proposals.length > 0) return { proposals, days, shortened: false };
+  for (let n = days - 1; n >= 1; n--) {
+    const shorter = propose(catalog, { ...p, days: n });
+    if (shorter.length > 0) return { proposals: shorter, days: n, shortened: true };
+  }
+  return { proposals: [], days, shortened: false };
+}
