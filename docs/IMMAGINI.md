@@ -60,15 +60,23 @@ Percorso del file: il browser carica su un URL firmato in `incoming/` (fuori dal
 
 ### Foto da Commons (entità senza foto vera)
 
-Immagini → Foto da Commons elenca luoghi, attività, itinerari pronti e aree senza una foto vera: nessuna immagine, immagine bloccata, solo illustrazione o segnaposto demo. Per ognuno il server cerca su Commons (`src/server/media/commons-search.ts`):
+Immagini → Foto da Commons elenca luoghi, attività, itinerari pronti e aree senza una foto vera: nessuna immagine, immagine bloccata, solo illustrazione o segnaposto demo.
 
-- **luoghi:** file fotografati entro 3 km dalle coordinate, più la ricerca per nome;
-- **attività e itinerari:** ricerca per nome (e vicino al luogo), con almeno metà delle parole chiave del nome nel titolo o nella descrizione del file: se nessuna foto corrisponde si salta, e la pagina mostra la foto del luogo invece di una foto sbagliata;
-- **aree:** ricerca per nome; senza risultati adatti l'area riusa la foto vera di uno dei suoi luoghi.
+**Metodo principale: la foto principale di Wikipedia/Wikidata** (`src/server/media/wiki-images.ts`). Per ogni voce:
 
-Le richieste verso Wikimedia seguono le sue regole (`src/server/media/wikimedia.ts`): una alla volta con una breve pausa, User-Agent con un contatto (variabile `WIKIMEDIA_CONTACT`, un'email o un indirizzo; senza, l'indirizzo del sito), e con 429 o 503 si aspetta e si riprova fino a tre volte. Gli errori mostrano il codice HTTP. La ricerca va in due passi: prima un elenco leggero (solo misure e tipo) da tutte le interrogazioni, poi i dettagli (licenza, autore, descrizione) dei 20 file migliori a gruppi di 10, seguendo le continuazioni dell'API. La ricerca per nome si fa due volte: prima filtrata sulle licenze ammesse nei dati strutturati di Commons (la maggior parte delle foto è CC BY-SA, e senza filtro le poche ammesse si perdono), poi libera; quella per posizione copre 10 km. Quando non trova niente, l'admin vede quanti risultati sono stati scartati e perché (licenza, dimensioni, autore, persone, nome). Si tengono solo i file che passano i controlli dell'importatore (licenza, lato lungo, download da upload.wikimedia.org), con un autore, senza persone riconoscibili (avviso "personality") e senza mappe, stemmi o bandiere; una foto già importata non si ripropone per un'altra entità. "Trova e assegna le foto mancanti" assegna a ognuna il candidato più pertinente, a passi brevi; "Cerca su Commons" mostra i candidati di una sola entità per scegliere a mano. Il testo alternativo viene dalla descrizione su Commons (o dal nome): va riletto dalla tabella delle immagini. Le foto di parchi archeologici, musei e monumenti pubblici vanno segnate come beni culturali, con l'autorizzazione, prima del lancio.
+1. su it.wikipedia si cerca la voce più pertinente al nome, tenendo solo quella il cui titolo ha almeno una parola chiave del nome (Etna versante sud → Etna; Corso di cous cous trapanese → nessuna voce);
+2. si prende l'immagine dell'elemento Wikidata (P18) o, in mancanza, quella della voce: l'hanno scelta i redattori di Wikipedia per quel soggetto, ed è sempre un file di Commons;
+3. il file passa dagli stessi controlli dell'importatore (licenza, lato lungo, download da upload.wikimedia.org), con autore obbligatorio e senza persone riconoscibili.
 
-Nel sito locale le immagini demo (`npm run media:demo`) sono segnaposto: con l'app avviata e un account admin, "Trova e assegna le foto mancanti" le sostituisce con foto vere (serve la rete verso Wikimedia).
+Le attività e gli itinerari senza una voce propria restano senza foto propria e mostrano quella del luogo (catena di ripiego); un'area senza voce adatta riusa la foto di uno dei suoi luoghi. "Trova e assegna le foto mancanti" lavora a passi brevi; "Cerca su Commons" mostra per prima la foto di Wikipedia e poi le alternative della ricerca su Commons (per posizione e per nome).
+
+**Licenze.** Le immagini principali di Wikipedia sono spesso CC BY-SA: servono la casella "Ammetti anche foto con licenza CC BY-SA" (scelta di Ludovico). NC e ND sono sempre escluse.
+
+**Richieste.** Una al secondo, in fila, verso it.wikipedia.org, www.wikidata.org, commons.wikimedia.org e upload.wikimedia.org soltanto (`src/server/media/wikimedia.ts`, sopra safeFetch), con User-Agent che porta il contatto `WIKIMEDIA_CONTACT` (un'email: senza, Wikimedia limita le richieste e risponde 429; la pagina lo segnala). Con 429 o 503 si aspetta e si riprova fino a tre volte; gli errori mostrano il codice HTTP.
+
+Il testo alternativo viene dalla descrizione su Commons (o dal nome): va riletto dalla tabella delle immagini. Le foto di parchi archeologici, musei e monumenti pubblici vanno segnate come beni culturali, con l'autorizzazione, prima del lancio.
+
+Nel sito locale le immagini demo (`npm run media:demo`) sono segnaposto: con l'app avviata, un account admin e `WIKIMEDIA_CONTACT` nel `.env.local`, "Trova e assegna le foto mancanti" le sostituisce con foto vere.
 
 ### Importatore Wikimedia Commons
 

@@ -108,6 +108,7 @@ export function CommonsPhotoFinder({
               {log.map((i) => (
                 <li key={i.key} data-outcome={i.outcome}>
                   {t(`entity.${i.type}`)}: <span className="font-semibold">{i.name}</span> · {t(`photoFinderOutcome.${i.outcome}`)}
+                  {i.outcome === "assigned" && i.detail && <> · {t("photoFinderFromArticle", { article: i.detail })}</>}
                   {i.mediaId && (
                     <>
                       {" "}
@@ -118,7 +119,7 @@ export function CommonsPhotoFinder({
                     <>
                       {" "}
                       · {reason(i.reason)}
-                      {i.detail && <> (HTTP {i.detail})</>}
+                      {i.detail && <> ({/^\d{3}$/.test(i.detail) ? `HTTP ${i.detail}` : i.detail})</>}
                       {i.stats && <> ({statsText(i.stats)})</>}
                     </>
                   )}

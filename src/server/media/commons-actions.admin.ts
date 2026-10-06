@@ -4,6 +4,7 @@ import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type {
+  CommonsFile,
   AutoAssignItem,
   AutoAssignStep,
   CandidateSearch,
@@ -17,6 +18,7 @@ import { entitiesNeedingPhoto, importedCommonsPages, type PhotoNeed } from "./ad
 import { commonsFileTitle, downloadCommonsFile, fetchCommonsFile } from "./commons";
 import { keywords, searchCommons, type CommonsCandidate, type SearchTarget } from "./commons-search";
 import { ingestPhoto, setCover } from "./ingest.admin";
+import { findWikipediaPhoto } from "./wiki-images";
 
 // Foto vere da Wikimedia Commons per le entità che non ne hanno (docs/IMMAGINI.md, "Foto da
 // Commons"): ricerca per posizione e per nome, importazione con gli stessi controlli
@@ -69,9 +71,17 @@ export async function searchCommonsForEntity(input: unknown): Promise<CandidateS
   const { type, id, allowSa } = parsed.data;
   const [need] = await entitiesNeedingPhoto(1, { type, id });
   if (!need) return { ok: false, error: "entity_not_found" };
-  const result = await searchCommons(await photoTarget(need), await importedCommonsPages(), undefined, { allowSa });
-  if (!result.ok) return result;
-  return { ok: true, candidates: result.candidates.slice(0, 8).map(toView), stats: result.stats };
+  const exclude = await importedCommonsPages();
+  // Prima la foto principale di Wikipedia/Wikidata, poi le alternative della ricerca su Commons.
+  const wiki = await findWikipediaPhoto(cleanName(need.name), exclude, { allowSa });
+  const wikiCandidate: PhotoCandidate[] = wiki.ok ? [{ ...toView({ ...wiki.file, previewUrl: wiki.file.downloadUrl, score: 100, matched: [] }) }] : [];
+  const result = await searchCommons(await photoTarget(need), exclude, undefined, { allowSa });
+  if (!result.ok) {
+    if (wikiCandidate.length > 0) return { ok: true, candidates: wikiCandidate, stats: { found: 1, license: 0, small: 0, other: 0, unfit: 0 } };
+    return result;
+  }
+  const others = result.candidates.filter((c) => !wiki.ok || c.pageUrl !== wiki.file.pageUrl).slice(0, 7).map(toView);
+  return { ok: true, candidates: [...wikiCandidate, ...others], stats: result.stats };
 }
 
 // Importa una pagina di Commons e la mette come copertina dell'entità. I metadati si rileggono
@@ -79,6 +89,12 @@ export async function searchCommonsForEntity(input: unknown): Promise<CandidateS
 async function importFor(need: PhotoNeed, pageUrl: string, altIt: string | null, userId: string, allowSa: boolean): Promise<PhotoImport> {
   const fetched = await fetchCommonsFile(pageUrl, undefined, { allowSa });
   if (!fetched.ok) return { ok: false, error: fetched.error, detail: "detail" in fetched ? fetched.detail : undefined };
+  return importFile(need, fetched.file, altIt, userId);
+}
+
+// Importa un file di Commons già letto dal server (metadati controllati da parseCommonsResponse).
+async function importFile(need: PhotoNeed, file: CommonsFile, altIt: string | null, userId: string): Promise<PhotoImport> {
+  const fetched = { file };
   const [existing] = await dbAdmin.select({ id: media.id }).from(media).where(eq(media.sourceUrl, fetched.file.pageUrl || "-"));
   if (existing) {
     await setCover(need, existing.id);
@@ -167,13 +183,14 @@ export async function autoAssignCommonsPhotos(input: unknown): Promise<AutoAssig
   const items: AutoAssignItem[] = [];
   for (const need of batch) {
     const base = { key: `${need.type}:${need.id}`, type: need.type, name: cleanName(need.name) };
-    const search = await searchCommons(await photoTarget(need), exclude, undefined, { allowSa: parsed.data.allowSa });
-    const best = search.ok ? search.candidates[0] : undefined;
-    if (best) {
-      const imported = await importFor(need, best.pageUrl, null, user.id, parsed.data.allowSa);
+    // La foto principale della voce di Wikipedia/Wikidata: coerente con il soggetto, poche
+    // richieste. Le attività senza una voce propria mostrano la foto del luogo (ripiego).
+    const found = await findWikipediaPhoto(base.name, exclude, { allowSa: parsed.data.allowSa });
+    if (found.ok) {
+      const imported = await importFile(need, found.file, null, user.id);
       if (imported.ok) {
-        exclude.add(best.pageUrl);
-        items.push({ ...base, outcome: "assigned", mediaId: imported.mediaId });
+        exclude.add(found.file.pageUrl);
+        items.push({ ...base, outcome: "assigned", mediaId: imported.mediaId, detail: found.article });
         continue;
       }
       if (need.type !== "area") {
@@ -192,9 +209,8 @@ export async function autoAssignCommonsPhotos(input: unknown): Promise<AutoAssig
     items.push({
       ...base,
       outcome: "skipped",
-      reason: search.ok ? "no_candidate" : search.error,
-      detail: search.ok ? undefined : search.detail,
-      stats: search.ok ? search.stats : undefined,
+      reason: found.ok ? "no_candidate" : `wiki_${found.reason}`,
+      detail: found.ok ? undefined : (found.detail ?? found.article),
     });
   }
   for (const path of MEDIA_PATHS) revalidatePath(path, "page");

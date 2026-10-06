@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CommonsPhotoFinder } from "@/components/admin/media/commons-photo-finder";
 import { Link } from "@/lib/i18n/navigation";
 import { entitiesNeedingPhoto } from "@/server/media/admin-queries.admin";
+import { wikimediaContact } from "@/server/media/wikimedia";
 import {
   autoAssignCommonsPhotos,
   importCommonsForEntity,
@@ -24,6 +25,11 @@ export default async function AdminCommonsPhotosPage({ params }: { params: Promi
         </Link>
       </div>
       <p className="max-w-3xl text-body text-lava-muted">{t("photoFinderIntro")}</p>
+      {!wikimediaContact() && (
+        <p role="alert" className="max-w-3xl rounded-sm border-[1.5px] border-danger bg-calce-raised px-4 py-3 text-body">
+          {t("photoFinderNoContact")}
+        </p>
+      )}
       <CommonsPhotoFinder
         needs={needs.map((n) => ({ type: n.type, id: n.id, name: n.name, placeName: n.placeName, current: n.current }))}
         autoAssign={autoAssignCommonsPhotos}

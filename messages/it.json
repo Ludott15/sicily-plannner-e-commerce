@@ -512,7 +512,12 @@
       "unsafe_svg": "File non ammesso",
       "storage_failed": "Salvataggio non riuscito. Riprova.",
       "no_candidate": "nessuna foto adatta su Commons",
-      "invalid": "Richiesta non valida"
+      "invalid": "Richiesta non valida",
+      "wiki_no_article": "nessuna voce di Wikipedia su questo soggetto: resta la foto del luogo",
+      "wiki_no_image": "la voce di Wikipedia non ha un'immagine",
+      "wiki_not_suitable": "l'immagine della voce non è adatta (licenza, misure, autore o persone)",
+      "wiki_already_used": "l'immagine della voce è già usata altrove",
+      "wiki_network": "Wikipedia non ha risposto"
     },
     "authorizationsTitle": "Autorizzazioni per i beni culturali",
     "authorizationsIntro": "Le immagini di beni culturali in consegna a un ente pubblico (parchi archeologici, musei, monumenti) si pubblicano solo con un'autorizzazione dell'ente non scaduta. Una stessa autorizzazione vale per più immagini.",
@@ -533,7 +538,7 @@
     "coverageExpiringTitle": "Autorizzazioni in scadenza entro 60 giorni",
     "coverageExpiringEmpty": "Nessuna autorizzazione in scadenza.",
     "photoFinderTitle": "Foto da Commons",
-    "photoFinderIntro": "Luoghi, attività, itinerari pronti e aree senza una foto vera (nessuna immagine, immagine bloccata, solo illustrazione o segnaposto demo). Le foto arrivano da Wikimedia Commons: cercate vicino alle coordinate del luogo e per nome, solo con licenza CC0, CC BY o pubblico dominio, senza persone riconoscibili, con autore e crediti. Controlla sempre il risultato: le foto di parchi archeologici, musei e monumenti pubblici vanno segnate come beni culturali e collegate a un'autorizzazione prima del lancio.",
+    "photoFinderIntro": "Luoghi, attività, itinerari pronti e aree senza una foto vera (nessuna immagine, immagine bloccata, solo illustrazione o segnaposto demo). Per ognuno si usa la foto principale della voce di Wikipedia/Wikidata sullo stesso soggetto, scelta dai redattori di Wikipedia e sempre su Wikimedia Commons, con autore, licenza e crediti, senza persone riconoscibili. Le attività senza una voce propria mostrano la foto del luogo. Controlla sempre il risultato: le foto di parchi archeologici, musei e monumenti pubblici vanno segnate come beni culturali e collegate a un'autorizzazione prima del lancio.",
     "photoFinderAutoTitle": "Assegnazione automatica",
     "photoFinderAutoHint": "{count, plural, =0 {Nessuna entità senza foto vera.} one {Una entità senza foto vera: le si assegna la foto più pertinente trovata su Commons.} other {# entità senza foto vera: a ognuna si assegna la foto più pertinente trovata su Commons.}} Attività e itinerari ricevono una foto solo se il soggetto corrisponde al nome; altrimenti mostrano la foto del luogo. Un'area senza foto adatta usa quella di uno dei suoi luoghi.",
     "photoFinderAuto": "Trova e assegna le foto mancanti",
@@ -558,7 +563,9 @@
     "photoFinderDone": "Foto assegnata: apri",
     "photoFinderAllowSa": "Ammetti anche foto con licenza CC BY-SA",
     "photoFinderAllowSaHint": "La maggior parte delle foto su Wikimedia Commons è CC BY-SA: senza questa casella molte entità restano senza foto. Con CC BY-SA la didascalia cita autore e licenza come per CC BY, e le versioni ritagliate restano sotto la stessa licenza. Le licenze NC e ND restano escluse.",
-    "photoFinderStats": "{found} risultati: {license} con licenza non ammessa, {small} troppo piccoli, {unfit} non adatti (senza autore, persone, mappe o nome diverso), {other} altro"
+    "photoFinderStats": "{found} risultati: {license} con licenza non ammessa, {small} troppo piccoli, {unfit} non adatti (senza autore, persone, mappe o nome diverso), {other} altro",
+    "photoFinderFromArticle": "da Wikipedia: {article}",
+    "photoFinderNoContact": "Manca WIKIMEDIA_CONTACT (un'email) nelle variabili d'ambiente: Wikimedia limita le richieste senza un contatto e risponde con 429. Aggiungila al file .env.local (in locale) o su Vercel e riavvia."
   },
   "Og": {
     "activity": "Attività · {province}",
