@@ -33,6 +33,7 @@ export default async function AdminMediaPage({
       <div className="flex flex-wrap items-baseline justify-between gap-4">
         <h1 className="is-display text-heading-1">{t("media")}</h1>
         <div className="flex flex-wrap gap-4 text-body">
+          <Link href="/admin/media/foto-commons">{t("photoFinderTitle")}</Link>
           <Link href="/admin/media/commons">{t("commonsTitle")}</Link>
           <Link href="/admin/media/autorizzazioni">{t("authorizationsTitle")}</Link>
         </div>

@@ -130,3 +130,17 @@ test("admin: copertura delle immagini per area e tipo", async ({ page, request }
   await expect(etna.locator('td[data-entity="activity"]')).toContainText("1 foto");
   await expect(page.getByTestId("expiring-authorizations").or(page.getByText("Nessuna autorizzazione in scadenza."))).toBeVisible();
 });
+
+test("admin: foto da Commons elenca le entità senza foto vera, segnaposto demo compresi", async ({ page, request }) => {
+  const email = await signUpWithCode(page, request);
+  const { withDb } = await import("./db.mjs");
+  await withDb((sql) => sql`update profiles set role = 'admin' where id = (select id from auth.users where email = ${email})`);
+  await page.goto("/it/admin/media/foto-commons");
+  await expect(page.getByRole("heading", { name: "Foto da Commons", level: 1 })).toBeVisible();
+  // Bronte non ha una foto propria; Palermo ha solo l'immagine di prova (npm run media:demo).
+  const [bronte] = await withDb((sql) => sql`select id from public.places where slug = 'demo-bronte'`);
+  const [palermo] = await withDb((sql) => sql`select id from public.places where slug = 'demo-palermo'`);
+  await expect(page.locator(`[data-need="place:${bronte!.id}"]`)).toContainText("nessuna immagine");
+  await expect(page.locator(`[data-need="place:${palermo!.id}"]`)).toContainText("segnaposto demo");
+  await expect(page.getByRole("button", { name: "Trova e assegna le foto mancanti" })).toBeEnabled();
+});

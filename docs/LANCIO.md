@@ -51,8 +51,8 @@ Il widget Turnstile si crea su Cloudflare (Turnstile → Add widget) con il domi
 
 Il bucket `media` e le sue policy arrivano con le migrazioni (`supabase db push`), non con `config push`: non serve crearlo dalla dashboard. Prima del lancio, dall'admin:
 
-- ogni area ha la sua illustrazione SVG (Immagini → Carica, file `slug-area-01.svg`) e ogni luogo ha un'area;
-- i luoghi in evidenza e gli itinerari pronti hanno una foto vera completa (testo alternativo, autore, licenza);
+- ogni luogo, i luoghi in evidenza e gli itinerari pronti hanno una foto vera completa (testo alternativo, autore, licenza): Immagini → Foto da Commons assegna quelle mancanti, da rileggere;
+- ogni area ha una copertina (foto o illustrazione SVG) e ogni luogo ha un'area;
 - le immagini di beni culturali hanno un'autorizzazione non scaduta.
 
 Regole complete in [IMMAGINI.md](IMMAGINI.md).
@@ -76,6 +76,6 @@ Fallisce se:
 - il cron risponde senza segreto;
 - restano azioni in sospeso nelle pagine;
 - nel database ci sono dati demo o di test (immagini demo comprese);
-- un luogo in evidenza o un itinerario pubblicato non ha una foto vera, un media pubblico non ha il testo alternativo, una foto con licenza non ha autore e licenza, un bene culturale non ha un'autorizzazione valida, un'area non ha l'illustrazione o un luogo non ha l'area.
+- un luogo in evidenza o un itinerario pubblicato non ha una foto vera, un media pubblico non ha il testo alternativo, una foto con licenza non ha autore e licenza, un bene culturale non ha un'autorizzazione valida, un luogo non ha una foto vera, un'area non ha la copertina o un luogo non ha l'area.
 
 I template e il link dell'email si controllano a mano, come indicato nella tabella.

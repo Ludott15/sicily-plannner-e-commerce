@@ -14,6 +14,7 @@ export function imageLaunchProblems(databaseUrl: string): Promise<{
   publicMediaWithoutAlt: string[];
   licensedWithoutCredit: string[];
   heritageWithoutAuthorization: string[];
-  areasWithoutIllustration: string[];
+  placesWithoutPhoto: string[];
+  areasWithoutCover: string[];
   placesWithoutArea: string[];
 }>;

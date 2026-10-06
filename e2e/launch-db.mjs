@@ -38,8 +38,10 @@ export async function demoRowCounts(databaseUrl) {
 // - publicMediaWithoutAlt: media usati da entità pubblicate senza testo alternativo italiano;
 // - licensedWithoutCredit: foto con licenza senza autore o licenza;
 // - heritageWithoutAuthorization: beni culturali senza autorizzazione valida (scaduta o assente);
-// - areasWithoutIllustration, placesWithoutArea: l'ultimo anello della catena di ripiego
-//   (nessuna pagina deve restare senza immagine).
+// - placesWithoutPhoto: luoghi senza una foto vera propria e usabile (le attività senza foto
+//   propria mostrano quella del luogo, quindi così ogni card ha una foto vera);
+// - areasWithoutCover, placesWithoutArea: l'ultimo anello della catena di ripiego (foto o
+//   illustrazione dell'area: nessuna pagina deve restare senza immagine).
 export async function imageLaunchProblems(databaseUrl) {
   const sql = postgres(databaseUrl, { max: 1, prepare: false });
   try {
@@ -91,13 +93,17 @@ export async function imageLaunchProblems(databaseUrl) {
           order by m.id
         ) as "heritageWithoutAuthorization",
         array(
+          select p.slug from public.places p
+          where not exists (select 1 from usable_photo u where u.id = p.cover_media_id)
+          order by p.slug
+        ) as "placesWithoutPhoto",
+        array(
           select ar.slug from public.areas ar
           where not exists (
-            select 1 from public.media m
-            where m.id = ar.cover_media_id and m.kind = 'illustration' and public.media_is_usable(m.id)
+            select 1 from public.media m where m.id = ar.cover_media_id and public.media_is_usable(m.id)
           )
           order by ar.sort
-        ) as "areasWithoutIllustration",
+        ) as "areasWithoutCover",
         array(select p.slug from public.places p where p.area_id is null order by p.slug) as "placesWithoutArea"`;
     return row;
   } finally {

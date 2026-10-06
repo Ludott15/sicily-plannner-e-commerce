@@ -61,7 +61,8 @@ test.describe("lancio: dati del catalogo in produzione", () => {
       publicMediaWithoutAlt: [],
       licensedWithoutCredit: [],
       heritageWithoutAuthorization: [],
-      areasWithoutIllustration: [],
+      placesWithoutPhoto: [],
+      areasWithoutCover: [],
       placesWithoutArea: [],
     });
   });

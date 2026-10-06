@@ -510,7 +510,9 @@
       "too_large": "File oltre 10 MB",
       "unreadable": "File illeggibile",
       "unsafe_svg": "File non ammesso",
-      "storage_failed": "Salvataggio non riuscito. Riprova."
+      "storage_failed": "Salvataggio non riuscito. Riprova.",
+      "no_candidate": "nessuna foto adatta su Commons",
+      "invalid": "Richiesta non valida"
     },
     "authorizationsTitle": "Autorizzazioni per i beni culturali",
     "authorizationsIntro": "Le immagini di beni culturali in consegna a un ente pubblico (parchi archeologici, musei, monumenti) si pubblicano solo con un'autorizzazione dell'ente non scaduta. Una stessa autorizzazione vale per più immagini.",
@@ -529,7 +531,31 @@
     "coverageImagesIntro": "Per area e tipo: quante entità hanno una foto vera propria, quante usano una foto di ripiego (il luogo o la prima tappa), quante mostrano solo un'illustrazione e quante nessuna immagine. Contano solo le immagini usabili.",
     "coverageImageCell": "{photo} foto · {fallback} ripiego · {illustration} illustr. · {none} nessuna",
     "coverageExpiringTitle": "Autorizzazioni in scadenza entro 60 giorni",
-    "coverageExpiringEmpty": "Nessuna autorizzazione in scadenza."
+    "coverageExpiringEmpty": "Nessuna autorizzazione in scadenza.",
+    "photoFinderTitle": "Foto da Commons",
+    "photoFinderIntro": "Luoghi, attività, itinerari pronti e aree senza una foto vera (nessuna immagine, immagine bloccata, solo illustrazione o segnaposto demo). Le foto arrivano da Wikimedia Commons: cercate vicino alle coordinate del luogo e per nome, solo con licenza CC0, CC BY o pubblico dominio, senza persone riconoscibili, con autore e crediti. Controlla sempre il risultato: le foto di parchi archeologici, musei e monumenti pubblici vanno segnate come beni culturali e collegate a un'autorizzazione prima del lancio.",
+    "photoFinderAutoTitle": "Assegnazione automatica",
+    "photoFinderAutoHint": "{count, plural, =0 {Nessuna entità senza foto vera.} one {Una entità senza foto vera: le si assegna la foto più pertinente trovata su Commons.} other {# entità senza foto vera: a ognuna si assegna la foto più pertinente trovata su Commons.}} Attività e itinerari ricevono una foto solo se il soggetto corrisponde al nome; altrimenti mostrano la foto del luogo. Un'area senza foto adatta usa quella di uno dei suoi luoghi.",
+    "photoFinderAuto": "Trova e assegna le foto mancanti",
+    "photoFinderStop": "Ferma",
+    "photoFinderProgress": "{assigned} assegnate · {reused} riusate · {skipped} saltate · {remaining} da fare",
+    "photoFinderOutcome": {
+      "assigned": "foto assegnata",
+      "reused": "foto di un suo luogo",
+      "skipped": "nessuna foto adatta"
+    },
+    "photoFinderManualTitle": "Una alla volta ({count})",
+    "photoFinderEmpty": "Tutte le entità hanno una foto vera.",
+    "photoFinderCurrent": {
+      "none": "nessuna immagine",
+      "blocked": "immagine bloccata",
+      "illustration": "solo illustrazione",
+      "demo": "segnaposto demo"
+    },
+    "photoFinderSearch": "Cerca su Commons",
+    "photoFinderNoCandidates": "Nessuna foto adatta su Commons. Carica una foto tua o di un partner dalle Immagini.",
+    "photoFinderUse": "Usa questa",
+    "photoFinderDone": "Foto assegnata: apri"
   },
   "Og": {
     "activity": "Attività · {province}",

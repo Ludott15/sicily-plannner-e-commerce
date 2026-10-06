@@ -219,3 +219,98 @@ export async function adminImageCoverage(): Promise<ImageCoverageRow[]> {
     none: r.none,
   }));
 }
+
+// ---------------------------------------------------------------------------
+// Entità senza una foto vera (foto da Commons)
+// ---------------------------------------------------------------------------
+
+export type PhotoNeed = {
+  type: "area" | "place" | "activity" | "itinerary";
+  id: string;
+  slug: string | null;
+  name: string;
+  // Luogo di riferimento (attività e itinerari) e coordinate per la ricerca per posizione.
+  placeName: string | null;
+  lat: number | null;
+  lng: number | null;
+  // Cosa c'è oggi: niente, un media bloccato, un'illustrazione o un'immagine demo.
+  current: "none" | "blocked" | "illustration" | "demo";
+};
+
+// Aree, luoghi, attività e itinerari pronti la cui copertina propria non è una foto vera
+// usabile. Le immagini demo (nome file demo-…) contano come mancanti: sono segnaposto.
+// Ordine: luoghi, attività, itinerari, aree (un'area senza una foto propria può riusare quella
+// di uno dei suoi luoghi, quindi viene per ultima).
+// Con only: quella sola entità, anche se ha già una foto (per sostituirla).
+export async function entitiesNeedingPhoto(limit = 500, only?: { type: PhotoNeed["type"]; id: string }): Promise<PhotoNeed[]> {
+  await requireAdmin();
+  const rows = await dbAdmin.execute<{
+    type: PhotoNeed["type"];
+    id: string;
+    slug: string | null;
+    name: string;
+    place_name: string | null;
+    lat: number | null;
+    lng: number | null;
+    current: PhotoNeed["current"];
+  }>(sql`
+    with cover as (
+      select m.id,
+        case
+          when coalesce(m.original_filename, '') like 'demo-%' then 'demo'
+          when not public.media_is_usable(m.id) then 'blocked'
+          when m.kind = 'illustration' then 'illustration'
+          else 'photo'
+        end as status
+      from public.media m
+    ),
+    entities as (
+      select 4 as ord, 'area' as type, a.id, a.slug, a.name_it as name, null::text as place_name,
+        (select avg(p.lat) from public.places p where p.area_id = a.id) as lat,
+        (select avg(p.lng) from public.places p where p.area_id = a.id) as lng,
+        a.cover_media_id
+      from public.areas a
+      union all
+      select 1, 'place', p.id, p.slug, p.name, null, p.lat, p.lng, p.cover_media_id from public.places p
+      union all
+      select 2, 'activity', a.id, a.slug, a.title, p.name, p.lat, p.lng, a.cover_media_id
+      from public.activities a join public.places p on p.id = a.place_id
+      union all
+      select 3, 'itinerary', i.id, i.slug, i.title, fp.name, fp.lat, fp.lng, i.cover_media_id
+      from public.itineraries i
+      left join lateral (
+        select coalesce(ii.place_id, act.place_id) as place_id
+        from public.itinerary_items ii left join public.activities act on act.id = ii.activity_id
+        where ii.itinerary_id = i.id order by ii.day_index, ii.position limit 1
+      ) first_stop on true
+      left join public.places fp on fp.id = first_stop.place_id
+      where i.is_template
+    )
+    select e.type, e.id, e.slug, e.name, e.place_name, e.lat::float8 as lat, e.lng::float8 as lng,
+      coalesce(c.status, 'none') as current
+    from entities e left join cover c on c.id = e.cover_media_id
+    where ${only ? sql`e.type = ${only.type} and e.id = ${only.id}::uuid` : sql`coalesce(c.status, 'none') <> 'photo'`}
+    order by e.ord, e.name
+    limit ${limit}
+  `);
+  return [...rows].map((r) => ({
+    type: r.type,
+    id: r.id,
+    slug: r.slug,
+    name: r.name,
+    placeName: r.place_name,
+    lat: r.lat,
+    lng: r.lng,
+    current: r.current,
+  }));
+}
+
+// Pagine di Commons già importate: la ricerca non ripropone la stessa foto per due entità.
+export async function importedCommonsPages(): Promise<Set<string>> {
+  await requireAdmin();
+  const rows = await dbAdmin
+    .select({ sourceUrl: media.sourceUrl })
+    .from(media)
+    .where(sql`${media.sourceUrl} like 'https://commons.wikimedia.org/%'`);
+  return new Set(rows.flatMap((r) => (r.sourceUrl ? [r.sourceUrl] : [])));
+}

@@ -81,3 +81,36 @@ export type CommonsImportResult = {
   becameCover?: boolean;
   error?: CommonsRowError | UploadRejection["code"] | "storage_failed";
 };
+
+// Foto da Commons per le entità senza foto vera (Immagini → Foto da Commons).
+export type PhotoEntityType = "area" | "place" | "activity" | "itinerary";
+
+export type PhotoCandidate = {
+  pageUrl: string;
+  previewUrl: string;
+  title: string;
+  author: string | null;
+  license: string;
+  description: string | null;
+  width: number;
+  height: number;
+  score: number;
+  warnings: string[];
+};
+
+export type CandidateSearch = { ok: true; candidates: PhotoCandidate[] } | { ok: false; error: CommonsRowError | "invalid" };
+
+export type PhotoImport = { ok: true; mediaId: string } | { ok: false; error: CommonsImportResult["error"] | "invalid" };
+
+export type AutoAssignItem = {
+  key: string;
+  type: PhotoEntityType;
+  name: string;
+  // assigned: foto importata da Commons; reused: area con la foto di un suo luogo;
+  // skipped: nessuna foto adatta (la pagina continua a usare il ripiego).
+  outcome: "assigned" | "reused" | "skipped";
+  mediaId?: string;
+  reason?: string;
+};
+
+export type AutoAssignStep = { ok: true; items: AutoAssignItem[]; remaining: number } | { ok: false; error: "invalid" };

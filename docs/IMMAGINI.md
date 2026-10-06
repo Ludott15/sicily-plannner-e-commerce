@@ -22,6 +22,8 @@ Regole editoriali e tecniche per le foto e le illustrazioni di luoghi, attività
 | Partner (`partner`) | Sì, con autorizzazione scritta del partner | Autore e licenza obbligatori. |
 | Illustrazioni (`illustration`) | Solo quelle della redazione | SVG statici forniti da Ludovico; didascalia "Illustrazione di Isula". |
 
+Ogni luogo, attività, itinerario e area deve mostrare una foto vera coerente con il nome. Le aree possono avere una foto (o, in alternativa, un'illustrazione della redazione).
+
 Le foto con licenza sono sempre "modificate": le varianti sono ritagli e riduzioni dell'originale, e le licenze CC chiedono di dichiararlo.
 
 ## Beni culturali
@@ -56,6 +58,18 @@ Immagini → Carica immagini. JPEG, PNG o WebP fino a 10 MB con il lato lungo di
 
 Percorso del file: il browser carica su un URL firmato in `incoming/` (fuori dalla funzione serverless, che su Vercel accetta al massimo 4,5 MB); il server controlla il contenuto vero con sharp (tipo, dimensioni, SVG senza script né riferimenti esterni), salva l'originale ripulito (orientamento applicato, EXIF, GPS, XMP e IPTC rimossi), genera le varianti e cancella il file grezzo. Poi si compilano testo alternativo, tipo, autore e licenza nella tabella "Da completare".
 
+### Foto da Commons (entità senza foto vera)
+
+Immagini → Foto da Commons elenca luoghi, attività, itinerari pronti e aree senza una foto vera: nessuna immagine, immagine bloccata, solo illustrazione o segnaposto demo. Per ognuno il server cerca su Commons (`src/server/media/commons-search.ts`):
+
+- **luoghi:** file fotografati entro 3 km dalle coordinate, più la ricerca per nome;
+- **attività e itinerari:** ricerca per nome (e vicino al luogo), con almeno metà delle parole chiave del nome nel titolo o nella descrizione del file: se nessuna foto corrisponde si salta, e la pagina mostra la foto del luogo invece di una foto sbagliata;
+- **aree:** ricerca per nome; senza risultati adatti l'area riusa la foto vera di uno dei suoi luoghi.
+
+Si tengono solo i file che passano i controlli dell'importatore (licenza, lato lungo, download da upload.wikimedia.org), con un autore, senza persone riconoscibili (avviso "personality") e senza mappe, stemmi o bandiere; una foto già importata non si ripropone per un'altra entità. "Trova e assegna le foto mancanti" assegna a ognuna il candidato più pertinente, a passi brevi; "Cerca su Commons" mostra i candidati di una sola entità per scegliere a mano. Il testo alternativo viene dalla descrizione su Commons (o dal nome): va riletto dalla tabella delle immagini. Le foto di parchi archeologici, musei e monumenti pubblici vanno segnate come beni culturali, con l'autorizzazione, prima del lancio.
+
+Nel sito locale le immagini demo (`npm run media:demo`) sono segnaposto: con l'app avviata e un account admin, "Trova e assegna le foto mancanti" le sostituisce con foto vere (serve la rete verso Wikimedia).
+
 ### Importatore Wikimedia Commons
 
 Immagini → Importa da Wikimedia Commons. Una riga per immagine: `slug;URL della pagina del file su commons.wikimedia.org`. Il server legge autore, licenza e descrizione dall'API MediaWiki (`extmetadata`), accetta solo CC0, CC BY e pubblico dominio e rifiuta il resto con il motivo. L'autore si ripulisce dall'HTML (solo testo e un link http/https). Anteprima da confermare; alla conferma il server rilegge i metadati (non si fida dell'anteprima del browser), scarica una copia larga 2560 px e la salva con `accessed_at` = oggi e `modified` = vero.
@@ -78,7 +92,7 @@ Il download (`src/server/media/safe-fetch.ts`) accetta solo https, porta 443, ho
 
 ## Dati demo
 
-`npm run media:demo` (dopo `npm run db:reset`, e in CI) genera immagini di prova a tinta unita con il nome, con nome file `demo-…` e testo alternativo `[DEMO]`: mai foto vere né immagini generate da modelli. Il controllo di lancio sui dati demo le blocca in produzione, e lo script rifiuta di girare fuori da Supabase locale.
+`npm run media:demo` (dopo `npm run db:reset`, e in CI, dove non si dipende dalla rete verso Wikimedia) genera immagini di prova a tinta unita con il nome, con nome file `demo-…` e testo alternativo `[DEMO]`: mai foto vere né immagini generate da modelli. Il controllo di lancio sui dati demo le blocca in produzione, e lo script rifiuta di girare fuori da Supabase locale.
 
 ## Controlli di lancio (PRE_LAUNCH)
 
@@ -89,7 +103,8 @@ Il download (`src/server/media/safe-fetch.ts`) accetta solo https, porta 443, ho
 - nessun media pubblico senza testo alternativo italiano;
 - nessuna foto con licenza senza autore e licenza;
 - nessun bene culturale senza autorizzazione valida;
-- ogni area con un'illustrazione usabile, ogni luogo con un'area;
+- ogni luogo con una foto vera usabile (le attività senza foto propria mostrano quella del luogo);
+- ogni area con una copertina usabile (foto o illustrazione), ogni luogo con un'area;
 - nessuna immagine demo.
 
 Un luogo in evidenza la cui foto è bloccata esce comunque dal carosello senza fermare gli altri (`listFeaturedPlaces`).

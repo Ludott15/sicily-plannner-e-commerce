@@ -144,16 +144,21 @@ export async function deleteMediaFiles(mediaId: string, storagePath: string, var
 // Entità per slug
 // ---------------------------------------------------------------------------
 
-// Le foto si abbinano a luoghi, attività e itinerari pronti; le illustrazioni alle aree.
-// Uno slug presente in più tabelle è ambiguo: si segnala invece di indovinare.
+async function findAreas(slug: string): Promise<EntityRef[]> {
+  const rows = await dbAdmin
+    .select({ id: areas.id, slug: areas.slug, name: areas.nameIt, coverMediaId: areas.coverMediaId })
+    .from(areas)
+    .where(eq(areas.slug, slug));
+  return rows.map((r) => ({ type: "area" as const, ...r }));
+}
+
+// Le foto si abbinano a luoghi, attività e itinerari pronti e, se nessuno ha quello slug, alle
+// aree ("area-<slug>" per indicare un'area anche quando un luogo ha lo stesso slug). Le
+// illustrazioni (SVG) solo alle aree. Uno slug presente in più tabelle è ambiguo: si segnala
+// invece di indovinare.
 export async function findEntitiesBySlug(slug: string, forIllustration: boolean): Promise<EntityRef[]> {
-  if (forIllustration) {
-    const rows = await dbAdmin
-      .select({ id: areas.id, slug: areas.slug, name: areas.nameIt, coverMediaId: areas.coverMediaId })
-      .from(areas)
-      .where(eq(areas.slug, slug));
-    return rows.map((r) => ({ type: "area" as const, ...r }));
-  }
+  if (forIllustration) return findAreas(slug.replace(/^area-/, ""));
+  if (slug.startsWith("area-")) return findAreas(slug.slice("area-".length));
   const [placeRows, activityRows, itineraryRows] = await Promise.all([
     dbAdmin
       .select({ id: places.id, slug: places.slug, name: places.name, coverMediaId: places.coverMediaId })
@@ -168,11 +173,12 @@ export async function findEntitiesBySlug(slug: string, forIllustration: boolean)
       .from(itineraries)
       .where(and(eq(itineraries.slug, slug), eq(itineraries.isTemplate, true), isNotNull(itineraries.slug))),
   ]);
-  return [
+  const found = [
     ...placeRows.map((r) => ({ type: "place" as const, ...r })),
     ...activityRows.map((r) => ({ type: "activity" as const, ...r })),
     ...itineraryRows.map((r) => ({ type: "itinerary" as const, ...r })),
   ];
+  return found.length > 0 ? found : findAreas(slug);
 }
 
 export async function setCover(entity: Pick<EntityRef, "type" | "id">, mediaId: string | null) {

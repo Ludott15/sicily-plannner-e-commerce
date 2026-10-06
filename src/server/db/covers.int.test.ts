@@ -156,7 +156,9 @@ describe("controlli di lancio sulle immagini", () => {
     expect(problems.featuredWithoutPhoto).not.toContain(slug("luogo-ok"));
     expect(problems.heritageWithoutAuthorization).toContain(photoExpired);
     expect(problems.publicMediaWithoutAlt).toContain(photoNoAlt);
-    expect(problems.areasWithoutIllustration).not.toContain(slug("area"));
+    expect(problems.areasWithoutCover).not.toContain(slug("area"));
+    expect(problems.placesWithoutPhoto).toEqual(expect.arrayContaining([slug("luogo-senza-alt"), slug("luogo-senza-foto")]));
+    expect(problems.placesWithoutPhoto).not.toContain(slug("luogo-ok"));
     // Il pronto parte da un luogo senza foto: la catena arriva solo all'illustrazione.
     expect(problems.itinerariesWithoutPhoto).toContain(slug("pronto"));
   });
