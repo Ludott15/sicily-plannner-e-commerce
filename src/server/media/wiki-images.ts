@@ -65,6 +65,16 @@ export const wikipediaGeoUrl = (lat: number, lng: number) =>
 export const wikipediaSearchUrl = (name: string) =>
   wikiUrl({ generator: "search", gsrsearch: name, gsrnamespace: "0", gsrlimit: "5" });
 
+// La ricerca di Wikipedia vuole tutte le parole: "Aperitivo e vita notturna alla Vucciria" non
+// trova nulla. Questa cerca le parole chiave in alternativa (OR), senza quelle del luogo, e
+// lascia a titleMatch la scelta: "Vucciria", "Casa natale di Luigi Pirandello".
+export function wikipediaAnyWordUrl(target: WikiTarget): string | null {
+  const placeWords = keywords(target.placeName ?? "");
+  const words = nameKeywords(target.name).filter((w) => !placeWords.some((p) => sameWord(p, w)));
+  if (words.length === 0) return null;
+  return wikiUrl({ generator: "search", gsrsearch: words.join(" OR "), gsrnamespace: "0", gsrlimit: "10" });
+}
+
 export function wikidataEntityUrl(item: string) {
   const params = new URLSearchParams({ action: "wbgetentities", format: "json", ids: item, props: "claims" });
   return `https://www.wikidata.org/w/api.php?${params}`;
@@ -80,18 +90,57 @@ export function readEntity(json: unknown, item: string): { image: string | null;
   return { image: typeof value === "string" && value.trim() !== "" ? value.trim() : null, human };
 }
 
+// Parole che descrivono l'attività, non il soggetto: "Aperitivo e vita notturna alla Vucciria"
+// deve trovare "Vucciria", non "Vita notturna".
+const ACTIVITY_WORDS = new Set(
+  (
+    "aperitivo vita notturna colazione pranzo cena relax giornata passeggiata piedi gita barca kayak giro " +
+    "intorno lezione cucina dolci assaggi vista tramonto alba bagno spiaggia trekking"
+  ).split(" "),
+);
+const nameKeywords = (name: string) => {
+  const words = keywords(name);
+  const subject = words.filter((w) => !ACTIVITY_WORDS.has(w));
+  return subject.length > 0 ? subject : words;
+};
+
 // Parole troppo generiche per contare come corrispondenza.
 const GENERIC = new Set(["san", "santa", "santo", "sant", "santi"]);
 
-// Stessa parola, anche al plurale o al femminile: "barocca"/"barocco", "trapanese"/"trapani".
+// Stessa parola, anche al plurale o al femminile ("barocca"/"barocco", "trapanese"/"trapani")
+// o con una lettera di differenza nelle parole lunghe ("Kolymbethra"/"Kolymbetra").
 export function sameWord(a: string, b: string) {
   if (a === b) return true;
   const min = Math.min(a.length, b.length);
   if (min < 5) return false;
   let common = 0;
   while (common < min && a[common] === b[common]) common++;
-  return common >= min - 1;
+  if (common >= min - 1) return true;
+  return min >= 7 && Math.abs(a.length - b.length) <= 1 && editDistance(a, b) <= 1;
 }
+
+function editDistance(a: string, b: string) {
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j++) row[j] = Math.min(prev[j]! + 1, row[j - 1]! + 1, prev[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = row;
+  }
+  return prev[b.length]!;
+}
+
+// Voci su infrastrutture e istituzioni: la loro foto non rappresenta il luogo ("Stazione di
+// Bronte", "Diocesi di Piazza Armerina", "Strada statale 286 di Castelbuono").
+const NOT_A_SUBJECT = new Set(
+  (
+    "stazione ferrovia ferrovie strada autostrada aeroporto porto diocesi arcidiocesi provincia libero consorzio " +
+    "comune circondario mandamento universita ospedale stadio squadra azienda societa battaglia assedio elezioni"
+  ).split(" "),
+);
+export const isNotASubject = (title: string, name: string) => {
+  const first = keywords(title)[0] ?? "";
+  return NOT_A_SUBJECT.has(first) && !keywords(name).includes(first);
+};
 
 // Quanto il titolo della voce corrisponde al nome: null se non è coerente. Coerente se ogni
 // parola del titolo è nel nome ("Ortigia" per "Ortigia, Siracusa"; "Catania" per "Catania")
@@ -101,7 +150,7 @@ export function sameWord(a: string, b: string) {
 // Con `nearby` (voce entro pochi km dall'entità) basta anche che il titolo contenga tutto il
 // nome: "Cattedrale di Noto" per Noto, se la voce del paese non ha una foto adatta.
 export function titleMatch(title: string, name: string, options: { nearby?: boolean } = {}): number | null {
-  const nameWords = keywords(name);
+  const nameWords = nameKeywords(name);
   const titleWords = keywords(title);
   if (nameWords.length === 0 || titleWords.length === 0) return null;
   const shared = nameWords.filter((n) => !GENERIC.has(n) && titleWords.some((t) => sameWord(n, t))).length;
@@ -151,7 +200,7 @@ export function pickArticles(json: unknown, target: WikiTarget): WikiPage[] {
       if (km !== null && km > MAX_DISTANCE_KM) return [];
       const nearby = km !== null;
       const title = nearby ? withoutQualifier(page.title) : page.title;
-      if (onlyPlace(title, target.placeName)) return [];
+      if (onlyPlace(title, target.placeName) || isNotASubject(title, target.name)) return [];
       const score = titleMatch(title, target.name, { nearby });
       if (score === null) return [];
       return [{ page, score, km: km ?? MAX_DISTANCE_KM, index: page.index ?? 0 }];
@@ -184,13 +233,20 @@ export async function findWikipediaPhoto(
     () => wikipediaTitleUrl(target.name),
     ...(here ? [() => wikipediaGeoUrl(here.lat, here.lng)] : []),
     () => wikipediaSearchUrl(target.name),
+    () => wikipediaAnyWordUrl(target),
   ];
   const tried = new Set<string>();
+  const seen: string[] = [];
   let last: Exclude<WikiPhotoResult, { ok: true }> = { ok: false, reason: "no_article" };
 
   try {
     for (const source of sources) {
-      for (const article of pickArticles(await get(source(), WIKI_HOSTS), target)) {
+      const url = source();
+      if (!url) continue;
+      const json = await get(url, WIKI_HOSTS);
+      // Per capire un "nessuna voce": i titoli trovati dalle ricerche per nome.
+      if (url.includes("generator=search")) seen.push(...pagesOf(json).flatMap((p) => (p.title ? [p.title] : [])));
+      for (const article of pickArticles(json, target)) {
         if (!article.title || tried.has(article.title)) continue;
         tried.add(article.title);
         const result = await photoOfArticle(article, exclude, options, get);
@@ -198,6 +254,9 @@ export async function findWikipediaPhoto(
         // Un motivo più utile (licenza, misure) non viene coperto da "nessuna immagine".
         if (last.reason === "no_article" || result.reason !== "no_image") last = result;
       }
+    }
+    if (last.reason === "no_article" && seen.length > 0) {
+      return { ok: false, reason: "no_article", detail: `scartate: ${[...new Set(seen)].slice(0, 4).join(", ")}` };
     }
     return last;
   } catch (error) {
