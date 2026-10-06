@@ -20,7 +20,8 @@
     "legal": "Legal information",
     "privacy": "Privacy",
     "cookie": "Cookies",
-    "terms": "Terms of sale"
+    "terms": "Terms of sale",
+    "preferences": "Preferences"
   },
   "Home": {
     "title": "Sicily as locals know it, made for you.",
@@ -93,8 +94,7 @@
     "email": "Email",
     "displayName": "Name",
     "role": "Role",
-    "memberSince": "Member since",
-    "preferences": "Preferences"
+    "memberSince": "Member since"
   },
   "Catalog": {
     "activitiesTitle": "Things to do in Sicily",
@@ -352,14 +352,29 @@
     "authorAdd": "Add the author",
     "newAuthor": "New author",
     "tipInactive": "off",
-    "fieldDiet": "Suitable diets",
-    "fieldDietHint": "For food and wine activities: people with a diet only see suitable ones.",
+    "fieldDiet": "Suitable diets (to be confirmed with the supplier)",
+    "fieldDietHint": "For food and wine activities. An indication, not a guarantee: people with a diet only see these, with the \"Indicative\" note.",
     "diet": {
       "vegetarian": "Vegetarian",
       "vegan": "Vegan",
       "gluten_free": "Gluten-free",
       "lactose_free": "Lactose-free"
-    }
+    },
+    "fieldArea": "Travel area",
+    "fieldAreaHint": "Without an area, this place's activities are not used in suggested trips.",
+    "noArea": "No area",
+    "coverage": "Coverage",
+    "coverageTitle": "Catalogue coverage",
+    "coverageIntro": "For each area: active activities, tagged ones (including those awaiting approval), with an active offer and with a valid local tip. Eligible means the engine can build a trip of that many days in the area, at a balanced pace with no constraints.",
+    "coverageArea": "Area",
+    "coverageActive": "Active",
+    "coverageTagged": "Tagged",
+    "coverageOffer": "With offer",
+    "coverageTip": "With tip",
+    "coverageDays": "{days} days",
+    "coverageOf": "{n} of {total}",
+    "coverageYes": "Eligible",
+    "coverageNo": "Not eligible"
   },
   "Og": {
     "activity": "Activity · {province}",
@@ -463,7 +478,7 @@
       "friends": "With friends"
     },
     "airportTitle": "Where do you land?",
-    "airportHint": "We start from the areas closest to the airport. If you don't know yet, that's fine.",
+    "airportHint": "With equal interests, we favour the areas closest to the airport. If you don't know yet, that's fine.",
     "airport": {
       "CTA": "Catania",
       "PMO": "Palermo",
@@ -491,16 +506,21 @@
       "invalid": "Some answers aren't valid. Reload the page and try again.",
       "captcha_failed": "We couldn't verify that you're a person. Reload the page and try again.",
       "failed": "We couldn't save your answers. Please try again."
-    }
+    },
+    "tripTitle": "Your next trip",
+    "tripHint": "Your tastes stay as saved: choose the days, period, who you travel with and how you get around.",
+    "tastesTitle": "Your tastes",
+    "editTastes": "Edit tastes",
+    "tastesNone": "No interests given: trips draw on the whole catalogue.",
+    "tastesPace": "Pace: {pace}"
   },
   "Proposals": {
     "title": "Here are three trips for you",
     "intro": "Built from the catalog with your answers. Every stop says why it's there.",
-    "changePreferences": "Change preferences",
-    "empty": "With these answers we can't find suitable activities yet. Try widening the period, budget or interests.",
-    "proposalTitle": "Trip {n} · {zone}",
+    "empty": "For this trip no area has enough activities for all the days you chose. Try fewer days, or widen the period and budget.",
+    "proposalTitle": "Trip {n} · {area}",
     "proposalMeta": "{days, plural, one {# day} other {# days}}",
-    "day": "Day {n} · {zone}",
+    "day": "Day {n} · {places}",
     "reasons": {
       "combines": "{a} and {b} together",
       "topForInterest": "Among the best for {interest}",
@@ -510,7 +530,7 @@
       "accessible": "Accessible",
       "bestInZone": "Among the closest to your tastes in this area",
       "strongestInterest": "For {interest}, what matters most to you",
-      "dietFriendly": "Suits your diet",
+      "dietFriendly": "Listed as suitable for your diet",
       "samePlace": "Same place as the stop before",
       "shortVisit": "Short: {duration}, leaves time for the rest"
     },
@@ -518,26 +538,42 @@
     "introGeneric": "They're built from the catalog without your tastes. Answer the questions to get them tailored.",
     "needsRentalCar": "Some stops can only be reached by car: for this trip you'll need a rental car.",
     "needsCar": "Some stops can only be reached by car.",
-    "rentCar": "Rent a car"
+    "rentCar": "Rent a car",
+    "whyArea": "Why this area",
+    "dietNote": "Indicative: always check with the organiser",
+    "areaReasons": {
+      "interestStops": "{count, plural, one {# stop} other {# stops}} for {interest}",
+      "nearAirport": "Close to {airport} airport",
+      "highlyRated": "Highly rated stops: {rating} out of 5 on average",
+      "noCar": "No stop needs a car",
+      "variant": "Few multi-area trips for the days you chose: this variant gives more room to {interest}",
+      "stops": "{stops, plural, one {# stop} other {# stops}} in {days, plural, one {# day} other {# days}} without changing area"
+    },
+    "changeTrip": "Change the trip",
+    "editTastes": "Edit your tastes"
   },
   "Preferences": {
     "title": "Preferences",
     "seeTrips": "See the three trips",
-    "save": "Save preferences",
-    "saved": "Preferences saved.",
+    "save": "Save tastes",
+    "saved": "Tastes saved.",
     "deleted": "Mobility and diet deleted.",
     "tolerancesTitle": "Heat and crowds",
     "heat": "How well you handle heat",
     "crowd": "How well you handle crowds",
     "needsTitle": "Mobility and diet",
     "reducedMobility": "Reduced mobility: accessible activities only",
-    "dietLegend": "Diet",
+    "dietLegend": "Diet (indicative: always check with the organiser)",
     "diet": {
       "vegetarian": "Vegetarian",
       "vegan": "Vegan",
       "gluten_free": "Gluten-free",
       "lactose_free": "Lactose-free"
     },
-    "deleteSensitive": "Delete mobility and diet"
+    "deleteSensitive": "Delete mobility and diet",
+    "heading": "Your tastes",
+    "subtitle": "They apply to all your trips. Days, period, company, airport, budget and car are chosen for each trip, in \"Plan your trip\".",
+    "empty": "You haven't told us what you like yet. A few questions are enough, and they apply to all your trips.",
+    "createTrip": "Plan your trip"
   }
 }

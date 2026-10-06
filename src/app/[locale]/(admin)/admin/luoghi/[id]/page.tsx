@@ -5,7 +5,7 @@ import { FormNotice } from "@/components/admin/fields";
 import { PlaceForm } from "@/components/admin/place-form";
 import { Link } from "@/lib/i18n/navigation";
 import { savePlace } from "@/server/catalog/admin-actions.admin";
-import { adminGetPlace } from "@/server/catalog/admin-queries.admin";
+import { adminGetPlace, adminListAreas } from "@/server/catalog/admin-queries.admin";
 
 export default async function EditPlacePage({
   params,
@@ -17,7 +17,7 @@ export default async function EditPlacePage({
   const { locale, id } = await params;
   setRequestLocale(locale);
   if (!z.uuid().safeParse(id).success) notFound();
-  const [t, place, { salvato }] = await Promise.all([getTranslations("Admin"), adminGetPlace(id), searchParams]);
+  const [t, place, areas, { salvato }] = await Promise.all([getTranslations("Admin"), adminGetPlace(id), adminListAreas(), searchParams]);
   if (!place) notFound();
 
   return (
@@ -30,7 +30,12 @@ export default async function EditPlacePage({
         </div>
       </div>
       <FormNotice message={salvato ? t("saved") : null} />
-      <PlaceForm action={savePlace} locale={locale} values={place} />
+      <PlaceForm
+        action={savePlace}
+        locale={locale}
+        values={place}
+        areas={areas.map((a) => ({ id: a.id, name: locale === "en" ? a.nameEn : a.nameIt }))}
+      />
     </section>
   );
 }

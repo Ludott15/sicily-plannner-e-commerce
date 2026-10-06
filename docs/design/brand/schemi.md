@@ -29,6 +29,14 @@ Ogni vista che carica dati ha quattro stati progettati, non uno:
 
 Una domanda per schermata, 6-8 schermate, barra di avanzamento in `lava`. Ogni schermata si può saltare. Gli interessi si scelgono con i chip; l'intensità con la scala da 0 a 5. Alla fine, prima del risultato: "Ecco tre viaggi pensati per te", non una schermata di congratulazioni.
 
+**Gusti e viaggio sono due cose diverse.** I gusti valgono per tutti i viaggi: interessi con il loro peso, ritmo, tolleranza a caldo e folla, mobilità e dieta. Il viaggio è di questa volta: giorni, periodo, con chi, aeroporto, budget e auto.
+
+- La prima volta "Crea il tuo viaggio" è il percorso completo, una domanda per schermata. Chi ha già i gusti trova una sola schermata, "Il tuo prossimo viaggio", con gli ultimi valori del viaggio già compilati e sopra il riepilogo dei gusti con "Modifica i gusti".
+- Preferenze contiene solo i gusti, e lo dice: valgono per tutti i tuoi viaggi.
+- "Ecco tre viaggi" offre due strade distinte: "Cambia il viaggio" e "Modifica i tuoi gusti".
+- Un solo pulsante principale in home, "Crea il tuo viaggio"; Preferenze sta nel menu utente.
+- **Gruppi:** si aggregano solo i gusti dei membri. Date e persone sono del viaggio del gruppo, non di ciascun membro.
+
 ## Prenotazioni: niente promesse impossibili
 
 Con i link affiliati ogni attività si prenota sul sito di un partner diverso, e non riceviamo conferma. Quindi:

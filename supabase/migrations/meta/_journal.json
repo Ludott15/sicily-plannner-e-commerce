@@ -183,6 +183,13 @@
       "when": 1791242971015,
       "tag": "20261005232931_drop_has_car",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791285633791,
+      "tag": "20261006112033_areas",
+      "breakpoints": true
     }
   ]
 }

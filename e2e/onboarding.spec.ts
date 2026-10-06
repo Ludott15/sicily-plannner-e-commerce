@@ -2,8 +2,9 @@ import { expect, test, type Page } from "@playwright/test";
 import { sessionUserId, testEmail, waitForCode } from "./helpers";
 
 // Onboarding (M4): 7 domande anche da ospite, una per indirizzo, risposte conservate al
-// ricaricamento; tre viaggi con "Per te"; Preferenze con mobilità e dieta solo con consenso;
-// il profilo resta all'utente nella conversione da ospite ad account.
+// ricaricamento; tre viaggi con "Per te"; chi torna con i gusti salvati sceglie solo il
+// viaggio in una schermata (parte 5); Preferenze con i soli gusti, mobilità e dieta solo con
+// consenso; il profilo resta all'utente nella conversione da ospite ad account.
 
 const FALLBACK = "Tra le più vicine ai tuoi gusti in questa zona";
 const next = (page: Page) => page.getByRole("button", { name: "Avanti", exact: true });
@@ -102,10 +103,74 @@ test("ospite: sette domande, risposte salvate, tre viaggi con il perché di ogni
   const withCar = await withDb((sql) => sql`select slug from public.activities where slug = any(${slugs}) and requires_car`);
   if (withCar.length > 0) await expect(page.getByText("per questo viaggio serve un'auto a noleggio").first()).toBeVisible();
 
-  // "Cambia preferenze" riapre l'onboarding con le risposte salvate.
-  await page.getByRole("link", { name: "Cambia preferenze" }).first().click();
+  // Due link: "Cambia il viaggio" (schermata singola) e "Modifica i tuoi gusti" (Preferenze).
+  await expect(page.getByRole("link", { name: "Cambia preferenze" })).toHaveCount(0);
+  await page.getByRole("link", { name: "Modifica i tuoi gusti" }).click();
+  await expect(page).toHaveURL(/\/it\/preferenze$/);
+  await page.goBack();
+  await page.getByRole("link", { name: "Cambia il viaggio" }).click();
   await expect(page).toHaveURL(/\/it\/viaggio\/nuovo$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Il tuo prossimo viaggio");
+});
+
+test("lo stesso ospite che torna: una sola schermata con il viaggio precompilato e il riepilogo dei gusti", async ({ page }) => {
+  await answerAll(page);
+  const id = await sessionUserId(page);
+  await page.goto("/it/viaggio/nuovo");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Il tuo prossimo viaggio");
+  await expect(page.getByText(/Domanda \d di 7/)).toHaveCount(0);
+  // Valori del viaggio di prima.
   await expect(page.getByRole("radio", { name: "3 giorni" })).toBeChecked();
+  await expect(page.getByRole("button", { name: "giu", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("radio", { name: "In coppia" })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "Catania" })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "Fino a 60 €" })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /^La noleggio/ })).toBeChecked();
+  // Riepilogo dei gusti, senza i campi dei gusti.
+  const tastes = page.getByRole("region", { name: "I tuoi gusti" });
+  await expect(tastes).toContainText("Mare · Moltissimo");
+  await expect(tastes).toContainText("Cibo e vino · Abbastanza");
+  await expect(tastes).toContainText("Ritmo: Rilassato");
+  await expect(page.getByRole("heading", { name: "Quanto conta ognuno?" })).toHaveCount(0);
+  await expect(tastes.getByRole("link", { name: "Modifica i gusti" })).toHaveAttribute("href", "/it/preferenze");
+
+  // Cambia solo il viaggio: i gusti restano.
+  await page.getByRole("radio", { name: "5 giorni" }).check({ force: true });
+  await page.getByRole("radio", { name: "Palermo" }).check({ force: true });
+  await page.getByRole("button", { name: "Ecco tre viaggi pensati per te" }).click();
+  await expect(page).toHaveURL(/\/it\/viaggio\/proposte$/);
+  const { withDb } = await import("./db.mjs");
+  const [row] = await withDb(
+    (sql) => sql`select c.trip_days, c.arrival_airport, p.pace::text, p.party::text,
+      (select count(*)::int from public.preference_weights w where w.user_id = c.user_id and w.explicit > 0) as weights
+      from public.user_constraints c join public.profiles p on p.id = c.user_id where c.user_id = ${id}`,
+  );
+  expect(row).toMatchObject({ trip_days: 5, arrival_airport: "PMO", pace: "relaxed", party: "couple", weights: 2 });
+
+  // Indietro del browser: si torna alla schermata singola, mai a una domanda del percorso.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/it\/viaggio\/nuovo$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Il tuo prossimo viaggio");
+  await expect(page.getByRole("radio", { name: "5 giorni" })).toBeChecked();
+});
+
+test("Indietro dai tre viaggi dopo il percorso completo: la schermata singola, non la domanda 7", async ({ page }) => {
+  await answerAll(page);
+  await page.goBack();
+  await expect(page).toHaveURL(/domanda=7$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Il tuo prossimo viaggio");
+  await expect(page.getByText(/Domanda \d di 7/)).toHaveCount(0);
+});
+
+test("Preferenze senza gusti salvati: una frase e \"Crea il tuo viaggio\"", async ({ page }) => {
+  await page.goto("/it/login");
+  await page.getByRole("button", { name: "Continua senza account" }).click();
+  await expect(page).toHaveURL(/\/it\/profilo$/);
+  await page.getByRole("banner").getByRole("link", { name: "Preferenze", exact: true }).click();
+  await expect(page).toHaveURL(/\/it\/preferenze$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("I tuoi gusti");
+  await page.getByRole("main").getByRole("link", { name: "Crea il tuo viaggio" }).click();
+  await expect(page.getByText("Domanda 1 di 7")).toBeVisible();
 });
 
 test("domanda 3: il pallino più alto azzera, la riga resta con \"Non conta\"; nuovo clic la riporta", async ({ page }) => {
@@ -169,14 +234,22 @@ test("Preferenze: mobilità e dieta solo con consenso, e si cancellano", async (
   const { withDb } = await import("./db.mjs");
   const id = await sessionUserId(page);
   await page.goto("/it/preferenze");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("I tuoi gusti");
+  await expect(page.getByText("Valgono per tutti i tuoi viaggi.", { exact: false })).toBeVisible();
+  // Solo i gusti: nessun campo del viaggio.
+  for (const name of ["Quanti giorni, e quando?", "Con chi viaggi?", "Dove atterri?", "Budget e spostamenti"]) {
+    await expect(page.getByRole("heading", { name }), name).toHaveCount(0);
+  }
+  await expect(page.getByRole("heading", { name: "Quanto conta ognuno?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Che ritmo ti piace?" })).toBeVisible();
   await expect(page.locator('[data-pending-id="preferences.consent"]')).toHaveAttribute("data-pending", "testi");
   const mobility = page.getByRole("checkbox", { name: "Mobilità ridotta: solo attività accessibili" });
   await expect(mobility).toBeDisabled();
   await page.getByRole("checkbox", { name: "Testo in preparazione." }).check();
   await mobility.check();
   await page.getByRole("checkbox", { name: "Vegana" }).check();
-  await page.getByRole("button", { name: "Salva le preferenze" }).click();
-  await expect(page.getByRole("status")).toHaveText("Preferenze salvate.");
+  await page.getByRole("button", { name: "Salva i gusti" }).click();
+  await expect(page.getByRole("status")).toHaveText("Gusti salvati.");
   const [saved] = await withDb(
     (sql) => sql`select reduced_mobility, diet, sensitive_consent_at is not null as consent from public.user_constraints where user_id = ${id}`,
   );
