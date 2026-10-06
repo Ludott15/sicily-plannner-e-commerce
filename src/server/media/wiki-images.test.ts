@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Transport } from "./safe-fetch";
-import { distanceKm, findWikipediaPhoto, pickArticle, readEntity, titleMatch } from "./wiki-images";
+import { distanceKm, findWikipediaPhoto, pickArticle, readEntity, sameWord, titleMatch, wikipediaAnyWordUrl } from "./wiki-images";
 
 const commonsFile = (
   name: string,
@@ -132,6 +132,24 @@ describe("scelta della voce", () => {
     ).toBe("Pescheria di Catania");
   });
 
+  it("scarta stazioni, diocesi e strade, tranne quando sono il nome stesso; tollera una lettera di differenza", () => {
+    const BRONTE = { lat: 37.7875, lng: 14.8313 };
+    expect(pickArticle(search({ title: "Stazione di Bronte", at: [37.79, 14.83] }), { name: "Bronte", ...BRONTE })).toBeNull();
+    expect(pickArticle(search({ title: "Diocesi di Piazza Armerina" }), { name: "Piazza Armerina" })).toBeNull();
+    expect(pickArticle(search({ title: "Porto Empedocle" }), { name: "Porto Empedocle" })?.title).toBe("Porto Empedocle");
+    expect(sameWord("kolymbethra", "kolymbetra")).toBe(true);
+    expect(sameWord("monreale", "morreale")).toBe(true);
+    expect(sameWord("catania", "catanzaro")).toBe(false);
+    expect(titleMatch("Giardino della Kolymbetra", "Giardino della Kolymbethra")).not.toBeNull();
+  });
+
+  it("ricerca con le parole in alternativa, senza quelle del luogo", () => {
+    const url = new URL(wikipediaAnyWordUrl({ name: "Colazione alla pescheria di Catania", placeName: "Catania" })!);
+    expect(url.searchParams.get("gsrsearch")).toBe("pescheria");
+    expect(wikipediaAnyWordUrl({ name: "Erice", placeName: "Erice" })).toBeNull();
+    expect(new URL(wikipediaAnyWordUrl({ name: "Aperitivo e vita notturna alla Vucciria", placeName: "Palermo" })!).searchParams.get("gsrsearch")).toBe("vucciria");
+  });
+
   it("preferisce la voce più coerente e vicina; scarta disambiguazioni e voci lontane", () => {
     const pages = search(
       { title: "Palermo (disambigua)", disambiguation: true },
@@ -179,6 +197,7 @@ describe("findWikipediaPhoto", () => {
     expect(await findWikipediaPhoto({ name: "Corso di cous cous trapanese" }, new Set(), { transport: fakeWiki({ search: search({ title: "Cuscus" }) }).transport, sleep: noSleep })).toEqual({
       ok: false,
       reason: "no_article",
+      detail: "scartate: Cuscus",
     });
     expect(await findWikipediaPhoto({ name: "Noto" }, new Set(), { transport: fakeWiki({ search: search({ title: "Noto" }) }).transport, sleep: noSleep })).toEqual({
       ok: false,
@@ -213,6 +232,28 @@ describe("findWikipediaPhoto", () => {
       article: "Pirandello",
       detail: "persona",
     });
+  });
+
+  it("trova la voce anche quando la ricerca per nome intero non dà risultati", async () => {
+    const vucciria: Transport = async (url) => {
+      const body =
+        url.host === "it.wikipedia.org"
+          ? url.searchParams.get("gsrlimit") === "10"
+            ? search({ title: "Vita notturna", pageimage: "Notte.jpg" }, { title: "Palermo" }, { title: "Vucciria", pageimage: "Vucciria.jpg" })
+            : {}
+          : commonsFile("Vucciria.jpg", { license: "cc0" });
+      return {
+        status: 200,
+        header: (name) => (name === "content-type" ? "application/json" : null),
+        body: (async function* () {
+          yield new TextEncoder().encode(JSON.stringify(body));
+        })(),
+        cancel: () => {},
+      };
+    };
+    expect(
+      await findWikipediaPhoto({ name: "Aperitivo e vita notturna alla Vucciria", placeName: "Palermo" }, new Set(), { transport: vucciria, sleep: noSleep }),
+    ).toMatchObject({ ok: true, article: "Vucciria" });
   });
 
   it("prima il titolo esatto, poi le voci vicine; mai una voce omonima lontana", async () => {
