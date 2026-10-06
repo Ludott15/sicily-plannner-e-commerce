@@ -56,3 +56,6 @@ export const carAccess = pgEnum("car_access", ["own", "rental", "none"]);
 // l'ha segnato come fatto. Lo stato lo segna l'utente, non riceviamo conferme dai partner.
 export const bookingKind = pgEnum("booking_kind", ["activity", "lodging", "car", "flight"]);
 export const bookingStatus = pgEnum("booking_status", ["to_book", "booked"]);
+// Immagini del catalogo: foto vera o illustrazione, e da dove viene (docs/IMMAGINI.md).
+export const mediaKind = pgEnum("media_kind", ["photo", "illustration"]);
+export const mediaSourceType = pgEnum("media_source_type", ["own", "licensed", "partner", "illustration"]);

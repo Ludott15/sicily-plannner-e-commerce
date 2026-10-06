@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Breadcrumb } from "@/components/catalog/breadcrumb";
 import { CatalogActivityCard } from "@/components/catalog/catalog-activity-card";
+import { CoverFigure } from "@/components/catalog/cover-figure";
 import { ItineraryCard } from "@/components/catalog/itinerary-card";
 import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
@@ -52,15 +53,17 @@ export default async function PlacePage({ params }: Props) {
         <Breadcrumb items={[{ label: t("breadcrumbRoot") }, { label: provinceName(place.province) }, { label: place.name }]} />
       </div>
 
-      <div className="relative -mx-4 -mt-4 aspect-[4/3] overflow-hidden bg-calce-sunk md:mx-0 md:mt-4 md:aspect-[21/9] md:rounded-xl">
-        {place.coverImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={place.coverImage} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <span className="is-display absolute bottom-4 left-4 text-heading-2 text-lava-muted" aria-hidden="true">
-            {place.name}
-          </span>
-        )}
+      <div className="-mx-4 -mt-4 md:mx-0 md:mt-4">
+        <CoverFigure
+          cover={place.cover}
+          ratio="16x9"
+          sizes="(min-width: 1200px) 1072px, (min-width: 768px) calc(100vw - 128px), 100vw"
+          locale={locale}
+          placeholder={place.name}
+          priority
+          frameClassName="aspect-[4/3] md:aspect-[21/9] md:rounded-xl"
+          captionClassName="px-4 md:px-0"
+        />
       </div>
 
       <header className="mt-6 flex flex-col gap-4">

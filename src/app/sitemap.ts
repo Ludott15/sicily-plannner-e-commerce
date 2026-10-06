@@ -16,6 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/attivita",
     "/itinerari",
     "/link-affiliati",
+    "/crediti-foto",
     // Pagine con testi ancora in sospeso: fuori dalla sitemap (e noindex) finché non sono scritte.
     ...(isPending("about.editorial", "about.founder") ? [] : ["/chi-siamo"]),
     ...(isPending("legal.privacy") ? [] : ["/privacy"]),

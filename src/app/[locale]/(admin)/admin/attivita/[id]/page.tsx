@@ -4,7 +4,9 @@ import { z } from "zod";
 import { ActivityForm } from "@/components/admin/activity-form";
 import { OfferForm } from "@/components/admin/offer-form";
 import { FormNotice } from "@/components/admin/fields";
+import { AdminCoverBlock } from "@/components/admin/cover-block";
 import { Link } from "@/lib/i18n/navigation";
+import { getAdminMedia } from "@/server/media/admin-queries.admin";
 import { deleteOffer, saveActivity, saveOffer } from "@/server/catalog/admin-actions.admin";
 import {
   adminGetActivity,
@@ -33,6 +35,7 @@ export default async function EditActivityPage({
     searchParams,
   ]);
   if (!activity) notFound();
+  const cover = activity.coverMediaId ? await getAdminMedia(activity.coverMediaId) : null;
 
   return (
     <section className="flex flex-col gap-6">
@@ -66,6 +69,7 @@ export default async function EditActivityPage({
           tags: activity.tags,
         }}
       />
+      <AdminCoverBlock cover={cover} slug={activity.slug} />
 
       <section id="offerte" aria-labelledby="offerte-titolo" className="flex flex-col gap-4 border-t border-divider pt-8">
         <h2 id="offerte-titolo" className="is-display text-heading-2">

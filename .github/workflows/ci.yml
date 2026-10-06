@@ -37,8 +37,9 @@ jobs:
           cache: npm
       - run: npm ci
 
+      # storage-api serve alle immagini del catalogo (bucket media, route /api/media, e2e).
       - name: Avvia Supabase locale (applica le migrazioni da zero)
-        run: npx supabase start -x studio,storage-api,imgproxy,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta
+        run: npx supabase start -x studio,imgproxy,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta
 
       - name: Test RLS (pgTAP)
         run: npm run db:test
@@ -60,6 +61,9 @@ jobs:
 
       - name: Test di integrazione (dbAsUser, RLS via Drizzle)
         run: npm run test:int
+
+      - name: Immagini demo nello storage locale (il seed non carica file)
+        run: npm run media:demo
 
       - run: npm run build
       - run: npx playwright install --with-deps chromium

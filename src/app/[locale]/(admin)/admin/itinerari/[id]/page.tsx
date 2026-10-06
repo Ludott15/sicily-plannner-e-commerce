@@ -4,7 +4,9 @@ import { z } from "zod";
 import { Field, FormNotice, Select, TextInput } from "@/components/admin/fields";
 import { TemplateForm } from "@/components/admin/template-form";
 import { Button } from "@/components/design";
+import { AdminCoverBlock } from "@/components/admin/cover-block";
 import { Link } from "@/lib/i18n/navigation";
+import { getAdminMedia } from "@/server/media/admin-queries.admin";
 import {
   addTemplateItem,
   deleteTemplateItem,
@@ -34,6 +36,7 @@ export default async function EditTemplatePage({
     searchParams,
   ]);
   if (!template) notFound();
+  const cover = template.coverMediaId ? await getAdminMedia(template.coverMediaId) : null;
 
   const hidden = (
     <>
@@ -57,6 +60,7 @@ export default async function EditTemplatePage({
         locale={locale}
         values={{ id: template.id, title: template.title, slug: template.slug, days: template.days, dayTitles: template.dayTitles }}
       />
+      <AdminCoverBlock cover={cover} slug={template.slug} />
 
       <div className="flex flex-col gap-8">
         <h2 className="is-display text-heading-2">{t("stops")}</h2>

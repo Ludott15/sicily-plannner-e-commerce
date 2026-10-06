@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { and, asc, desc, eq, exists, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import { activityCoverChain, itineraryCoverChain, placeCoverChain, type CoverMedia } from "@/lib/media";
 import { dbPublic } from "@/server/db/public";
 import type { UserTx } from "@/server/db/user";
 import {
@@ -10,8 +11,10 @@ import {
   interests,
   itineraries,
   itineraryItems,
+  media,
   places,
 } from "@/server/db/schema";
+import { areaCoverJson, coverJson } from "./covers";
 
 // Letture pubbliche del catalogo: passano tutte da dbPublic (ruolo anon), quindi
 // le attività inattive e gli itinerari non template non escono mai da qui.
@@ -33,8 +36,19 @@ const activityCardColumns = {
   placeName: places.name,
   placeSlug: places.slug,
   placeProvince: places.province,
-  placeCoverImage: places.coverImage,
+  // Anelli della catena di ripiego (attività → luogo → area), già filtrati dalla RLS.
+  ownCover: coverJson(activities.coverMediaId),
+  placeCover: coverJson(places.coverMediaId),
+  areaCover: areaCoverJson(places.areaId),
 };
+
+type CoverColumns = { ownCover: CoverMedia | null; placeCover: CoverMedia | null; areaCover: CoverMedia | null };
+
+// Sostituisce i tre anelli con la copertina risolta.
+function withCover<T extends CoverColumns>(row: T) {
+  const { ownCover, placeCover, areaCover, ...rest } = row;
+  return { ...rest, cover: activityCoverChain({ own: ownCover, place: placeCover, area: areaCover }) };
+}
 
 export type Tag = { key: string; strength: number };
 export type CatalogActivity = Awaited<ReturnType<typeof listActivities>>[number];
@@ -64,12 +78,12 @@ async function tagsByActivity(tx: UserTx, ids: string[]) {
   return map;
 }
 
-async function withTags<T extends { id: string }>(tx: UserTx, rows: T[]) {
+async function withTags<T extends { id: string } & CoverColumns>(tx: UserTx, rows: T[]) {
   const tags = await tagsByActivity(
     tx,
     rows.map((r) => r.id),
   );
-  return rows.map((r) => ({ ...r, tags: tags.get(r.id) ?? [] }));
+  return rows.map((r) => ({ ...withCover(r), tags: tags.get(r.id) ?? [] }));
 }
 
 // Filtri della lista attività: interessi (basta uno dei selezionati) e provincia.
@@ -162,22 +176,42 @@ export const listNearbyActivities = cache((activityId: string, placeId: string, 
 
 export const getPlace = cache((slug: string) =>
   dbPublic(async (tx) => {
-    const [place] = await tx.select().from(places).where(eq(places.slug, slug));
-    if (!place) return null;
+    const [row] = await tx
+      .select({
+        id: places.id,
+        slug: places.slug,
+        name: places.name,
+        province: places.province,
+        lat: places.lat,
+        lng: places.lng,
+        description: places.description,
+        ownCover: coverJson(places.coverMediaId),
+        areaCover: areaCoverJson(places.areaId),
+      })
+      .from(places)
+      .where(eq(places.slug, slug));
+    if (!row) return null;
+    const { ownCover, areaCover, ...place } = row;
     const rows = await tx
       .select(activityCardColumns)
       .from(activities)
       .innerJoin(places, eq(places.id, activities.placeId))
       .where(eq(activities.placeId, place.id))
       .orderBy(desc(activities.rating), asc(activities.title));
-    return { ...place, activities: await withTags(tx, rows) };
+    return { ...place, cover: placeCoverChain({ own: ownCover, area: areaCover }), activities: await withTags(tx, rows) };
   }),
 );
 
 // Itinerari pronti (template editoriali pubblicati) con i luoghi toccati, in ordine di visita.
 async function templateSummaries(tx: UserTx, where = sql`true`) {
   const templates = await tx
-    .select({ id: itineraries.id, slug: itineraries.slug, title: itineraries.title, days: itineraries.days })
+    .select({
+      id: itineraries.id,
+      slug: itineraries.slug,
+      title: itineraries.title,
+      days: itineraries.days,
+      ownCover: coverJson(itineraries.coverMediaId),
+    })
     .from(itineraries)
     .where(and(eq(itineraries.isTemplate, true), isNotNull(itineraries.slug), where))
     .orderBy(asc(itineraries.days), asc(itineraries.title));
@@ -187,7 +221,8 @@ async function templateSummaries(tx: UserTx, where = sql`true`) {
     .select({
       itineraryId: itineraryItems.itineraryId,
       placeName: places.name,
-      placeCoverImage: places.coverImage,
+      placeCover: coverJson(places.coverMediaId),
+      areaCover: areaCoverJson(places.areaId),
       requiresCar: activities.requiresCar,
     })
     .from(itineraryItems)
@@ -201,14 +236,16 @@ async function templateSummaries(tx: UserTx, where = sql`true`) {
     )
     .orderBy(asc(itineraryItems.dayIndex), asc(itineraryItems.position));
 
-  return templates.map((t) => {
+  return templates.map(({ ownCover, ...t }) => {
     const own = stops.filter((s) => s.itineraryId === t.id);
     const placeNames = [...new Set(own.flatMap((s) => (s.placeName ? [s.placeName] : [])))];
+    // Catena: copertina propria → luogo della prima tappa → area di quel luogo.
+    const first = own[0];
     return {
       ...t,
       slug: t.slug!,
       placeNames,
-      coverImage: own.find((s) => s.placeCoverImage)?.placeCoverImage ?? null,
+      cover: itineraryCoverChain({ own: ownCover, firstStop: first?.placeCover, area: first?.areaCover }),
       requiresCar: own.some((s) => s.requiresCar),
     };
   });
@@ -241,6 +278,7 @@ export const getTemplate = cache((slug: string) =>
         title: itineraries.title,
         days: itineraries.days,
         dayTitles: itineraries.dayTitles,
+        ownCover: coverJson(itineraries.coverMediaId),
       })
       .from(itineraries)
       .where(and(eq(itineraries.slug, slug), eq(itineraries.isTemplate, true)));
@@ -262,7 +300,8 @@ export const getTemplate = cache((slug: string) =>
         placeId: places.id,
         placeSlug: places.slug,
         placeName: places.name,
-        placeCoverImage: places.coverImage,
+        placeCover: coverJson(places.coverMediaId),
+        areaCover: areaCoverJson(places.areaId),
       })
       .from(itineraryItems)
       .leftJoin(activities, eq(activities.id, itineraryItems.activityId))
@@ -271,7 +310,13 @@ export const getTemplate = cache((slug: string) =>
       .where(eq(itineraryItems.itineraryId, itinerary.id))
       .orderBy(asc(itineraryItems.dayIndex), asc(itineraryItems.position));
 
-    return { ...itinerary, items };
+    const { ownCover, ...rest } = itinerary;
+    const first = items[0];
+    return {
+      ...rest,
+      cover: itineraryCoverChain({ own: ownCover, firstStop: first?.placeCover, area: first?.areaCover }),
+      items,
+    };
   }),
 );
 
@@ -312,5 +357,56 @@ export const listActivityOffers = cache((activityId: string) =>
       .from(activityOffers)
       .where(eq(activityOffers.activityId, activityId))
       .orderBy(sql`${activityOffers.priceFromEur} asc nulls last`, asc(activityOffers.title)),
+  ),
+);
+
+// Luoghi in evidenza (carosello della home): solo quelli con una foto vera propria e
+// pubblica. Un luogo la cui foto è bloccata (alt mancante, autorizzazione scaduta…) esce dal
+// carosello senza toccare gli altri: la RLS di media lo nasconde e la riga si scarta qui.
+export const listFeaturedPlaces = cache(() =>
+  dbPublic(async (tx) => {
+    const rows = await tx
+      .select({
+        id: places.id,
+        slug: places.slug,
+        name: places.name,
+        areaId: places.areaId,
+        featuredOrder: places.featuredOrder,
+        cover: coverJson(places.coverMediaId),
+      })
+      .from(places)
+      .where(eq(places.isFeatured, true))
+      .orderBy(sql`${places.featuredOrder} asc nulls last`, asc(places.name));
+    return rows.flatMap((r) => (r.cover?.kind === "photo" ? [{ ...r, cover: r.cover }] : []));
+  }),
+);
+
+// Crediti delle foto (/crediti-foto): tutti i media pubblici, con dove sono usati. La RLS
+// limita media e entità a ciò che è pubblico; source_link è solo la pagina di Commons.
+export const listPhotoCredits = cache(() =>
+  dbPublic((tx) =>
+    tx
+      .select({
+        id: media.id,
+        kind: media.kind,
+        author: media.author,
+        authorUrl: media.authorUrl,
+        license: media.license,
+        licenseUrl: media.licenseUrl,
+        sourceLink: media.sourceLink,
+        modified: media.modified,
+        altIt: media.altIt,
+        altEn: media.altEn,
+        usedBy: sql<string[]>`array(
+          select x.name from (
+            select p.name from public.places p where p.cover_media_id = ${media.id}
+            union select a.title from public.activities a where a.cover_media_id = ${media.id}
+            union select i.title from public.itineraries i where i.cover_media_id = ${media.id} and i.is_template and i.slug is not null
+            union select ar.name_it from public.areas ar where ar.cover_media_id = ${media.id}
+          ) x order by x.name
+        )`,
+      })
+      .from(media)
+      .orderBy(asc(media.kind), asc(media.author), asc(media.id)),
   ),
 );

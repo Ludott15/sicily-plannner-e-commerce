@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { activities, places } from "./catalog";
 import { bookingKind, bookingStatus, groupRole, inviteStatus, itineraryStatus, partner } from "./enums";
+import { media } from "./media";
 import { profiles } from "./profiles";
 
 // Itinerari e gruppi stanno nello stesso file: si referenziano a vicenda
@@ -42,10 +43,13 @@ export const itineraries = pgTable(
     // mostra i luoghi delle sue tappe. Chi copia un itinerario pronto eredita i titoli.
     dayTitles: text("day_titles").array().notNull().default(sql`'{}'`),
     status: itineraryStatus("status").notNull().default("draft"),
+    // Copertina degli itinerari pronti; senza, quella del luogo della prima tappa.
+    coverMediaId: uuid("cover_media_id").references(() => media.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("itineraries_owner_id_idx").on(t.ownerId),
+    index("itineraries_cover_media_id_idx").on(t.coverMediaId),
     index("itineraries_group_id_idx").on(t.groupId),
     check("itineraries_days_range", sql`${t.days} between 1 and 60`),
     check("itineraries_title_length", sql`char_length(btrim(${t.title})) between 1 and 200`),
