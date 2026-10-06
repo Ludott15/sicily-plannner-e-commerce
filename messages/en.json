@@ -204,7 +204,8 @@
       "Quite",
       "A lot",
       "Very much"
-    ]
+    ],
+    "book": "Book"
   },
   "Admin": {
     "title": "Catalogue admin",
@@ -552,7 +553,8 @@
     },
     "changeTrip": "Change the trip",
     "editTastes": "Edit your tastes",
-    "shortened": "A single area covers at most {days, plural, one {# day} other {# days}}: here are the three best {days, plural, one {#-day} other {#-day}} trips. Trips across several areas are coming soon."
+    "shortened": "A single area covers at most {days, plural, one {# day} other {# days}}: here are the three best {days, plural, one {#-day} other {#-day}} trips. Trips across several areas are coming soon.",
+    "saveTrip": "Save this trip"
   },
   "Preferences": {
     "title": "Preferences",
@@ -577,5 +579,48 @@
     "subtitle": "They apply to all your trips. Days, period, company, airport, budget and car are chosen for each trip, in \"Plan your trip\".",
     "empty": "You haven't told us what you like yet. A few questions are enough, and they apply to all your trips.",
     "createTrip": "Plan your trip"
+  },
+  "Trips": {
+    "listTitle": "My trips",
+    "listEmpty": "You haven't saved a trip yet. Start from one of the suggested trips or a ready-made itinerary.",
+    "createTrip": "Plan your trip",
+    "eyebrow": "Your trip",
+    "saveTitle": "Save the trip",
+    "saveIntro": "{name}: choose when you leave and how many you are. You can change the stops later.",
+    "startDate": "Departure date",
+    "startDateHint": "Optional: if you don't know yet, leave it empty.",
+    "travelers": "Travellers",
+    "travelersUnknown": "Not sure yet",
+    "travelersOption": "{count, plural, one {# person} other {# people}}",
+    "create": "Save the trip",
+    "proposalTripTitle": "{area} in {days, plural, one {# day} other {# days}}",
+    "from": "From {date}",
+    "noDates": "Dates to be chosen",
+    "daysCount": "{count, plural, one {# day} other {# days}}",
+    "stopsCount": "{count, plural, one {# stop} other {# stops}}",
+    "dayEmptyName": "To be filled",
+    "emptyDay": "No stops on this day. Add one from an activity page.",
+    "moveUp": "Move up: {title}",
+    "moveDown": "Move down: {title}",
+    "remove": "Remove from trip: {title}",
+    "booking": {
+      "lodging": "Accommodation",
+      "car": "Car hire",
+      "flight": "Flights"
+    },
+    "addTitle": "Add to trip",
+    "pickTrip": "Trip",
+    "pickDay": "Day",
+    "dayOption": "Day {n} · {stops, plural, =0 {empty} one {# stop} other {# stops}}",
+    "sameArea": "same area",
+    "farTrip": "This trip is in another area ({areas}): getting to {area} from there is a long drive.",
+    "addHere": "Add",
+    "noTripsYet": "You don't have a trip to add it to yet.",
+    "errors": {
+      "invalid": "Check the details and try again.",
+      "captcha_failed": "We couldn't verify you're not a robot. Please try again.",
+      "not_found": "This trip is no longer available.",
+      "failed": "Something went wrong. Please try again shortly."
+    }
   }
 }

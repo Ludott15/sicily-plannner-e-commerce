@@ -3,6 +3,7 @@
 import { Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ButtonAnchor } from "./button";
+import { PendingButton } from "./pending-button";
 
 // BookingList (docs/design/components/BookingList/README.md)
 // Checklist "Da prenotare": lo stato lo segna l'utente con la casella da 44px
@@ -10,12 +11,14 @@ import { ButtonAnchor } from "./button";
 // in lava-muted e perde il bottone verso il partner. Conteggio sempre nella forma
 // "3 da prenotare · 1 fatto" (bookingCount), identico in intestazione, bottone e lista.
 // Riga di trasparenza sugli affiliati sotto la lista.
+// Finché il link al partner non esiste (M6) il bottone è un'azione in sospeso; una voce senza
+// partner noto (alloggio, auto, voli fino alla M6) non mostra la riga del partner.
 
 export type BookingItem = {
   id: string;
   name: string;
-  partner: string;
-  href: string;
+  partner: string | null;
+  href: string | null;
   done: boolean;
 };
 
@@ -64,14 +67,18 @@ export function BookingList({
           </button>
           <div>
             <div className="is-booking__name">{item.name}</div>
-            <div className="is-booking__partner">{item.partner}</div>
+            {item.partner && <div className="is-booking__partner">{item.partner}</div>}
           </div>
           {item.done ? (
             <span />
-          ) : (
+          ) : item.href && item.partner ? (
             <ButtonAnchor variant="secondary" size="sm" href={item.href} rel="sponsored noopener">
               {t("onPartner", { partner: item.partner })}
             </ButtonAnchor>
+          ) : (
+            <PendingButton id="booking.partner-link" variant="secondary" size="sm">
+              {item.partner ? t("onPartner", { partner: item.partner }) : t("book")}
+            </PendingButton>
           )}
         </div>
       ))}

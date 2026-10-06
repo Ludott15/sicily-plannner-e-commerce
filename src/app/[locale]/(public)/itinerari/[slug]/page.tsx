@@ -4,7 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ItineraryDays, type Day } from "@/components/catalog/itinerary-days";
 import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
-import { ActionBar, PendingButton } from "@/components/design";
+import { ActionBar, ButtonLink } from "@/components/design";
 import { publicEnv } from "@/lib/env";
 import { formatDuration } from "@/lib/format";
 import { localizedAlternates } from "@/lib/seo";
@@ -13,8 +13,8 @@ import { listTipsFor } from "@/server/catalog/tips";
 
 // Itinerario pronto (mockup ItinerarioProntoMobile.html; su desktop la struttura di
 // Itinerario.html senza le parti di gruppo). Non ancora in pagina: trasferimenti tra le tappe
-// e chilometri (servono le distanze), "Cosa prenotare" (M5 e M6), mappa. "Usa questo
-// itinerario" è in sospeso fino al builder (M5). Consiglio locale accanto alla tappa: al
+// e chilometri (servono le distanze), mappa. "Usa questo itinerario" porta a /viaggio/salva
+// (date e persone), che crea il viaggio dell'utente con i titoli dei giorni. Consiglio locale accanto alla tappa: al
 // massimo uno per giorno, sulla prima tappa che ne ha uno (dell'attività o del suo luogo).
 
 type Props = { params: Promise<{ locale: string; slug: string }> };
@@ -113,9 +113,9 @@ export default async function ItineraryPage({ params }: Props) {
             <span className="text-body-s text-lava">{t.rich("curatedBy", { b: (chunks) => <b>{chunks}</b> })}</span>
           </div>
           <div className="hidden flex-wrap items-start gap-3 md:flex">
-            <PendingButton id="itinerary.use" variant="primary">
+            <ButtonLink href={`/viaggio/salva?da=${itinerary.slug}`} variant="primary">
               {t("useItinerary")}
-            </PendingButton>
+            </ButtonLink>
             <ShareButton title={itinerary.title} />
           </div>
         </header>
@@ -147,9 +147,9 @@ export default async function ItineraryPage({ params }: Props) {
       {/* Mobile: barra fissa con l'azione principale e Condividi, al posto della TabBar */}
       <ActionBar>
         <div className="flex-1">
-          <PendingButton id="itinerary.use" variant="primary" fullWidth>
+          <ButtonLink href={`/viaggio/salva?da=${itinerary.slug}`} variant="primary" className="w-full">
             {t("useItinerary")}
-          </PendingButton>
+          </ButtonLink>
         </div>
         <ShareButton title={itinerary.title} iconOnly />
       </ActionBar>

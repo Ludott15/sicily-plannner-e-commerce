@@ -48,7 +48,9 @@ async function collectPending(page: Page) {
     await sql`insert into public.preference_weights (user_id, interest_key, explicit) values (${id}, 'food_wine', 5)`;
     await sql`update public.profiles set onboarding_completed_at = now() where id = ${id}`;
   });
-  await collectFrom(page, SESSION_PAGES, found);
+  // Un viaggio dell'ospite: la checklist "Da prenotare" ha i link ai partner in sospeso (M6).
+  const [trip] = await withDb((sql) => sql`insert into public.itineraries (owner_id, title, days) values (${id}, 'e2e- Viaggio', 2) returning id`);
+  await collectFrom(page, [...SESSION_PAGES, `/it/viaggi/${trip!.id}`], found);
   return found;
 }
 
@@ -58,9 +60,10 @@ test("le azioni in sospeso nelle pagine sono esattamente quelle dell'elenco", as
 });
 
 test("un'azione in sospeso non fa nulla", async ({ page }) => {
-  await page.goto("/it/itinerari/demo-sicilia-orientale");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/it/attivita");
   const url = page.url();
-  await page.locator('[data-pending-id="itinerary.use"]').first().click({ force: true });
+  await page.locator('[data-pending-id="tabbar.shop"]').first().click({ force: true });
   await expect(page).toHaveURL(url);
 });
 

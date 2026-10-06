@@ -204,7 +204,8 @@
       "Abbastanza",
       "Molto",
       "Moltissimo"
-    ]
+    ],
+    "book": "Prenota"
   },
   "Admin": {
     "title": "Admin del catalogo",
@@ -552,7 +553,8 @@
     },
     "changeTrip": "Cambia il viaggio",
     "editTastes": "Modifica i tuoi gusti",
-    "shortened": "Una sola zona copre al massimo {days, plural, one {# giorno} other {# giorni}}: ecco i tre migliori viaggi di {days, plural, one {# giorno} other {# giorni}}. I viaggi su più zone arrivano presto."
+    "shortened": "Una sola zona copre al massimo {days, plural, one {# giorno} other {# giorni}}: ecco i tre migliori viaggi di {days, plural, one {# giorno} other {# giorni}}. I viaggi su più zone arrivano presto.",
+    "saveTrip": "Salva questo viaggio"
   },
   "Preferences": {
     "title": "Preferenze",
@@ -577,5 +579,48 @@
     "subtitle": "Valgono per tutti i tuoi viaggi. Giorni, periodo, compagnia, aeroporto, budget e auto li scegli a ogni viaggio, in \"Crea il tuo viaggio\".",
     "empty": "Non ci hai ancora detto cosa ti piace. Bastano poche domande, e valgono per tutti i tuoi viaggi.",
     "createTrip": "Crea il tuo viaggio"
+  },
+  "Trips": {
+    "listTitle": "I miei viaggi",
+    "listEmpty": "Non hai ancora salvato un viaggio. Parti da uno dei viaggi proposti o da un itinerario pronto.",
+    "createTrip": "Crea il tuo viaggio",
+    "eyebrow": "Il tuo viaggio",
+    "saveTitle": "Salva il viaggio",
+    "saveIntro": "{name}: scegli quando parti e in quanti siete. Potrai cambiare le tappe dopo.",
+    "startDate": "Data di partenza",
+    "startDateHint": "Facoltativa: se non la sai ancora, lasciala vuota.",
+    "travelers": "Persone",
+    "travelersUnknown": "Non lo so ancora",
+    "travelersOption": "{count, plural, one {# persona} other {# persone}}",
+    "create": "Salva il viaggio",
+    "proposalTripTitle": "{area} in {days, plural, one {# giorno} other {# giorni}}",
+    "from": "Dal {date}",
+    "noDates": "Date da scegliere",
+    "daysCount": "{count, plural, one {# giorno} other {# giorni}}",
+    "stopsCount": "{count, plural, one {# tappa} other {# tappe}}",
+    "dayEmptyName": "Da riempire",
+    "emptyDay": "Nessuna tappa in questo giorno. Aggiungine una dalla scheda di un'attività.",
+    "moveUp": "Sposta su: {title}",
+    "moveDown": "Sposta giù: {title}",
+    "remove": "Togli dal viaggio: {title}",
+    "booking": {
+      "lodging": "Alloggio",
+      "car": "Noleggio auto",
+      "flight": "Voli"
+    },
+    "addTitle": "Aggiungi al viaggio",
+    "pickTrip": "Viaggio",
+    "pickDay": "Giorno",
+    "dayOption": "Giorno {n} · {stops, plural, =0 {vuoto} one {# tappa} other {# tappe}}",
+    "sameArea": "stessa zona",
+    "farTrip": "Questo viaggio è in un'altra zona ({areas}): da qui a {area} serve uno spostamento lungo.",
+    "addHere": "Aggiungi",
+    "noTripsYet": "Non hai ancora un viaggio a cui aggiungerla.",
+    "errors": {
+      "invalid": "Controlla i dati e riprova.",
+      "captcha_failed": "Non siamo riusciti a verificare che non sei un robot. Riprova.",
+      "not_found": "Questo viaggio non è più disponibile.",
+      "failed": "Qualcosa non ha funzionato. Riprova tra poco."
+    }
   }
 }
