@@ -54,6 +54,7 @@ export async function SiteFooter() {
                 [
                   ["/chi-siamo", "about"],
                   ["/link-affiliati", "affiliateLinks"],
+                  ["/crediti-foto", "photoCredits"],
                 ] as const
               ).map(([href, key]) => (
                 <li key={href}>

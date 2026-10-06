@@ -16,7 +16,6 @@ export type PlaceFormValues = {
   lat: number | null;
   lng: number | null;
   description: string | null;
-  coverImage: string | null;
 };
 
 export type AreaOption = { id: string; name: string };
@@ -78,9 +77,6 @@ export function PlaceForm({
       </div>
       <Field label={t("fieldDescription")} htmlFor="description">
         <TextArea id="description" name="description" defaultValue={values.description ?? ""} />
-      </Field>
-      <Field label={t("fieldCover")} htmlFor="coverImage">
-        <TextInput id="coverImage" name="coverImage" type="url" defaultValue={values.coverImage ?? ""} />
       </Field>
       <div>
         <Button type="submit" variant="primary" disabled={pending}>

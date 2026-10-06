@@ -153,7 +153,6 @@ const placeSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
   description: optionalText,
-  coverImage: optionalText.pipe(z.url({ protocol: /^https$/ }).nullable()),
 });
 
 export async function savePlace(_prev: AdminFormState, formData: FormData): Promise<AdminFormState> {
