@@ -23,6 +23,16 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 
+CREATE TYPE "public"."car_access" AS ENUM (
+    'own',
+    'rental',
+    'none'
+);
+
+
+ALTER TYPE "public"."car_access" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."event_type" AS ENUM (
     'view',
     'save',
@@ -752,6 +762,8 @@ CREATE TABLE IF NOT EXISTS "public"."activities" (
     "synced_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "on_site_price_eur" numeric(8,2),
+    "diet_friendly" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    CONSTRAINT "activities_diet_friendly_valid" CHECK (("diet_friendly" <@ '{vegetarian,vegan,gluten_free,lactose_free}'::"text"[])),
     CONSTRAINT "activities_duration_positive" CHECK (("duration_min" > 0)),
     CONSTRAINT "activities_on_site_price_non_negative" CHECK (("on_site_price_eur" >= (0)::numeric)),
     CONSTRAINT "activities_rating_range" CHECK ((("rating" >= (0)::numeric) AND ("rating" <= (5)::numeric))),
@@ -1383,7 +1395,6 @@ ALTER TABLE "public"."user_badges" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."user_constraints" (
     "user_id" "uuid" NOT NULL,
     "budget_per_day_eur" integer,
-    "has_car" boolean DEFAULT false NOT NULL,
     "reduced_mobility" boolean DEFAULT false NOT NULL,
     "diet" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
     "max_daily_travel_min" integer,
@@ -1392,9 +1403,15 @@ CREATE TABLE IF NOT EXISTS "public"."user_constraints" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "trip_days" smallint,
     "trip_months" smallint[] DEFAULT '{}'::smallint[] NOT NULL,
+    "car_access" "public"."car_access",
+    "arrival_airport" "text",
+    "sensitive_consent_at" timestamp with time zone,
+    CONSTRAINT "user_constraints_arrival_airport_valid" CHECK (("arrival_airport" = ANY (ARRAY['CTA'::"text", 'PMO'::"text", 'TPS'::"text", 'CIY'::"text"]))),
     CONSTRAINT "user_constraints_budget_non_negative" CHECK (("budget_per_day_eur" >= 0)),
     CONSTRAINT "user_constraints_crowd_range" CHECK ((("crowd_tolerance" >= 0) AND ("crowd_tolerance" <= 5))),
+    CONSTRAINT "user_constraints_diet_valid" CHECK (("diet" <@ '{vegetarian,vegan,gluten_free,lactose_free}'::"text"[])),
     CONSTRAINT "user_constraints_heat_range" CHECK ((("heat_tolerance" >= 0) AND ("heat_tolerance" <= 5))),
+    CONSTRAINT "user_constraints_sensitive_consent" CHECK (((("reduced_mobility" = false) AND ("diet" = '{}'::"text"[])) OR ("sensitive_consent_at" IS NOT NULL))),
     CONSTRAINT "user_constraints_travel_positive" CHECK (("max_daily_travel_min" > 0)),
     CONSTRAINT "user_constraints_trip_days_range" CHECK ((("trip_days" >= 1) AND ("trip_days" <= 14))),
     CONSTRAINT "user_constraints_trip_months_valid" CHECK (("trip_months" <@ '{1,2,3,4,5,6,7,8,9,10,11,12}'::smallint[]))
@@ -3277,10 +3294,6 @@ GRANT INSERT("budget_per_day_eur"),UPDATE("budget_per_day_eur") ON TABLE "public
 
 
 
-GRANT INSERT("has_car"),UPDATE("has_car") ON TABLE "public"."user_constraints" TO "authenticated";
-
-
-
 GRANT INSERT("reduced_mobility"),UPDATE("reduced_mobility") ON TABLE "public"."user_constraints" TO "authenticated";
 
 
@@ -3306,6 +3319,18 @@ GRANT INSERT("trip_days"),UPDATE("trip_days") ON TABLE "public"."user_constraint
 
 
 GRANT INSERT("trip_months"),UPDATE("trip_months") ON TABLE "public"."user_constraints" TO "authenticated";
+
+
+
+GRANT INSERT("car_access"),UPDATE("car_access") ON TABLE "public"."user_constraints" TO "authenticated";
+
+
+
+GRANT INSERT("arrival_airport"),UPDATE("arrival_airport") ON TABLE "public"."user_constraints" TO "authenticated";
+
+
+
+GRANT INSERT("sensitive_consent_at"),UPDATE("sensitive_consent_at") ON TABLE "public"."user_constraints" TO "authenticated";
 
 
 

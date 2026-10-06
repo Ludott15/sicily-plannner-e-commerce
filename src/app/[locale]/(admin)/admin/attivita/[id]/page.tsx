@@ -59,6 +59,7 @@ export default async function EditActivityPage({
           onSitePriceEur: activity.onSitePriceEur,
           requiresCar: activity.requiresCar,
           accessible: activity.accessible,
+          dietFriendly: activity.dietFriendly,
           seasonMonths: activity.seasonMonths,
           rating: activity.rating,
           isActive: activity.isActive,

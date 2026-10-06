@@ -1,0 +1,1 @@
+ALTER TABLE "user_constraints" DROP COLUMN "has_car";

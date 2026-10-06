@@ -169,6 +169,20 @@
       "when": 1791240049126,
       "tag": "20261005224049_trip_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791242941023,
+      "tag": "20261005232901_preferences_part2",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791242971015,
+      "tag": "20261005232931_drop_has_car",
+      "breakpoints": true
     }
   ]
 }

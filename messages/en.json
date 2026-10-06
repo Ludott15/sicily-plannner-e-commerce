@@ -93,7 +93,8 @@
     "email": "Email",
     "displayName": "Name",
     "role": "Role",
-    "memberSince": "Member since"
+    "memberSince": "Member since",
+    "preferences": "Preferences"
   },
   "Catalog": {
     "activitiesTitle": "Things to do in Sicily",
@@ -190,12 +191,20 @@
     "tabShop": "Shop",
     "tabProfile": "Profile",
     "pointsAria": "{points} points",
-    "scaleValue": "{n} out of 5",
+    "scaleValue": "{n} out of 5, {word}",
     "rewardedReview": "Rewarded review",
     "stampLocked": "Stamp to unlock",
     "editorialMonogram": "I",
     "pendingHint": "Coming soon",
-    "pendingText": "Text in preparation."
+    "pendingText": "Text in preparation.",
+    "scaleWords": [
+      "Doesn't matter",
+      "A little",
+      "Somewhat",
+      "Quite",
+      "A lot",
+      "Very much"
+    ]
   },
   "Admin": {
     "title": "Catalogue admin",
@@ -342,7 +351,15 @@
     "authorActive": "Active author",
     "authorAdd": "Add the author",
     "newAuthor": "New author",
-    "tipInactive": "off"
+    "tipInactive": "off",
+    "fieldDiet": "Suitable diets",
+    "fieldDietHint": "For food and wine activities: people with a diet only see suitable ones.",
+    "diet": {
+      "vegetarian": "Vegetarian",
+      "vegan": "Vegan",
+      "gluten_free": "Gluten-free",
+      "lactose_free": "Lactose-free"
+    }
   },
   "Og": {
     "activity": "Activity · {province}",
@@ -406,7 +423,7 @@
     "daysLegend": "Days",
     "daysOption": "{count, plural, one {# day} other {# days}}",
     "monthsLegend": "Possible months",
-    "monthsHint": "No month chosen: any time of year.",
+    "monthsHint": "If you don't pick a month, any time of year works.",
     "months": [
       "Jan",
       "Feb",
@@ -422,7 +439,7 @@
       "Dec"
     ],
     "interestsTitle": "What makes you want to go?",
-    "interestsHint": "Pick everything you're interested in. In the next question you tell us how much.",
+    "interestsHint": "Pick everything you're interested in. In the next question you tell us how much it matters.",
     "weightsTitle": "How much does each one matter?",
     "weightsHint": "From 0 to 5. Your answers stay private, even in group trips.",
     "weightsEmpty": "You haven't picked any interests: go back to pick some, or carry on.",
@@ -445,14 +462,31 @@
       "family": "With family",
       "friends": "With friends"
     },
+    "airportTitle": "Where do you land?",
+    "airportHint": "We start from the areas closest to the airport. If you don't know yet, that's fine.",
+    "airport": {
+      "CTA": "Catania",
+      "PMO": "Palermo",
+      "TPS": "Trapani",
+      "CIY": "Comiso",
+      "unknown": "I don't know yet"
+    },
     "budgetTitle": "Budget and getting around",
-    "budgetHint": "The budget is for one day of activities, per person. Without a car we only suggest activities you can reach without one.",
+    "budgetHint": "The budget is for one day of activities, per person. Without a car we only suggest activities you can reach without a car.",
     "budgetLegend": "Daily budget",
     "budgetOption": "Up to €{amount}",
     "budgetNone": "No limit",
-    "carLegend": "Do you have a car?",
-    "carYes": "Yes",
-    "carNo": "No",
+    "carLegend": "Will you get around by car?",
+    "car": {
+      "own": "I have a car",
+      "rental": "I'll rent one",
+      "none": "No car"
+    },
+    "carDetail": {
+      "own": "Including activities you can only reach by car",
+      "rental": "Including activities by car: we tell you when you need one",
+      "none": "Only activities you can reach without a car"
+    },
     "errors": {
       "invalid": "Some answers aren't valid. Reload the page and try again.",
       "captcha_failed": "We couldn't verify that you're a person. Reload the page and try again.",
@@ -474,7 +508,36 @@
       "freeEntry": "Free entry",
       "inSeason": "In its time of year",
       "accessible": "Accessible",
-      "bestInZone": "Among the closest to your tastes in this area"
-    }
+      "bestInZone": "Among the closest to your tastes in this area",
+      "strongestInterest": "For {interest}, what matters most to you",
+      "dietFriendly": "Suits your diet",
+      "samePlace": "Same place as the stop before",
+      "shortVisit": "Short: {duration}, leaves time for the rest"
+    },
+    "titleGeneric": "You haven't told us much: here are three trips to start with",
+    "introGeneric": "They're built from the catalog without your tastes. Answer the questions to get them tailored.",
+    "needsRentalCar": "Some stops can only be reached by car: for this trip you'll need a rental car.",
+    "needsCar": "Some stops can only be reached by car.",
+    "rentCar": "Rent a car"
+  },
+  "Preferences": {
+    "title": "Preferences",
+    "seeTrips": "See the three trips",
+    "save": "Save preferences",
+    "saved": "Preferences saved.",
+    "deleted": "Mobility and diet deleted.",
+    "tolerancesTitle": "Heat and crowds",
+    "heat": "How well you handle heat",
+    "crowd": "How well you handle crowds",
+    "needsTitle": "Mobility and diet",
+    "reducedMobility": "Reduced mobility: accessible activities only",
+    "dietLegend": "Diet",
+    "diet": {
+      "vegetarian": "Vegetarian",
+      "vegan": "Vegan",
+      "gluten_free": "Gluten-free",
+      "lactose_free": "Lactose-free"
+    },
+    "deleteSensitive": "Delete mobility and diet"
   }
 }

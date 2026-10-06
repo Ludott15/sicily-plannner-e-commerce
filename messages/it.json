@@ -93,7 +93,8 @@
     "email": "Email",
     "displayName": "Nome",
     "role": "Ruolo",
-    "memberSince": "Iscritto dal"
+    "memberSince": "Iscritto dal",
+    "preferences": "Preferenze"
   },
   "Catalog": {
     "activitiesTitle": "Attività in Sicilia",
@@ -190,12 +191,20 @@
     "tabShop": "Shop",
     "tabProfile": "Profilo",
     "pointsAria": "{points} punti",
-    "scaleValue": "{n} su 5",
+    "scaleValue": "{n} su 5, {word}",
     "rewardedReview": "Recensione con premio",
     "stampLocked": "Timbro da sbloccare",
     "editorialMonogram": "I",
     "pendingHint": "Disponibile a breve",
-    "pendingText": "Testo in preparazione."
+    "pendingText": "Testo in preparazione.",
+    "scaleWords": [
+      "Non conta",
+      "Poco",
+      "Un po'",
+      "Abbastanza",
+      "Molto",
+      "Moltissimo"
+    ]
   },
   "Admin": {
     "title": "Admin del catalogo",
@@ -342,7 +351,15 @@
     "authorActive": "Autore attivo",
     "authorAdd": "Aggiungi l'autore",
     "newAuthor": "Nuovo autore",
-    "tipInactive": "spento"
+    "tipInactive": "spento",
+    "fieldDiet": "Diete adatte",
+    "fieldDietHint": "Per le attività di cibo e vino: chi indica una dieta vede solo quelle adatte.",
+    "diet": {
+      "vegetarian": "Vegetariana",
+      "vegan": "Vegana",
+      "gluten_free": "Senza glutine",
+      "lactose_free": "Senza lattosio"
+    }
   },
   "Og": {
     "activity": "Attività · {province}",
@@ -402,11 +419,11 @@
     "finish": "Ecco tre viaggi pensati per te",
     "privacyLink": "Informativa sulla privacy",
     "daysTitle": "Quanti giorni, e quando?",
-    "daysHint": "Anche se non lo sai ancora con precisione: si cambia dopo.",
+    "daysHint": "Anche se non lo sai ancora con precisione: potrai cambiarlo dopo.",
     "daysLegend": "Giorni",
     "daysOption": "{count, plural, one {# giorno} other {# giorni}}",
     "monthsLegend": "Mesi possibili",
-    "monthsHint": "Nessun mese scelto: qualunque periodo.",
+    "monthsHint": "Se non scegli nessun mese, va bene qualunque periodo.",
     "months": [
       "gen",
       "feb",
@@ -422,7 +439,7 @@
       "dic"
     ],
     "interestsTitle": "Cosa ti fa venire voglia di partire?",
-    "interestsHint": "Scegli tutto quello che ti interessa. Nella prossima domanda ci dici quanto.",
+    "interestsHint": "Scegli tutto quello che ti interessa. Nella prossima domanda ci dici quanto conta.",
     "weightsTitle": "Quanto conta ognuno?",
     "weightsHint": "Da 0 a 5. Le tue risposte restano private, anche nei viaggi di gruppo.",
     "weightsEmpty": "Non hai scelto interessi: torna indietro per sceglierli, oppure vai avanti.",
@@ -445,14 +462,31 @@
       "family": "In famiglia",
       "friends": "Con amici"
     },
+    "airportTitle": "Dove atterri?",
+    "airportHint": "Partiamo dalle zone più vicine all'aeroporto. Se non lo sai ancora, nessun problema.",
+    "airport": {
+      "CTA": "Catania",
+      "PMO": "Palermo",
+      "TPS": "Trapani",
+      "CIY": "Comiso",
+      "unknown": "Non lo so ancora"
+    },
     "budgetTitle": "Budget e spostamenti",
-    "budgetHint": "Il budget è per le attività di un giorno, a persona. Senza auto ti proponiamo solo attività raggiungibili senza.",
+    "budgetHint": "Il budget è per le attività di un giorno, a persona. Senza auto ti proponiamo solo attività raggiungibili senza auto.",
     "budgetLegend": "Budget giornaliero",
     "budgetOption": "Fino a {amount} €",
     "budgetNone": "Nessun limite",
-    "carLegend": "Hai un'auto?",
-    "carYes": "Sì",
-    "carNo": "No",
+    "carLegend": "Ti sposti in auto?",
+    "car": {
+      "own": "Ho l'auto",
+      "rental": "La noleggio",
+      "none": "Niente auto"
+    },
+    "carDetail": {
+      "own": "Anche le attività che si raggiungono solo in auto",
+      "rental": "Anche le attività in auto: ti diciamo quando serve",
+      "none": "Solo attività raggiungibili senza auto"
+    },
     "errors": {
       "invalid": "Qualche risposta non è valida. Ricarica la pagina e riprova.",
       "captcha_failed": "Non siamo riusciti a verificare che sei una persona. Ricarica la pagina e riprova.",
@@ -474,7 +508,36 @@
       "freeEntry": "Ingresso libero",
       "inSeason": "Nel suo periodo dell'anno",
       "accessible": "Accessibile",
-      "bestInZone": "Tra le più vicine ai tuoi gusti in questa zona"
-    }
+      "bestInZone": "Tra le più vicine ai tuoi gusti in questa zona",
+      "strongestInterest": "Per {interest}, quello che conta di più per te",
+      "dietFriendly": "Adatta alla tua dieta",
+      "samePlace": "Nello stesso posto della tappa prima",
+      "shortVisit": "Breve: {duration}, lascia tempo per il resto"
+    },
+    "titleGeneric": "Non ci hai detto molto: ecco tre viaggi per cominciare",
+    "introGeneric": "Sono costruiti dal catalogo senza i tuoi gusti. Rispondi alle domande per averli su misura.",
+    "needsRentalCar": "Alcune tappe si raggiungono solo in auto: per questo viaggio serve un'auto a noleggio.",
+    "needsCar": "Alcune tappe si raggiungono solo in auto.",
+    "rentCar": "Noleggia un'auto"
+  },
+  "Preferences": {
+    "title": "Preferenze",
+    "seeTrips": "Vedi i tre viaggi",
+    "save": "Salva le preferenze",
+    "saved": "Preferenze salvate.",
+    "deleted": "Mobilità e dieta cancellate.",
+    "tolerancesTitle": "Caldo e folla",
+    "heat": "Quanto sopporti il caldo",
+    "crowd": "Quanto sopporti la folla",
+    "needsTitle": "Mobilità e dieta",
+    "reducedMobility": "Mobilità ridotta: solo attività accessibili",
+    "dietLegend": "Dieta",
+    "diet": {
+      "vegetarian": "Vegetariana",
+      "vegan": "Vegana",
+      "gluten_free": "Senza glutine",
+      "lactose_free": "Senza lattosio"
+    },
+    "deleteSensitive": "Cancella mobilità e dieta"
   }
 }

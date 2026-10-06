@@ -4,9 +4,9 @@ import { interestDomain } from "@/components/design";
 import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
 import { getUser } from "@/server/auth";
 import { listInterests } from "@/server/catalog/queries";
-import { DEFAULT_ANSWERS, getSavedAnswers } from "@/server/personalization/data";
+import { EMPTY_ANSWERS, getSavedPreferences } from "@/server/personalization/data";
 
-// "Crea il tuo viaggio": sei domande, anche senza account. Con risposte già salvate
+// "Crea il tuo viaggio": sette domande, anche senza account. Con risposte già salvate
 // ("Cambia preferenze") l'onboarding riparte da quelle. Pagina personale: non indicizzata.
 type Props = { params: Promise<{ locale: string }> };
 
@@ -21,23 +21,25 @@ export default async function NewTripPage({ params }: Props) {
   setRequestLocale(locale);
 
   const [user, rows] = await Promise.all([getUser(), listInterests()]);
-  const saved = user ? await getSavedAnswers(user) : null;
+  const saved = user ? await getSavedPreferences(user) : null;
   const interests = rows.map((r) => ({
     key: r.key,
     label: locale === "en" ? r.labelEn : r.labelIt,
     domain: interestDomain(r.key),
   }));
-  const initial = saved
+  const initial = saved?.completed
     ? {
         days: saved.days,
         months: saved.months,
+        interests: saved.interests,
         weights: saved.weights,
         pace: saved.pace,
         party: saved.party,
+        airport: saved.airport,
         budgetPerDayEur: saved.budgetPerDayEur,
-        hasCar: saved.hasCar,
+        car: saved.car,
       }
-    : DEFAULT_ANSWERS;
+    : EMPTY_ANSWERS;
 
   return <OnboardingFlow locale={locale} interests={interests} initial={initial} needsSession={!user} />;
 }

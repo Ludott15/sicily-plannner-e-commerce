@@ -17,7 +17,7 @@ insert into public.user_taste (user_id) values (tests.uid('alice'));
 select tests.authenticate_as('alice');
 
 select lives_ok(
-  format($$insert into public.user_constraints (user_id, budget_per_day_eur, has_car) values (%L, 120, true)$$, tests.uid('alice')),
+  format($$insert into public.user_constraints (user_id, budget_per_day_eur, car_access) values (%L, 120, 'own')$$, tests.uid('alice')),
   'proprietario: inserisce i propri vincoli'
 );
 select lives_ok(
