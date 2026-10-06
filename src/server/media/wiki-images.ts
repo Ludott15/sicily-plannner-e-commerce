@@ -22,7 +22,10 @@ const COMMONS_HOSTS = ["commons.wikimedia.org"] as const;
 const GEO_RADIUS_M = 10_000;
 export const MAX_DISTANCE_KM = 25;
 
-export type WikiTarget = { name: string; lat?: number | null; lng?: number | null };
+// placeName: il luogo di un'attività o della prima tappa di un itinerario. La voce del luogo
+// non vale per l'attività: "Corso di cous cous trapanese" non prende la foto di Trapani, che
+// l'attività mostra già con la catena di ripiego.
+export type WikiTarget = { name: string; placeName?: string | null; lat?: number | null; lng?: number | null };
 
 export type WikiPhotoResult =
   | { ok: true; file: CommonsFile; article: string }
@@ -58,7 +61,7 @@ const wikiUrl = (params: Record<string, string>) => `https://it.wikipedia.org/w/
 
 export const wikipediaTitleUrl = (name: string) => wikiUrl({ titles: name });
 export const wikipediaGeoUrl = (lat: number, lng: number) =>
-  wikiUrl({ generator: "geosearch", ggscoord: `${lat}|${lng}`, ggsradius: String(GEO_RADIUS_M), ggslimit: "50" });
+  wikiUrl({ generator: "geosearch", ggscoord: `${lat}|${lng}`, ggsradius: String(GEO_RADIUS_M), ggslimit: "100" });
 export const wikipediaSearchUrl = (name: string) =>
   wikiUrl({ generator: "search", gsrsearch: name, gsrnamespace: "0", gsrlimit: "5" });
 
@@ -95,16 +98,30 @@ export function sameWord(a: string, b: string) {
 // oppure se titolo e nome hanno almeno due parole significative in comune ("Teatro Massimo
 // Vittorio Emanuele" per "Visita al Teatro Massimo"; "Duomo di Cefalù" per "Duomo normanno
 // di Cefalù"). Così "Myriam Catania", "Teatro alla Scala" e "Le ceneri di Pirandello" no.
-export function titleMatch(title: string, name: string): number | null {
+// Con `nearby` (voce entro pochi km dall'entità) basta anche che il titolo contenga tutto il
+// nome: "Cattedrale di Noto" per Noto, se la voce del paese non ha una foto adatta.
+export function titleMatch(title: string, name: string, options: { nearby?: boolean } = {}): number | null {
   const nameWords = keywords(name);
   const titleWords = keywords(title);
   if (nameWords.length === 0 || titleWords.length === 0) return null;
   const shared = nameWords.filter((n) => !GENERIC.has(n) && titleWords.some((t) => sameWord(n, t))).length;
   if (shared === 0) return null;
   const covered = titleWords.every((t) => nameWords.some((n) => sameWord(n, t)));
-  if (!covered && shared < 2) return null;
+  const contains = options.nearby === true && shared === nameWords.length;
+  if (!covered && shared < 2 && !contains) return null;
   return shared * 10 + (covered ? 5 : 0) - titleWords.length;
 }
+
+// Il titolo parla solo del luogo (es. "Trapani" per un'attività a Trapani)?
+const onlyPlace = (title: string, placeName: string | null | undefined) => {
+  if (!placeName) return false;
+  const placeWords = keywords(placeName);
+  return keywords(title).every((t) => placeWords.some((p) => sameWord(p, t)));
+};
+
+// "Noto (Italia)" → "Noto": il qualificatore tra parentesi si ignora solo per le voci vicine
+// (con coordinate entro la distanza massima), non per "Caltagirone (azienda)".
+const withoutQualifier = (title: string) => title.replace(/\s*\([^)]*\)\s*$/, "").trim() || title;
 
 export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const rad = Math.PI / 180;
@@ -129,11 +146,14 @@ export function pickArticles(json: unknown, target: WikiTarget): WikiPage[] {
   return pagesOf(json)
     .flatMap((page) => {
       if (!page.title || page.missing || page.pageprops?.disambiguation !== undefined) return [];
-      const score = titleMatch(page.title, target.name);
-      if (score === null) return [];
       const there = coordsOf(page);
       const km = here && there ? distanceKm(here, there) : null;
       if (km !== null && km > MAX_DISTANCE_KM) return [];
+      const nearby = km !== null;
+      const title = nearby ? withoutQualifier(page.title) : page.title;
+      if (onlyPlace(title, target.placeName)) return [];
+      const score = titleMatch(title, target.name, { nearby });
+      if (score === null) return [];
       return [{ page, score, km: km ?? MAX_DISTANCE_KM, index: page.index ?? 0 }];
     })
     .sort((a, b) => b.score - a.score || a.km - b.km || a.index - b.index)

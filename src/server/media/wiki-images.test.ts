@@ -114,6 +114,24 @@ describe("scelta della voce", () => {
     }
   });
 
+  it("voci vicine: qualificatore tra parentesi ignorato e titolo che contiene il nome; mai la voce del luogo per un'attività", () => {
+    const NOTO = { lat: 36.8906, lng: 15.0697 };
+    expect(pickArticle(search({ title: "Noto (Italia)", at: [36.89, 15.07] }), { name: "Noto", ...NOTO })?.title).toBe("Noto (Italia)");
+    expect(pickArticle(search({ title: "Caltagirone (azienda)" }), { name: "Caltagirone", ...NOTO })).toBeNull();
+    expect(pickArticle(search({ title: "Cattedrale di Noto", at: [36.893, 15.069] }), { name: "Noto", ...NOTO })?.title).toBe("Cattedrale di Noto");
+    expect(pickArticle(search({ title: "Cattedrale di Noto" }), { name: "Noto", ...NOTO })).toBeNull();
+    const TRAPANI = { lat: 38.0176, lng: 12.5365 };
+    expect(pickArticle(search({ title: "Trapani", at: [38.0176, 12.5365] }), { name: "Corso di cous cous trapanese", placeName: "Trapani", ...TRAPANI })).toBeNull();
+    expect(
+      pickArticle(search({ title: "Catania", at: [37.5, 15.08] }, { title: "Pescheria di Catania", at: [37.501, 15.085] }), {
+        name: "Colazione alla pescheria di Catania",
+        placeName: "Catania",
+        lat: 37.5,
+        lng: 15.08,
+      })?.title,
+    ).toBe("Pescheria di Catania");
+  });
+
   it("preferisce la voce più coerente e vicina; scarta disambiguazioni e voci lontane", () => {
     const pages = search(
       { title: "Palermo (disambigua)", disambiguation: true },
