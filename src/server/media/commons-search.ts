@@ -15,7 +15,7 @@ import { wikimediaFetch } from "./wikimedia";
 // Ogni dettaglio passa dagli stessi controlli dell'importatore (parseCommonsResponse); poi si
 // scartano i file senza autore o con persone riconoscibili e si ordina per pertinenza.
 
-const META_FILTER = "Artist|LicenseShortName|License|LicenseUrl|ImageDescription|ObjectName|Restrictions";
+const META_FILTER = "Artist|Credit|LicenseShortName|License|LicenseUrl|ImageDescription|ObjectName|Restrictions";
 const PREVIEW_WIDTH = 960;
 const DETAIL_BATCH = 10;
 const DETAIL_TOP = 20;
@@ -122,7 +122,8 @@ export function searchUrls(target: SearchTarget, options: LicenseOptions = {}) {
 // Passo 2: dettagli di un gruppo di file (licenza, autore, descrizione, miniatura).
 export function detailsUrl(titles: string[], extra: Record<string, string> = {}) {
   return apiUrl({
-    prop: "imageinfo",
+    prop: "imageinfo|categories",
+    cllimit: "max",
     iiprop: "url|size|mime|extmetadata",
     iiurlwidth: String(PREVIEW_WIDTH),
     iiextmetadatalanguage: "it",
@@ -138,7 +139,13 @@ export type SearchStats = { found: number; license: number; small: number; other
 export const emptyStats = (): SearchStats => ({ found: 0, license: 0, small: 0, other: 0, unfit: 0 });
 
 type LitePage = { title: string; width: number; height: number; geo: boolean; text: boolean };
-type ApiPage = { title?: string; index?: number; missing?: boolean; imageinfo?: Array<Record<string, unknown>> };
+type ApiPage = {
+  title?: string;
+  index?: number;
+  missing?: boolean;
+  imageinfo?: Array<Record<string, unknown>>;
+  categories?: Array<{ title?: string }>;
+};
 const pagesOf = (json: unknown) => ((json as { query?: { pages?: ApiPage[] } })?.query?.pages ?? []) as ApiPage[];
 
 // Unisce i risultati leggeri delle interrogazioni, uno per file, scartando subito i non adatti.
@@ -248,9 +255,16 @@ export async function searchCommons(
       let extra: Record<string, string> = {};
       for (let round = 0; round < 4; round++) {
         const json = (await get(detailsUrl(titles, extra))) as { continue?: Record<string, string> };
+        // Le continuazioni portano pezzi diversi (dettagli, categorie): si uniscono.
         for (const page of pagesOf(json)) {
-          if (!page.title || pages.get(page.title)?.imageinfo?.length) continue;
-          pages.set(page.title, page);
+          if (!page.title) continue;
+          const known = pages.get(page.title);
+          pages.set(page.title, {
+            ...known,
+            ...page,
+            imageinfo: known?.imageinfo?.length ? known.imageinfo : page.imageinfo,
+            categories: [...(known?.categories ?? []), ...(page.categories ?? [])],
+          });
         }
         if (!json.continue) break;
         extra = json.continue;

@@ -53,11 +53,14 @@ export function commonsApiUrl(title: string) {
     action: "query",
     format: "json",
     formatversion: "2",
-    prop: "imageinfo",
+    // Le categorie servono per le licenze multiple (es. GFDL + CC BY-SA): extmetadata ne
+    // riporta una sola, le categorie di licenza di Commons tutte.
+    prop: "imageinfo|categories",
+    cllimit: "max",
     iiprop: "url|size|mime|extmetadata",
     iiurlwidth: String(DOWNLOAD_WIDTH),
     iiextmetadatalanguage: "it",
-    iiextmetadatafilter: "Artist|LicenseShortName|License|LicenseUrl|ImageDescription|ObjectName|Restrictions",
+    iiextmetadatafilter: "Artist|Credit|LicenseShortName|License|LicenseUrl|ImageDescription|ObjectName|Restrictions",
     titles: title,
   });
   return `https://commons.wikimedia.org/w/api.php?${params}`;
@@ -88,20 +91,36 @@ export function classifyLicense(
   if (tokens.has("nc")) return { ok: false, error: "license_nc" };
   if (tokens.has("nd")) return { ok: false, error: "license_nd" };
   const url = meta.url && /^https?:\/\//i.test(meta.url.trim()) ? meta.url.trim().replace(/^http:/i, "https:") : null;
+  // I codici hanno spesso un suffisso ("cc-by-sa-3.0-migrated", "cc-by-3.0-it",
+  // "cc-by-sa-3.0,2.5,2.0,1.0"): conta la prima versione.
   if (tokens.has("sa")) {
-    const bySa = /^cc-by-sa-(\d(?:\.\d)?)(?:-[a-z]{2,3})?$/.exec(code) ?? /^cc by-sa (\d(?:\.\d)?)\b/i.exec(short);
+    const bySa = /^cc-by-sa-(\d(?:\.\d)?)/.exec(code) ?? /^cc by-sa (\d(?:\.\d)?)\b/i.exec(short);
     if (!options.allowSa || !bySa) return { ok: false, error: "license_sa" };
     return { ok: true, license: `CC BY-SA ${bySa[1]}`, licenseUrl: url ?? `https://creativecommons.org/licenses/by-sa/${bySa[1]}/` };
   }
   if (code === "cc0" || /^cc0\b/i.test(short)) {
     return { ok: true, license: "CC0 1.0", licenseUrl: url ?? "https://creativecommons.org/publicdomain/zero/1.0/" };
   }
-  const by = /^cc-by-(\d(?:\.\d)?)(?:-[a-z]{2,3})?$/.exec(code);
-  if (by) return { ok: true, license: short || `CC BY ${by[1]}`, licenseUrl: url ?? `https://creativecommons.org/licenses/by/${by[1]}/` };
+  const by = /^cc-by-(\d(?:\.\d)?)/.exec(code) ?? /^cc by (\d(?:\.\d)?)\b/i.exec(short);
+  if (by) return { ok: true, license: `CC BY ${by[1]}`, licenseUrl: url ?? `https://creativecommons.org/licenses/by/${by[1]}/` };
   if (code === "pd" || code.startsWith("pd-") || /^(public domain|pubblico dominio)$/i.test(short)) {
     return { ok: true, license: "Pubblico dominio", licenseUrl: url };
   }
   return { ok: false, error: "license_not_allowed" };
+}
+
+// Licenze dalle categorie del file ("Category:CC-BY-SA-4.0", "Category:CC-Zero",
+// "Category:Public domain"…): servono quando il file ha più licenze ed extmetadata riporta
+// quella non ammessa (GFDL). Si sceglie la più libera tra quelle ammesse.
+export function licenseFromCategories(categories: readonly string[], options: LicenseOptions = {}): LicenseDecision | null {
+  const names = categories.map((c) => c.replace(/^Category:/i, "").trim());
+  if (names.some((n) => /^CC-Zero$/i.test(n))) return classifyLicense({ license: "cc0" });
+  if (names.some((n) => /^Public domain\b|^PD[- ]/i.test(n))) return classifyLicense({ license: "pd" });
+  const by = names.map((n) => /^CC-BY-(\d\.\d)\b/i.exec(n)).find(Boolean);
+  if (by) return classifyLicense({ license: `cc-by-${by[1]}` });
+  const bySa = names.map((n) => /^CC-BY-SA-(\d\.\d)\b/i.exec(n)).find(Boolean);
+  if (bySa && options.allowSa) return classifyLicense({ license: `cc-by-sa-${bySa[1]}` }, options);
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -175,21 +194,22 @@ const ext = (meta: Record<string, ExtValue> | undefined, key: string) => {
 export function parseCommonsResponse(
   json: unknown,
   options: LicenseOptions = {},
-): { ok: true; file: CommonsFile } | { ok: false; error: CommonsError } {
+): { ok: true; file: CommonsFile } | { ok: false; error: CommonsError; license?: string } {
   const page = (json as { query?: { pages?: unknown[] } })?.query?.pages?.[0] as
-    | { title?: string; missing?: boolean; imageinfo?: Array<Record<string, unknown>> }
+    | { title?: string; missing?: boolean; imageinfo?: Array<Record<string, unknown>>; categories?: Array<{ title?: string }> }
     | undefined;
   if (!page || page.missing || !page.imageinfo?.[0]) return { ok: false, error: "file_not_found" };
   const info = page.imageinfo[0]!;
   const meta = info.extmetadata as Record<string, ExtValue> | undefined;
   if (!meta) return { ok: false, error: "metadata_unavailable" };
 
-  const decision = classifyLicense({
-    license: ext(meta, "License"),
-    shortName: htmlToText(ext(meta, "LicenseShortName") ?? "", 80),
-    url: ext(meta, "LicenseUrl"),
-  }, options);
-  if (!decision.ok) return { ok: false, error: decision.error };
+  const shortName = htmlToText(ext(meta, "LicenseShortName") ?? "", 80);
+  let decision = classifyLicense({ license: ext(meta, "License"), shortName, url: ext(meta, "LicenseUrl") }, options);
+  if (!decision.ok && decision.error !== "license_nc" && decision.error !== "license_nd") {
+    const fromCategories = licenseFromCategories((page.categories ?? []).map((c) => c.title ?? ""), options);
+    if (fromCategories?.ok) decision = fromCategories;
+  }
+  if (!decision.ok) return { ok: false, error: decision.error, license: shortName || (ext(meta, "License") ?? undefined) };
 
   const mime = String(info.mime ?? "");
   const width = Number(info.width);
@@ -206,7 +226,14 @@ export function parseCommonsResponse(
     return { ok: false, error: `fetch_${(error as SafeFetchError).code ?? "invalid_url"}` as CommonsError };
   }
   const pageUrl = String(info.descriptionurl ?? "");
-  const { author, authorUrl } = cleanAuthor(ext(meta, "Artist"));
+  // Autore: Artist; se manca, Credit (tranne le diciture generiche come "Opera propria").
+  let { author, authorUrl } = cleanAuthor(ext(meta, "Artist"));
+  if (!author) {
+    const credit = cleanAuthor(ext(meta, "Credit"));
+    if (credit.author && !/^(own work|opera propria|travail personnel|eigenes werk|trabajo propio)\b/i.test(credit.author)) {
+      ({ author, authorUrl } = credit);
+    }
+  }
   const restrictions = (ext(meta, "Restrictions") ?? "").toLowerCase();
   return {
     ok: true,

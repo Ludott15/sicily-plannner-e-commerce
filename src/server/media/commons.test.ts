@@ -132,15 +132,15 @@ describe("parseCommonsResponse", () => {
     });
   });
   it("rifiuta licenza SA o NC, file piccoli e download fuori allowlist", () => {
-    expect(parseCommonsResponse(apiResponse({ ...meta, License: "cc-by-sa-4.0", LicenseShortName: "CC BY-SA 4.0" }))).toEqual({
+    expect(parseCommonsResponse(apiResponse({ ...meta, License: "cc-by-sa-4.0", LicenseShortName: "CC BY-SA 4.0" }))).toMatchObject({
       ok: false,
       error: "license_sa",
     });
-    expect(parseCommonsResponse(apiResponse({ ...meta, License: "cc-by-nc-4.0", LicenseShortName: "CC BY-NC 4.0" }))).toEqual({
+    expect(parseCommonsResponse(apiResponse({ ...meta, License: "cc-by-nc-4.0", LicenseShortName: "CC BY-NC 4.0" }))).toMatchObject({
       ok: false,
       error: "license_nc",
     });
-    expect(parseCommonsResponse(apiResponse({ Artist: "x" }))).toEqual({ ok: false, error: "license_missing" });
+    expect(parseCommonsResponse(apiResponse({ Artist: "x" }))).toMatchObject({ ok: false, error: "license_missing" });
     expect(parseCommonsResponse(apiResponse(meta, { width: 1200, height: 900 }))).toEqual({ ok: false, error: "too_small" });
     expect(parseCommonsResponse(apiResponse(meta, { thumburl: "https://evil.example/x.jpg" }))).toEqual({
       ok: false,
