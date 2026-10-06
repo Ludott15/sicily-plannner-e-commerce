@@ -2,7 +2,7 @@ import "server-only";
 import { asc, eq, inArray, sql } from "drizzle-orm";
 import { activities, activityInterests, areas, interests, places, preferenceWeights, profiles, userConstraints } from "@/server/db/schema";
 import { dbPublic } from "@/server/db/public";
-import { dbAsUser, type DbUser } from "@/server/db/user";
+import { dbAsUser, type DbUser, type UserTx } from "@/server/db/user";
 import { effectiveWeight, type Airport, type CarAccess, type CatalogActivity, type Pace, type Profile } from "./engine";
 import { NEUTRAL } from "@/lib/onboarding";
 
@@ -91,35 +91,61 @@ export async function getSavedPreferences(user: DbUser): Promise<SavedPreference
 const intArray = (values: number[]) => `{${[...new Set(values)].sort((a, b) => a - b).join(",")}}`;
 const textArray = (values: string[]) => `{${[...new Set(values)].sort().join(",")}}`;
 
-// Salva le risposte dell'onboarding: vincoli e viaggio in user_constraints, ritmo e compagnia
-// in profiles, pesi espliciti in preference_weights (scelti con il loro peso, gli altri a 0;
-// implicit non si tocca). SQL esplicito: l'insert di Drizzle elenca anche le colonne con
-// default, su cui authenticated non ha il grant (grant minimi per colonna).
+// Gusti e viaggio (M4 parte 5). I gusti valgono per tutti i viaggi: interessi con i pesi e
+// ritmo (più tolleranze, mobilità e dieta nella pagina Preferenze). Il viaggio è di questa
+// volta: giorni, mesi, con chi, aeroporto, budget e auto. Nei gruppi si aggregano solo i gusti.
+export type TasteAnswers = Pick<OnboardingAnswers, "interests" | "weights" | "pace">;
+export type TripAnswers = Pick<OnboardingAnswers, "days" | "months" | "party" | "airport" | "budgetPerDayEur" | "car">;
+
+// Gusti: pesi espliciti in preference_weights (scelti con il loro peso, gli altri a 0;
+// implicit non si tocca) e ritmo in profiles. SQL esplicito: l'insert di Drizzle elenca anche
+// le colonne con default, su cui authenticated non ha il grant (grant minimi per colonna).
+async function writeTastes(tx: UserTx, user: DbUser, tastes: TasteAnswers) {
+  const keys = (await tx.select({ key: interests.key }).from(interests)).map((r) => r.key);
+  await tx.update(profiles).set({ pace: tastes.pace }).where(eq(profiles.id, user.id));
+  const chosen = new Set(tastes.interests);
+  for (const key of keys) {
+    const explicit = chosen.has(key) ? (tastes.weights[key] ?? NEUTRAL.weight) : 0;
+    await tx.execute(sql`
+      insert into public.preference_weights (user_id, interest_key, explicit)
+      values (${user.id}, ${key}, ${explicit})
+      on conflict (user_id, interest_key) do update set explicit = excluded.explicit, updated_at = now()`);
+  }
+}
+
+// Viaggio: vincoli del viaggio in user_constraints, compagnia in profiles. Restano salvati
+// come ultimi valori usati, per precompilare il viaggio successivo.
+async function writeTrip(tx: UserTx, user: DbUser, trip: TripAnswers) {
+  await tx.execute(sql`
+    insert into public.user_constraints (user_id, budget_per_day_eur, car_access, trip_days, trip_months, arrival_airport)
+    values (${user.id}, ${trip.budgetPerDayEur}, ${trip.car}, ${trip.days}, ${intArray(trip.months)}::smallint[], ${trip.airport})
+    on conflict (user_id) do update set
+      budget_per_day_eur = excluded.budget_per_day_eur,
+      car_access = excluded.car_access,
+      trip_days = excluded.trip_days,
+      trip_months = excluded.trip_months,
+      arrival_airport = excluded.arrival_airport`);
+  await tx.update(profiles).set({ party: trip.party }).where(eq(profiles.id, user.id));
+}
+
+// Fine del percorso completo: gusti e viaggio, e i gusti risultano completati
+// (profiles.onboarding_completed_at).
 export async function saveAnswers(user: DbUser, answers: OnboardingAnswers): Promise<void> {
   await dbAsUser(user, async (tx) => {
-    const keys = (await tx.select({ key: interests.key }).from(interests)).map((r) => r.key);
-    await tx.execute(sql`
-      insert into public.user_constraints (user_id, budget_per_day_eur, car_access, trip_days, trip_months, arrival_airport)
-      values (${user.id}, ${answers.budgetPerDayEur}, ${answers.car}, ${answers.days}, ${intArray(answers.months)}::smallint[], ${answers.airport})
-      on conflict (user_id) do update set
-        budget_per_day_eur = excluded.budget_per_day_eur,
-        car_access = excluded.car_access,
-        trip_days = excluded.trip_days,
-        trip_months = excluded.trip_months,
-        arrival_airport = excluded.arrival_airport`);
-    await tx
-      .update(profiles)
-      .set({ pace: answers.pace, party: answers.party, onboardingCompletedAt: new Date() })
-      .where(eq(profiles.id, user.id));
-    const chosen = new Set(answers.interests);
-    for (const key of keys) {
-      const explicit = chosen.has(key) ? (answers.weights[key] ?? NEUTRAL.weight) : 0;
-      await tx.execute(sql`
-        insert into public.preference_weights (user_id, interest_key, explicit)
-        values (${user.id}, ${key}, ${explicit})
-        on conflict (user_id, interest_key) do update set explicit = excluded.explicit, updated_at = now()`);
-    }
+    await writeTastes(tx, user, answers);
+    await writeTrip(tx, user, answers);
+    await tx.update(profiles).set({ onboardingCompletedAt: new Date() }).where(eq(profiles.id, user.id));
   });
+}
+
+// Pagina Preferenze: solo i gusti.
+export async function saveTastes(user: DbUser, tastes: TasteAnswers): Promise<void> {
+  await dbAsUser(user, (tx) => writeTastes(tx, user, tastes));
+}
+
+// "Il tuo prossimo viaggio" (gusti già completati): solo il viaggio.
+export async function saveTrip(user: DbUser, trip: TripAnswers): Promise<void> {
+  await dbAsUser(user, (tx) => writeTrip(tx, user, trip));
 }
 
 // Preferenze in più. Mobilità ridotta e dieta si salvano solo con il consenso; senza consenso

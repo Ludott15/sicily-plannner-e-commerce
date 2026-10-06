@@ -83,12 +83,13 @@ export default async function ProposalsPage({ params }: Props) {
           <h1 className="is-display text-display-l">{personal ? t("title") : t("titleGeneric")}</h1>
           <p className="mt-3 text-body-l text-pretty text-lava-muted">{personal ? t("intro") : t("introGeneric")}</p>
         </div>
+        {/* Due link distinti (M4 parte 5): il viaggio di questa volta e i gusti di sempre. */}
         <div className="flex flex-wrap gap-2">
-          <ButtonLink href="/preferenze" variant="secondary">
-            {t("preferences")}
-          </ButtonLink>
           <ButtonLink href="/viaggio/nuovo" variant="secondary">
-            {t("changePreferences")}
+            {t("changeTrip")}
+          </ButtonLink>
+          <ButtonLink href="/preferenze" variant="secondary">
+            {t("editTastes")}
           </ButtonLink>
         </div>
       </div>
@@ -97,7 +98,7 @@ export default async function ProposalsPage({ params }: Props) {
         <div className="mt-10 flex flex-col items-start gap-4">
           <p className="text-body-l">{t("empty")}</p>
           <ButtonLink href="/viaggio/nuovo" variant="primary">
-            {t("changePreferences")}
+            {t("changeTrip")}
           </ButtonLink>
         </div>
       ) : (

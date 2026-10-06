@@ -1,11 +1,12 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { routing } from "@/lib/i18n/routing";
 import { getUser, requireUser } from "@/server/auth";
 import { createClient } from "@/server/supabase/server";
-import { clearSensitivePreferences, saveAnswers, saveExtraPreferences } from "./data";
+import { clearSensitivePreferences, getSavedPreferences, saveAnswers, saveExtraPreferences, saveTastes, saveTrip } from "./data";
 
 // Onboarding e Preferenze (M4): Zod → utente (o nuova sessione ospite, protetta da Turnstile)
 // → scrittura con dbAsUser. Sono dati personali: restano dell'utente, e nella conversione da
@@ -14,18 +15,22 @@ import { clearSensitivePreferences, saveAnswers, saveExtraPreferences } from "./
 const DIETS = ["vegetarian", "vegan", "gluten_free", "lactose_free"] as const;
 const interestKey = z.string().regex(/^[a-z_]{1,40}$/);
 
-const answersShape = {
-  // null = domanda saltata (valori neutri in src/lib/onboarding.ts).
-  days: z.number().int().min(1).max(14).nullable(),
-  months: z.array(z.number().int().min(1).max(12)).max(12),
+// Gusti (valgono per tutti i viaggi) e viaggio (di questa volta): docs/spec.md, M4 parte 5.
+// null = domanda saltata (valori neutri in src/lib/onboarding.ts).
+const tasteShape = {
   interests: z.array(interestKey).max(30),
   weights: z.record(interestKey, z.number().int().min(0).max(5)),
   pace: z.enum(["relaxed", "balanced", "intense"]).nullable(),
+};
+const tripShape = {
+  days: z.number().int().min(1).max(14).nullable(),
+  months: z.array(z.number().int().min(1).max(12)).max(12),
   party: z.enum(["solo", "couple", "family", "friends"]).nullable(),
   airport: z.enum(["CTA", "PMO", "TPS", "CIY"]).nullable(),
   budgetPerDayEur: z.number().int().min(0).max(2000).nullable(),
   car: z.enum(["own", "rental", "none"]).nullable(),
 };
+const answersShape = { ...tasteShape, ...tripShape };
 
 const onboardingSchema = z.object({
   locale: z.enum(routing.locales),
@@ -60,9 +65,31 @@ export async function submitOnboarding(input: OnboardingInput): Promise<ActionEr
   redirect(`/${locale}/viaggio/proposte`);
 }
 
+const tripSchema = z.object({ locale: z.enum(routing.locales), ...tripShape });
+export type TripInput = Omit<z.input<typeof tripSchema>, "locale"> & { locale: string };
+
+// "Il tuo prossimo viaggio": chi ha già i gusti completati sceglie solo il viaggio.
+export async function submitTrip(input: TripInput): Promise<ActionError> {
+  const parsed = tripSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", code: "invalid" };
+  const user = await requireUser();
+  const { locale, ...trip } = parsed.data;
+  try {
+    // Senza gusti completati la schermata singola non esiste: si fa il percorso completo.
+    const saved = await getSavedPreferences(user);
+    if (!saved?.completed) return { status: "error", code: "invalid" };
+    await saveTrip(user, trip);
+  } catch {
+    return { status: "error", code: "failed" };
+  }
+  // Le pagine personali in cache nel browser mostrano i valori nuovi anche con Indietro.
+  revalidatePath("/", "layout");
+  redirect(`/${locale}/viaggio/proposte`);
+}
+
 const preferencesSchema = z.object({
   locale: z.enum(routing.locales),
-  ...answersShape,
+  ...tasteShape,
   reducedMobility: z.boolean(),
   diet: z.array(z.enum(DIETS)).max(DIETS.length),
   heatTolerance: z.number().int().min(0).max(5).nullable(),
@@ -72,18 +99,20 @@ const preferencesSchema = z.object({
 
 export type PreferencesInput = Omit<z.input<typeof preferencesSchema>, "locale"> & { locale: string };
 
-// Pagina Preferenze: tutte le risposte più mobilità ridotta, dieta e tolleranze.
+// Pagina Preferenze: solo i gusti (interessi e pesi, ritmo, tolleranze, mobilità e dieta).
+// Il viaggio si cambia da "Crea il tuo viaggio".
 export async function savePreferences(input: PreferencesInput): Promise<ActionError> {
   const parsed = preferencesSchema.safeParse(input);
   if (!parsed.success) return { status: "error", code: "invalid" };
   const user = await requireUser();
-  const { locale, reducedMobility, diet, heatTolerance, crowdTolerance, sensitiveConsent, ...answers } = parsed.data;
+  const { locale, reducedMobility, diet, heatTolerance, crowdTolerance, sensitiveConsent, ...tastes } = parsed.data;
   try {
-    await saveAnswers(user, answers);
+    await saveTastes(user, tastes);
     await saveExtraPreferences(user, { reducedMobility, diet, heatTolerance, crowdTolerance, sensitiveConsent });
   } catch {
     return { status: "error", code: "failed" };
   }
+  revalidatePath("/", "layout");
   redirect(`/${locale}/preferenze?salvate=1`);
 }
 

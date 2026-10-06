@@ -10,21 +10,14 @@ import {
   type PreferencesInput,
 } from "@/server/personalization/actions";
 import type { ExtraPreferences, OnboardingAnswers } from "@/server/personalization/data";
-import {
-  AirportField,
-  BudgetCarField,
-  DaysField,
-  InterestsField,
-  PaceField,
-  PartyField,
-  WeightsField,
-  type Interest,
-} from "./fields";
+import { InterestsField, PaceField, WeightsField, type Interest } from "./fields";
 
-// Pagina Preferenze: tutte le risposte dell'onboarding, più tolleranza al caldo e alla folla,
-// mobilità ridotta e dieta. Queste ultime sono dati sensibili: si compilano solo dopo aver
-// spuntato il consenso (testo in sospeso, lo scrive Ludovico), e si possono cancellare.
-// Lo scoring usa mobilità e dieta come vincoli rigidi.
+// Pagina Preferenze: solo i gusti, che valgono per tutti i viaggi (M4 parte 5): interessi con
+// i pesi, ritmo, tolleranza al caldo e alla folla, mobilità ridotta e dieta. Giorni, periodo,
+// compagnia, aeroporto, budget e auto sono del viaggio e stanno in "Crea il tuo viaggio".
+// Mobilità e dieta sono dati sensibili: si compilano solo dopo aver spuntato il consenso
+// (testo in sospeso, lo scrive Ludovico), e si possono cancellare. Lo scoring le usa come
+// filtri; la dieta è indicativa.
 
 const DIETS = ["vegetarian", "vegan", "gluten_free", "lactose_free"] as const;
 
@@ -54,7 +47,14 @@ export function PreferencesForm({
     event.preventDefault();
     setError(null);
     startTransition(async () => {
-      const result = await savePreferences({ locale, ...answers, ...extra, diet: extra.diet as PreferencesInput["diet"] });
+      const result = await savePreferences({
+        locale,
+        interests: answers.interests,
+        weights: answers.weights,
+        pace: answers.pace,
+        ...extra,
+        diet: extra.diet as PreferencesInput["diet"],
+      });
       if (result?.status === "error") setError(result.code);
     });
   }
@@ -78,13 +78,9 @@ export function PreferencesForm({
 
   return (
     <form onSubmit={save} className="flex flex-col gap-8">
-      {section("viaggio", tq("daysTitle"), <DaysField answers={answers} set={set} />)}
       {section("interessi", tq("interestsTitle"), <InterestsField answers={answers} set={set} interests={interests} />)}
       {section("pesi", tq("weightsTitle"), <WeightsField answers={answers} set={set} interests={interests} />)}
       {section("ritmo", tq("paceTitle"), <PaceField answers={answers} set={set} />)}
-      {section("compagnia", tq("partyTitle"), <PartyField answers={answers} set={set} />)}
-      {section("arrivo", tq("airportTitle"), <AirportField answers={answers} set={set} />)}
-      {section("budget", tq("budgetTitle"), <BudgetCarField answers={answers} set={set} />)}
       {section(
         "tolleranze",
         t("tolerancesTitle"),

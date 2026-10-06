@@ -7,7 +7,9 @@ import { requireUser } from "@/server/auth";
 import { listInterests } from "@/server/catalog/queries";
 import { EMPTY_ANSWERS, getSavedPreferences } from "@/server/personalization/data";
 
-// Preferenze: tutte le risposte modificabili, anche per un ospite. Pagina personale.
+// Preferenze: i gusti, che valgono per tutti i viaggi (M4 parte 5), anche per un ospite. Il
+// viaggio (giorni, periodo, compagnia, aeroporto, budget, auto) si sceglie in "Crea il tuo
+// viaggio". Senza gusti salvati: una frase e il pulsante per crearli. Pagina personale.
 type Props = { params: Promise<{ locale: string }>; searchParams: Promise<{ salvate?: string; cancellati?: string }> };
 
 export async function generateMetadata({ params }: Omit<Props, "searchParams">): Promise<Metadata> {
@@ -27,36 +29,36 @@ export default async function PreferencesPage({ params, searchParams }: Props) {
     searchParams,
   ]);
   const interests = rows.map((r) => ({ key: r.key, label: locale === "en" ? r.labelEn : r.labelIt, domain: interestDomain(r.key) }));
-  const answers = saved
-    ? {
-        days: saved.days,
-        months: saved.months,
-        interests: saved.interests,
-        weights: saved.weights,
-        pace: saved.pace,
-        party: saved.party,
-        airport: saved.airport,
-        budgetPerDayEur: saved.budgetPerDayEur,
-        car: saved.car,
-      }
-    : EMPTY_ANSWERS;
+  if (!saved?.completed) {
+    return (
+      <section className="mx-auto flex w-full max-w-2xl flex-col items-start gap-4 px-4 py-10">
+        <h1 className="is-display text-display-l">{t("heading")}</h1>
+        <p className="text-body-l text-pretty text-lava-muted">{t("empty")}</p>
+        <ButtonLink href="/viaggio/nuovo" variant="primary">
+          {t("createTrip")}
+        </ButtonLink>
+      </section>
+    );
+  }
+  const answers = { ...EMPTY_ANSWERS, interests: saved.interests, weights: saved.weights, pace: saved.pace };
   const extra = {
-    reducedMobility: saved?.reducedMobility ?? false,
-    diet: saved?.diet ?? [],
-    heatTolerance: saved?.heatTolerance ?? null,
-    crowdTolerance: saved?.crowdTolerance ?? null,
-    sensitiveConsent: saved?.sensitiveConsent ?? false,
+    reducedMobility: saved.reducedMobility,
+    diet: saved.diet,
+    heatTolerance: saved.heatTolerance,
+    crowdTolerance: saved.crowdTolerance,
+    sensitiveConsent: saved.sensitiveConsent,
   };
 
   return (
     <section className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="is-display text-display-l">{t("title")}</h1>
-        {saved?.completed && (
-          <ButtonLink href="/viaggio/proposte" variant="secondary">
-            {t("seeTrips")}
-          </ButtonLink>
-        )}
+        <div className="flex flex-col gap-2">
+          <h1 className="is-display text-display-l">{t("heading")}</h1>
+          <p className="text-body-l text-pretty text-lava-muted">{t("subtitle")}</p>
+        </div>
+        <ButtonLink href="/viaggio/proposte" variant="secondary">
+          {t("seeTrips")}
+        </ButtonLink>
       </div>
       <FormNotice message={salvate ? t("saved") : cancellati ? t("deleted") : null} />
       <PreferencesForm

@@ -94,8 +94,7 @@
     "email": "Email",
     "displayName": "Nome",
     "role": "Ruolo",
-    "memberSince": "Iscritto dal",
-    "preferences": "Preferenze"
+    "memberSince": "Iscritto dal"
   },
   "Catalog": {
     "activitiesTitle": "Attività in Sicilia",
@@ -507,13 +506,18 @@
       "invalid": "Qualche risposta non è valida. Ricarica la pagina e riprova.",
       "captcha_failed": "Non siamo riusciti a verificare che sei una persona. Ricarica la pagina e riprova.",
       "failed": "Non siamo riusciti a salvare le risposte. Riprova."
-    }
+    },
+    "tripTitle": "Il tuo prossimo viaggio",
+    "tripHint": "I tuoi gusti restano quelli salvati: scegli giorni, periodo, con chi viaggi e come ti sposti.",
+    "tastesTitle": "I tuoi gusti",
+    "editTastes": "Modifica i gusti",
+    "tastesNone": "Nessun interesse indicato: i viaggi partono da tutto il catalogo.",
+    "tastesPace": "Ritmo: {pace}"
   },
   "Proposals": {
     "title": "Ecco tre viaggi pensati per te",
     "intro": "Costruiti dal catalogo con le tue risposte. Ogni tappa dice perché è lì.",
-    "changePreferences": "Cambia preferenze",
-    "empty": "Con queste risposte nessuna zona ha abbastanza attività per tutti i giorni scelti. Prova con meno giorni, o allarga periodo, budget o interessi.",
+    "empty": "Con questo viaggio nessuna zona ha abbastanza attività per tutti i giorni scelti. Prova con meno giorni, o allarga periodo e budget.",
     "proposalTitle": "Viaggio {n} · {area}",
     "proposalMeta": "{days, plural, one {# giorno} other {# giorni}}",
     "day": "Giorno {n} · {places}",
@@ -535,7 +539,6 @@
     "needsRentalCar": "Alcune tappe si raggiungono solo in auto: per questo viaggio serve un'auto a noleggio.",
     "needsCar": "Alcune tappe si raggiungono solo in auto.",
     "rentCar": "Noleggia un'auto",
-    "preferences": "Preferenze",
     "whyArea": "Perché questa zona",
     "dietNote": "Indicativo: conferma sempre con chi organizza",
     "areaReasons": {
@@ -545,13 +548,15 @@
       "noCar": "Nessuna tappa richiede l'auto",
       "variant": "Pochi viaggi in più zone per i giorni scelti: questa variante dà più spazio a {interest}",
       "stops": "{stops, plural, one {# tappa} other {# tappe}} in {days, plural, one {# giorno} other {# giorni}} senza cambiare zona"
-    }
+    },
+    "changeTrip": "Cambia il viaggio",
+    "editTastes": "Modifica i tuoi gusti"
   },
   "Preferences": {
     "title": "Preferenze",
     "seeTrips": "Vedi i tre viaggi",
-    "save": "Salva le preferenze",
-    "saved": "Preferenze salvate.",
+    "save": "Salva i gusti",
+    "saved": "Gusti salvati.",
     "deleted": "Mobilità e dieta cancellate.",
     "tolerancesTitle": "Caldo e folla",
     "heat": "Quanto sopporti il caldo",
@@ -565,6 +570,10 @@
       "gluten_free": "Senza glutine",
       "lactose_free": "Senza lattosio"
     },
-    "deleteSensitive": "Cancella mobilità e dieta"
+    "deleteSensitive": "Cancella mobilità e dieta",
+    "heading": "I tuoi gusti",
+    "subtitle": "Valgono per tutti i tuoi viaggi. Giorni, periodo, compagnia, aeroporto, budget e auto li scegli a ogni viaggio, in \"Crea il tuo viaggio\".",
+    "empty": "Non ci hai ancora detto cosa ti piace. Bastano poche domande, e valgono per tutti i tuoi viaggi.",
+    "createTrip": "Crea il tuo viaggio"
   }
 }

@@ -23,7 +23,7 @@ async function guestWithAnswers(page: Page, extra?: { diet: string[] }) {
   });
 }
 
-test("tre viaggi in tre aree diverse, con il perché della zona e il link alle Preferenze", async ({ page }) => {
+test("tre viaggi in tre aree diverse, con il perché della zona; Preferenze solo nel menu utente", async ({ page }) => {
   await guestWithAnswers(page);
   await page.goto("/it/viaggio/proposte");
   const proposals = page.locator("li[data-area]");
@@ -32,7 +32,9 @@ test("tre viaggi in tre aree diverse, con il perché della zona e il link alle P
   expect(new Set(areas).size).toBe(3);
   await expect(page.getByRole("heading", { name: "Perché questa zona" })).toHaveCount(3);
   await expect(page.getByRole("heading", { level: 2, name: /^Viaggio 1 · / })).toBeVisible();
-  await expect(page.getByRole("main").getByRole("link", { name: "Preferenze", exact: true })).toHaveAttribute("href", "/it/preferenze");
+  await expect(page.getByRole("main").getByRole("link", { name: "Modifica i tuoi gusti" })).toHaveAttribute("href", "/it/preferenze");
+  await expect(page.getByRole("main").getByRole("link", { name: "Cambia il viaggio" })).toHaveAttribute("href", "/it/viaggio/nuovo");
+  await expect(page.getByRole("main").getByRole("link", { name: "Preferenze", exact: true })).toHaveCount(0);
   await expect(page.getByRole("banner").getByRole("link", { name: "Preferenze", exact: true })).toBeVisible();
   // Senza dieta nessuna riga "Indicativo".
   await expect(page.getByText("Indicativo: conferma sempre con chi organizza")).toHaveCount(0);

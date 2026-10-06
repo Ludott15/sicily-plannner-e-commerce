@@ -1,6 +1,6 @@
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { EmailCodeForm } from "@/components/auth/email-code-form";
-import { Button, ButtonLink } from "@/components/design";
+import { Button } from "@/components/design";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProfile, requireUser } from "@/server/auth";
 import { signOut } from "@/server/auth/actions";
@@ -69,9 +69,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
               </div>
             ))}
           </dl>
-          <ButtonLink href="/preferenze" variant="secondary" size="sm" className="mt-6">
-            {t("preferences")}
-          </ButtonLink>
         </CardContent>
       </Card>
     </section>
