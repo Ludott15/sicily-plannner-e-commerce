@@ -16,6 +16,8 @@ export type ActivityCardProps = {
   title: string;
   placeName: string;
   imageUrl?: string | null;
+  // Immagine già pronta (CoverPicture del catalogo, con varianti e srcset): ha la precedenza su imageUrl.
+  image?: ReactNode;
   tag?: { label: string; domain?: Domain };
   meta: string[];
   why?: Why;
@@ -24,7 +26,7 @@ export type ActivityCardProps = {
   action?: ReactNode;
 };
 
-export function ActivityCard({ href, title, placeName, imageUrl, tag, meta, why, price, save, action }: ActivityCardProps) {
+export function ActivityCard({ href, title, placeName, imageUrl, image, tag, meta, why, price, save, action }: ActivityCardProps) {
   if (process.env.NODE_ENV !== "production" && meta.length > 3) {
     console.warn(`ActivityCard "${title}": al massimo tre metadati, ricevuti ${meta.length}.`);
   }
@@ -32,8 +34,9 @@ export function ActivityCard({ href, title, placeName, imageUrl, tag, meta, why,
   return (
     <article className="is-card">
       <div className="is-card__media">
-        {imageUrl ? (
-          // Le foto del catalogo arrivano da URL esterni configurati dall'admin.
+        {image ? (
+          image
+        ) : imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={imageUrl} alt="" loading="lazy" />
         ) : (

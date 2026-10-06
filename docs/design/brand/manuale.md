@@ -72,7 +72,7 @@ Regole:
 
 ## Fotografia
 
-Foto reali, luce naturale calda, persone che fanno cose, non cartoline vuote o droni patinati. Formati: 4:5 per le card, 16:9 o piena larghezza per gli hero, 1:1 per i prodotti. Mai testo sopra la foto. Didascalia con luogo e autore in `caption`. Fino alle foto vere, segnaposto `calce-sunk` con il nome del luogo, mai foto di stock.
+Foto vere del luogo vero, luce naturale calda, persone che fanno cose (solo con il loro consenso), non cartoline vuote o droni patinati. Mai foto di stock generiche, mai immagini generate. Formati: 4:5 per le card, 16:9 o piena larghezza per gli hero, 1:1 per i prodotti, ritagliati sul punto focale. Mai testo sopra la foto. Didascalia in `caption` sotto le immagini di pagina: "Foto: autore, licenza" con i link, "modificata" quando la foto è ritagliata o ridotta; le illustrazioni delle aree dicono "Illustrazione di Isula". Senza foto propria, la pagina usa la foto del luogo e poi l'illustrazione dell'area; il segnaposto `calce-sunk` con il nome del luogo resta solo come ultimo caso, che in produzione non deve capitare. Licenze ammesse, beni culturali e importazione da Wikimedia Commons: [docs/IMMAGINI.md](../../IMMAGINI.md).
 
 ## Icone
 

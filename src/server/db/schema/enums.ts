@@ -52,3 +52,6 @@ export const orderStatus = pgEnum("order_status", [
 export const localTipAuthorKind = pgEnum("local_tip_author_kind", ["editorial", "person"]);
 // Auto nel viaggio: propria, a noleggio, nessuna (onboarding, domanda "Budget e spostamenti").
 export const carAccess = pgEnum("car_access", ["own", "rental", "none"]);
+// Immagini del catalogo: foto vera o illustrazione, e da dove viene (docs/IMMAGINI.md).
+export const mediaKind = pgEnum("media_kind", ["photo", "illustration"]);
+export const mediaSourceType = pgEnum("media_source_type", ["own", "licensed", "partner", "illustration"]);
