@@ -1,6 +1,6 @@
 import "server-only";
 import type { CommonsFile } from "@/lib/media-admin";
-import { COMMONS_API_HOSTS, parseCommonsResponse } from "./commons";
+import { COMMONS_API_HOSTS, parseCommonsResponse, type LicenseOptions } from "./commons";
 import { SafeFetchError, safeFetch, type Transport } from "./safe-fetch";
 
 // Ricerca di foto su Wikimedia Commons per un'entità del catalogo (luogo, attività, itinerario,
@@ -83,7 +83,15 @@ function apiUrl(params: Record<string, string>) {
   return `https://commons.wikimedia.org/w/api.php?${search}`;
 }
 
-export function searchUrls(target: SearchTarget) {
+// Licenze ammesse nei dati strutturati di Commons (P275 licenza, P6216 stato del copyright):
+// CC0, CC BY 2.0/2.5/3.0/4.0, pubblico dominio; con allowSa anche CC BY-SA 2.0/2.5/3.0/4.0.
+// La gran parte delle foto su Commons è CC BY-SA: senza questo filtro le poche foto ammesse si
+// perdono tra le prime decine di risultati.
+const LICENSE_FILTER = ["P275=Q6938433", "P275=Q19125117", "P275=Q18810333", "P275=Q14947546", "P275=Q20007257", "P6216=Q19652"];
+const SA_FILTER = ["P275=Q19068220", "P275=Q19113751", "P275=Q14946043", "P275=Q18199165"];
+
+export function searchUrls(target: SearchTarget, options: LicenseOptions = {}) {
+  const licenses = [...LICENSE_FILTER, ...(options.allowSa ? SA_FILTER : [])].join("|");
   const urls: Array<{ url: string; geo: boolean }> = [];
   if (target.lat != null && target.lng != null) {
     urls.push({
@@ -91,27 +99,47 @@ export function searchUrls(target: SearchTarget) {
       url: apiUrl({
         generator: "geosearch",
         ggscoord: `${target.lat}|${target.lng}`,
-        ggsradius: "3000",
+        ggsradius: "10000",
         ggsnamespace: "6",
-        ggslimit: "40",
+        // Oltre 50 file l'API non restituisce le miniature (iiurlwidth) nella stessa risposta.
+        ggslimit: "50",
       }),
     });
   }
   urls.push({
     geo: false,
-    url: apiUrl({ generator: "search", gsrsearch: `${target.query} filetype:bitmap`, gsrnamespace: "6", gsrlimit: "30" }),
+    url: apiUrl({
+      generator: "search",
+      gsrsearch: `${target.query} filetype:bitmap haswbstatement:${licenses}`,
+      gsrnamespace: "6",
+      gsrlimit: "50",
+    }),
+  });
+  urls.push({
+    geo: false,
+    url: apiUrl({ generator: "search", gsrsearch: `${target.query} filetype:bitmap`, gsrnamespace: "6", gsrlimit: "50" }),
   });
   return urls;
 }
 
+// Perché i file trovati sono stati scartati: si mostra all'admin quando una ricerca non
+// trova niente ("40 trovate: 31 con licenza non ammessa…").
+export type SearchStats = { found: number; license: number; small: number; other: number; unfit: number };
+export const emptyStats = (): SearchStats => ({ found: 0, license: 0, small: 0, other: 0, unfit: 0 });
+
 // Pagine di una risposta dell'API → candidati validi (stessi controlli dell'importatore).
-export function parseCandidates(json: unknown): CommonsFile[] {
+export function parseCandidates(json: unknown, options: LicenseOptions = {}, stats: SearchStats = emptyStats()): CommonsFile[] {
   const pages = ((json as { query?: { pages?: unknown[] } })?.query?.pages ?? []) as Array<{ index?: number }>;
   return [...pages]
     .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
     .flatMap((page) => {
-      const parsed = parseCommonsResponse({ query: { pages: [page] } });
-      return parsed.ok ? [parsed.file] : [];
+      stats.found++;
+      const parsed = parseCommonsResponse({ query: { pages: [page] } }, options);
+      if (parsed.ok) return [parsed.file];
+      if (parsed.error.startsWith("license_")) stats.license++;
+      else if (parsed.error === "too_small") stats.small++;
+      else stats.other++;
+      return [];
     });
 }
 
@@ -119,6 +147,7 @@ export function rankCandidates(
   results: Array<{ files: CommonsFile[]; geo: boolean }>,
   target: SearchTarget,
   exclude: ReadonlySet<string> = new Set(),
+  stats: SearchStats = emptyStats(),
 ): CommonsCandidate[] {
   const words = keywords(target.name);
   // Un file trovato sia per posizione sia per nome vale di più: si tengono entrambe le provenienze.
@@ -127,8 +156,10 @@ export function rankCandidates(
     for (const file of files) {
       if (!file.pageUrl || exclude.has(file.pageUrl)) continue;
       // Serve un autore (la didascalia lo cita) e niente persone riconoscibili senza consenso.
-      if (!file.author || file.warnings.includes("personality")) continue;
-      if (NOT_A_PHOTO.test(file.title)) continue;
+      if (!file.author || file.warnings.includes("personality") || NOT_A_PHOTO.test(file.title)) {
+        stats.unfit++;
+        continue;
+      }
       const entry = byPage.get(file.pageUrl) ?? { file, geo: false, text: false };
       if (geo) entry.geo = true;
       else entry.text = true;
@@ -141,21 +172,28 @@ export function rankCandidates(
   const ranked: CommonsCandidate[] = [];
   for (const { file, geo, text } of byPage.values()) {
     const { score, matched } = scoreCandidate(file, words, geo);
-    if (matched.length < needed && (target.requireNameMatch || !geo)) continue;
+    if (matched.length < needed && (target.requireNameMatch || !geo)) {
+      stats.unfit++;
+      continue;
+    }
     ranked.push({ ...file, previewUrl: file.downloadUrl, score: score + (geo && text ? 2 : 0), matched });
   }
   return ranked.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
 }
 
-export type SearchResult = { ok: true; candidates: CommonsCandidate[] } | { ok: false; error: `fetch_${SafeFetchError["code"]}` | "metadata_unavailable" };
+export type SearchResult =
+  | { ok: true; candidates: CommonsCandidate[]; stats: SearchStats }
+  | { ok: false; error: `fetch_${SafeFetchError["code"]}` | "metadata_unavailable" };
 
 export async function searchCommons(
   target: SearchTarget,
   exclude: ReadonlySet<string> = new Set(),
   transport?: Transport,
+  options: LicenseOptions = {},
 ): Promise<SearchResult> {
   const results: Array<{ files: CommonsFile[]; geo: boolean }> = [];
-  for (const { url, geo } of searchUrls(target)) {
+  const stats = emptyStats();
+  for (const { url, geo } of searchUrls(target, options)) {
     try {
       const res = await safeFetch(url, {
         allowedHosts: COMMONS_API_HOSTS,
@@ -164,11 +202,11 @@ export async function searchCommons(
         timeoutMs: 15_000,
         transport,
       });
-      results.push({ files: parseCandidates(JSON.parse(res.body.toString("utf8"))), geo });
+      results.push({ files: parseCandidates(JSON.parse(res.body.toString("utf8")), options, stats), geo });
     } catch (error) {
       if (error instanceof SyntaxError) return { ok: false, error: "metadata_unavailable" };
       return { ok: false, error: error instanceof SafeFetchError ? `fetch_${error.code}` : "fetch_network" };
     }
   }
-  return { ok: true, candidates: rankCandidates(results, target, exclude) };
+  return { ok: true, candidates: rankCandidates(results, target, exclude, stats), stats };
 }

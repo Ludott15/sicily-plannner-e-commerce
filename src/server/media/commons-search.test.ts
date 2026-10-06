@@ -49,6 +49,15 @@ describe("rankCandidates", () => {
   const place: SearchTarget = { name: "Ortigia", query: "ortigia", lat: 37.06, lng: 15.29, requireNameMatch: false };
   const activity: SearchTarget = { name: "Corso di cous cous trapanese", query: "cous trapanese", requireNameMatch: true };
 
+  it("CC BY-SA solo con allowSa, e i motivi di scarto si contano", async () => {
+    const api = () => fakeApi({ geo: files(page("Ortigia SA.jpg", { license: "cc-by-sa-4.0" }), page("Ortigia piccola.jpg", { width: 900, height: 600 })) });
+    const without = await searchCommons(place, new Set(), api());
+    expect(without.ok && without.candidates).toEqual([]);
+    expect(without.ok && without.stats).toEqual({ found: 2, license: 1, small: 1, other: 0, unfit: 0 });
+    const withSa = await searchCommons(place, new Set(), api(), { allowSa: true });
+    expect(withSa.ok && withSa.candidates.map((c) => [c.title, c.license])).toEqual([["File:Ortigia SA.jpg", "CC BY-SA 4.0"]]);
+  });
+
   it("scarta licenze non ammesse, autori mancanti, persone riconoscibili, mappe e stemmi", async () => {
     const transport = fakeApi({
       geo: files(
@@ -123,10 +132,18 @@ describe("searchUrls", () => {
     expect(urls.map((u) => [new URL(u.url).host, u.geo])).toEqual([
       ["commons.wikimedia.org", true],
       ["commons.wikimedia.org", false],
+      ["commons.wikimedia.org", false],
     ]);
     expect(new URL(urls[0]!.url).searchParams.get("ggscoord")).toBe("36.89|15.07");
-    expect(new URL(urls[1]!.url).searchParams.get("gsrsearch")).toBe("noto filetype:bitmap");
-    expect(searchUrls({ name: "Ovest", query: "ovest Sicilia", requireNameMatch: true })).toHaveLength(1);
+    // Prima la ricerca filtrata sulle licenze ammesse (dati strutturati), poi quella libera.
+    const filtered = new URL(urls[1]!.url).searchParams.get("gsrsearch")!;
+    expect(filtered).toMatch(/^noto filetype:bitmap haswbstatement:P275=Q6938433\|/);
+    expect(filtered).not.toContain("Q18199165");
+    expect(new URL(urls[2]!.url).searchParams.get("gsrsearch")).toBe("noto filetype:bitmap");
+    expect(new URL(searchUrls({ name: "Noto", query: "noto", requireNameMatch: false }, { allowSa: true })[0]!.url).searchParams.get("gsrsearch")).toContain(
+      "P275=Q18199165",
+    );
+    expect(searchUrls({ name: "Ovest", query: "ovest Sicilia", requireNameMatch: true })).toHaveLength(2);
   });
 
   it("un errore di rete diventa un codice, senza eccezioni", async () => {

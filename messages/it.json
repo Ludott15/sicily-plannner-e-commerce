@@ -555,7 +555,10 @@
     "photoFinderSearch": "Cerca su Commons",
     "photoFinderNoCandidates": "Nessuna foto adatta su Commons. Carica una foto tua o di un partner dalle Immagini.",
     "photoFinderUse": "Usa questa",
-    "photoFinderDone": "Foto assegnata: apri"
+    "photoFinderDone": "Foto assegnata: apri",
+    "photoFinderAllowSa": "Ammetti anche foto con licenza CC BY-SA",
+    "photoFinderAllowSaHint": "La maggior parte delle foto su Wikimedia Commons è CC BY-SA: senza questa casella molte entità restano senza foto. Con CC BY-SA la didascalia cita autore e licenza come per CC BY, e le versioni ritagliate restano sotto la stessa licenza. Le licenze NC e ND restano escluse.",
+    "photoFinderStats": "{found} risultati: {license} con licenza non ammessa, {small} troppo piccoli, {unfit} non adatti (senza autore, persone, mappe o nome diverso), {other} altro"
   },
   "Og": {
     "activity": "Attività · {province}",

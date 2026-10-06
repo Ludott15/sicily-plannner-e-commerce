@@ -38,6 +38,17 @@ describe("classifyLicense", () => {
     expect(classifyLicense({ license: "cc-by-3.0-it", shortName: "" })).toMatchObject({ ok: true, license: "CC BY 3.0" });
     expect(classifyLicense({ license: "pd", shortName: "Public domain" })).toMatchObject({ ok: true, license: "Pubblico dominio" });
   });
+  it("CC BY-SA solo se l'admin la ammette; NC e ND mai", () => {
+    expect(classifyLicense({ license: "cc-by-sa-4.0", shortName: "CC BY-SA 4.0" }, { allowSa: true })).toEqual({
+      ok: true,
+      license: "CC BY-SA 4.0",
+      licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",
+    });
+    expect(classifyLicense({ license: "cc-by-sa-3.0-it" }, { allowSa: true })).toMatchObject({ ok: true, license: "CC BY-SA 3.0" });
+    expect(classifyLicense({ license: "cc-by-nc-sa-4.0" }, { allowSa: true })).toEqual({ ok: false, error: "license_nc" });
+    expect(classifyLicense({ license: "cc-by-nd-4.0" }, { allowSa: true })).toEqual({ ok: false, error: "license_nd" });
+  });
+
   it("rifiuta SA, NC, ND, licenze assenti e altre licenze", () => {
     expect(classifyLicense({ license: "cc-by-sa-4.0", shortName: "CC BY-SA 4.0" })).toEqual({ ok: false, error: "license_sa" });
     expect(classifyLicense({ license: "", shortName: "CC BY-SA 3.0" })).toEqual({ ok: false, error: "license_sa" });
