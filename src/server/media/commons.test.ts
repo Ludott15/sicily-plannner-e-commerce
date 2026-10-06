@@ -176,8 +176,8 @@ describe("rete (trasporto finto)", () => {
     const never: Transport = async () => {
       throw new Error("nessuna richiesta attesa");
     };
-    expect(await downloadCommonsFile("https://commons.wikimedia.org/x.jpg", never)).toEqual({ ok: false, error: "fetch_host_not_allowed" });
-    expect(await downloadCommonsFile("https://10.0.0.1/x.jpg", never)).toEqual({ ok: false, error: "fetch_host_not_allowed" });
+    expect(await downloadCommonsFile("https://commons.wikimedia.org/x.jpg", never)).toMatchObject({ ok: false, error: "fetch_host_not_allowed" });
+    expect(await downloadCommonsFile("https://10.0.0.1/x.jpg", never)).toMatchObject({ ok: false, error: "fetch_host_not_allowed" });
   });
 });
 

@@ -78,14 +78,14 @@ export async function searchCommonsForEntity(input: unknown): Promise<CandidateS
 // dal server: dal browser arriva solo l'indirizzo della pagina.
 async function importFor(need: PhotoNeed, pageUrl: string, altIt: string | null, userId: string, allowSa: boolean): Promise<PhotoImport> {
   const fetched = await fetchCommonsFile(pageUrl, undefined, { allowSa });
-  if (!fetched.ok) return { ok: false, error: fetched.error };
+  if (!fetched.ok) return { ok: false, error: fetched.error, detail: "detail" in fetched ? fetched.detail : undefined };
   const [existing] = await dbAdmin.select({ id: media.id }).from(media).where(eq(media.sourceUrl, fetched.file.pageUrl || "-"));
   if (existing) {
     await setCover(need, existing.id);
     return { ok: true, mediaId: existing.id };
   }
   const downloaded = await downloadCommonsFile(fetched.file.downloadUrl);
-  if (!downloaded.ok) return { ok: false, error: downloaded.error };
+  if (!downloaded.ok) return { ok: false, error: downloaded.error, detail: downloaded.detail };
   const alt = (altIt?.trim() || fetched.file.description || cleanName(need.name)).slice(0, 300);
   const ingested = await ingestPhoto(
     downloaded.body,
@@ -177,7 +177,7 @@ export async function autoAssignCommonsPhotos(input: unknown): Promise<AutoAssig
         continue;
       }
       if (need.type !== "area") {
-        items.push({ ...base, outcome: "skipped", reason: imported.error ?? "failed" });
+        items.push({ ...base, outcome: "skipped", reason: imported.error ?? "failed", detail: imported.detail });
         continue;
       }
     }
@@ -193,6 +193,7 @@ export async function autoAssignCommonsPhotos(input: unknown): Promise<AutoAssig
       ...base,
       outcome: "skipped",
       reason: search.ok ? "no_candidate" : search.error,
+      detail: search.ok ? undefined : search.detail,
       stats: search.ok ? search.stats : undefined,
     });
   }
