@@ -374,7 +374,8 @@
     "coverageDays": "{days} giorni",
     "coverageOf": "{n} su {total}",
     "coverageYes": "Idonea",
-    "coverageNo": "Non idonea"
+    "coverageNo": "Non idonea",
+    "coveragePlacesWithoutArea": "{count, plural, =0 {Tutti i luoghi hanno un'area.} one {# luogo senza area} other {# luoghi senza area}}"
   },
   "Og": {
     "activity": "Attività · {province}",
@@ -550,7 +551,8 @@
       "stops": "{stops, plural, one {# tappa} other {# tappe}} in {days, plural, one {# giorno} other {# giorni}} senza cambiare zona"
     },
     "changeTrip": "Cambia il viaggio",
-    "editTastes": "Modifica i tuoi gusti"
+    "editTastes": "Modifica i tuoi gusti",
+    "shortened": "Una sola zona copre al massimo {days, plural, one {# giorno} other {# giorni}}: ecco i tre migliori viaggi di {days, plural, one {# giorno} other {# giorni}}. I viaggi su più zone arrivano presto."
   },
   "Preferences": {
     "title": "Preferenze",

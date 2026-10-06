@@ -7,7 +7,7 @@ import { redirect } from "@/lib/i18n/navigation";
 import { getUser } from "@/server/auth";
 import { interestLabels } from "@/server/catalog/labels";
 import { areaNames, engineCatalog, getSavedPreferences, toProfile } from "@/server/personalization/data";
-import { propose, type AreaReason, type Reason } from "@/server/personalization/engine";
+import { proposeTrips, type AreaReason, type Reason } from "@/server/personalization/engine";
 
 // "Ecco tre viaggi pensati per te" (schemi.md): tre proposte costruite dal catalogo dal
 // motore (server/personalization/engine.ts), una per area di viaggio, ognuna con il perché
@@ -39,7 +39,8 @@ export default async function ProposalsPage({ params }: Props) {
     areaNames(locale),
   ]);
   const profile = toProfile(saved);
-  const proposals = propose(catalog, profile);
+  // Se nessuna area copre i giorni scelti: i viaggi sul massimo di giorni coperto, e lo diciamo.
+  const { proposals, days: coveredDays, shortened } = proposeTrips(catalog, profile);
   const personal = Object.values(saved.weights).some((w) => w > 0);
   const label = (key: string) => labels.get(key) ?? key;
   const reasonText = (r: Reason): string => {
@@ -93,6 +94,12 @@ export default async function ProposalsPage({ params }: Props) {
           </ButtonLink>
         </div>
       </div>
+
+      {shortened && (
+        <p role="note" className="mt-8 rounded-lg border border-card-edge bg-calce-raised p-4 text-body">
+          {t("shortened", { days: coveredDays })}
+        </p>
+      )}
 
       {proposals.length === 0 ? (
         <div className="mt-10 flex flex-col items-start gap-4">

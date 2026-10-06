@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { NEUTRAL } from "@/lib/onboarding";
-import { adminCatalogCoverage } from "@/server/catalog/admin-queries.admin";
+import { Link } from "@/lib/i18n/navigation";
+import { adminCatalogCoverage, adminPlacesWithoutArea } from "@/server/catalog/admin-queries.admin";
 import { engineCatalog } from "@/server/personalization/data";
 import { eligibleAreas, type Profile } from "@/server/personalization/engine";
 
@@ -25,7 +26,12 @@ const neutral = (days: number): Profile => ({
 export default async function CoveragePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const [t, rows, catalog] = await Promise.all([getTranslations("Admin"), adminCatalogCoverage(), engineCatalog()]);
+  const [t, rows, catalog, noArea] = await Promise.all([
+    getTranslations("Admin"),
+    adminCatalogCoverage(),
+    engineCatalog(),
+    adminPlacesWithoutArea(),
+  ]);
   const eligible = new Map(DAYS.map((d) => [d, new Set(eligibleAreas(catalog, neutral(d)))]));
   const cell = "border-b border-divider px-3 py-2 text-right tabular-nums";
 
@@ -34,6 +40,18 @@ export default async function CoveragePage({ params }: { params: Promise<{ local
       <div className="flex flex-col gap-2">
         <h1 className="is-display text-heading-1">{t("coverageTitle")}</h1>
         <p className="max-w-2xl text-body text-lava-muted">{t("coverageIntro")}</p>
+      </div>
+      <div className="flex flex-col gap-2" data-testid="places-without-area">
+        <p className="text-body font-semibold">{t("coveragePlacesWithoutArea", { count: noArea.length })}</p>
+        {noArea.length > 0 && (
+          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-body-s">
+            {noArea.map((p) => (
+              <li key={p.id}>
+                <Link href={`/admin/luoghi/${p.id}`}>{p.name}</Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-body-s">
