@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Transport } from "./safe-fetch";
-import { findWikipediaPhoto, pickArticle, readEntity } from "./wiki-images";
+import { distanceKm, findWikipediaPhoto, pickArticle, readEntity, titleMatch } from "./wiki-images";
 
 const commonsFile = (
   name: string,
@@ -34,13 +34,17 @@ const commonsFile = (
 });
 
 // Risposte finte per host: ricerca su it.wikipedia, P18 su Wikidata, file su Commons.
-function fakeWiki(responses: { search: unknown; claims?: Record<string, unknown>; files?: Record<string, unknown>; fail?: number }) {
+function fakeWiki(responses: { search: unknown; exact?: unknown; geo?: unknown; claims?: Record<string, unknown>; files?: Record<string, unknown>; fail?: number }) {
   const hosts: string[] = [];
   const transport: Transport = async (url) => {
     hosts.push(url.host);
     const body =
       url.host === "it.wikipedia.org"
-        ? responses.search
+        ? url.searchParams.has("titles")
+          ? (responses.exact ?? {})
+          : url.searchParams.get("generator") === "geosearch"
+            ? (responses.geo ?? {})
+            : responses.search
         : url.host === "www.wikidata.org"
           ? (responses.claims?.[url.searchParams.get("ids") ?? ""] ?? { entities: {} })
           : (responses.files?.[(url.searchParams.get("titles") ?? "").replace(/^File:/, "")] ?? { query: { pages: [{ missing: true }] } });
@@ -57,9 +61,19 @@ function fakeWiki(responses: { search: unknown; claims?: Record<string, unknown>
   return { transport, hosts };
 }
 
-const search = (...pages: Array<{ title: string; pageimage?: string; item?: string }>) => ({
-  query: { pages: pages.map((p, i) => ({ title: p.title, index: i + 1, pageimage: p.pageimage, pageprops: p.item ? { wikibase_item: p.item } : undefined })) },
+type Page = { title: string; pageimage?: string; item?: string; at?: [number, number]; disambiguation?: boolean };
+const search = (...pages: Page[]) => ({
+  query: {
+    pages: pages.map((p, i) => ({
+      title: p.title,
+      index: i + 1,
+      pageimage: p.pageimage,
+      pageprops: { ...(p.item ? { wikibase_item: p.item } : {}), ...(p.disambiguation ? { disambiguation: "" } : {}) },
+      ...(p.at ? { coordinates: [{ lat: p.at[0], lon: p.at[1] }] } : {}),
+    })),
+  },
 });
+const PALERMO = { lat: 38.1157, lng: 13.3615 };
 const entity = (item: string, file: string | null, human = false) => ({
   entities: {
     [item]: {
@@ -72,13 +86,46 @@ const entity = (item: string, file: string | null, human = false) => ({
 });
 const noSleep = async () => {};
 
-describe("pickArticle", () => {
-  it("prende la prima voce che ha una parola chiave del nome", () => {
-    expect(pickArticle(search({ title: "Provincia di Agrigento" }, { title: "Agrigento" }), "Agrigento")?.title).toBe("Provincia di Agrigento");
-    expect(pickArticle(search({ title: "Etna" }), "Etna versante sud")?.title).toBe("Etna");
-    expect(pickArticle(search({ title: "Cuscus" }), "Corso di cous cous trapanese")).toBeNull();
-    expect(pickArticle({}, "Noto")).toBeNull();
+describe("scelta della voce", () => {
+  it("titolo coerente con il nome: tutte le parole del titolo nel nome, o almeno due in comune", () => {
+    expect(titleMatch("Catania", "Catania")).not.toBeNull();
+    expect(titleMatch("Ortigia", "Ortigia, Siracusa")).not.toBeNull();
+    expect(titleMatch("Etna", "Etna versante sud")).not.toBeNull();
+    expect(titleMatch("Teatro Massimo Vittorio Emanuele", "Visita al Teatro Massimo")).not.toBeNull();
+    expect(titleMatch("Duomo di Cefalù", "Duomo normanno di Cefalù")).not.toBeNull();
+    expect(titleMatch("Castello dei Ventimiglia (Castelbuono)", "Castelbuono e il castello dei Ventimiglia")).not.toBeNull();
+    // Dai log: voci sbagliate che prima passavano.
+    for (const [title, name] of [
+      ["Myriam Catania", "Catania"],
+      ["Charlotte Brontë", "Bronte"],
+      ["Caltagirone (azienda)", "Caltagirone"],
+      ["Strada statale 286 di Castelbuono", "Castelbuono"],
+      ["San Gavino Monreale", "Monreale"],
+      ["Battaglia di Austerlitz", "Piano Battaglia"],
+      ["Trapani Shark", "Trapani"],
+      ["Teatro alla Scala", "Visita al Teatro Massimo"],
+      ["Duomo di Monreale", "Duomo normanno di Cefalù"],
+      ["Le ceneri di Pirandello", "Casa natale di Pirandello"],
+      ["Rocca Sanvitale (Fontanellato)", "Castello di Lombardia e Rocca di Cerere"],
+      ["Germania Ovest", "Ovest"],
+      ["Cuscus", "Corso di cous cous trapanese"],
+    ]) {
+      expect(titleMatch(title!, name!), `${title} per ${name}`).toBeNull();
+    }
   });
+
+  it("preferisce la voce più coerente e vicina; scarta disambiguazioni e voci lontane", () => {
+    const pages = search(
+      { title: "Palermo (disambigua)", disambiguation: true },
+      { title: "Teatro Massimo (Pescara)", at: [42.46, 14.21] },
+      { title: "Teatro Massimo Vittorio Emanuele", at: [38.1202, 13.3572] },
+    );
+    expect(pickArticle(pages, { name: "Teatro Massimo", ...PALERMO })?.title).toBe("Teatro Massimo Vittorio Emanuele");
+    expect(pickArticle(search({ title: "Palermo (disambigua)", disambiguation: true }), { name: "Palermo" })).toBeNull();
+    expect(pickArticle({}, { name: "Noto" })).toBeNull();
+    expect(distanceKm(PALERMO, { lat: 37.5079, lng: 15.083 })).toBeGreaterThan(160);
+  });
+
   it("legge immagine (P18) e persona (P31 = Q5) da Wikidata", () => {
     expect(readEntity(entity("Q1", "Agrigento Concordia.jpg"), "Q1")).toEqual({ image: "Agrigento Concordia.jpg", human: false });
     expect(readEntity(entity("Q2", "Ritratto.jpg", true), "Q2")).toEqual({ image: "Ritratto.jpg", human: true });
@@ -94,9 +141,9 @@ describe("findWikipediaPhoto", () => {
         claims: { Q13256: entity("Q13256", "Agrigento Concordia.jpg") },
         files: { "Agrigento Concordia.jpg": commonsFile("Agrigento Concordia.jpg") },
       });
-    const withSa = await findWikipediaPhoto("Agrigento", new Set(), { allowSa: true, transport: api().transport, sleep: noSleep });
+    const withSa = await findWikipediaPhoto({ name: "Agrigento" }, new Set(), { allowSa: true, transport: api().transport, sleep: noSleep });
     expect(withSa).toMatchObject({ ok: true, article: "Agrigento", file: { title: "File:Agrigento Concordia.jpg", license: "CC BY-SA 4.0" } });
-    const without = await findWikipediaPhoto("Agrigento", new Set(), { transport: api().transport, sleep: noSleep });
+    const without = await findWikipediaPhoto({ name: "Agrigento" }, new Set(), { transport: api().transport, sleep: noSleep });
     expect(without).toEqual({ ok: false, reason: "not_suitable", article: "Agrigento", detail: "license_sa: CC BY-SA 4.0" });
   });
 
@@ -105,27 +152,27 @@ describe("findWikipediaPhoto", () => {
       search: search({ title: "Erice", pageimage: "Erice_castello.jpg" }),
       files: { "Erice castello.jpg": commonsFile("Erice castello.jpg", { license: "cc0" }) },
     });
-    const result = await findWikipediaPhoto("Erice", new Set(), { transport: api.transport, sleep: noSleep });
+    const result = await findWikipediaPhoto({ name: "Erice" }, new Set(), { transport: api.transport, sleep: noSleep });
     expect(result).toMatchObject({ ok: true, file: { title: "File:Erice castello.jpg", license: "CC0 1.0" } });
-    expect(api.hosts).toEqual(["it.wikipedia.org", "commons.wikimedia.org"]);
+    expect(api.hosts).toEqual(["it.wikipedia.org", "it.wikipedia.org", "commons.wikimedia.org"]);
   });
 
   it("nessuna voce, nessuna immagine, già usata, senza autore", async () => {
-    expect(await findWikipediaPhoto("Corso di cous cous trapanese", new Set(), { transport: fakeWiki({ search: search({ title: "Cuscus" }) }).transport, sleep: noSleep })).toEqual({
+    expect(await findWikipediaPhoto({ name: "Corso di cous cous trapanese" }, new Set(), { transport: fakeWiki({ search: search({ title: "Cuscus" }) }).transport, sleep: noSleep })).toEqual({
       ok: false,
       reason: "no_article",
     });
-    expect(await findWikipediaPhoto("Noto", new Set(), { transport: fakeWiki({ search: search({ title: "Noto" }) }).transport, sleep: noSleep })).toEqual({
+    expect(await findWikipediaPhoto({ name: "Noto" }, new Set(), { transport: fakeWiki({ search: search({ title: "Noto" }) }).transport, sleep: noSleep })).toEqual({
       ok: false,
       reason: "no_image",
       article: "Noto",
     });
     const used = fakeWiki({ search: search({ title: "Noto", pageimage: "Noto.jpg" }), files: { "Noto.jpg": commonsFile("Noto.jpg", { license: "cc0" }) } });
     expect(
-      await findWikipediaPhoto("Noto", new Set(["https://commons.wikimedia.org/wiki/File:Noto.jpg"]), { transport: used.transport, sleep: noSleep }),
+      await findWikipediaPhoto({ name: "Noto" }, new Set(["https://commons.wikimedia.org/wiki/File:Noto.jpg"]), { transport: used.transport, sleep: noSleep }),
     ).toEqual({ ok: false, reason: "already_used", article: "Noto" });
     const anonymous = fakeWiki({ search: search({ title: "Noto", pageimage: "Noto.jpg" }), files: { "Noto.jpg": commonsFile("Noto.jpg", { license: "cc0", author: null }) } });
-    expect(await findWikipediaPhoto("Noto", new Set(), { transport: anonymous.transport, sleep: noSleep })).toEqual({
+    expect(await findWikipediaPhoto({ name: "Noto" }, new Set(), { transport: anonymous.transport, sleep: noSleep })).toEqual({
       ok: false,
       reason: "not_suitable",
       article: "Noto",
@@ -135,12 +182,52 @@ describe("findWikipediaPhoto", () => {
 
   it("salta le voci su persone e passa alla successiva", async () => {
     const api = fakeWiki({
-      search: search({ title: "Luigi Pirandello", item: "Q1403" }, { title: "Casa natale di Luigi Pirandello", item: "Q3661", pageimage: "Caos.jpg" }),
+      search: search({ title: "Pirandello", item: "Q1403" }, { title: "Casa natale di Luigi Pirandello", item: "Q3661", pageimage: "Caos.jpg" }),
       claims: { Q1403: entity("Q1403", "Pirandello ritratto.jpg", true), Q3661: entity("Q3661", null) },
       files: { "Caos.jpg": commonsFile("Caos.jpg", { license: "cc0" }) },
     });
-    const result = await findWikipediaPhoto("Casa natale di Pirandello", new Set(), { transport: api.transport, sleep: noSleep });
+    const result = await findWikipediaPhoto({ name: "Casa natale di Pirandello" }, new Set(), { transport: api.transport, sleep: noSleep });
     expect(result).toMatchObject({ ok: true, article: "Casa natale di Luigi Pirandello", file: { title: "File:Caos.jpg" } });
+    const person = fakeWiki({ search: search({ title: "Pirandello", item: "Q1403" }), claims: { Q1403: entity("Q1403", "Ritratto.jpg", true) } });
+    expect(await findWikipediaPhoto({ name: "Pirandello" }, new Set(), { transport: person.transport, sleep: noSleep })).toEqual({
+      ok: false,
+      reason: "not_suitable",
+      article: "Pirandello",
+      detail: "persona",
+    });
+  });
+
+  it("prima il titolo esatto, poi le voci vicine; mai una voce omonima lontana", async () => {
+    const cc0 = (name: string) => commonsFile(name, { license: "cc0" });
+    const catania = fakeWiki({
+      exact: search({ title: "Catania", pageimage: "Catania.jpg", at: [37.5079, 15.083] }),
+      search: search({ title: "Myriam Catania", pageimage: "Myriam.jpg" }),
+      files: { "Catania.jpg": cc0("Catania.jpg"), "Myriam.jpg": cc0("Myriam.jpg") },
+    });
+    expect(await findWikipediaPhoto({ name: "Catania", lat: 37.5, lng: 15.08 }, new Set(), { transport: catania.transport, sleep: noSleep })).toMatchObject({
+      ok: true,
+      article: "Catania",
+    });
+
+    const teatro = fakeWiki({
+      geo: search({ title: "Palermo", pageimage: "Palermo.jpg", at: [38.1157, 13.3615] }, { title: "Teatro Massimo Vittorio Emanuele", pageimage: "Massimo.jpg", at: [38.1202, 13.3572] }),
+      search: search({ title: "Teatro alla Scala", pageimage: "Scala.jpg", at: [45.4674, 9.1895] }),
+      files: { "Massimo.jpg": cc0("Massimo.jpg"), "Scala.jpg": cc0("Scala.jpg"), "Palermo.jpg": cc0("Palermo.jpg") },
+    });
+    expect(await findWikipediaPhoto({ name: "Visita al Teatro Massimo", ...PALERMO }, new Set(), { transport: teatro.transport, sleep: noSleep })).toMatchObject({
+      ok: true,
+      article: "Teatro Massimo Vittorio Emanuele",
+    });
+
+    const far = fakeWiki({
+      exact: search({ title: "Teatro Massimo", pageimage: "Pescara.jpg", at: [42.46, 14.21] }),
+      files: { "Pescara.jpg": cc0("Pescara.jpg") },
+      search: {},
+    });
+    expect(await findWikipediaPhoto({ name: "Teatro Massimo", ...PALERMO }, new Set(), { transport: far.transport, sleep: noSleep })).toEqual({
+      ok: false,
+      reason: "no_article",
+    });
   });
 
   it("licenze multiple dalle categorie, codici con suffisso, autore dal campo Credit", async () => {
@@ -148,7 +235,7 @@ describe("findWikipediaPhoto", () => {
       search: search({ title: "Catania", pageimage: "Catania.jpg" }),
       files: { "Catania.jpg": commonsFile("Catania.jpg", { license: "gfdl", short: "GFDL", categories: ["GFDL", "CC-BY-SA-3.0-migrated", "CC-BY-SA-3.0"] }) },
     });
-    expect(await findWikipediaPhoto("Catania", new Set(), { allowSa: true, transport: gfdl.transport, sleep: noSleep })).toMatchObject({
+    expect(await findWikipediaPhoto({ name: "Catania" }, new Set(), { allowSa: true, transport: gfdl.transport, sleep: noSleep })).toMatchObject({
       ok: true,
       file: { license: "CC BY-SA 3.0" },
     });
@@ -156,7 +243,7 @@ describe("findWikipediaPhoto", () => {
       search: search({ title: "Erice", pageimage: "Erice.jpg" }),
       files: { "Erice.jpg": commonsFile("Erice.jpg", { license: "cc-by-sa-3.0-migrated", short: "CC BY-SA 3.0", author: null, credit: "Mario Rossi" }) },
     });
-    expect(await findWikipediaPhoto("Erice", new Set(), { allowSa: true, transport: migrated.transport, sleep: noSleep })).toMatchObject({
+    expect(await findWikipediaPhoto({ name: "Erice" }, new Set(), { allowSa: true, transport: migrated.transport, sleep: noSleep })).toMatchObject({
       ok: true,
       file: { license: "CC BY-SA 3.0", author: "Mario Rossi" },
     });
@@ -164,14 +251,14 @@ describe("findWikipediaPhoto", () => {
       search: search({ title: "Enna", pageimage: "Enna.jpg" }),
       files: { "Enna.jpg": commonsFile("Enna.jpg", { license: "cc0", author: null, credit: "Opera propria" }) },
     });
-    expect(await findWikipediaPhoto("Enna", new Set(), { transport: ownWork.transport, sleep: noSleep })).toMatchObject({
+    expect(await findWikipediaPhoto({ name: "Enna" }, new Set(), { transport: ownWork.transport, sleep: noSleep })).toMatchObject({
       ok: false,
       detail: "autore mancante",
     });
   });
 
   it("un rifiuto di Wikimedia diventa network con il codice HTTP", async () => {
-    expect(await findWikipediaPhoto("Noto", new Set(), { transport: fakeWiki({ search: {}, fail: 403 }).transport, sleep: noSleep })).toEqual({
+    expect(await findWikipediaPhoto({ name: "Noto" }, new Set(), { transport: fakeWiki({ search: {}, fail: 403 }).transport, sleep: noSleep })).toEqual({
       ok: false,
       reason: "network",
       detail: "403",

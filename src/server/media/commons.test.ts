@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   classifyLicense,
   cleanAuthor,
+  downloadUrl,
   commonsFileTitle,
   downloadCommonsFile,
   fetchCommonsFile,
@@ -142,14 +143,36 @@ describe("parseCommonsResponse", () => {
     });
     expect(parseCommonsResponse(apiResponse({ Artist: "x" }))).toMatchObject({ ok: false, error: "license_missing" });
     expect(parseCommonsResponse(apiResponse(meta, { width: 1200, height: 900 }))).toEqual({ ok: false, error: "too_small" });
-    expect(parseCommonsResponse(apiResponse(meta, { thumburl: "https://evil.example/x.jpg" }))).toEqual({
+    expect(parseCommonsResponse(apiResponse(meta, { thumburl: "https://evil.example/x.jpg", url: "https://evil.example/y.jpg" }))).toEqual({
       ok: false,
       error: "fetch_host_not_allowed",
+      detail: "fetch_host_not_allowed: evil.example",
     });
     expect(parseCommonsResponse({ query: { pages: [{ title: "File:X.jpg", missing: true }] } })).toEqual({
       ok: false,
       error: "file_not_found",
     });
+  });
+});
+
+describe("downloadUrl", () => {
+  const orig = "https://upload.wikimedia.org/wikipedia/commons/a/ab/Teatro_greco.jpg";
+  it("usa la miniatura dell'API se è su upload.wikimedia.org", () => {
+    expect(downloadUrl("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Teatro_greco.jpg/1920px-Teatro_greco.jpg", orig, 5000)).toBe(
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Teatro_greco.jpg/1920px-Teatro_greco.jpg",
+    );
+    expect(downloadUrl("//upload.wikimedia.org/wikipedia/commons/thumb/a/ab/T.jpg/1920px-T.jpg", orig, 5000)).toBe(
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/T.jpg/1920px-T.jpg",
+    );
+  });
+  it("altrimenti la costruisce dall'originale, o usa l'originale se è già piccolo", () => {
+    expect(downloadUrl("https://altro.example/x.jpg", orig, 5000)).toBe(
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Teatro_greco.jpg/1920px-Teatro_greco.jpg",
+    );
+    expect(downloadUrl(undefined, "https://upload.wikimedia.org/wikipedia/commons/c/cd/Scan.tif", 5000)).toBe(
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Scan.tif/1920px-Scan.tif.jpg",
+    );
+    expect(downloadUrl(undefined, orig, 1800)).toBe(orig);
   });
 });
 

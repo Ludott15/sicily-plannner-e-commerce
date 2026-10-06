@@ -73,7 +73,7 @@ export async function searchCommonsForEntity(input: unknown): Promise<CandidateS
   if (!need) return { ok: false, error: "entity_not_found" };
   const exclude = await importedCommonsPages();
   // Prima la foto principale di Wikipedia/Wikidata, poi le alternative della ricerca su Commons.
-  const wiki = await findWikipediaPhoto(cleanName(need.name), exclude, { allowSa });
+  const wiki = await findWikipediaPhoto({ name: cleanName(need.name), lat: need.lat, lng: need.lng }, exclude, { allowSa });
   const wikiCandidate: PhotoCandidate[] = wiki.ok ? [{ ...toView({ ...wiki.file, previewUrl: wiki.file.downloadUrl, score: 100, matched: [] }) }] : [];
   const result = await searchCommons(await photoTarget(need), exclude, undefined, { allowSa });
   if (!result.ok) {
@@ -185,7 +185,7 @@ export async function autoAssignCommonsPhotos(input: unknown): Promise<AutoAssig
     const base = { key: `${need.type}:${need.id}`, type: need.type, name: cleanName(need.name) };
     // La foto principale della voce di Wikipedia/Wikidata: coerente con il soggetto, poche
     // richieste. Le attività senza una voce propria mostrano la foto del luogo (ripiego).
-    const found = await findWikipediaPhoto(base.name, exclude, { allowSa: parsed.data.allowSa });
+    const found = await findWikipediaPhoto({ name: base.name, lat: need.lat, lng: need.lng }, exclude, { allowSa: parsed.data.allowSa });
     if (found.ok) {
       const imported = await importFile(need, found.file, null, user.id);
       if (imported.ok) {
