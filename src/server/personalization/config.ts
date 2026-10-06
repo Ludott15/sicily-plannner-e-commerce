@@ -38,11 +38,24 @@ export const REASONS = {
 // Interesse delle attività di cibo, su cui vale il vincolo della dieta.
 export const FOOD_INTEREST = "food_wine";
 
-// Aeroporti di arrivo e province vicine (zona base): bonus al punteggio della zona.
-export const AIRPORT_ZONES = {
-  CTA: ["CT", "SR", "EN", "ME"],
-  PMO: ["PA", "TP", "AG"],
-  TPS: ["TP", "PA", "AG"],
-  CIY: ["RG", "SR", "CT"],
+// Idoneità di un'area (M4 parte 3): l'area deve riempire tutti i giorni scelti, ognuno almeno
+// per questa frazione delle ore del ritmo. Sotto la soglia l'area non viene mai proposta.
+export const AREA_ELIGIBILITY = { minDayFill: 0.5 } as const;
+
+// Varianti nella stessa area (meno di 3 aree idonee): le attività dell'interesse della variante
+// ricevono questo vantaggio nel punteggio, così il viaggio cambia carattere.
+export const VARIANT_FOCUS_BOOST = 0.5;
+
+// Aeroporti di arrivo (coordinate delle piste). Bonus piccolo, che rompe la parità tra aree
+// simili e non ribalta la classifica: pieno a distanza 0, nullo oltre rangeKm. Il motivo
+// "vicina all'aeroporto" compare entro nearKm (distanza in linea d'aria dal centro dell'area).
+export const AIRPORTS = {
+  CTA: { lat: 37.4668, lng: 15.0664 },
+  PMO: { lat: 38.176, lng: 13.091 },
+  TPS: { lat: 37.9114, lng: 12.488 },
+  CIY: { lat: 36.9946, lng: 14.6072 },
 } as const;
-export const AIRPORT_BONUS = 1.3;
+export const AIRPORT_BONUS = { max: 0.02, rangeKm: 120, nearKm: 70 } as const;
+
+// Motivi d'area: voto medio delle tappe da cui vale la pena dirlo.
+export const AREA_TOP_RATING = 4.6;

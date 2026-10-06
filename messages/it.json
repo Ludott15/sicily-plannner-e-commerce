@@ -20,7 +20,8 @@
     "legal": "Informazioni legali",
     "privacy": "Privacy",
     "cookie": "Cookie",
-    "terms": "Condizioni di vendita"
+    "terms": "Condizioni di vendita",
+    "preferences": "Preferenze"
   },
   "Home": {
     "title": "La Sicilia di chi ci vive, su misura per te.",
@@ -352,14 +353,29 @@
     "authorAdd": "Aggiungi l'autore",
     "newAuthor": "Nuovo autore",
     "tipInactive": "spento",
-    "fieldDiet": "Diete adatte",
-    "fieldDietHint": "Per le attività di cibo e vino: chi indica una dieta vede solo quelle adatte.",
+    "fieldDiet": "Diete adatte (da confermare con il fornitore)",
+    "fieldDietHint": "Per le attività di cibo e vino. È un'indicazione, non una garanzia: chi indica una dieta vede solo queste, con la nota \"Indicativo\".",
     "diet": {
       "vegetarian": "Vegetariana",
       "vegan": "Vegana",
       "gluten_free": "Senza glutine",
       "lactose_free": "Senza lattosio"
-    }
+    },
+    "fieldArea": "Area di viaggio",
+    "fieldAreaHint": "Senza area, le attività di questo luogo non entrano nei viaggi proposti.",
+    "noArea": "Senza area",
+    "coverage": "Copertura",
+    "coverageTitle": "Copertura del catalogo",
+    "coverageIntro": "Per ogni area: attività attive, con tag (anche quelle da approvare), con offerta attiva e con un consiglio locale valido. Idonea vuol dire che il motore riesce a comporre un viaggio di quei giorni nell'area, con ritmo equilibrato e nessun vincolo.",
+    "coverageArea": "Area",
+    "coverageActive": "Attive",
+    "coverageTagged": "Con tag",
+    "coverageOffer": "Con offerta",
+    "coverageTip": "Con consiglio",
+    "coverageDays": "{days} giorni",
+    "coverageOf": "{n} su {total}",
+    "coverageYes": "Idonea",
+    "coverageNo": "Non idonea"
   },
   "Og": {
     "activity": "Attività · {province}",
@@ -463,7 +479,7 @@
       "friends": "Con amici"
     },
     "airportTitle": "Dove atterri?",
-    "airportHint": "Partiamo dalle zone più vicine all'aeroporto. Se non lo sai ancora, nessun problema.",
+    "airportHint": "A parità di interesse, preferiamo le zone più vicine all'aeroporto. Se non lo sai ancora, nessun problema.",
     "airport": {
       "CTA": "Catania",
       "PMO": "Palermo",
@@ -497,10 +513,10 @@
     "title": "Ecco tre viaggi pensati per te",
     "intro": "Costruiti dal catalogo con le tue risposte. Ogni tappa dice perché è lì.",
     "changePreferences": "Cambia preferenze",
-    "empty": "Con queste risposte non troviamo ancora attività adatte. Prova ad allargare periodo, budget o interessi.",
-    "proposalTitle": "Viaggio {n} · {zone}",
+    "empty": "Con queste risposte nessuna zona ha abbastanza attività per tutti i giorni scelti. Prova con meno giorni, o allarga periodo, budget o interessi.",
+    "proposalTitle": "Viaggio {n} · {area}",
     "proposalMeta": "{days, plural, one {# giorno} other {# giorni}}",
-    "day": "Giorno {n} · {zone}",
+    "day": "Giorno {n} · {places}",
     "reasons": {
       "combines": "{a} e {b} insieme",
       "topForInterest": "Tra le migliori per {interest}",
@@ -510,7 +526,7 @@
       "accessible": "Accessibile",
       "bestInZone": "Tra le più vicine ai tuoi gusti in questa zona",
       "strongestInterest": "Per {interest}, quello che conta di più per te",
-      "dietFriendly": "Adatta alla tua dieta",
+      "dietFriendly": "Indicata per la tua dieta",
       "samePlace": "Nello stesso posto della tappa prima",
       "shortVisit": "Breve: {duration}, lascia tempo per il resto"
     },
@@ -518,7 +534,18 @@
     "introGeneric": "Sono costruiti dal catalogo senza i tuoi gusti. Rispondi alle domande per averli su misura.",
     "needsRentalCar": "Alcune tappe si raggiungono solo in auto: per questo viaggio serve un'auto a noleggio.",
     "needsCar": "Alcune tappe si raggiungono solo in auto.",
-    "rentCar": "Noleggia un'auto"
+    "rentCar": "Noleggia un'auto",
+    "preferences": "Preferenze",
+    "whyArea": "Perché questa zona",
+    "dietNote": "Indicativo: conferma sempre con chi organizza",
+    "areaReasons": {
+      "interestStops": "{count, plural, one {# tappa} other {# tappe}} per {interest}",
+      "nearAirport": "Vicina all'aeroporto di {airport}",
+      "highlyRated": "Tappe molto apprezzate: {rating} su 5 di media",
+      "noCar": "Nessuna tappa richiede l'auto",
+      "variant": "Pochi viaggi in più zone per i giorni scelti: questa variante dà più spazio a {interest}",
+      "stops": "{stops, plural, one {# tappa} other {# tappe}} in {days, plural, one {# giorno} other {# giorni}} senza cambiare zona"
+    }
   },
   "Preferences": {
     "title": "Preferenze",
@@ -531,7 +558,7 @@
     "crowd": "Quanto sopporti la folla",
     "needsTitle": "Mobilità e dieta",
     "reducedMobility": "Mobilità ridotta: solo attività accessibili",
-    "dietLegend": "Dieta",
+    "dietLegend": "Dieta (indicativa: conferma sempre con chi organizza)",
     "diet": {
       "vegetarian": "Vegetariana",
       "vegan": "Vegana",

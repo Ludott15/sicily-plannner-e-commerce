@@ -7,6 +7,7 @@ import { signOut } from "@/server/auth/actions";
 // Intestazione (mockup Home e Attività): marchio "Isula" in Fraunces 600 lava, navigazione,
 // "Accedi" secondario. Il bottone principale della vista sta nella pagina, non qui.
 // Le voci "I miei viaggi" e "Shop" arrivano con le rispettive milestone.
+// "Preferenze" per chiunque abbia una sessione, ospite compreso.
 // Un ospite (sessione anonima) vede "Salva l'account" al posto di Profilo ed Esci: uscendo
 // perderebbe i suoi viaggi, quindi l'uscita sta nel profilo, con l'avviso.
 export async function SiteHeader() {
@@ -33,6 +34,11 @@ export async function SiteHeader() {
           </nav>
         </div>
         <div className="flex items-center gap-2">
+          {user && (
+            <ButtonLink href="/preferenze" variant="ghost" size="sm">
+              {t("preferences")}
+            </ButtonLink>
+          )}
           {user?.is_anonymous ? (
             <ButtonLink href="/profilo" variant="secondary" size="sm">
               {t("saveAccount")}

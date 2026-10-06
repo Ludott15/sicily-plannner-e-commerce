@@ -27,6 +27,21 @@ export const interests = pgTable("interests", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Aree di viaggio (M4 parte 3): l'unità con cui il motore compone i viaggi, non la provincia.
+// Elenco editoriale (migrazione seed_areas), modificabile solo dall'admin.
+export const areas = pgTable(
+  "areas",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull().unique(),
+    nameIt: text("name_it").notNull(),
+    nameEn: text("name_en").notNull(),
+    sort: smallint("sort").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [check("areas_slug_format", sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`)],
+);
+
 export const places = pgTable(
   "places",
   {
@@ -34,6 +49,8 @@ export const places = pgTable(
     slug: text("slug").notNull().unique(),
     name: text("name").notNull(),
     province: char("province", { length: 2 }).notNull(),
+    // Area di viaggio; null = non ancora assegnata (le sue attività non entrano nelle proposte).
+    areaId: uuid("area_id").references(() => areas.id, { onDelete: "restrict" }),
     lat: doublePrecision("lat").notNull(),
     lng: doublePrecision("lng").notNull(),
     description: text("description"),
@@ -41,6 +58,7 @@ export const places = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    index("places_area_id_idx").on(t.areaId),
     check("places_lat_range", sql`${t.lat} between -90 and 90`),
     check("places_lng_range", sql`${t.lng} between -180 and 180`),
   ],

@@ -148,6 +148,8 @@ const placeSchema = z.object({
   name: z.string().trim().min(2).max(120),
   slug: slugSchema,
   province: z.enum(Object.keys(PROVINCES) as [string, ...string[]]),
+  // Area di viaggio; vuota = non ancora assegnata.
+  areaId: z.uuid().nullable().or(z.literal("").transform(() => null)),
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
   description: optionalText,

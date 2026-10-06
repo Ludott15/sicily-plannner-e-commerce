@@ -24,7 +24,34 @@ insert into public.places (slug, name, province, lat, lng, description) values
   ('demo-trapani', 'Trapani', 'TP', 38.0176, 12.5365, '[DEMO] Saline e porto per le Egadi.'),
   ('demo-erice', 'Erice', 'TP', 38.0371, 12.5864, '[DEMO] Borgo medievale in cima al monte.'),
   ('demo-san-vito', 'San Vito Lo Capo', 'TP', 38.1742, 12.7352, '[DEMO] Spiaggia e riserva dello Zingaro.'),
-  ('demo-piazza-armerina', 'Piazza Armerina', 'EN', 37.3663, 14.3336, '[DEMO] Villa Romana del Casale.');
+  ('demo-piazza-armerina', 'Piazza Armerina', 'EN', 37.3663, 14.3336, '[DEMO] Villa Romana del Casale.'),
+  ('demo-mondello', 'Mondello', 'PA', 38.2047, 13.3236, '[DEMO] Borgo marinaro di Palermo.'),
+  ('demo-segesta', 'Segesta', 'TP', 37.9411, 12.8336, '[DEMO] Tempio dorico sulla collina.'),
+  ('demo-sciacca', 'Sciacca', 'AG', 37.5092, 13.0889, '[DEMO] Città delle ceramiche e delle terme.'),
+  ('demo-eraclea-minoa', 'Eraclea Minoa', 'AG', 37.3922, 13.2817, '[DEMO] Scavi greci sopra la spiaggia.'),
+  ('demo-pantalica', 'Pantalica', 'SR', 37.1450, 15.0270, '[DEMO] Necropoli rupestre nelle gole dell''Anapo.'),
+  ('demo-fontane-bianche', 'Fontane Bianche', 'SR', 36.9628, 15.2069, '[DEMO] Spiaggia a sud di Siracusa.'),
+  ('demo-marzamemi', 'Marzamemi', 'SR', 36.7400, 15.1170, '[DEMO] Borgo di pescatori con la tonnara.'),
+  ('demo-modica', 'Modica', 'RG', 36.8586, 14.7608, '[DEMO] Città barocca su due colline.'),
+  ('demo-scicli', 'Scicli', 'RG', 36.7922, 14.7069, '[DEMO] Barocco tra le cave.'),
+  ('demo-marina-ragusa', 'Marina di Ragusa', 'RG', 36.7836, 14.5506, '[DEMO] Spiaggia e lungomare.');
+
+-- Aree di viaggio dei luoghi demo (le aree vengono dalla migrazione, non dal seed). Sei aree
+-- hanno almeno 6 attività; Costa nord e Madonie e Interno ne hanno poche: restano non idonee
+-- per i viaggi lunghi, come succede con un catalogo reale ancora incompleto.
+update public.places p set area_id = a.id
+from (values
+  ('demo-palermo', 'palermo'), ('demo-monreale', 'palermo'), ('demo-mondello', 'palermo'),
+  ('demo-cefalu', 'costa-nord-madonie'),
+  ('demo-trapani', 'ovest'), ('demo-erice', 'ovest'), ('demo-san-vito', 'ovest'), ('demo-segesta', 'ovest'),
+  ('demo-agrigento', 'agrigentino'), ('demo-scala-dei-turchi', 'agrigentino'), ('demo-sciacca', 'agrigentino'), ('demo-eraclea-minoa', 'agrigentino'),
+  ('demo-piazza-armerina', 'interno'),
+  ('demo-catania', 'etna-costa-ionica'), ('demo-etna-sud', 'etna-costa-ionica'), ('demo-bronte', 'etna-costa-ionica'), ('demo-taormina', 'etna-costa-ionica'),
+  ('demo-ortigia', 'siracusano'), ('demo-pantalica', 'siracusano'), ('demo-fontane-bianche', 'siracusano'), ('demo-marzamemi', 'siracusano'),
+  ('demo-noto', 'barocco-ibleo'), ('demo-ragusa-ibla', 'barocco-ibleo'), ('demo-modica', 'barocco-ibleo'), ('demo-scicli', 'barocco-ibleo'), ('demo-marina-ragusa', 'barocco-ibleo')
+) as v(place_slug, area_slug)
+join public.areas a on a.slug = v.area_slug
+where p.slug = v.place_slug;
 
 -- Attività: create inattive, poi taggate, poi attivate (regola activity_without_tags).
 -- on_site_price_eur è il prezzo pagato in loco (ingresso, biglietto), un metadato: null per tour ed
@@ -62,7 +89,20 @@ from (values
   ('demo-erice-borgo', 'demo-erice', 'Erice e dolci di badia', '[DEMO] Borgo medievale e pasticceria storica.', 150, null, true, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.7),
   ('demo-zingaro', 'demo-san-vito', 'Riserva dello Zingaro', '[DEMO] Sentiero costiero tra calette.', 300, 5.00, true, false, '{3,4,5,6,9,10,11}', 4.8),
   ('demo-san-vito-relax', 'demo-san-vito', 'Giornata di relax a San Vito', '[DEMO] Spiaggia bianca e lettino.', 360, null, false, true, '{6,7,8,9}', 4.4),
-  ('demo-villa-casale', 'demo-piazza-armerina', 'Villa Romana del Casale', '[DEMO] Mosaici romani patrimonio UNESCO.', 150, 12.00, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.8)
+  ('demo-villa-casale', 'demo-piazza-armerina', 'Villa Romana del Casale', '[DEMO] Mosaici romani patrimonio UNESCO.', 150, 12.00, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.8),
+  ('demo-mondello-spiaggia', 'demo-mondello', 'Spiaggia di Mondello', '[DEMO] Mare e lungomare liberty.', 240, 0.00, false, true, '{6,7,8,9}', 4.4),
+  ('demo-catacombe-cappuccini', 'demo-palermo', 'Catacombe dei Cappuccini', '[DEMO] Corridoi sotterranei del convento.', 60, 5.00, false, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.3),
+  ('demo-segesta-tempio', 'demo-segesta', 'Tempio e teatro di Segesta', '[DEMO] Tempio dorico e teatro sul monte Barbaro.', 150, 6.00, true, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.8),
+  ('demo-kolymbethra', 'demo-agrigento', 'Giardino della Kolymbethra', '[DEMO] Agrumeto antico nella Valle dei Templi.', 90, 6.00, false, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.6),
+  ('demo-casa-pirandello', 'demo-agrigento', 'Casa natale di Pirandello', '[DEMO] Museo nella contrada del Caos.', 60, 4.00, true, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.3),
+  ('demo-eraclea-spiaggia', 'demo-eraclea-minoa', 'Eraclea Minoa, spiaggia e scavi', '[DEMO] Teatro greco e pineta sul mare.', 300, 0.00, true, false, '{5,6,7,8,9,10}', 4.6),
+  ('demo-ceramiche-sciacca', 'demo-sciacca', 'Botteghe di ceramica a Sciacca', '[DEMO] Laboratorio con un ceramista.', 120, null, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.5),
+  ('demo-pantalica-trekking', 'demo-pantalica', 'Necropoli e gole di Pantalica', '[DEMO] Sentiero tra tombe rupestri e fiume.', 240, 0.00, true, false, '{3,4,5,9,10,11}', 4.7),
+  ('demo-fontane-bianche', 'demo-fontane-bianche', 'Mare a Fontane Bianche', '[DEMO] Spiaggia di sabbia chiara.', 300, 0.00, false, true, '{6,7,8,9}', 4.3),
+  ('demo-marzamemi-borgo', 'demo-marzamemi', 'Marzamemi e la tonnara', '[DEMO] Piazza della tonnara e conserve di tonno.', 150, null, true, true, '{4,5,6,7,8,9,10}', 4.6),
+  ('demo-modica-barocca', 'demo-modica', 'Modica barocca a piedi', '[DEMO] San Giorgio e la città alta.', 150, 0.00, false, false, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.6),
+  ('demo-scicli-chiese', 'demo-scicli', 'Scicli e via Mormino Penna', '[DEMO] Chiese e palazzi barocchi.', 120, 0.00, false, true, '{1,2,3,4,5,6,7,8,9,10,11,12}', 4.5),
+  ('demo-marina-ragusa', 'demo-marina-ragusa', 'Spiaggia di Marina di Ragusa', '[DEMO] Sabbia e lungomare.', 300, 0.00, false, true, '{6,7,8,9}', 4.3)
 ) as v(slug, place_slug, title, description, duration_min, price, requires_car, accessible, months, rating)
 join public.places p on p.slug = v.place_slug;
 
@@ -98,7 +138,20 @@ from (values
   ('demo-erice-borgo', 'villages', 3), ('demo-erice-borgo', 'food_wine', 2), ('demo-erice-borgo', 'history_archaeology', 1),
   ('demo-zingaro', 'nature_hiking', 3), ('demo-zingaro', 'sea', 2),
   ('demo-san-vito-relax', 'relax', 3), ('demo-san-vito-relax', 'sea', 3),
-  ('demo-villa-casale', 'history_archaeology', 3), ('demo-villa-casale', 'art', 3)
+  ('demo-villa-casale', 'history_archaeology', 3), ('demo-villa-casale', 'art', 3),
+  ('demo-mondello-spiaggia', 'sea', 3), ('demo-mondello-spiaggia', 'relax', 2),
+  ('demo-catacombe-cappuccini', 'history_archaeology', 3),
+  ('demo-segesta-tempio', 'history_archaeology', 3), ('demo-segesta-tempio', 'nature_hiking', 1),
+  ('demo-kolymbethra', 'nature_hiking', 3), ('demo-kolymbethra', 'history_archaeology', 1),
+  ('demo-casa-pirandello', 'art', 2), ('demo-casa-pirandello', 'history_archaeology', 2),
+  ('demo-eraclea-spiaggia', 'sea', 3), ('demo-eraclea-spiaggia', 'history_archaeology', 1),
+  ('demo-ceramiche-sciacca', 'local_experiences', 3), ('demo-ceramiche-sciacca', 'art', 2), ('demo-ceramiche-sciacca', 'villages', 1),
+  ('demo-pantalica-trekking', 'nature_hiking', 3), ('demo-pantalica-trekking', 'history_archaeology', 2),
+  ('demo-fontane-bianche', 'sea', 3), ('demo-fontane-bianche', 'relax', 2),
+  ('demo-marzamemi-borgo', 'villages', 3), ('demo-marzamemi-borgo', 'food_wine', 2),
+  ('demo-modica-barocca', 'art', 3), ('demo-modica-barocca', 'villages', 2),
+  ('demo-scicli-chiese', 'art', 3), ('demo-scicli-chiese', 'villages', 2),
+  ('demo-marina-ragusa', 'sea', 3), ('demo-marina-ragusa', 'relax', 1)
 ) as t(activity_slug, interest_key, strength)
 join public.activities a on a.slug = t.activity_slug;
 

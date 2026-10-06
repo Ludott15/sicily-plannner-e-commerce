@@ -20,6 +20,7 @@ const PAGES = [
 
 // Pagine personali: servono una sessione e risposte salvate. Ospite con auto a noleggio e cibo e
 // vino al massimo, così i tre viaggi hanno tappe in auto (l'Etna nel seed) e l'avviso del noleggio.
+// Tre giorni: con il seed demo nessuna area è idonea per viaggi molto più lunghi.
 const SESSION_PAGES = ["/it/viaggio/proposte", "/it/preferenze"];
 
 async function collectFrom(page: Page, paths: string[], found: Map<string, string>) {
@@ -43,7 +44,7 @@ async function collectPending(page: Page) {
   const id = await sessionUserId(page);
   const { withDb } = await import("./db.mjs");
   await withDb(async (sql) => {
-    await sql`insert into public.user_constraints (user_id, car_access, trip_days) values (${id}, 'rental', 5)`;
+    await sql`insert into public.user_constraints (user_id, car_access, trip_days) values (${id}, 'rental', 3)`;
     await sql`insert into public.preference_weights (user_id, interest_key, explicit) values (${id}, 'food_wine', 5)`;
     await sql`update public.profiles set onboarding_completed_at = now() where id = ${id}`;
   });

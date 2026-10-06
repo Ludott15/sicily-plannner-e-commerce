@@ -877,6 +877,20 @@ CREATE TABLE IF NOT EXISTS "public"."affiliate_conversions" (
 ALTER TABLE "public"."affiliate_conversions" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."areas" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "slug" "text" NOT NULL,
+    "name_it" "text" NOT NULL,
+    "name_en" "text" NOT NULL,
+    "sort" smallint DEFAULT 0 NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "areas_slug_format" CHECK (("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::"text"))
+);
+
+
+ALTER TABLE "public"."areas" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."badges" (
     "key" "text" NOT NULL,
     "name_it" "text" NOT NULL,
@@ -1241,6 +1255,7 @@ CREATE TABLE IF NOT EXISTS "public"."places" (
     "description" "text",
     "cover_image" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "area_id" "uuid",
     CONSTRAINT "places_lat_range" CHECK ((("lat" >= ('-90'::integer)::double precision) AND ("lat" <= (90)::double precision))),
     CONSTRAINT "places_lng_range" CHECK ((("lng" >= ('-180'::integer)::double precision) AND ("lng" <= (180)::double precision)))
 );
@@ -1515,6 +1530,16 @@ ALTER TABLE ONLY "public"."affiliate_clicks"
 
 ALTER TABLE ONLY "public"."affiliate_conversions"
     ADD CONSTRAINT "affiliate_conversions_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."areas"
+    ADD CONSTRAINT "areas_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."areas"
+    ADD CONSTRAINT "areas_slug_unique" UNIQUE ("slug");
 
 
 
@@ -1798,6 +1823,10 @@ CREATE INDEX "orders_user_id_idx" ON "public"."orders" USING "btree" ("user_id")
 
 
 
+CREATE INDEX "places_area_id_idx" ON "public"."places" USING "btree" ("area_id");
+
+
+
 CREATE INDEX "points_ledger_season_user_idx" ON "public"."points_ledger" USING "btree" ("season", "user_id");
 
 
@@ -2057,6 +2086,11 @@ ALTER TABLE ONLY "public"."orders"
 
 
 
+ALTER TABLE ONLY "public"."places"
+    ADD CONSTRAINT "places_area_id_areas_id_fk" FOREIGN KEY ("area_id") REFERENCES "public"."areas"("id") ON DELETE RESTRICT;
+
+
+
 ALTER TABLE ONLY "public"."points_ledger"
     ADD CONSTRAINT "points_ledger_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -2222,6 +2256,25 @@ ALTER TABLE "public"."affiliate_conversions" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "affiliate_conversions_select_admin" ON "public"."affiliate_conversions" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."areas" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "areas_delete_admin" ON "public"."areas" FOR DELETE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "areas_insert_admin" ON "public"."areas" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "areas_select_all" ON "public"."areas" FOR SELECT TO "authenticated", "anon" USING (true);
+
+
+
+CREATE POLICY "areas_update_admin" ON "public"."areas" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
 
 
 
@@ -2887,6 +2940,12 @@ GRANT SELECT ON TABLE "public"."affiliate_clicks" TO "authenticated";
 
 GRANT ALL ON TABLE "public"."affiliate_conversions" TO "service_role";
 GRANT SELECT ON TABLE "public"."affiliate_conversions" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."areas" TO "service_role";
+GRANT SELECT ON TABLE "public"."areas" TO "anon";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."areas" TO "authenticated";
 
 
 

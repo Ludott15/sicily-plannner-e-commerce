@@ -1,6 +1,6 @@
 import "server-only";
 import { asc, eq, inArray, sql } from "drizzle-orm";
-import { activities, activityInterests, interests, places, preferenceWeights, profiles, userConstraints } from "@/server/db/schema";
+import { activities, activityInterests, areas, interests, places, preferenceWeights, profiles, userConstraints } from "@/server/db/schema";
 import { dbPublic } from "@/server/db/public";
 import { dbAsUser, type DbUser } from "@/server/db/user";
 import { effectiveWeight, type Airport, type CarAccess, type CatalogActivity, type Pace, type Profile } from "./engine";
@@ -169,7 +169,8 @@ export function toProfile(saved: SavedPreferences): Profile {
   };
 }
 
-// Catalogo per il motore: solo attività attive (dbPublic), con tag e provincia del luogo.
+// Catalogo per il motore: solo attività attive (dbPublic), con tag, area e coordinate del luogo.
+// Le attività di un luogo senza area non entrano nelle proposte.
 export async function engineCatalog(): Promise<CatalogActivity[]> {
   return dbPublic(async (tx) => {
     const rows = await tx
@@ -178,7 +179,9 @@ export async function engineCatalog(): Promise<CatalogActivity[]> {
         slug: activities.slug,
         title: activities.title,
         placeName: places.name,
-        zone: places.province,
+        area: areas.slug,
+        lat: places.lat,
+        lng: places.lng,
         durationMin: activities.durationMin,
         onSitePriceEur: activities.onSitePriceEur,
         seasonMonths: activities.seasonMonths,
@@ -189,6 +192,7 @@ export async function engineCatalog(): Promise<CatalogActivity[]> {
       })
       .from(activities)
       .innerJoin(places, eq(places.id, activities.placeId))
+      .innerJoin(areas, eq(areas.id, places.areaId))
       .orderBy(asc(activities.id));
     const ids = rows.map((r) => r.id);
     const tags = ids.length
@@ -204,4 +208,12 @@ export async function engineCatalog(): Promise<CatalogActivity[]> {
       tags: tags.filter((t) => t.activityId === r.id).map((t) => ({ key: t.key, strength: t.strength })),
     }));
   });
+}
+
+// Nomi delle aree nella lingua della pagina, per slug.
+export async function areaNames(locale: string): Promise<Map<string, string>> {
+  const rows = await dbPublic((tx) =>
+    tx.select({ slug: areas.slug, it: areas.nameIt, en: areas.nameEn }).from(areas).orderBy(asc(areas.sort)),
+  );
+  return new Map(rows.map((r) => [r.slug, locale === "en" ? r.en : r.it]));
 }

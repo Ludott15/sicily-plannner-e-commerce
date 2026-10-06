@@ -12,13 +12,26 @@ export type PlaceFormValues = {
   name: string;
   slug: string;
   province: string;
+  areaId: string | null;
   lat: number | null;
   lng: number | null;
   description: string | null;
   coverImage: string | null;
 };
 
-export function PlaceForm({ action, locale, values }: { action: AdminFormAction; locale: string; values: PlaceFormValues }) {
+export type AreaOption = { id: string; name: string };
+
+export function PlaceForm({
+  action,
+  locale,
+  values,
+  areas,
+}: {
+  action: AdminFormAction;
+  locale: string;
+  values: PlaceFormValues;
+  areas: AreaOption[];
+}) {
   const t = useTranslations("Admin");
   const { state, onSubmit, pending } = useAdminForm(action);
 
@@ -40,6 +53,16 @@ export function PlaceForm({ action, locale, values }: { action: AdminFormAction;
             {Object.entries(PROVINCES).map(([code, name]) => (
               <option key={code} value={code}>
                 {name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label={t("fieldArea")} hint={t("fieldAreaHint")} htmlFor="areaId">
+          <Select id="areaId" name="areaId" defaultValue={values.areaId ?? ""}>
+            <option value="">{t("noArea")}</option>
+            {areas.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
               </option>
             ))}
           </Select>
