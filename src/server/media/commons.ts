@@ -3,7 +3,8 @@ import { MAX_UPLOAD_BYTES, MIN_LONG_SIDE } from "@/lib/media";
 import type { CommonsError, CommonsFile } from "@/lib/media-admin";
 
 export type { CommonsError, CommonsFile };
-import { SafeFetchError, checkUrl, safeFetch, type Transport } from "./safe-fetch";
+import { SafeFetchError, checkUrl, type Transport } from "./safe-fetch";
+import { wikimediaFetch } from "./wikimedia";
 
 // Importatore da Wikimedia Commons (percorso sensibile, docs/IMMAGINI.md):
 // - l'admin incolla "slug;URL della pagina del file su commons.wikimedia.org";
@@ -18,7 +19,9 @@ const PAGE_HOSTS = new Set(["commons.wikimedia.org", "commons.m.wikimedia.org"])
 
 // Larghezza della copia scaricata: abbastanza per la variante più grande con margine per il
 // ritaglio, e quasi sempre sotto i 10 MB. Il ridimensionamento rende la foto "modificata".
-export const DOWNLOAD_WIDTH = 2560;
+// 1920 è una delle larghezze standard delle miniature di Wikimedia: le larghezze fuori standard
+// vengono limitate o rifiutate.
+export const DOWNLOAD_WIDTH = 1920;
 
 
 // "File:Nome file.jpg" dall'URL della pagina del file (anche versione mobile o ?title=).
@@ -232,27 +235,30 @@ function fetchError(error: unknown): CommonsError {
   return error instanceof SafeFetchError ? `fetch_${error.code}` : "fetch_network";
 }
 
+// Dettaglio dell'errore da mostrare all'admin (es. il codice HTTP di un rifiuto di Wikimedia).
+const errorDetail = (error: unknown) => (error instanceof SafeFetchError ? error.detail : undefined);
+
 export async function fetchCommonsFile(pageUrl: string, transport?: Transport, options: LicenseOptions = {}) {
   const title = commonsFileTitle(pageUrl);
   if (!title) return { ok: false as const, error: "invalid_page_url" as CommonsError };
   try {
-    const res = await safeFetch(commonsApiUrl(title), {
+    const res = await wikimediaFetch(commonsApiUrl(title), {
       allowedHosts: COMMONS_API_HOSTS,
       contentTypes: ["application/json"],
       maxBytes: 2 * 1024 * 1024,
-      timeoutMs: 10_000,
+      timeoutMs: 20_000,
       transport,
     });
     return parseCommonsResponse(JSON.parse(res.body.toString("utf8")), options);
   } catch (error) {
     if (error instanceof SyntaxError) return { ok: false as const, error: "metadata_unavailable" as CommonsError };
-    return { ok: false as const, error: fetchError(error) };
+    return { ok: false as const, error: fetchError(error), detail: errorDetail(error) };
   }
 }
 
 export async function downloadCommonsFile(downloadUrl: string, transport?: Transport) {
   try {
-    const res = await safeFetch(downloadUrl, {
+    const res = await wikimediaFetch(downloadUrl, {
       allowedHosts: COMMONS_FILE_HOSTS,
       contentTypes: ["image/jpeg", "image/png", "image/webp"],
       maxBytes: MAX_UPLOAD_BYTES,
@@ -261,7 +267,7 @@ export async function downloadCommonsFile(downloadUrl: string, transport?: Trans
     });
     return { ok: true as const, body: res.body };
   } catch (error) {
-    return { ok: false as const, error: fetchError(error) };
+    return { ok: false as const, error: fetchError(error), detail: errorDetail(error) };
   }
 }
 

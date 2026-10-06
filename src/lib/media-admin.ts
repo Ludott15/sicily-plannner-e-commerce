@@ -103,9 +103,9 @@ export type PhotoSearchStats = { found: number; license: number; small: number; 
 
 export type CandidateSearch =
   | { ok: true; candidates: PhotoCandidate[]; stats: PhotoSearchStats }
-  | { ok: false; error: CommonsRowError | "invalid" };
+  | { ok: false; error: CommonsRowError | "invalid"; detail?: string };
 
-export type PhotoImport = { ok: true; mediaId: string } | { ok: false; error: CommonsImportResult["error"] | "invalid" };
+export type PhotoImport = { ok: true; mediaId: string } | { ok: false; error: CommonsImportResult["error"] | "invalid"; detail?: string };
 
 export type AutoAssignItem = {
   key: string;
@@ -116,6 +116,8 @@ export type AutoAssignItem = {
   outcome: "assigned" | "reused" | "skipped";
   mediaId?: string;
   reason?: string;
+  // Dettaglio tecnico (es. codice HTTP di un rifiuto di Wikimedia).
+  detail?: string;
   stats?: PhotoSearchStats;
 };
 

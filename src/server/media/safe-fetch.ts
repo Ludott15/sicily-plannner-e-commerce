@@ -19,7 +19,7 @@ export type SafeFetchErrorCode = FetchErrorCode;
 export class SafeFetchError extends Error {
   constructor(
     readonly code: SafeFetchErrorCode,
-    detail?: string,
+    readonly detail?: string,
   ) {
     super(detail ? `${code}: ${detail}` : code);
     this.name = "SafeFetchError";
@@ -34,7 +34,7 @@ export type TransportResponse = {
 };
 
 // Esegue una singola richiesta GET senza seguire redirect. Sostituibile nei test.
-export type Transport = (url: URL, signal: AbortSignal) => Promise<TransportResponse>;
+export type Transport = (url: URL, signal: AbortSignal, headers?: Record<string, string>) => Promise<TransportResponse>;
 
 export type SafeFetchOptions = {
   allowedHosts: readonly string[];
@@ -42,6 +42,7 @@ export type SafeFetchOptions = {
   timeoutMs: number;
   maxRedirects?: number;
   contentTypes: readonly string[];
+  headers?: Record<string, string>;
   transport?: Transport;
 };
 
@@ -68,7 +69,7 @@ export function checkUrl(raw: string | URL, allowedHosts: readonly string[], bas
 }
 
 export async function safeFetch(raw: string, options: SafeFetchOptions): Promise<SafeFetchResult> {
-  const { allowedHosts, maxBytes, timeoutMs, maxRedirects = 3, contentTypes, transport = nodeTransport } = options;
+  const { allowedHosts, maxBytes, timeoutMs, maxRedirects = 3, contentTypes, headers, transport = nodeTransport } = options;
   const signal = AbortSignal.timeout(timeoutMs);
   // Il timeout vale anche per un trasporto o un corpo che non ascoltano il segnale.
   const timedOut = new Promise<never>((_, reject) => {
@@ -79,7 +80,7 @@ export async function safeFetch(raw: string, options: SafeFetchOptions): Promise
 
   try {
     for (let hop = 0; ; hop++) {
-      const res = await Promise.race([transport(url, signal), timedOut]);
+      const res = await Promise.race([transport(url, signal, headers), timedOut]);
       if (REDIRECTS.has(res.status)) {
         res.cancel();
         if (hop >= maxRedirects) throw new SafeFetchError("too_many_redirects");
@@ -203,7 +204,7 @@ export function makeSafeLookup(resolve: typeof dnsLookup = dnsLookup): LookupFun
 
 const safeLookup = makeSafeLookup();
 
-const nodeTransport: Transport = (url, signal) =>
+const nodeTransport: Transport = (url, signal, headers) =>
   new Promise((resolve, reject) => {
     const req = httpsRequest(
       url,
@@ -211,7 +212,7 @@ const nodeTransport: Transport = (url, signal) =>
         method: "GET",
         lookup: safeLookup,
         signal,
-        headers: { "user-agent": "IsulaCatalogImporter/1.0 (catalogo immagini)", accept: "*/*" },
+        headers: { "user-agent": "IsulaCatalogImporter/1.0", accept: "*/*", ...headers },
       },
       (res) => {
         resolve({

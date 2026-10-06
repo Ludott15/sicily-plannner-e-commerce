@@ -118,6 +118,7 @@ export function CommonsPhotoFinder({
                     <>
                       {" "}
                       · {reason(i.reason)}
+                      {i.detail && <> (HTTP {i.detail})</>}
                       {i.stats && <> ({statsText(i.stats)})</>}
                     </>
                   )}
@@ -189,7 +190,7 @@ function NeedItem({
               start(async () => {
                 const result = await search({ type: need.type, id: need.id, allowSa });
                 if (!result.ok) {
-                  setError(errorText(result.error));
+                  setError(`${errorText(result.error)}${result.detail ? ` (HTTP ${result.detail})` : ""}`);
                   return;
                 }
                 setError(null);
@@ -229,7 +230,7 @@ function NeedItem({
                     start(async () => {
                       const result = await importPhoto({ type: need.type, id: need.id, pageUrl: c.pageUrl, allowSa });
                       if (!result.ok) {
-                        setError(errorText(result.error ?? "storage_failed"));
+                        setError(`${errorText(result.error ?? "storage_failed")}${result.detail ? ` (HTTP ${result.detail})` : ""}`);
                         return;
                       }
                       setDone(result.mediaId);

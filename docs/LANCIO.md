@@ -43,6 +43,7 @@ Restano manuali solo i segreti (passo 2 e sezione 2) e l'SMTP di produzione, se 
 | Variabile | Valore | Verifica |
 | --- | --- | --- |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | site key del widget Turnstile del dominio | Se manca, la build di produzione si ferma (`src/lib/env.ts`). A mano: il widget non mostra l'avviso "testing only". |
+| `WIKIMEDIA_CONTACT` | email o indirizzo di contatto per Wikimedia (es. l'email della redazione) | Facoltativa: senza, le richieste a Wikimedia Commons usano l'indirizzo del sito come contatto nello User-Agent. |
 | `CRON_SECRET` | stringa casuale lunga (es. `openssl rand -hex 32`) | `GET https://<dominio>/api/cron/cleanup-guests` senza header risponde 401. Nei log di Vercel il cron delle 3:00 UTC risponde 200 con `{"deleted": n}`. |
 
 Il widget Turnstile si crea su Cloudflare (Turnstile → Add widget) con il dominio di produzione. Da lì vengono la site key (Vercel) e la chiave segreta (`SUPABASE_AUTH_CAPTCHA_SECRET` per `config push`).
