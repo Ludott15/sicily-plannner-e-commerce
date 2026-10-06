@@ -24,7 +24,12 @@ import { ingestPhoto, setCover } from "./ingest.admin";
 // Zod → requireAdmin → scrittura, come le altre azioni dell'admin.
 
 const MEDIA_PATHS = ["/[locale]/admin/media", "/[locale]/admin/media/foto-commons"] as const;
-const entitySchema = z.object({ type: z.enum(["area", "place", "activity", "itinerary"]), id: z.uuid() });
+const entitySchema = z.object({
+  type: z.enum(["area", "place", "activity", "itinerary"]),
+  id: z.uuid(),
+  // CC BY-SA ammessa solo se l'admin la abilita esplicitamente (docs/IMMAGINI.md, Licenze).
+  allowSa: z.boolean().default(false),
+});
 
 function today() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" }).format(new Date());
@@ -61,17 +66,18 @@ export async function searchCommonsForEntity(input: unknown): Promise<CandidateS
   const parsed = entitySchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid" };
   await requireAdmin();
-  const [need] = await entitiesNeedingPhoto(1, parsed.data);
+  const { type, id, allowSa } = parsed.data;
+  const [need] = await entitiesNeedingPhoto(1, { type, id });
   if (!need) return { ok: false, error: "entity_not_found" };
-  const result = await searchCommons(await photoTarget(need), await importedCommonsPages());
+  const result = await searchCommons(await photoTarget(need), await importedCommonsPages(), undefined, { allowSa });
   if (!result.ok) return result;
-  return { ok: true, candidates: result.candidates.slice(0, 8).map(toView) };
+  return { ok: true, candidates: result.candidates.slice(0, 8).map(toView), stats: result.stats };
 }
 
 // Importa una pagina di Commons e la mette come copertina dell'entità. I metadati si rileggono
 // dal server: dal browser arriva solo l'indirizzo della pagina.
-async function importFor(need: PhotoNeed, pageUrl: string, altIt: string | null, userId: string): Promise<PhotoImport> {
-  const fetched = await fetchCommonsFile(pageUrl);
+async function importFor(need: PhotoNeed, pageUrl: string, altIt: string | null, userId: string, allowSa: boolean): Promise<PhotoImport> {
+  const fetched = await fetchCommonsFile(pageUrl, undefined, { allowSa });
   if (!fetched.ok) return { ok: false, error: fetched.error };
   const [existing] = await dbAdmin.select({ id: media.id }).from(media).where(eq(media.sourceUrl, fetched.file.pageUrl || "-"));
   if (existing) {
@@ -111,10 +117,10 @@ export async function importCommonsForEntity(input: unknown): Promise<PhotoImpor
   const parsed = importSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { user } = await requireAdmin();
-  const { type, id, pageUrl, altIt } = parsed.data;
+  const { type, id, pageUrl, altIt, allowSa } = parsed.data;
   const [need] = await entitiesNeedingPhoto(1, { type, id });
   if (!need) return { ok: false, error: "entity_not_found" };
-  const result = await importFor(need, pageUrl, altIt ?? null, user.id);
+  const result = await importFor(need, pageUrl, altIt ?? null, user.id, allowSa);
   for (const path of MEDIA_PATHS) revalidatePath(path, "page");
   return result;
 }
@@ -142,6 +148,7 @@ async function reusePlacePhoto(areaId: string) {
 const autoSchema = z.object({
   skip: z.array(z.string().max(60)).max(2000),
   limit: z.number().int().min(1).max(5),
+  allowSa: z.boolean().default(false),
 });
 
 // Un passo dell'assegnazione automatica: prende le prossime entità senza foto vera (tranne
@@ -160,10 +167,10 @@ export async function autoAssignCommonsPhotos(input: unknown): Promise<AutoAssig
   const items: AutoAssignItem[] = [];
   for (const need of batch) {
     const base = { key: `${need.type}:${need.id}`, type: need.type, name: cleanName(need.name) };
-    const search = await searchCommons(await photoTarget(need), exclude);
+    const search = await searchCommons(await photoTarget(need), exclude, undefined, { allowSa: parsed.data.allowSa });
     const best = search.ok ? search.candidates[0] : undefined;
     if (best) {
-      const imported = await importFor(need, best.pageUrl, null, user.id);
+      const imported = await importFor(need, best.pageUrl, null, user.id, parsed.data.allowSa);
       if (imported.ok) {
         exclude.add(best.pageUrl);
         items.push({ ...base, outcome: "assigned", mediaId: imported.mediaId });
@@ -182,7 +189,12 @@ export async function autoAssignCommonsPhotos(input: unknown): Promise<AutoAssig
         continue;
       }
     }
-    items.push({ ...base, outcome: "skipped", reason: search.ok ? "no_candidate" : search.error });
+    items.push({
+      ...base,
+      outcome: "skipped",
+      reason: search.ok ? "no_candidate" : search.error,
+      stats: search.ok ? search.stats : undefined,
+    });
   }
   for (const path of MEDIA_PATHS) revalidatePath(path, "page");
   return { ok: true, items, remaining: Math.max(0, pending.length - batch.length) };

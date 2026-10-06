@@ -98,7 +98,12 @@ export type PhotoCandidate = {
   warnings: string[];
 };
 
-export type CandidateSearch = { ok: true; candidates: PhotoCandidate[] } | { ok: false; error: CommonsRowError | "invalid" };
+// Risultati della ricerca e motivi di scarto (licenza, dimensioni, autore/persone/nome…).
+export type PhotoSearchStats = { found: number; license: number; small: number; other: number; unfit: number };
+
+export type CandidateSearch =
+  | { ok: true; candidates: PhotoCandidate[]; stats: PhotoSearchStats }
+  | { ok: false; error: CommonsRowError | "invalid" };
 
 export type PhotoImport = { ok: true; mediaId: string } | { ok: false; error: CommonsImportResult["error"] | "invalid" };
 
@@ -111,6 +116,7 @@ export type AutoAssignItem = {
   outcome: "assigned" | "reused" | "skipped";
   mediaId?: string;
   reason?: string;
+  stats?: PhotoSearchStats;
 };
 
 export type AutoAssignStep = { ok: true; items: AutoAssignItem[]; remaining: number } | { ok: false; error: "invalid" };

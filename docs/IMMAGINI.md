@@ -16,7 +16,7 @@ Regole editoriali e tecniche per le foto e le illustrazioni di luoghi, attività
 | Foto proprie (`own`) | Sì | Autore e licenza obbligatori (anche "Tutti i diritti riservati"). |
 | CC0, pubblico dominio | Sì | Importabili da Commons. |
 | CC BY (qualsiasi versione) | Sì | Importabili da Commons. Autore, licenza con link e "modificata" nella didascalia. |
-| CC BY-SA | Solo dopo valutazione di Ludovico | Mai dall'importatore: solo caricamento manuale. |
+| CC BY-SA | Solo su scelta esplicita dell'admin | Mai dall'importatore a righe. In Foto da Commons solo spuntando "Ammetti anche foto con licenza CC BY-SA": è la valutazione di Ludovico, per quella ricerca. Didascalia con autore e licenza; le versioni ritagliate restano CC BY-SA. |
 | NC (non commerciale), ND (non opere derivate) | No | Il sito è commerciale e le varianti sono ritagli, cioè opere derivate. |
 | Agenzie fotografiche | Solo con licenza commerciale | Mai "solo uso editoriale". Il contratto va conservato fuori dal sito; nel campo licenza il suo nome. |
 | Partner (`partner`) | Sì, con autorizzazione scritta del partner | Autore e licenza obbligatori. |
@@ -66,7 +66,7 @@ Immagini → Foto da Commons elenca luoghi, attività, itinerari pronti e aree s
 - **attività e itinerari:** ricerca per nome (e vicino al luogo), con almeno metà delle parole chiave del nome nel titolo o nella descrizione del file: se nessuna foto corrisponde si salta, e la pagina mostra la foto del luogo invece di una foto sbagliata;
 - **aree:** ricerca per nome; senza risultati adatti l'area riusa la foto vera di uno dei suoi luoghi.
 
-Si tengono solo i file che passano i controlli dell'importatore (licenza, lato lungo, download da upload.wikimedia.org), con un autore, senza persone riconoscibili (avviso "personality") e senza mappe, stemmi o bandiere; una foto già importata non si ripropone per un'altra entità. "Trova e assegna le foto mancanti" assegna a ognuna il candidato più pertinente, a passi brevi; "Cerca su Commons" mostra i candidati di una sola entità per scegliere a mano. Il testo alternativo viene dalla descrizione su Commons (o dal nome): va riletto dalla tabella delle immagini. Le foto di parchi archeologici, musei e monumenti pubblici vanno segnate come beni culturali, con l'autorizzazione, prima del lancio.
+La ricerca per nome si fa due volte: prima filtrata sulle licenze ammesse nei dati strutturati di Commons (la maggior parte delle foto è CC BY-SA, e senza filtro le poche ammesse si perdono), poi libera; quella per posizione copre 10 km. Quando non trova niente, l'admin vede quanti risultati sono stati scartati e perché (licenza, dimensioni, autore, persone, nome). Si tengono solo i file che passano i controlli dell'importatore (licenza, lato lungo, download da upload.wikimedia.org), con un autore, senza persone riconoscibili (avviso "personality") e senza mappe, stemmi o bandiere; una foto già importata non si ripropone per un'altra entità. "Trova e assegna le foto mancanti" assegna a ognuna il candidato più pertinente, a passi brevi; "Cerca su Commons" mostra i candidati di una sola entità per scegliere a mano. Il testo alternativo viene dalla descrizione su Commons (o dal nome): va riletto dalla tabella delle immagini. Le foto di parchi archeologici, musei e monumenti pubblici vanno segnate come beni culturali, con l'autorizzazione, prima del lancio.
 
 Nel sito locale le immagini demo (`npm run media:demo`) sono segnaposto: con l'app avviata e un account admin, "Trova e assegna le foto mancanti" le sostituisce con foto vere (serve la rete verso Wikimedia).
 

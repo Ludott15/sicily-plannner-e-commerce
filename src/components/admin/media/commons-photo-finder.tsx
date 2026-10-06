@@ -12,7 +12,14 @@ import type {
   PhotoCandidate,
   PhotoEntityType,
   PhotoImport,
+  PhotoSearchStats,
 } from "@/lib/media-admin";
+import { Checkbox } from "../fields";
+
+function useStatsText() {
+  const t = useTranslations("Admin");
+  return (stats?: PhotoSearchStats) => (stats ? t("photoFinderStats", stats) : "");
+}
 
 export type NeedRow = {
   type: PhotoEntityType;
@@ -40,14 +47,16 @@ export function CommonsPhotoFinder({
   const [log, setLog] = useState<AutoAssignItem[]>([]);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
+  const [allowSa, setAllowSa] = useState(false);
   const stop = useRef(false);
+  const statsText = useStatsText();
 
   async function runAuto() {
     setRunning(true);
     stop.current = false;
     const skip: string[] = [];
     for (;;) {
-      const step = await autoAssign({ skip, limit: 2 }).catch(() => null);
+      const step = await autoAssign({ skip, limit: 2, allowSa }).catch(() => null);
       if (!step || !step.ok) break;
       skip.push(...step.items.map((i) => i.key));
       setLog((prev) => [...prev, ...step.items]);
@@ -68,6 +77,13 @@ export function CommonsPhotoFinder({
           {t("photoFinderAutoTitle")}
         </h2>
         <p className="text-body-s text-lava-muted">{t("photoFinderAutoHint", { count: needs.length })}</p>
+        <Checkbox
+          label={t("photoFinderAllowSa")}
+          checked={allowSa}
+          disabled={running}
+          onChange={(e) => setAllowSa(e.target.checked)}
+        />
+        <p className="text-caption text-lava-muted">{t("photoFinderAllowSaHint")}</p>
         <div className="flex flex-wrap gap-3">
           <Button variant="primary" disabled={running || needs.length === 0} onClick={runAuto}>
             {t("photoFinderAuto")}
@@ -98,7 +114,13 @@ export function CommonsPhotoFinder({
                       · <Link href={`/admin/media/${i.mediaId}`}>{t("mediaOpen")}</Link>
                     </>
                   )}
-                  {i.outcome === "skipped" && <> · {reason(i.reason)}</>}
+                  {i.outcome === "skipped" && (
+                    <>
+                      {" "}
+                      · {reason(i.reason)}
+                      {i.stats && <> ({statsText(i.stats)})</>}
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
@@ -115,7 +137,7 @@ export function CommonsPhotoFinder({
         ) : (
           <ul className="flex flex-col divide-y divide-divider">
             {needs.map((n) => (
-              <NeedItem key={`${n.type}:${n.id}`} need={n} search={search} importPhoto={importPhoto} />
+              <NeedItem key={`${n.type}:${n.id}`} need={n} search={search} importPhoto={importPhoto} allowSa={allowSa} />
             ))}
           </ul>
         )}
@@ -128,14 +150,18 @@ function NeedItem({
   need,
   search,
   importPhoto,
+  allowSa,
 }: {
   need: NeedRow;
+  allowSa: boolean;
   search: (input: unknown) => Promise<CandidateSearch>;
   importPhoto: (input: unknown) => Promise<PhotoImport>;
 }) {
   const t = useTranslations("Admin");
   const router = useRouter();
   const [candidates, setCandidates] = useState<PhotoCandidate[] | null>(null);
+  const [stats, setStats] = useState<PhotoSearchStats | undefined>(undefined);
+  const statsText = useStatsText();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -161,13 +187,14 @@ function NeedItem({
             disabled={pending}
             onClick={() =>
               start(async () => {
-                const result = await search({ type: need.type, id: need.id });
+                const result = await search({ type: need.type, id: need.id, allowSa });
                 if (!result.ok) {
                   setError(errorText(result.error));
                   return;
                 }
                 setError(null);
                 setCandidates(result.candidates);
+                setStats(result.stats);
               })
             }
           >
@@ -178,7 +205,9 @@ function NeedItem({
       {error && <p className="text-body-s font-semibold text-danger">{error}</p>}
       {candidates && !done && (
         candidates.length === 0 ? (
-          <p className="text-body-s text-lava-muted">{t("photoFinderNoCandidates")}</p>
+          <p className="text-body-s text-lava-muted">
+            {t("photoFinderNoCandidates")} ({statsText(stats)})
+          </p>
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {candidates.map((c) => (
@@ -198,7 +227,7 @@ function NeedItem({
                   disabled={pending}
                   onClick={() =>
                     start(async () => {
-                      const result = await importPhoto({ type: need.type, id: need.id, pageUrl: c.pageUrl });
+                      const result = await importPhoto({ type: need.type, id: need.id, pageUrl: c.pageUrl, allowSa });
                       if (!result.ok) {
                         setError(errorText(result.error ?? "storage_failed"));
                         return;

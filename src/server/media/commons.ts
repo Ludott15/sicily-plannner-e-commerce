@@ -70,16 +70,26 @@ export type LicenseDecision =
 
 // License (codice: "cc0", "cc-by-4.0", "cc-by-sa-3.0", "pd") e LicenseShortName ("CC BY 4.0",
 // "Public domain") da extmetadata. Prima si cercano le clausole vietate, poi le ammesse.
-export function classifyLicense(meta: { license?: string | null; shortName?: string | null; url?: string | null }): LicenseDecision {
+// CC BY-SA si accetta solo con allowSa: lo decide l'admin, caso per caso o per una ricerca
+// (docs/IMMAGINI.md, Licenze). NC e ND non si accettano mai.
+export type LicenseOptions = { allowSa?: boolean };
+
+export function classifyLicense(
+  meta: { license?: string | null; shortName?: string | null; url?: string | null },
+  options: LicenseOptions = {},
+): LicenseDecision {
   const code = (meta.license ?? "").trim().toLowerCase();
   const short = (meta.shortName ?? "").trim();
   const tokens = new Set(`${code} ${short.toLowerCase()}`.split(/[\s\-_/,()]+/).filter(Boolean));
   if (!code && !short) return { ok: false, error: "license_missing" };
   if (tokens.has("nc")) return { ok: false, error: "license_nc" };
   if (tokens.has("nd")) return { ok: false, error: "license_nd" };
-  if (tokens.has("sa")) return { ok: false, error: "license_sa" };
-
   const url = meta.url && /^https?:\/\//i.test(meta.url.trim()) ? meta.url.trim().replace(/^http:/i, "https:") : null;
+  if (tokens.has("sa")) {
+    const bySa = /^cc-by-sa-(\d(?:\.\d)?)(?:-[a-z]{2,3})?$/.exec(code) ?? /^cc by-sa (\d(?:\.\d)?)\b/i.exec(short);
+    if (!options.allowSa || !bySa) return { ok: false, error: "license_sa" };
+    return { ok: true, license: `CC BY-SA ${bySa[1]}`, licenseUrl: url ?? `https://creativecommons.org/licenses/by-sa/${bySa[1]}/` };
+  }
   if (code === "cc0" || /^cc0\b/i.test(short)) {
     return { ok: true, license: "CC0 1.0", licenseUrl: url ?? "https://creativecommons.org/publicdomain/zero/1.0/" };
   }
@@ -159,7 +169,10 @@ const ext = (meta: Record<string, ExtValue> | undefined, key: string) => {
   return typeof value === "string" ? value : null;
 };
 
-export function parseCommonsResponse(json: unknown): { ok: true; file: CommonsFile } | { ok: false; error: CommonsError } {
+export function parseCommonsResponse(
+  json: unknown,
+  options: LicenseOptions = {},
+): { ok: true; file: CommonsFile } | { ok: false; error: CommonsError } {
   const page = (json as { query?: { pages?: unknown[] } })?.query?.pages?.[0] as
     | { title?: string; missing?: boolean; imageinfo?: Array<Record<string, unknown>> }
     | undefined;
@@ -172,7 +185,7 @@ export function parseCommonsResponse(json: unknown): { ok: true; file: CommonsFi
     license: ext(meta, "License"),
     shortName: htmlToText(ext(meta, "LicenseShortName") ?? "", 80),
     url: ext(meta, "LicenseUrl"),
-  });
+  }, options);
   if (!decision.ok) return { ok: false, error: decision.error };
 
   const mime = String(info.mime ?? "");
@@ -219,7 +232,7 @@ function fetchError(error: unknown): CommonsError {
   return error instanceof SafeFetchError ? `fetch_${error.code}` : "fetch_network";
 }
 
-export async function fetchCommonsFile(pageUrl: string, transport?: Transport) {
+export async function fetchCommonsFile(pageUrl: string, transport?: Transport, options: LicenseOptions = {}) {
   const title = commonsFileTitle(pageUrl);
   if (!title) return { ok: false as const, error: "invalid_page_url" as CommonsError };
   try {
@@ -230,7 +243,7 @@ export async function fetchCommonsFile(pageUrl: string, transport?: Transport) {
       timeoutMs: 10_000,
       transport,
     });
-    return parseCommonsResponse(JSON.parse(res.body.toString("utf8")));
+    return parseCommonsResponse(JSON.parse(res.body.toString("utf8")), options);
   } catch (error) {
     if (error instanceof SyntaxError) return { ok: false as const, error: "metadata_unavailable" as CommonsError };
     return { ok: false as const, error: fetchError(error) };

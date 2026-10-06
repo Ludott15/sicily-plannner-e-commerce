@@ -555,7 +555,10 @@
     "photoFinderSearch": "Search Commons",
     "photoFinderNoCandidates": "No suitable photo on Commons. Upload your own or a partner's photo from Images.",
     "photoFinderUse": "Use this one",
-    "photoFinderDone": "Photo assigned: open"
+    "photoFinderDone": "Photo assigned: open",
+    "photoFinderAllowSa": "Also allow CC BY-SA photos",
+    "photoFinderAllowSaHint": "Most photos on Wikimedia Commons are CC BY-SA: without this box many entities stay without a photo. With CC BY-SA the caption credits author and licence as for CC BY, and the cropped versions stay under the same licence. NC and ND licences remain excluded.",
+    "photoFinderStats": "{found} results: {license} with a licence not allowed, {small} too small, {unfit} unsuitable (no author, people, maps or different name), {other} other"
   },
   "Og": {
     "activity": "Activity · {province}",
