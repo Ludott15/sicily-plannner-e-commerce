@@ -191,10 +191,35 @@ const ext = (meta: Record<string, ExtValue> | undefined, key: string) => {
   return typeof value === "string" ? value : null;
 };
 
+// Copia ridotta a DOWNLOAD_WIDTH (thumburl) se l'originale è più largo; altrimenti l'originale.
+// Se la miniatura proposta dall'API non è su upload.wikimedia.org (o manca) si costruisce
+// dall'originale con lo schema standard delle miniature: /thumb/a/ab/Nome.jpg/1920px-Nome.jpg.
+export function downloadUrl(thumb: unknown, original: unknown, width: number): string {
+  const orig = typeof original === "string" ? absolute(original) : "";
+  if (typeof thumb === "string" && isCommonsFileUrl(absolute(thumb))) return absolute(thumb);
+  if (!isCommonsFileUrl(orig) || !(width > DOWNLOAD_WIDTH)) return orig || (typeof thumb === "string" ? absolute(thumb) : "");
+  const url = new URL(orig);
+  const match = url.pathname.match(/^\/wikipedia\/commons\/([0-9a-f]\/[0-9a-f]{2})\/([^/]+)$/);
+  if (!match) return orig;
+  const ext = /\.tiff?$/i.test(match[2]!) ? ".jpg" : "";
+  url.pathname = `/wikipedia/commons/thumb/${match[1]}/${match[2]}/${DOWNLOAD_WIDTH}px-${match[2]}${ext}`;
+  return url.toString();
+}
+
+const absolute = (raw: string) => (raw.startsWith("//") ? `https:${raw}` : raw);
+const isCommonsFileUrl = (raw: string) => {
+  try {
+    checkUrl(raw, COMMONS_FILE_HOSTS);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export function parseCommonsResponse(
   json: unknown,
   options: LicenseOptions = {},
-): { ok: true; file: CommonsFile } | { ok: false; error: CommonsError; license?: string } {
+): { ok: true; file: CommonsFile } | { ok: false; error: CommonsError; license?: string; detail?: string } {
   const page = (json as { query?: { pages?: unknown[] } })?.query?.pages?.[0] as
     | { title?: string; missing?: boolean; imageinfo?: Array<Record<string, unknown>>; categories?: Array<{ title?: string }> }
     | undefined;
@@ -218,12 +243,12 @@ export function parseCommonsResponse(
   if (!Number.isFinite(width) || !Number.isFinite(height) || Math.max(width, height) < MIN_LONG_SIDE) {
     return { ok: false, error: "too_small" };
   }
-  // Copia ridotta a DOWNLOAD_WIDTH (thumburl) se l'originale è più largo; altrimenti l'originale.
-  const download = String(info.thumburl ?? info.url ?? "");
+  const download = downloadUrl(info.thumburl, info.url, width);
   try {
     checkUrl(download, COMMONS_FILE_HOSTS);
   } catch (error) {
-    return { ok: false, error: `fetch_${(error as SafeFetchError).code ?? "invalid_url"}` as CommonsError };
+    const err = error as SafeFetchError;
+    return { ok: false, error: `fetch_${err.code ?? "invalid_url"}` as CommonsError, detail: `fetch_${err.code}: ${err.detail ?? download}` };
   }
   const pageUrl = String(info.descriptionurl ?? "");
   // Autore: Artist; se manca, Credit (tranne le diciture generiche come "Opera propria").
