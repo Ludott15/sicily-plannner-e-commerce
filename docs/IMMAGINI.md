@@ -65,8 +65,8 @@ Immagini → Foto da Commons elenca luoghi, attività, itinerari pronti e aree s
 **Metodo principale: la foto principale di Wikipedia/Wikidata** (`src/server/media/wiki-images.ts`). Per ogni voce:
 
 1. su it.wikipedia si cerca la voce più pertinente al nome, tenendo solo quella il cui titolo ha almeno una parola chiave del nome (Etna versante sud → Etna; Corso di cous cous trapanese → nessuna voce);
-2. si prende l'immagine dell'elemento Wikidata (P18) o, in mancanza, quella della voce: l'hanno scelta i redattori di Wikipedia per quel soggetto, ed è sempre un file di Commons;
-3. il file passa dagli stessi controlli dell'importatore (licenza, lato lungo, download da upload.wikimedia.org), con autore obbligatorio e senza persone riconoscibili.
+2. si prende l'immagine dell'elemento Wikidata (P18) o, in mancanza, quella della voce: l'hanno scelta i redattori di Wikipedia per quel soggetto, ed è sempre un file di Commons. Le voci su persone (Wikidata: istanza di essere umano) si saltano, perché la loro immagine è un ritratto: si passa alla voce successiva;
+3. il file passa dagli stessi controlli dell'importatore (licenza, lato lungo, download da upload.wikimedia.org), con autore obbligatorio e senza persone riconoscibili. La licenza si legge da extmetadata e, se il file ne ha più d'una (es. GFDL e CC BY-SA), dalle sue categorie di licenza; l'autore da "Artist" o, in mancanza, da "Credit" (non "Opera propria"). Quando un file viene scartato, la riga dice perché (licenza, autore mancante, persone).
 
 Le attività e gli itinerari senza una voce propria restano senza foto propria e mostrano quella del luogo (catena di ripiego); un'area senza voce adatta riusa la foto di uno dei suoi luoghi. "Trova e assegna le foto mancanti" lavora a passi brevi; "Cerca su Commons" mostra per prima la foto di Wikipedia e poi le alternative della ricerca su Commons (per posizione e per nome).
 

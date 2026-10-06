@@ -11,7 +11,9 @@ import { wikimediaFetch } from "./wikimedia";
 // Tre richieste al massimo, una alla volta (wikimediaFetch):
 // 1. it.wikipedia: la voce più pertinente per il nome (ricerca, con l'immagine principale e
 //    l'elemento Wikidata);
-// 2. Wikidata: l'immagine (P18) dell'elemento, se c'è;
+// 2. Wikidata: l'immagine (P18) dell'elemento, se c'è; le voci su persone (P31 = essere umano)
+//    si saltano, perché la loro immagine è un ritratto ("Casa natale di Pirandello" non deve
+//    prendere la foto di Luigi Pirandello);
 // 3. Commons: autore, licenza e descrizione del file, con gli stessi controlli
 //    dell'importatore (parseCommonsResponse).
 
@@ -46,32 +48,36 @@ export function wikipediaSearchUrl(name: string) {
   return `https://it.wikipedia.org/w/api.php?${params}`;
 }
 
-export function wikidataImageUrl(item: string) {
-  const params = new URLSearchParams({ action: "wbgetclaims", format: "json", entity: item, property: "P18" });
+export function wikidataEntityUrl(item: string) {
+  const params = new URLSearchParams({ action: "wbgetentities", format: "json", ids: item, props: "claims" });
   return `https://www.wikidata.org/w/api.php?${params}`;
+}
+
+type Claim = { mainsnak?: { datavalue?: { value?: unknown } } };
+
+// Immagine (P18) ed "è una persona" (P31 = Q5) dall'elemento Wikidata.
+export function readEntity(json: unknown, item: string): { image: string | null; human: boolean } {
+  const claims = (json as { entities?: Record<string, { claims?: Record<string, Claim[]> }> })?.entities?.[item]?.claims ?? {};
+  const value = claims.P18?.[0]?.mainsnak?.datavalue?.value;
+  const human = (claims.P31 ?? []).some((c) => (c.mainsnak?.datavalue?.value as { id?: string } | undefined)?.id === "Q5");
+  return { image: typeof value === "string" && value.trim() !== "" ? value.trim() : null, human };
 }
 
 // La voce giusta: la prima (in ordine di pertinenza) il cui titolo ha almeno una parola chiave
 // del nome. "Etna versante sud" → "Etna"; "Corso di cous cous trapanese" → "Cuscus" no
 // (nessuna parola in comune) → nessuna voce, e l'attività mostra la foto del luogo.
-export function pickArticle(json: unknown, name: string): WikiPage | null {
+export function pickArticles(json: unknown, name: string): WikiPage[] {
   const words = keywords(name);
   const pages = (((json as { query?: { pages?: WikiPage[] } })?.query?.pages ?? []) as WikiPage[])
     .slice()
     .sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
-  return (
-    pages.find((p) => {
-      const title = keywords(p.title ?? "");
-      return words.some((w) => title.some((t) => t.startsWith(w) || w.startsWith(t)));
-    }) ?? null
-  );
+  return pages.filter((p) => {
+    const title = keywords(p.title ?? "");
+    return words.some((w) => title.some((t) => t.startsWith(w) || w.startsWith(t)));
+  });
 }
 
-export function p18FromClaims(json: unknown): string | null {
-  const claims = (json as { claims?: { P18?: Array<{ mainsnak?: { datavalue?: { value?: unknown } } }> } })?.claims?.P18 ?? [];
-  const value = claims[0]?.mainsnak?.datavalue?.value;
-  return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
-}
+export const pickArticle = (json: unknown, name: string) => pickArticles(json, name)[0] ?? null;
 
 export async function findWikipediaPhoto(
   name: string,
@@ -91,34 +97,56 @@ export async function findWikipediaPhoto(
   };
 
   try {
-    const article = pickArticle(await get(wikipediaSearchUrl(name), WIKI_HOSTS), name);
-    if (!article?.title) return { ok: false, reason: "no_article" };
+    const articles = pickArticles(await get(wikipediaSearchUrl(name), WIKI_HOSTS), name);
+    if (articles.length === 0) return { ok: false, reason: "no_article" };
 
-    // Prima l'immagine di Wikidata (sempre su Commons), poi quella della voce di Wikipedia
-    // (che potrebbe essere un file locale non libero: in quel caso Commons non lo trova).
-    const files: string[] = [];
-    const item = article.pageprops?.wikibase_item;
-    if (item && /^Q\d+$/.test(item)) {
-      const p18 = p18FromClaims(await get(wikidataImageUrl(item), WIKI_HOSTS));
-      if (p18) files.push(p18);
-    }
-    if (article.pageimage) files.push(article.pageimage.replace(/_/g, " "));
-    const unique = [...new Set(files.map((f) => f.replace(/_/g, " ")))];
-    if (unique.length === 0) return { ok: false, reason: "no_image", article: article.title };
-
-    let lastReason: "not_suitable" | "already_used" = "not_suitable";
-    for (const file of unique) {
-      const parsed = parseCommonsResponse(await get(commonsApiUrl(`File:${file}`), COMMONS_HOSTS), options);
-      if (!parsed.ok) continue;
-      if (exclude.has(parsed.file.pageUrl)) {
-        lastReason = "already_used";
+    let last: Exclude<WikiPhotoResult, { ok: true }> = { ok: false, reason: "no_article" };
+    for (const article of articles) {
+      if (!article.title) continue;
+      // Prima l'immagine di Wikidata (sempre su Commons), poi quella della voce di Wikipedia
+      // (che potrebbe essere un file locale non libero: in quel caso Commons non lo trova).
+      const files: string[] = [];
+      const item = article.pageprops?.wikibase_item;
+      if (item && /^Q\d+$/.test(item)) {
+        const entity = readEntity(await get(wikidataEntityUrl(item), WIKI_HOSTS), item);
+        if (entity.human) {
+          last = { ok: false, reason: "not_suitable", article: article.title, detail: "persona" };
+          continue;
+        }
+        if (entity.image) files.push(entity.image);
+      }
+      if (article.pageimage) files.push(article.pageimage);
+      const unique = [...new Set(files.map((f) => f.replace(/_/g, " ")))];
+      if (unique.length === 0) {
+        last = { ok: false, reason: "no_image", article: article.title };
         continue;
       }
-      // Serve un autore (la didascalia lo cita) e niente persone riconoscibili senza consenso.
-      if (!parsed.file.author || parsed.file.warnings.includes("personality")) continue;
-      return { ok: true, file: parsed.file, article: article.title };
+      for (const file of unique) {
+        const parsed = parseCommonsResponse(await get(commonsApiUrl(`File:${file}`), COMMONS_HOSTS), options);
+        if (!parsed.ok) {
+          // Un file locale di Wikipedia (spesso non libero) non è su Commons: si passa oltre senza
+          // coprire il motivo, più utile, del file precedente.
+          if (parsed.error === "file_not_found" && last.reason === "not_suitable") continue;
+          last = { ok: false, reason: "not_suitable", article: article.title, detail: parsed.license ? `${parsed.error}: ${parsed.license}` : parsed.error };
+          continue;
+        }
+        if (exclude.has(parsed.file.pageUrl)) {
+          last = { ok: false, reason: "already_used", article: article.title };
+          continue;
+        }
+        // Serve un autore (la didascalia lo cita) e niente persone riconoscibili senza consenso.
+        if (!parsed.file.author) {
+          last = { ok: false, reason: "not_suitable", article: article.title, detail: "autore mancante" };
+          continue;
+        }
+        if (parsed.file.warnings.includes("personality")) {
+          last = { ok: false, reason: "not_suitable", article: article.title, detail: "persone riconoscibili" };
+          continue;
+        }
+        return { ok: true, file: parsed.file, article: article.title };
+      }
     }
-    return { ok: false, reason: lastReason, article: article.title };
+    return last;
   } catch (error) {
     return { ok: false, reason: "network", detail: error instanceof SafeFetchError ? (error.detail ?? error.code) : undefined };
   }

@@ -210,7 +210,7 @@ export async function autoAssignCommonsPhotos(input: unknown): Promise<AutoAssig
       ...base,
       outcome: "skipped",
       reason: found.ok ? "no_candidate" : `wiki_${found.reason}`,
-      detail: found.ok ? undefined : (found.detail ?? found.article),
+      detail: found.ok ? undefined : [found.article, found.detail].filter(Boolean).join(" · ") || undefined,
     });
   }
   for (const path of MEDIA_PATHS) revalidatePath(path, "page");
