@@ -8,12 +8,22 @@ import { SafeFetchError, safeFetch, type SafeFetchOptions, type SafeFetchResult 
 // - con 429 (troppe richieste) o 503 si aspetta e si riprova, al massimo tre volte.
 // Tutto passa comunque da safeFetch (allowlist, redirect, timeout, dimensione, indirizzi interni).
 
-const MIN_GAP_MS = 400;
+// Una richiesta al secondo: con un contatto valido nello User-Agent resta ben sotto i limiti
+// di Wikimedia anche per un catalogo intero.
+const MIN_GAP_MS = 1_000;
 const RETRY_DELAYS_MS = [2_000, 5_000, 12_000];
 
+// Contatto per Wikimedia: WIKIMEDIA_CONTACT (email o indirizzo pubblico). Un indirizzo locale
+// (localhost) non è un contatto: senza WIKIMEDIA_CONTACT in locale si usa il repository.
+export function wikimediaContact() {
+  const explicit = process.env.WIKIMEDIA_CONTACT?.trim();
+  if (explicit) return explicit;
+  const site = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  return /^https:\/\//.test(site) && !/localhost|127\.0\.0\.1/.test(site) ? site : null;
+}
+
 export function wikimediaUserAgent() {
-  const contact = process.env.WIKIMEDIA_CONTACT || process.env.NEXT_PUBLIC_SITE_URL || "https://github.com/Ludott15/sicily-plannner-e-commerce";
-  return `IsulaSicilyPlanner/1.0 (${contact}) image-importer`;
+  return `IsulaSicilyPlanner/1.0 (${wikimediaContact() ?? "https://github.com/Ludott15/sicily-plannner-e-commerce"}) image-importer`;
 }
 
 let queue: Promise<unknown> = Promise.resolve();

@@ -260,7 +260,11 @@ export async function searchCommons(
         if (parsed.ok) details.push(parsed.file);
         else if (parsed.error.startsWith("license_")) stats.license++;
         else if (parsed.error === "too_small") stats.small++;
-        else stats.other++;
+        else {
+          // Diagnosi nel terminale del server: il motivo vero dietro "altro".
+          if (stats.other === 0) console.warn("Commons: dettagli non validi", { title, error: parsed.error, page: JSON.stringify(pages.get(title) ?? null).slice(0, 500) });
+          stats.other++;
+        }
       }
     }
     return { ok: true, candidates: rankCandidates(details, origin, target, exclude, stats), stats };

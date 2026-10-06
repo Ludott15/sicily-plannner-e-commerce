@@ -512,7 +512,12 @@
       "unsafe_svg": "File not allowed",
       "storage_failed": "Saving failed. Try again.",
       "no_candidate": "no suitable photo on Commons",
-      "invalid": "Invalid request"
+      "invalid": "Invalid request",
+      "wiki_no_article": "no Wikipedia entry on this subject: the place's photo stays",
+      "wiki_no_image": "the Wikipedia entry has no image",
+      "wiki_not_suitable": "the entry's image is not suitable (licence, size, author or people)",
+      "wiki_already_used": "the entry's image is already used elsewhere",
+      "wiki_network": "Wikipedia did not answer"
     },
     "authorizationsTitle": "Authorizations for cultural heritage",
     "authorizationsIntro": "Images of cultural heritage assets in the care of a public body (archaeological parks, museums, monuments) are published only with an unexpired authorization from that body. One authorization can cover several images.",
@@ -533,7 +538,7 @@
     "coverageExpiringTitle": "Authorizations expiring within 60 days",
     "coverageExpiringEmpty": "No authorizations expiring.",
     "photoFinderTitle": "Photos from Commons",
-    "photoFinderIntro": "Places, activities, ready-made itineraries and areas without a real photo (no image, blocked image, illustration only or demo placeholder). Photos come from Wikimedia Commons: searched near the place's coordinates and by name, only CC0, CC BY or public domain, no recognisable people, with author and credits. Always check the result: photos of archaeological parks, museums and public monuments must be marked as cultural heritage and linked to an authorization before launch.",
+    "photoFinderIntro": "Places, activities, ready-made itineraries and areas without a real photo (no image, blocked image, illustration only or demo placeholder). Each gets the main image of the Wikipedia/Wikidata entry on the same subject, chosen by Wikipedia editors and always on Wikimedia Commons, with author, licence and credits, without recognisable people. Activities without an entry of their own show the place's photo. Always check the result: photos of archaeological parks, museums and public monuments must be marked as cultural heritage and linked to an authorization before launch.",
     "photoFinderAutoTitle": "Automatic assignment",
     "photoFinderAutoHint": "{count, plural, =0 {No entities without a real photo.} one {One entity without a real photo: it gets the most relevant photo found on Commons.} other {# entities without a real photo: each gets the most relevant photo found on Commons.}} Activities and itineraries get a photo only if the subject matches the name; otherwise they show the place's photo. An area without a suitable photo uses one of its places'.",
     "photoFinderAuto": "Find and assign missing photos",
@@ -558,7 +563,9 @@
     "photoFinderDone": "Photo assigned: open",
     "photoFinderAllowSa": "Also allow CC BY-SA photos",
     "photoFinderAllowSaHint": "Most photos on Wikimedia Commons are CC BY-SA: without this box many entities stay without a photo. With CC BY-SA the caption credits author and licence as for CC BY, and the cropped versions stay under the same licence. NC and ND licences remain excluded.",
-    "photoFinderStats": "{found} results: {license} with a licence not allowed, {small} too small, {unfit} unsuitable (no author, people, maps or different name), {other} other"
+    "photoFinderStats": "{found} results: {license} with a licence not allowed, {small} too small, {unfit} unsuitable (no author, people, maps or different name), {other} other",
+    "photoFinderFromArticle": "from Wikipedia: {article}",
+    "photoFinderNoContact": "WIKIMEDIA_CONTACT (an email) is missing from the environment variables: Wikimedia throttles requests without a contact and answers 429. Add it to .env.local (locally) or on Vercel and restart."
   },
   "Og": {
     "activity": "Activity · {province}",
