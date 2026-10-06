@@ -19,6 +19,7 @@ export type ActivityFormValues = {
   onSitePriceEur: string | null;
   requiresCar: boolean;
   accessible: boolean;
+  dietFriendly: string[];
   seasonMonths: number[];
   rating: string | null;
   isActive: boolean;
@@ -89,6 +90,16 @@ export function ActivityForm({
           <Checkbox label={t("fieldAccessible")} name="accessible" defaultChecked={values.accessible} />
         </div>
       </div>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-body-s font-semibold">{t("fieldDiet")}</legend>
+        <p className="text-caption text-lava-muted">{t("fieldDietHint")}</p>
+        <div className="flex flex-wrap gap-x-6">
+          {(["vegetarian", "vegan", "gluten_free", "lactose_free"] as const).map((d) => (
+            <Checkbox key={d} label={t(`diet.${d}`)} name="dietFriendly" value={d} defaultChecked={values.dietFriendly.includes(d)} />
+          ))}
+        </div>
+      </fieldset>
 
       <fieldset className="flex flex-col gap-2">
         <legend className="text-body-s font-semibold">{t("fieldSeason")}</legend>

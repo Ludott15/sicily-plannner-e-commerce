@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { PENDING_ACTIONS } from "../src/lib/pending-actions";
+import { sessionUserId } from "./helpers";
 
 // Azioni dei mockup visibili ma non ancora attive (src/lib/pending-actions.ts).
 // Il test confronta le azioni in sospeso trovate nelle pagine con l'elenco atteso:
@@ -17,9 +18,12 @@ const PAGES = [
   "/it/viaggio/nuovo",
 ];
 
-async function collectPending(page: Page) {
-  const found = new Map<string, string>();
-  for (const path of PAGES) {
+// Pagine personali: servono una sessione e risposte salvate. Ospite con auto a noleggio e cibo e
+// vino al massimo, così i tre viaggi hanno tappe in auto (l'Etna nel seed) e l'avviso del noleggio.
+const SESSION_PAGES = ["/it/viaggio/proposte", "/it/preferenze"];
+
+async function collectFrom(page: Page, paths: string[], found: Map<string, string>) {
+  for (const path of paths) {
     await page.goto(path);
     for (const el of await page.locator("[data-pending-id]").all()) {
       const id = (await el.getAttribute("data-pending-id"))!;
@@ -27,6 +31,23 @@ async function collectPending(page: Page) {
       await expect(el, id).toHaveAttribute("aria-disabled", "true");
     }
   }
+}
+
+async function collectPending(page: Page) {
+  const found = new Map<string, string>();
+  await collectFrom(page, PAGES, found);
+
+  await page.goto("/it/login");
+  await page.getByRole("button", { name: "Continua senza account" }).click();
+  await expect(page).toHaveURL(/\/it\/profilo$/);
+  const id = await sessionUserId(page);
+  const { withDb } = await import("./db.mjs");
+  await withDb(async (sql) => {
+    await sql`insert into public.user_constraints (user_id, car_access, trip_days) values (${id}, 'rental', 5)`;
+    await sql`insert into public.preference_weights (user_id, interest_key, explicit) values (${id}, 'food_wine', 5)`;
+    await sql`update public.profiles set onboarding_completed_at = now() where id = ${id}`;
+  });
+  await collectFrom(page, SESSION_PAGES, found);
   return found;
 }
 

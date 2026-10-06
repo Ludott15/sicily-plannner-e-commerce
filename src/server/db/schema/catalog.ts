@@ -67,6 +67,9 @@ export const activities = pgTable(
       .default(sql`'{1,2,3,4,5,6,7,8,9,10,11,12}'`),
     rating: numeric("rating", { precision: 2, scale: 1 }),
     embedding: vector("embedding", { dimensions: 1024 }),
+    // Diete per cui l'attività va bene (vegetariana, vegana, senza glutine, senza lattosio): per
+    // le attività di cibo e vino è un vincolo rigido per chi ha indicato una dieta.
+    dietFriendly: text("diet_friendly").array().notNull().default(sql`'{}'`),
     // Nasce inattiva: si attiva solo con almeno un tag di interesse (trigger activities_require_tags).
     isActive: boolean("is_active").notNull().default(false),
     syncedAt: timestamp("synced_at", { withTimezone: true }),
@@ -78,6 +81,7 @@ export const activities = pgTable(
     check("activities_duration_positive", sql`${t.durationMin} > 0`),
     check("activities_on_site_price_non_negative", sql`${t.onSitePriceEur} >= 0`),
     check("activities_rating_range", sql`${t.rating} between 0 and 5`),
+    check("activities_diet_friendly_valid", sql`${t.dietFriendly} <@ '{vegetarian,vegan,gluten_free,lactose_free}'::text[]`),
     check(
       "activities_season_months_valid",
       sql`${t.seasonMonths} <@ '{1,2,3,4,5,6,7,8,9,10,11,12}'::smallint[]`,

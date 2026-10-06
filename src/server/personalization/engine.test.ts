@@ -26,6 +26,7 @@ function activity(id: string, over: Partial<CatalogActivity> = {}): CatalogActiv
     seasonMonths: ALL_YEAR,
     requiresCar: false,
     accessible: true,
+    dietFriendly: [],
     rating: 4.5,
     tags: [{ key: "sea", strength: 2 }],
     ...over,
@@ -35,31 +36,35 @@ function activity(id: string, over: Partial<CatalogActivity> = {}): CatalogActiv
 const profile: Profile = {
   weights: { sea: 5, food_wine: 4, history_archaeology: 1, nature_hiking: 4 },
   budgetPerDayEur: 60,
-  hasCar: false,
+  car: "none",
   reducedMobility: false,
+  diet: [],
   pace: "balanced",
   days: 3,
   months: [6],
+  airport: null,
 };
 
 // Catalogo fisso: tre zone con attività di vario tipo, più casi che i vincoli devono escludere.
 const catalog: CatalogActivity[] = [
-  activity("tp-zingaro", { zone: "TP", tags: [{ key: "sea", strength: 3 }, { key: "nature_hiking", strength: 2 }], rating: 4.8, durationMin: 300 }),
-  activity("tp-saline", { zone: "TP", tags: [{ key: "nature_hiking", strength: 2 }], onSitePriceEur: 10, durationMin: 120 }),
-  activity("tp-couscous", { zone: "TP", tags: [{ key: "food_wine", strength: 3 }], durationMin: 180 }),
-  activity("tp-erice", { zone: "TP", tags: [{ key: "history_archaeology", strength: 2 }], durationMin: 150 }),
-  activity("tp-spiaggia", { zone: "TP", tags: [{ key: "sea", strength: 3 }], durationMin: 120, onSitePriceEur: 0 }),
-  activity("tp-barca", { zone: "TP", tags: [{ key: "sea", strength: 3 }], durationMin: 90 }),
-  activity("tp-auto", { zone: "TP", tags: [{ key: "sea", strength: 3 }], requiresCar: true, rating: 5 }),
+  activity("tp-zingaro", { zone: "TP", placeName: "San Vito", tags: [{ key: "sea", strength: 3 }, { key: "nature_hiking", strength: 2 }], rating: 4.8, durationMin: 300 }),
+  activity("tp-saline", { zone: "TP", placeName: "Trapani", tags: [{ key: "nature_hiking", strength: 2 }], onSitePriceEur: 10, durationMin: 120 }),
+  activity("tp-couscous", { zone: "TP", placeName: "Trapani", tags: [{ key: "food_wine", strength: 3 }], durationMin: 180, dietFriendly: ["vegetarian"] }),
+  activity("tp-erice", { zone: "TP", placeName: "Erice", tags: [{ key: "history_archaeology", strength: 2 }], durationMin: 150 }),
+  activity("tp-spiaggia", { zone: "TP", placeName: "San Vito", tags: [{ key: "sea", strength: 3 }], durationMin: 120, onSitePriceEur: 0 }),
+  activity("tp-barca", { zone: "TP", placeName: "Trapani", tags: [{ key: "sea", strength: 3 }], durationMin: 90 }),
+  activity("tp-auto", { zone: "TP", placeName: "Trapani", tags: [{ key: "sea", strength: 3 }], requiresCar: true, rating: 5 }),
   activity("tp-inverno", { zone: "TP", tags: [{ key: "sea", strength: 3 }], seasonMonths: [12, 1, 2], rating: 5 }),
   activity("tp-cara", { zone: "TP", tags: [{ key: "sea", strength: 3 }], onSitePriceEur: 200, rating: 5 }),
   activity("tp-lunga", { zone: "TP", tags: [{ key: "sea", strength: 3 }], durationMin: 600, rating: 5 }),
-  activity("sr-ortigia", { zone: "SR", tags: [{ key: "history_archaeology", strength: 3 }, { key: "food_wine", strength: 2 }], durationMin: 150 }),
-  activity("sr-barca", { zone: "SR", tags: [{ key: "sea", strength: 3 }], durationMin: 90, rating: 4.4 }),
-  activity("sr-mercato", { zone: "SR", tags: [{ key: "food_wine", strength: 3 }], durationMin: 90 }),
-  activity("pa-ballaro", { zone: "PA", tags: [{ key: "food_wine", strength: 3 }], durationMin: 150, rating: 4.8 }),
-  activity("pa-mondello", { zone: "PA", tags: [{ key: "sea", strength: 2 }], durationMin: 240, accessible: false }),
+  activity("sr-ortigia", { zone: "SR", placeName: "Ortigia", tags: [{ key: "history_archaeology", strength: 3 }, { key: "food_wine", strength: 2 }], durationMin: 150 }),
+  activity("sr-barca", { zone: "SR", placeName: "Ortigia", tags: [{ key: "sea", strength: 3 }], durationMin: 90, rating: 4.4 }),
+  activity("sr-mercato", { zone: "SR", placeName: "Ortigia", tags: [{ key: "food_wine", strength: 3 }], durationMin: 90, dietFriendly: ["vegetarian", "vegan"] }),
+  activity("pa-ballaro", { zone: "PA", placeName: "Palermo", tags: [{ key: "food_wine", strength: 3 }], durationMin: 150, rating: 4.8 }),
+  activity("pa-mondello", { zone: "PA", placeName: "Mondello", tags: [{ key: "sea", strength: 2 }], durationMin: 240, accessible: false }),
 ];
+
+const mainOf = (a: CatalogActivity) => [...a.tags].sort((x, y) => y.strength - x.strength || x.key.localeCompare(y.key))[0]!.key;
 
 const hardConstraintsHold = (proposals: ReturnType<typeof propose>, p: Profile) => {
   for (const proposal of proposals) {
@@ -72,8 +77,7 @@ const hardConstraintsHold = (proposals: ReturnType<typeof propose>, p: Profile) 
         expect(passesConstraints(a, p), a.id).toBe(true);
         expect(seen.has(a.id), `${a.id} ripetuta`).toBe(false);
         seen.add(a.id);
-        const main = [...a.tags].sort((x, y) => y.strength - x.strength || x.key.localeCompare(y.key))[0]!.key;
-        perInterest.set(main, (perInterest.get(main) ?? 0) + 1);
+        perInterest.set(mainOf(a), (perInterest.get(mainOf(a)) ?? 0) + 1);
       }
       for (const n of perInterest.values()) expect(n).toBeLessThanOrEqual(MAX_SAME_INTEREST_PER_DAY);
     }
@@ -81,7 +85,7 @@ const hardConstraintsHold = (proposals: ReturnType<typeof propose>, p: Profile) 
 };
 
 describe("filtro dei vincoli rigidi", () => {
-  it("scarta fuori stagione, auto senza auto, oltre il budget, più lunghe della giornata", () => {
+  it("scarta fuori stagione, auto con \"niente auto\", oltre il budget, più lunghe della giornata", () => {
     const kept = catalog.filter((a) => passesConstraints(a, profile)).map((a) => a.id);
     expect(kept).not.toContain("tp-auto");
     expect(kept).not.toContain("tp-inverno");
@@ -90,9 +94,24 @@ describe("filtro dei vincoli rigidi", () => {
     expect(kept).toContain("tp-zingaro");
   });
 
-  it("mobilità ridotta: solo accessibili; con l'auto le attività in auto restano", () => {
+  it("auto propria, a noleggio o non indicata: le attività in auto sono ammesse", () => {
+    const car = catalog.find((a) => a.id === "tp-auto")!;
+    for (const access of ["own", "rental", null] as const) expect(passesConstraints(car, { ...profile, car: access }), String(access)).toBe(true);
+  });
+
+  it("mobilità ridotta: solo attività accessibili", () => {
     expect(passesConstraints(catalog.find((a) => a.id === "pa-mondello")!, { ...profile, reducedMobility: true })).toBe(false);
-    expect(passesConstraints(catalog.find((a) => a.id === "tp-auto")!, { ...profile, hasCar: true })).toBe(true);
+  });
+
+  it("dieta: le attività di cibo devono essere adatte a tutte le diete indicate; le altre no", () => {
+    const vegan = { ...profile, diet: ["vegan"] };
+    expect(passesConstraints(catalog.find((a) => a.id === "tp-couscous")!, vegan)).toBe(false);
+    expect(passesConstraints(catalog.find((a) => a.id === "sr-mercato")!, vegan)).toBe(true);
+    expect(passesConstraints(catalog.find((a) => a.id === "pa-ballaro")!, vegan)).toBe(false);
+    expect(passesConstraints(catalog.find((a) => a.id === "tp-barca")!, vegan)).toBe(true);
+    const both = { ...profile, diet: ["vegetarian", "vegan"] };
+    expect(passesConstraints(catalog.find((a) => a.id === "sr-mercato")!, both)).toBe(true);
+    expect(passesConstraints(catalog.find((a) => a.id === "tp-couscous")!, both)).toBe(false);
   });
 
   it("senza mesi qualunque periodo, senza budget qualunque prezzo", () => {
@@ -132,7 +151,7 @@ describe("composizione greedy", () => {
     const first = propose(catalog, profile);
     expect(propose(catalog, profile)).toEqual(first);
     expect(propose([...catalog].reverse(), profile)).toEqual(first);
-    const shuffled = [...catalog].sort((x, y) => (x.id.length * 7 + x.id.charCodeAt(1)) % 5 - (y.id.length * 7 + y.id.charCodeAt(1)) % 5);
+    const shuffled = [...catalog].sort((x, y) => ((x.id.length * 7 + x.id.charCodeAt(1)) % 5) - ((y.id.length * 7 + y.id.charCodeAt(1)) % 5));
     expect(propose(shuffled, profile)).toEqual(first);
   });
 
@@ -140,8 +159,9 @@ describe("composizione greedy", () => {
     for (const p of [
       profile,
       { ...profile, pace: "relaxed" as const, days: 5 },
-      { ...profile, pace: "intense" as const, hasCar: true, months: [] },
+      { ...profile, pace: "intense" as const, car: "own" as const, months: [] },
       { ...profile, reducedMobility: true, budgetPerDayEur: 5 },
+      { ...profile, diet: ["vegan"], car: "rental" as const },
     ]) {
       hardConstraintsHold(propose(catalog, p), p);
     }
@@ -156,6 +176,28 @@ describe("composizione greedy", () => {
       .filter((a) => a.zone === "TP" && passesConstraints(a, profile))
       .sort((x, y) => score(y, profile) - score(x, profile) || x.id.localeCompare(y.id))[0]!;
     expect(proposals[0]!.days[0]!.activities[0]!.id).toBe(best.id);
+  });
+
+  it("aeroporto: a parità di attività la zona vicina viene prima; senza aeroporto nessun effetto", () => {
+    // Due zone con attività equivalenti: senza aeroporto l'ordine è alfabetico (SR, TP).
+    const twin = [
+      activity("sr-a", { zone: "SR", tags: [{ key: "sea", strength: 3 }] }),
+      activity("tp-a", { zone: "TP", tags: [{ key: "sea", strength: 3 }] }),
+    ];
+    const free = { ...profile, months: [] };
+    expect(propose(twin, { ...free, airport: null }).map((p) => p.zone)).toEqual(["SR", "TP"]);
+    expect(propose(twin, { ...free, airport: "TPS" }).map((p) => p.zone)).toEqual(["TP", "SR"]);
+    expect(propose(twin, { ...free, airport: "CIY" }).map((p) => p.zone)).toEqual(["SR", "TP"]);
+  });
+
+  it("auto a noleggio: le tappe in auto restano e il viaggio lo segnala; con l'auto propria no", () => {
+    const rental = propose(catalog, { ...profile, car: "rental", months: [] });
+    const tp = rental.find((p) => p.zone === "TP")!;
+    expect(tp.days.some((d) => d.activities.some((a) => a.id === "tp-auto"))).toBe(true);
+    expect(tp.needsCar).toBe(true);
+    const own = propose(catalog, { ...profile, car: "own", months: [] }).find((p) => p.zone === "TP")!;
+    expect(own.needsCar).toBe(false);
+    for (const p of propose(catalog, profile)) expect(p.needsCar).toBe(false);
   });
 
   it("al massimo tanti giorni quanti richiesti; finite le attività di una zona si passa alla successiva", () => {
@@ -173,28 +215,49 @@ describe("composizione greedy", () => {
 });
 
 describe("motivi Per te", () => {
-  it("spiegano l'attività senza ripetere l'input, al massimo due", () => {
-    expect(reasons(catalog[0]!, profile)).toEqual([
+  it("spiegano l'attività senza ripetere l'input", () => {
+    expect(reasons(catalog[0]!, profile).slice(0, 2)).toEqual([
       { code: "combines", interests: ["sea", "nature_hiking"] },
       { code: "topRated", rating: 4.8 },
     ]);
-    expect(reasons(activity("x", { tags: [{ key: "food_wine", strength: 3 }], rating: 4, onSitePriceEur: 0 }), profile)).toEqual([
+    expect(reasons(activity("x", { tags: [{ key: "food_wine", strength: 3 }], rating: 4, onSitePriceEur: 0 }), profile).slice(0, 2)).toEqual([
       { code: "topForInterest", interest: "food_wine" },
       { code: "freeEntry" },
     ]);
   });
 
-  it("un interesse con peso basso non diventa un motivo: resta la riserva", () => {
-    const a = activity("x", { tags: [{ key: "history_archaeology", strength: 3 }], rating: 4 });
-    expect(reasons(a, profile)).toEqual([{ code: "bestInZone" }]);
+  it("l'interesse più forte dell'utente spiega un'attività che lo ha con forza 2", () => {
+    const a = activity("x", { tags: [{ key: "sea", strength: 2 }], rating: 4, durationMin: 200 });
+    expect(reasons(a, { ...profile, weights: { sea: 3, art: 2 } })).toEqual([{ code: "strongestInterest", interest: "sea" }]);
   });
 
-  it("ogni attività proposta ha uno o due motivi", () => {
+  it("un interesse con peso basso non diventa un motivo", () => {
+    const a = activity("x", { tags: [{ key: "history_archaeology", strength: 3 }], rating: 4, durationMin: 200 });
+    expect(reasons(a, profile)).toEqual([]);
+  });
+
+  it("ogni tappa proposta ha uno o due motivi", () => {
     for (const p of propose(catalog, profile))
       for (const d of p.days)
         for (const a of d.activities) {
           expect(a.reasons.length).toBeGreaterThanOrEqual(1);
           expect(a.reasons.length).toBeLessThanOrEqual(2);
         }
+  });
+
+  it("il motivo di ripiego compare su meno di un terzo delle tappe, con profili diversi", () => {
+    const profiles: Profile[] = [
+      profile,
+      { ...profile, weights: { sea: 5 }, months: [] },
+      { ...profile, weights: { history_archaeology: 5 }, car: "own" },
+      { ...profile, weights: { food_wine: 5 }, pace: "intense" },
+      { ...profile, weights: { nature_hiking: 5, villages: 5 }, months: [] },
+      { ...profile, weights: Object.fromEntries(["sea", "food_wine", "history_archaeology", "nature_hiking"].map((k) => [k, 3])) },
+    ];
+    for (const p of profiles) {
+      const stops = propose(catalog, p).flatMap((pr) => pr.days.flatMap((d) => d.activities));
+      const fallback = stops.filter((a) => a.reasons.some((r) => r.code === "bestInZone")).length;
+      expect(fallback / stops.length, JSON.stringify(p.weights)).toBeLessThan(1 / 3);
+    }
   });
 });

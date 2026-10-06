@@ -15,7 +15,7 @@ import {
   vector,
 } from "drizzle-orm/pg-core";
 import { activities, interests } from "./catalog";
-import { eventType } from "./enums";
+import { carAccess, eventType } from "./enums";
 import { profiles } from "./profiles";
 import { itineraries } from "./trips";
 
@@ -27,9 +27,15 @@ export const userConstraints = pgTable(
       .primaryKey()
       .references(() => profiles.id, { onDelete: "cascade" }),
     budgetPerDayEur: integer("budget_per_day_eur"),
-    hasCar: boolean("has_car").notNull().default(false),
+    // null = non risposto: le attività in auto restano, il viaggio segnala che serve un'auto.
+    carAccess: carAccess("car_access"),
+    // Aeroporto di arrivo (IATA): orienta la zona base; servirà a voli e noleggi (M6).
+    arrivalAirport: text("arrival_airport"),
+    // Mobilità ridotta e dieta sono dati sensibili: si salvano solo con il consenso esplicito
+    // (data), e senza consenso restano vuote (vincolo user_constraints_sensitive_consent).
     reducedMobility: boolean("reduced_mobility").notNull().default(false),
     diet: text("diet").array().notNull().default(sql`'{}'`),
+    sensitiveConsentAt: timestamp("sensitive_consent_at", { withTimezone: true }),
     maxDailyTravelMin: integer("max_daily_travel_min"),
     heatTolerance: smallint("heat_tolerance"),
     crowdTolerance: smallint("crowd_tolerance"),
@@ -45,6 +51,12 @@ export const userConstraints = pgTable(
     check("user_constraints_heat_range", sql`${t.heatTolerance} between 0 and 5`),
     check("user_constraints_crowd_range", sql`${t.crowdTolerance} between 0 and 5`),
     check("user_constraints_trip_days_range", sql`${t.tripDays} between 1 and 14`),
+    check("user_constraints_arrival_airport_valid", sql`${t.arrivalAirport} in ('CTA', 'PMO', 'TPS', 'CIY')`),
+    check("user_constraints_diet_valid", sql`${t.diet} <@ '{vegetarian,vegan,gluten_free,lactose_free}'::text[]`),
+    check(
+      "user_constraints_sensitive_consent",
+      sql`(${t.reducedMobility} = false and ${t.diet} = '{}') or ${t.sensitiveConsentAt} is not null`,
+    ),
     check("user_constraints_trip_months_valid", sql`${t.tripMonths} <@ '{1,2,3,4,5,6,7,8,9,10,11,12}'::smallint[]`),
   ],
 );

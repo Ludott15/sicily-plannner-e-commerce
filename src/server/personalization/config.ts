@@ -31,4 +31,18 @@ export const REASONS = {
   strongWeight: 4,
   strongTag: 2,
   topRating: 4.7,
+  // Visita breve: lascia tempo per il resto della giornata.
+  shortVisitMin: 90,
 } as const;
+
+// Interesse delle attività di cibo, su cui vale il vincolo della dieta.
+export const FOOD_INTEREST = "food_wine";
+
+// Aeroporti di arrivo e province vicine (zona base): bonus al punteggio della zona.
+export const AIRPORT_ZONES = {
+  CTA: ["CT", "SR", "EN", "ME"],
+  PMO: ["PA", "TP", "AG"],
+  TPS: ["TP", "PA", "AG"],
+  CIY: ["RG", "SR", "CT"],
+} as const;
+export const AIRPORT_BONUS = 1.3;

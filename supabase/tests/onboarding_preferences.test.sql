@@ -15,8 +15,8 @@ select tests.create_user('admin', true);
 ----------------------------------------------------------------------------
 select tests.authenticate_as('alice');
 select lives_ok(
-  format($$insert into public.user_constraints (user_id, budget_per_day_eur, has_car, trip_days, trip_months)
-           values (%L, 90, true, 4, '{5,6}')$$, tests.uid('alice')),
+  format($$insert into public.user_constraints (user_id, budget_per_day_eur, car_access, trip_days, trip_months, arrival_airport)
+           values (%L, 90, 'rental', 4, '{5,6}', 'CTA')$$, tests.uid('alice')),
   'utente: salva giorni e mesi del viaggio'
 );
 select lives_ok(
@@ -77,6 +77,53 @@ select results_eq(
   format($$select c.trip_days, p.pace::text from public.user_constraints c join public.profiles p on p.id = c.user_id where c.user_id = %L$$, tests.uid('alice')),
   $$values (4::smallint, 'relaxed')$$,
   'altro utente: le risposte di alice non sono cambiate'
+);
+
+----------------------------------------------------------------------------
+-- PREFERENZE (M4 parte 2): auto, aeroporto, mobilità e dieta con consenso
+----------------------------------------------------------------------------
+select tests.authenticate_as('alice');
+select results_eq(
+  $$select car_access::text, arrival_airport from public.user_constraints$$,
+  $$values ('rental', 'CTA')$$,
+  'utente: auto a noleggio e aeroporto salvati'
+);
+select throws_ok(
+  format($$update public.user_constraints set reduced_mobility = true where user_id = %L$$, tests.uid('alice')),
+  '23514', null, 'mobilità ridotta senza consenso: rifiutata'
+);
+select throws_ok(
+  format($$update public.user_constraints set diet = '{vegan}' where user_id = %L$$, tests.uid('alice')),
+  '23514', null, 'dieta senza consenso: rifiutata'
+);
+select lives_ok(
+  format($$update public.user_constraints set reduced_mobility = true, diet = '{vegan}', sensitive_consent_at = now() where user_id = %L$$, tests.uid('alice')),
+  'utente: mobilità e dieta con il consenso'
+);
+select lives_ok(
+  format($$update public.user_constraints set reduced_mobility = false, diet = '{}', sensitive_consent_at = null where user_id = %L$$, tests.uid('alice')),
+  'utente: cancella mobilità, dieta e consenso'
+);
+select throws_ok(
+  format($$update public.user_constraints set arrival_airport = 'FCO' where user_id = %L$$, tests.uid('alice')),
+  '23514', null, 'aeroporto solo tra quelli siciliani previsti'
+);
+select throws_ok(
+  format($$update public.user_constraints set diet = '{carnivora}', sensitive_consent_at = now() where user_id = %L$$, tests.uid('alice')),
+  '23514', null, 'dieta solo tra quelle previste'
+);
+select tests.authenticate_as('bob');
+update public.user_constraints set car_access = 'none', arrival_airport = 'PMO' where user_id = tests.uid('alice');
+select tests.authenticate_as('guest');
+select lives_ok(
+  format($$update public.user_constraints set car_access = 'none', arrival_airport = 'TPS' where user_id = %L$$, tests.uid('guest')),
+  'ospite: salva auto e aeroporto'
+);
+reset role;
+select results_eq(
+  format($$select car_access::text, arrival_airport from public.user_constraints where user_id = %L$$, tests.uid('alice')),
+  $$values ('rental', 'CTA')$$,
+  'altro utente: non cambia auto e aeroporto di alice'
 );
 
 ----------------------------------------------------------------------------

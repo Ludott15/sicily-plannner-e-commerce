@@ -16,6 +16,8 @@ export const PENDING_ACTIONS = {
   "about.editorial": "testi",
   "about.founder": "testi",
   "onboarding.privacy": "testi",
+  "preferences.consent": "testi",
+  "proposal.car-rental": "M6",
   "legal.privacy": "legale",
   "legal.cookie": "legale",
   "legal.terms": "legale",

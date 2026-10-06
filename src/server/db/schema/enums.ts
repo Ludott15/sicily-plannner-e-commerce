@@ -50,3 +50,5 @@ export const orderStatus = pgEnum("order_status", [
   "refunded",
 ]);
 export const localTipAuthorKind = pgEnum("local_tip_author_kind", ["editorial", "person"]);
+// Auto nel viaggio: propria, a noleggio, nessuna (onboarding, domanda "Budget e spostamenti").
+export const carAccess = pgEnum("car_access", ["own", "rental", "none"]);

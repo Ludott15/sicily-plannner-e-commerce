@@ -102,6 +102,11 @@ from (values
 ) as t(activity_slug, interest_key, strength)
 join public.activities a on a.slug = t.activity_slug;
 
+-- Diete adatte (vincolo per chi indica una dieta nelle Preferenze): solo alcune attività di cibo.
+update public.activities set diet_friendly = '{vegetarian}' where slug in ('demo-mercato-ballaro', 'demo-cous-cous');
+update public.activities set diet_friendly = '{vegetarian,vegan,gluten_free}' where slug = 'demo-cantina-etna';
+update public.activities set diet_friendly = '{vegetarian,vegan,lactose_free}' where slug = 'demo-pistacchio-bronte';
+
 update public.activities set is_active = true where slug like 'demo-%';
 
 -- Offerte demo dei partner: URL di ricerca pubblica, non prodotti specifici; titoli, prezzi e

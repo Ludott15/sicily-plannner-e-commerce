@@ -71,16 +71,18 @@ const activitySchema = z.object({
 
 function readActivityForm(formData: FormData) {
   const months = formData.getAll("seasonMonths").map(Number);
+  const diets = new Set(["vegetarian", "vegan", "gluten_free", "lactose_free"]);
+  const dietFriendly = [...new Set(formData.getAll("dietFriendly").map(String))].filter((d) => diets.has(d)).sort();
   const tags = [...formData.entries()]
     .filter(([key]) => key.startsWith("tag_"))
     .map(([key, value]) => ({ key: key.slice(4), strength: Number(value) }))
     .filter((t) => t.strength >= 1 && t.strength <= 3);
-  return { months, tags };
+  return { months, tags, dietFriendly };
 }
 
 export async function saveActivity(_prev: AdminFormState, formData: FormData): Promise<AdminFormState> {
   const parsed = activitySchema.safeParse(Object.fromEntries(formData));
-  const { months, tags } = readActivityForm(formData);
+  const { months, tags, dietFriendly } = readActivityForm(formData);
   if (!parsed.success || months.some((m) => !Number.isInteger(m) || m < 1 || m > 12) || months.length === 0) {
     return { status: "error", code: "invalid" };
   }
@@ -96,6 +98,7 @@ export async function saveActivity(_prev: AdminFormState, formData: FormData): P
         onSitePriceEur: fields.onSitePriceEur === null ? null : fields.onSitePriceEur.toFixed(2),
         rating: fields.rating === null ? null : fields.rating.toFixed(1),
         seasonMonths: [...new Set(months)].sort((a, b) => a - b),
+        dietFriendly,
         isActive,
       };
       let previous: boolean | null = null;

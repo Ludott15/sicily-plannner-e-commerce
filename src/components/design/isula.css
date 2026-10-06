@@ -157,9 +157,16 @@ a.is-tabbar__item { color: var(--lava-muted); }
 
 /* Scala di preferenza 0-5. Il riempimento avanza da sinistra, 30ms per punto (movimento.md). */
 .is-scale { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--divider); }
+.is-scale__head { display: flex; align-items: baseline; gap: var(--space-2); }
 .is-scale__label { font-size: 16px; font-weight: 600; }
+.is-scale__value { font-size: 14px; color: var(--lava-muted); }
 .is-scale__pips { display: flex; gap: var(--space-2); }
 .is-scale__pip { position: relative; width: 36px; height: 36px; border-radius: var(--radius-pill); border: 1.5px solid var(--border-control); background: var(--calce-raised); cursor: pointer; padding: 0; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); transition-delay: calc(var(--pip-i, 0) * 30ms); }
+/* Sotto i 480px: etichetta e valore sopra, i cinque punti sotto a tutta larghezza. */
+@media (max-width: 479px) {
+  .is-scale { flex-direction: column; align-items: stretch; gap: var(--space-2); }
+  .is-scale__pips { justify-content: space-between; }
+}
 .is-scale__pip::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
 .is-scale__pip[aria-checked="true"], .is-scale__pip[data-filled="true"] { background: var(--lava); border-color: var(--lava); }
 
