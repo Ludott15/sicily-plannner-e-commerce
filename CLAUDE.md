@@ -28,6 +28,7 @@ Design system, manuale del brand ("Isula", nome di lavoro), schemi e mockup: [do
 - `npm run db:clean` — elimina solo i dati lasciati dai test (slug e titoli `int-`/`e2e-`, utenti `int-…@example.com` ed `e2e-…@example.com`); gira anche prima e dopo le suite di integrazione ed e2e
 - `npm run db:test` — test RLS in pgTAP (`supabase/tests/*.test.sql`); gli helper (`tests.create_user`, `tests.authenticate_as`, `tests.as_anon`) si includono con `\ir helpers/setup.psql` dopo `begin;`
 - `npm run db:snapshot` — aggiorna `supabase/schema.sql` dopo ogni migrazione
+- `npm run media:demo` — immagini demo nello storage locale (dopo `db:reset`: il seed non carica file); regole delle immagini in [docs/IMMAGINI.md](docs/IMMAGINI.md)
 - `npm run db:drift` — lo stesso controllo della CI
 
 ## Design system

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { CoverFigure } from "@/components/catalog/cover-figure";
 import { ItineraryDays, type Day } from "@/components/catalog/itinerary-days";
 import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
@@ -85,17 +86,17 @@ export default async function ItineraryPage({ params }: Props) {
     <>
       <article className="mx-auto w-full max-w-[1200px] px-4 pt-4 pb-12 md:px-16 md:pt-12 md:pb-16">
         {/* Su mobile la foto apre la pagina, come nel mockup */}
-        <div className="relative -mx-4 -mt-4 aspect-[4/3] overflow-hidden bg-calce-sunk md:hidden">
-          {firstPlace?.placeCoverImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={firstPlace.placeCoverImage} alt="" className="h-full w-full object-cover" />
-          ) : (
-            firstPlace?.placeName && (
-              <span className="is-display absolute bottom-4 left-4 text-heading-2 text-lava-muted" aria-hidden="true">
-                {firstPlace.placeName}
-              </span>
-            )
-          )}
+        <div className="-mx-4 -mt-4 md:hidden">
+          <CoverFigure
+            cover={itinerary.cover}
+            ratio="16x9"
+            sizes="100vw"
+            locale={locale}
+            placeholder={firstPlace?.placeName ?? itinerary.title}
+            priority
+            frameClassName="aspect-[4/3]"
+            captionClassName="px-4"
+          />
         </div>
 
         <header className="mt-6 flex flex-col gap-4 md:mt-0">

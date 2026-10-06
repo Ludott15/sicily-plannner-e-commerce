@@ -36,3 +36,34 @@ test.describe("lancio: Supabase Auth in produzione", () => {
     expect((await request.get(`${site}/api/cron/cleanup-guests`)).status()).toBe(401);
   });
 });
+
+// Database di produzione (LAUNCH_DATABASE_URL, basta un ruolo in sola lettura): nessun dato
+// demo o di test, immagini pronte (docs/IMMAGINI.md).
+test.describe("lancio: dati del catalogo in produzione", () => {
+  test.skip(process.env.PRE_LAUNCH !== "1", "attivo solo con PRE_LAUNCH=1");
+  const databaseUrl = process.env.LAUNCH_DATABASE_URL;
+
+  test("variabile del database di produzione presente", () => {
+    expect(databaseUrl, "LAUNCH_DATABASE_URL").toMatch(/^postgres(ql)?:\/\/.+/);
+  });
+
+  test("nessun dato demo o di test, immagini demo comprese", async () => {
+    const { demoRowCounts } = await import("./launch-db.mjs");
+    const counts = await demoRowCounts(databaseUrl!);
+    expect(Object.values(counts).every((n) => n === 0), JSON.stringify(counts)).toBe(true);
+  });
+
+  test("immagini: foto vere, testi alternativi, crediti, autorizzazioni e ripiego", async () => {
+    const { imageLaunchProblems } = await import("./launch-db.mjs");
+    expect(await imageLaunchProblems(databaseUrl!)).toEqual({
+      featuredWithoutPhoto: [],
+      itinerariesWithoutPhoto: [],
+      publicMediaWithoutAlt: [],
+      licensedWithoutCredit: [],
+      heritageWithoutAuthorization: [],
+      placesWithoutPhoto: [],
+      areasWithoutCover: [],
+      placesWithoutArea: [],
+    });
+  });
+});

@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { ActivityCard, interestDomain } from "@/components/design";
 import { formatDuration, formatEur } from "@/lib/format";
+import { CoverPicture } from "./cover-picture";
 import type { CatalogActivity } from "@/server/catalog/queries";
 
 // Un'attività del catalogo come ActivityCard (ActivityCard/README.md):
@@ -36,7 +37,17 @@ export function CatalogActivityCard({
       href={`/attivita/${activity.slug}`}
       title={activity.title}
       placeName={activity.placeName}
-      imageUrl={activity.placeCoverImage}
+      image={
+        activity.cover ? (
+          <CoverPicture
+            cover={activity.cover.media}
+            ratio="4x5"
+            sizes="(min-width: 1024px) 352px, (min-width: 640px) 50vw, 100vw"
+            locale={locale}
+            decorative
+          />
+        ) : undefined
+      }
       tag={topTag ? { label: interestLabels.get(topTag.key) ?? topTag.key, domain: interestDomain(topTag.key) } : undefined}
       meta={meta}
       price={offerPrice !== null ? { prefix: tDesign("offerFrom"), amount: offerPrice } : null}

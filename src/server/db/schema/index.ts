@@ -9,3 +9,4 @@ export * from "./shop";
 export * from "./ai";
 export * from "./audit";
 export * from "./local-tips";
+export * from "./media";

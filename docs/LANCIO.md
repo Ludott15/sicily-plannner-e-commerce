@@ -47,6 +47,16 @@ Restano manuali solo i segreti (passo 2 e sezione 2) e l'SMTP di produzione, se 
 
 Il widget Turnstile si crea su Cloudflare (Turnstile → Add widget) con il dominio di produzione. Da lì vengono la site key (Vercel) e la chiave segreta (`SUPABASE_AUTH_CAPTCHA_SECRET` per `config push`).
 
+## 3. Immagini del catalogo
+
+Il bucket `media` e le sue policy arrivano con le migrazioni (`supabase db push`), non con `config push`: non serve crearlo dalla dashboard. Prima del lancio, dall'admin:
+
+- ogni luogo, i luoghi in evidenza e gli itinerari pronti hanno una foto vera completa (testo alternativo, autore, licenza): Immagini → Foto da Commons assegna quelle mancanti, da rileggere;
+- ogni area ha una copertina (foto o illustrazione SVG) e ogni luogo ha un'area;
+- le immagini di beni culturali hanno un'autorizzazione non scaduta.
+
+Regole complete in [IMMAGINI.md](IMMAGINI.md).
+
 ## Verifica automatica
 
 ```bash
@@ -54,6 +64,7 @@ PRE_LAUNCH=1 \
 LAUNCH_SUPABASE_URL=https://<ref>.supabase.co \
 LAUNCH_SUPABASE_PUBLISHABLE_KEY=<chiave publishable di produzione> \
 LAUNCH_SITE_URL=https://<dominio> \
+LAUNCH_DATABASE_URL=<connessione al database di produzione, basta un ruolo in sola lettura> \
 npx playwright test e2e/launch.spec.ts e2e/pending-actions.spec.ts
 ```
 
@@ -63,6 +74,8 @@ Fallisce se:
 - le iscrizioni sono chiuse;
 - il CAPTCHA non è attivo;
 - il cron risponde senza segreto;
-- restano azioni in sospeso nelle pagine.
+- restano azioni in sospeso nelle pagine;
+- nel database ci sono dati demo o di test (immagini demo comprese);
+- un luogo in evidenza o un itinerario pubblicato non ha una foto vera, un media pubblico non ha il testo alternativo, una foto con licenza non ha autore e licenza, un bene culturale non ha un'autorizzazione valida, un luogo non ha una foto vera, un'area non ha la copertina o un luogo non ha l'area.
 
 I template e il link dell'email si controllano a mano, come indicato nella tabella.

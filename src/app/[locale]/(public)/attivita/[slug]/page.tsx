@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Breadcrumb } from "@/components/catalog/breadcrumb";
+import { CoverFigure } from "@/components/catalog/cover-figure";
 import { CatalogActivityCard } from "@/components/catalog/catalog-activity-card";
 import { CatalogLocalTip } from "@/components/catalog/catalog-local-tip";
 import { JsonLd } from "@/components/catalog/json-ld";
@@ -111,15 +112,17 @@ export default async function ActivityPage({ params, searchParams }: Props) {
   ].filter((m): m is string => Boolean(m));
 
   const photo = (
-    <div className="relative -mx-4 aspect-[4/3] overflow-hidden bg-calce-sunk md:mx-0 md:aspect-[21/9] md:rounded-xl">
-      {activity.placeCoverImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={activity.placeCoverImage} alt="" className="h-full w-full object-cover" />
-      ) : (
-        <span className="is-display absolute bottom-4 left-4 text-heading-2 text-lava-muted" aria-hidden="true">
-          {activity.placeName}
-        </span>
-      )}
+    <div className="-mx-4 md:mx-0">
+      <CoverFigure
+        cover={activity.cover}
+        ratio="16x9"
+        sizes="(min-width: 1200px) 1072px, (min-width: 768px) calc(100vw - 128px), 100vw"
+        locale={locale}
+        placeholder={activity.placeName}
+        priority
+        frameClassName="aspect-[4/3] md:aspect-[21/9] md:rounded-xl"
+        captionClassName="px-4 md:px-0"
+      />
     </div>
   );
 

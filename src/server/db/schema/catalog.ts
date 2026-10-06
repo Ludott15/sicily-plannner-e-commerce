@@ -13,10 +13,12 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
   vector,
 } from "drizzle-orm/pg-core";
 import { partner } from "./enums";
+import { media } from "./media";
 
 // Vocabolario condiviso da attività e profili: è il ponte dello scoring.
 export const interests = pgTable("interests", {
@@ -37,6 +39,8 @@ export const areas = pgTable(
     nameIt: text("name_it").notNull(),
     nameEn: text("name_en").notNull(),
     sort: smallint("sort").notNull().default(0),
+    // Copertina dell'area: un'illustrazione, ultimo anello della catena di ripiego delle immagini.
+    coverMediaId: uuid("cover_media_id").references(() => media.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [check("areas_slug_format", sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`)],
@@ -54,11 +58,21 @@ export const places = pgTable(
     lat: doublePrecision("lat").notNull(),
     lng: doublePrecision("lng").notNull(),
     description: text("description"),
+    // Non più usata dalle pagine (sostituita da cover_media_id): resta finché non si verifica
+    // che in produzione sia vuota, poi si elimina con una migrazione.
     coverImage: text("cover_image"),
+    coverMediaId: uuid("cover_media_id").references(() => media.id, { onDelete: "set null" }),
+    // Luogo in evidenza nel carosello della home, in ordine crescente.
+    isFeatured: boolean("is_featured").notNull().default(false),
+    featuredOrder: smallint("featured_order"),
+    // Foto della hero della home: al massimo un luogo (indice unico parziale).
+    isHomeHero: boolean("is_home_hero").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("places_area_id_idx").on(t.areaId),
+    index("places_cover_media_id_idx").on(t.coverMediaId),
+    uniqueIndex("places_single_home_hero").on(t.isHomeHero).where(sql`${t.isHomeHero}`),
     check("places_lat_range", sql`${t.lat} between -90 and 90`),
     check("places_lng_range", sql`${t.lng} between -180 and 180`),
   ],
@@ -90,11 +104,13 @@ export const activities = pgTable(
     dietFriendly: text("diet_friendly").array().notNull().default(sql`'{}'`),
     // Nasce inattiva: si attiva solo con almeno un tag di interesse (trigger activities_require_tags).
     isActive: boolean("is_active").notNull().default(false),
+    coverMediaId: uuid("cover_media_id").references(() => media.id, { onDelete: "set null" }),
     syncedAt: timestamp("synced_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("activities_place_id_idx").on(t.placeId),
+    index("activities_cover_media_id_idx").on(t.coverMediaId),
     index("activities_embedding_idx").using("hnsw", t.embedding.op("vector_cosine_ops")),
     check("activities_duration_positive", sql`${t.durationMin} > 0`),
     check("activities_on_site_price_non_negative", sql`${t.onSitePriceEur} >= 0`),

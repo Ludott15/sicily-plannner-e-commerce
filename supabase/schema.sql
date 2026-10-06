@@ -108,6 +108,26 @@ CREATE TYPE "public"."local_tip_author_kind" AS ENUM (
 ALTER TYPE "public"."local_tip_author_kind" OWNER TO "postgres";
 
 
+CREATE TYPE "public"."media_kind" AS ENUM (
+    'photo',
+    'illustration'
+);
+
+
+ALTER TYPE "public"."media_kind" OWNER TO "postgres";
+
+
+CREATE TYPE "public"."media_source_type" AS ENUM (
+    'own',
+    'licensed',
+    'partner',
+    'illustration'
+);
+
+
+ALTER TYPE "public"."media_source_type" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."order_status" AS ENUM (
     'pending',
     'paid',
@@ -645,6 +665,89 @@ $$;
 ALTER FUNCTION "public"."local_tips_person_relation"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."media_is_public"("p_media_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select public.media_is_usable(p_media_id) and (
+    exists (select 1 from public.places where cover_media_id = p_media_id)
+    or exists (select 1 from public.areas where cover_media_id = p_media_id)
+    or exists (select 1 from public.activities where cover_media_id = p_media_id and is_active)
+    or exists (
+      select 1 from public.itineraries
+      where cover_media_id = p_media_id and is_template and slug is not null
+    )
+  );
+$$;
+
+
+ALTER FUNCTION "public"."media_is_public"("p_media_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."media_is_usable"("p_media_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select exists (
+    select 1
+    from public.media m
+    left join public.image_authorizations a on a.id = m.authorization_id
+    where m.id = p_media_id
+      and nullif(btrim(m.alt_it), '') is not null
+      and (
+        m.kind = 'illustration'
+        or (
+          nullif(btrim(m.author), '') is not null
+          and nullif(btrim(m.license), '') is not null
+          and m.variants_version > 0
+        )
+      )
+      and (not m.heritage_asset or (a.id is not null and a.valid_until >= current_date))
+  );
+$$;
+
+
+ALTER FUNCTION "public"."media_is_usable"("p_media_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."media_object_is_public"("p_name" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $_$
+  select exists (
+    select 1
+    from public.media m
+    where m.id::text = split_part(p_name, '/', 1)
+      and (
+        (
+          m.kind = 'photo'
+          and m.variants_version > 0
+          and p_name ~ ('^' || m.id::text || '/v' || m.variants_version::text || '/(4x5|16x9|1x1)-[0-9]+\.(avif|webp)$')
+        )
+        or (m.kind = 'illustration' and p_name = m.storage_path)
+      )
+      and public.media_is_public(m.id)
+  );
+$_$;
+
+
+ALTER FUNCTION "public"."media_object_is_public"("p_name" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."media_touch_updated_at"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."media_touch_updated_at"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."prevent_mutation"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'pg_temp'
@@ -798,6 +901,7 @@ CREATE TABLE IF NOT EXISTS "public"."activities" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "on_site_price_eur" numeric(8,2),
     "diet_friendly" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "cover_media_id" "uuid",
     CONSTRAINT "activities_diet_friendly_valid" CHECK (("diet_friendly" <@ '{vegetarian,vegan,gluten_free,lactose_free}'::"text"[])),
     CONSTRAINT "activities_duration_positive" CHECK (("duration_min" > 0)),
     CONSTRAINT "activities_on_site_price_non_negative" CHECK (("on_site_price_eur" >= (0)::numeric)),
@@ -919,6 +1023,7 @@ CREATE TABLE IF NOT EXISTS "public"."areas" (
     "name_en" "text" NOT NULL,
     "sort" smallint DEFAULT 0 NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "cover_media_id" "uuid",
     CONSTRAINT "areas_slug_format" CHECK (("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::"text"))
 );
 
@@ -1064,6 +1169,25 @@ CREATE TABLE IF NOT EXISTS "public"."groups" (
 ALTER TABLE "public"."groups" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."image_authorizations" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "authority" "text" NOT NULL,
+    "reference" "text" NOT NULL,
+    "issued_on" "date" NOT NULL,
+    "valid_until" "date" NOT NULL,
+    "scope" "text" NOT NULL,
+    "document_url" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "image_authorizations_authority_length" CHECK ((("char_length"("btrim"("authority")) >= 1) AND ("char_length"("btrim"("authority")) <= 200))),
+    CONSTRAINT "image_authorizations_dates" CHECK (("valid_until" >= "issued_on")),
+    CONSTRAINT "image_authorizations_document_url_https" CHECK (("document_url" ~ '^https://'::"text")),
+    CONSTRAINT "image_authorizations_reference_length" CHECK ((("char_length"("btrim"("reference")) >= 1) AND ("char_length"("btrim"("reference")) <= 200)))
+);
+
+
+ALTER TABLE "public"."image_authorizations" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."interests" (
     "key" "text" NOT NULL,
     "label_it" "text" NOT NULL,
@@ -1102,6 +1226,7 @@ CREATE TABLE IF NOT EXISTS "public"."itineraries" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "day_titles" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
     "travelers" smallint,
+    "cover_media_id" "uuid",
     CONSTRAINT "itineraries_day_titles_within_days" CHECK (("cardinality"("day_titles") <= "days")),
     CONSTRAINT "itineraries_days_range" CHECK ((("days" >= 1) AND ("days" <= 60))),
     CONSTRAINT "itineraries_template_iff_editorial" CHECK ((("owner_id" IS NULL) = "is_template")),
@@ -1246,6 +1371,61 @@ CREATE OR REPLACE VIEW "public"."local_tips_due_for_review" WITH ("security_invo
 ALTER VIEW "public"."local_tips_due_for_review" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."media" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "storage_path" "text" NOT NULL,
+    "width" integer NOT NULL,
+    "height" integer NOT NULL,
+    "focal_x" double precision DEFAULT 0.5 NOT NULL,
+    "focal_y" double precision DEFAULT 0.5 NOT NULL,
+    "alt_it" "text",
+    "alt_en" "text",
+    "kind" "public"."media_kind" NOT NULL,
+    "source_type" "public"."media_source_type" NOT NULL,
+    "author" "text",
+    "author_url" "text",
+    "license" "text",
+    "license_url" "text",
+    "source_url" "text",
+    "source_link" "text" GENERATED ALWAYS AS (
+CASE
+    WHEN ("source_url" ~ '^https://commons\.wikimedia\.org/'::"text") THEN "source_url"
+    ELSE NULL::"text"
+END) STORED,
+    "accessed_at" "date",
+    "modified" boolean DEFAULT false NOT NULL,
+    "credit_text" "text" GENERATED ALWAYS AS (
+CASE
+    WHEN ("kind" = 'illustration'::"public"."media_kind") THEN 'Illustrazione di Isula'::"text"
+    ELSE ((('Foto: '::"text" || COALESCE(NULLIF("btrim"("author"), ''::"text"), '?'::"text")) || COALESCE((', '::"text" || NULLIF("btrim"("license"), ''::"text")), ''::"text")) ||
+    CASE
+        WHEN "modified" THEN ' (modificata)'::"text"
+        ELSE ''::"text"
+    END)
+END) STORED,
+    "heritage_asset" boolean DEFAULT false NOT NULL,
+    "authorization_id" "uuid",
+    "blur_data_url" "text",
+    "variants_version" integer DEFAULT 0 NOT NULL,
+    "original_filename" "text",
+    "created_by" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "media_author_url_http" CHECK (("author_url" ~ '^https?://'::"text")),
+    CONSTRAINT "media_authorization_only_heritage" CHECK ((("authorization_id" IS NULL) OR "heritage_asset")),
+    CONSTRAINT "media_dimensions_positive" CHECK ((("width" > 0) AND ("height" > 0))),
+    CONSTRAINT "media_focal_range" CHECK (((("focal_x" >= (0)::double precision) AND ("focal_x" <= (1)::double precision)) AND (("focal_y" >= (0)::double precision) AND ("focal_y" <= (1)::double precision)))),
+    CONSTRAINT "media_kind_matches_source" CHECK ((("kind" = 'illustration'::"public"."media_kind") = ("source_type" = 'illustration'::"public"."media_source_type"))),
+    CONSTRAINT "media_license_url_http" CHECK (("license_url" ~ '^https?://'::"text")),
+    CONSTRAINT "media_source_url_https" CHECK (("source_url" ~ '^https://'::"text")),
+    CONSTRAINT "media_storage_path_format" CHECK (("storage_path" ~ '^[0-9a-f-]{36}/(master\.(jpg|png|webp)|illustration\.svg)$'::"text")),
+    CONSTRAINT "media_variants_version_non_negative" CHECK (("variants_version" >= 0))
+);
+
+
+ALTER TABLE "public"."media" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."order_items" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "order_id" "uuid" NOT NULL,
@@ -1310,6 +1490,10 @@ CREATE TABLE IF NOT EXISTS "public"."places" (
     "cover_image" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "area_id" "uuid",
+    "cover_media_id" "uuid",
+    "is_featured" boolean DEFAULT false NOT NULL,
+    "featured_order" smallint,
+    "is_home_hero" boolean DEFAULT false NOT NULL,
     CONSTRAINT "places_lat_range" CHECK ((("lat" >= ('-90'::integer)::double precision) AND ("lat" <= (90)::double precision))),
     CONSTRAINT "places_lng_range" CHECK ((("lng" >= ('-180'::integer)::double precision) AND ("lng" <= (180)::double precision)))
 );
@@ -1642,6 +1826,11 @@ ALTER TABLE ONLY "public"."groups"
 
 
 
+ALTER TABLE ONLY "public"."image_authorizations"
+    ADD CONSTRAINT "image_authorizations_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."interests"
     ADD CONSTRAINT "interests_pkey" PRIMARY KEY ("key");
 
@@ -1684,6 +1873,16 @@ ALTER TABLE ONLY "public"."local_tip_authors"
 
 ALTER TABLE ONLY "public"."local_tips"
     ADD CONSTRAINT "local_tips_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."media"
+    ADD CONSTRAINT "media_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."media"
+    ADD CONSTRAINT "media_storage_path_unique" UNIQUE ("storage_path");
 
 
 
@@ -1787,6 +1986,10 @@ ALTER TABLE ONLY "public"."user_taste"
 
 
 
+CREATE INDEX "activities_cover_media_id_idx" ON "public"."activities" USING "btree" ("cover_media_id");
+
+
+
 CREATE INDEX "activities_embedding_idx" ON "public"."activities" USING "hnsw" ("embedding" "extensions"."vector_cosine_ops");
 
 
@@ -1847,6 +2050,10 @@ CREATE INDEX "item_votes_user_id_idx" ON "public"."item_votes" USING "btree" ("u
 
 
 
+CREATE INDEX "itineraries_cover_media_id_idx" ON "public"."itineraries" USING "btree" ("cover_media_id");
+
+
+
 CREATE INDEX "itineraries_group_id_idx" ON "public"."itineraries" USING "btree" ("group_id");
 
 
@@ -1875,6 +2082,10 @@ CREATE INDEX "local_tips_verified_at_idx" ON "public"."local_tips" USING "btree"
 
 
 
+CREATE INDEX "media_authorization_id_idx" ON "public"."media" USING "btree" ("authorization_id");
+
+
+
 CREATE INDEX "order_items_order_id_idx" ON "public"."order_items" USING "btree" ("order_id");
 
 
@@ -1888,6 +2099,14 @@ CREATE INDEX "orders_user_id_idx" ON "public"."orders" USING "btree" ("user_id")
 
 
 CREATE INDEX "places_area_id_idx" ON "public"."places" USING "btree" ("area_id");
+
+
+
+CREATE INDEX "places_cover_media_id_idx" ON "public"."places" USING "btree" ("cover_media_id");
+
+
+
+CREATE UNIQUE INDEX "places_single_home_hero" ON "public"."places" USING "btree" ("is_home_hero") WHERE "is_home_hero";
 
 
 
@@ -1943,6 +2162,10 @@ CREATE OR REPLACE TRIGGER "local_tips_person_relation" BEFORE INSERT OR UPDATE O
 
 
 
+CREATE OR REPLACE TRIGGER "media_touch_updated_at" BEFORE UPDATE ON "public"."media" FOR EACH ROW EXECUTE FUNCTION "public"."media_touch_updated_at"();
+
+
+
 CREATE OR REPLACE TRIGGER "points_ledger_immutable" BEFORE DELETE OR UPDATE ON "public"."points_ledger" FOR EACH ROW EXECUTE FUNCTION "public"."prevent_mutation"();
 
 
@@ -1956,6 +2179,11 @@ CREATE OR REPLACE TRIGGER "user_badges_immutable" BEFORE DELETE OR UPDATE ON "pu
 
 
 CREATE OR REPLACE TRIGGER "user_badges_no_truncate" BEFORE TRUNCATE ON "public"."user_badges" FOR EACH STATEMENT EXECUTE FUNCTION "public"."prevent_mutation"();
+
+
+
+ALTER TABLE ONLY "public"."activities"
+    ADD CONSTRAINT "activities_cover_media_id_media_id_fk" FOREIGN KEY ("cover_media_id") REFERENCES "public"."media"("id") ON DELETE SET NULL;
 
 
 
@@ -2001,6 +2229,11 @@ ALTER TABLE ONLY "public"."affiliate_clicks"
 
 ALTER TABLE ONLY "public"."affiliate_clicks"
     ADD CONSTRAINT "affiliate_clicks_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."areas"
+    ADD CONSTRAINT "areas_cover_media_id_media_id_fk" FOREIGN KEY ("cover_media_id") REFERENCES "public"."media"("id") ON DELETE SET NULL;
 
 
 
@@ -2075,6 +2308,11 @@ ALTER TABLE ONLY "public"."item_votes"
 
 
 ALTER TABLE ONLY "public"."itineraries"
+    ADD CONSTRAINT "itineraries_cover_media_id_media_id_fk" FOREIGN KEY ("cover_media_id") REFERENCES "public"."media"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."itineraries"
     ADD CONSTRAINT "itineraries_group_id_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."groups"("id") ON DELETE SET NULL;
 
 
@@ -2139,6 +2377,16 @@ ALTER TABLE ONLY "public"."local_tips"
 
 
 
+ALTER TABLE ONLY "public"."media"
+    ADD CONSTRAINT "media_authorization_id_image_authorizations_id_fk" FOREIGN KEY ("authorization_id") REFERENCES "public"."image_authorizations"("id") ON DELETE RESTRICT;
+
+
+
+ALTER TABLE ONLY "public"."media"
+    ADD CONSTRAINT "media_created_by_profiles_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
 ALTER TABLE ONLY "public"."order_items"
     ADD CONSTRAINT "order_items_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE CASCADE;
 
@@ -2171,6 +2419,11 @@ ALTER TABLE ONLY "public"."orders"
 
 ALTER TABLE ONLY "public"."places"
     ADD CONSTRAINT "places_area_id_areas_id_fk" FOREIGN KEY ("area_id") REFERENCES "public"."areas"("id") ON DELETE RESTRICT;
+
+
+
+ALTER TABLE ONLY "public"."places"
+    ADD CONSTRAINT "places_cover_media_id_media_id_fk" FOREIGN KEY ("cover_media_id") REFERENCES "public"."media"("id") ON DELETE SET NULL;
 
 
 
@@ -2460,6 +2713,9 @@ CREATE POLICY "groups_update_owner" ON "public"."groups" FOR UPDATE TO "authenti
 
 
 
+ALTER TABLE "public"."image_authorizations" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."interests" ENABLE ROW LEVEL SECURITY;
 
 
@@ -2596,6 +2852,17 @@ CREATE POLICY "local_tips_select_admin" ON "public"."local_tips" FOR SELECT TO "
 
 
 CREATE POLICY "local_tips_update_admin" ON "public"."local_tips" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."media" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "media_select_admin" ON "public"."media" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "media_select_public" ON "public"."media" FOR SELECT TO "authenticated", "anon" USING ("public"."media_is_public"("id"));
 
 
 
@@ -2919,6 +3186,33 @@ GRANT ALL ON FUNCTION "public"."local_tips_person_relation"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."media_is_public"("p_media_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."media_is_public"("p_media_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."media_is_public"("p_media_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."media_is_public"("p_media_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."media_is_usable"("p_media_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."media_is_usable"("p_media_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."media_is_usable"("p_media_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."media_is_usable"("p_media_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."media_object_is_public"("p_name" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."media_object_is_public"("p_name" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."media_object_is_public"("p_name" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."media_object_is_public"("p_name" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."media_touch_updated_at"() TO "anon";
+GRANT ALL ON FUNCTION "public"."media_touch_updated_at"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."media_touch_updated_at"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "anon";
 GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "service_role";
@@ -3185,6 +3479,10 @@ GRANT UPDATE("name") ON TABLE "public"."groups" TO "authenticated";
 
 
 
+GRANT ALL ON TABLE "public"."image_authorizations" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."interests" TO "service_role";
 GRANT SELECT ON TABLE "public"."interests" TO "anon";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."interests" TO "authenticated";
@@ -3347,6 +3645,105 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."local_tips" TO "authenticat
 
 GRANT ALL ON TABLE "public"."local_tips_due_for_review" TO "service_role";
 GRANT SELECT ON TABLE "public"."local_tips_due_for_review" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."media" TO "service_role";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("id") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("storage_path") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("storage_path") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("width") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("width") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("height") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("height") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("focal_x") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("focal_x") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("focal_y") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("focal_y") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("alt_it") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("alt_it") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("alt_en") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("alt_en") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("kind") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("kind") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("source_type") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("source_type") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("author") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("author") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("author_url") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("author_url") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("license") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("license") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("license_url") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("license_url") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("source_link") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("source_link") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("modified") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("modified") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("credit_text") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("credit_text") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("blur_data_url") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("blur_data_url") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT SELECT("variants_version") ON TABLE "public"."media" TO "anon";
+GRANT SELECT("variants_version") ON TABLE "public"."media" TO "authenticated";
 
 
 
