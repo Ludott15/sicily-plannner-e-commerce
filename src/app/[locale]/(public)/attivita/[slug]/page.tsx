@@ -11,8 +11,8 @@ import {
   affiliateHref,
   BookingBar,
   ButtonAnchor,
+  ButtonLink,
   interestDomain,
-  PendingButton,
 } from "@/components/design";
 import { publicEnv } from "@/lib/env";
 import { formatDuration, formatEur, formatSeason } from "@/lib/format";
@@ -27,7 +27,7 @@ import { getActivityTip } from "@/server/catalog/tips";
 // Non ancora in pagina, perché mancano dati o funzioni: galleria (una sola foto o il
 // segnaposto), "Perché è per te" (M4), "Da sapere",
 // recensioni (M9), prodotti della zona (M10), "+10 punti con il check-in" (M9).
-// In sospeso (visibili e disabilitate): Salva e "Aggiungi al viaggio" (M5).
+// "Aggiungi al viaggio" porta a /viaggi/aggiungi (scelta del viaggio e del giorno, M5).
 // Offerte: prodotti dei partner (activity_offers), dalla più economica; la prima è anche
 // nella barra mobile. Il prezzo dell'attività è quello pagato in loco (ingresso, biglietto),
 // un metadato e mai un'offerta. Senza offerte non c'è né AffiliateOffer né offerta nella barra.
@@ -200,9 +200,9 @@ export default async function ActivityPage({ params, searchParams }: Props) {
               <div className="rounded-lg border border-card-edge bg-calce-raised p-6 shadow-card">
                 <h2 className="text-body-s font-semibold">{t("addToTrip")}</h2>
                 <div className="mt-3">
-                  <PendingButton id="activity.add-to-trip" variant="primary" fullWidth>
+                  <ButtonLink href={`/viaggi/aggiungi?attivita=${activity.slug}`} variant="primary" className="w-full">
                     {t("addToTrip")}
-                  </PendingButton>
+                  </ButtonLink>
                 </div>
               </div>
               {offerList}
@@ -249,9 +249,9 @@ export default async function ActivityPage({ params, searchParams }: Props) {
       {/* Mobile: la barra di prenotazione sostituisce la TabBar, con l'offerta principale */}
       <BookingBar
         addToTrip={
-          <PendingButton id="activity.add-to-trip" variant="primary" fullWidth>
+          <ButtonLink href={`/viaggi/aggiungi?attivita=${activity.slug}`} variant="primary" className="w-full">
             {t("addToTrip")}
-          </PendingButton>
+          </ButtonLink>
         }
         offer={
           mainOffer ? (

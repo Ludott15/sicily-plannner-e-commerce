@@ -23,6 +23,26 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 
+CREATE TYPE "public"."booking_kind" AS ENUM (
+    'activity',
+    'lodging',
+    'car',
+    'flight'
+);
+
+
+ALTER TYPE "public"."booking_kind" OWNER TO "postgres";
+
+
+CREATE TYPE "public"."booking_status" AS ENUM (
+    'to_book',
+    'booked'
+);
+
+
+ALTER TYPE "public"."booking_status" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."car_access" AS ENUM (
     'own',
     'rental',
@@ -574,6 +594,21 @@ $$;
 ALTER FUNCTION "public"."is_group_owner"("gid" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."itinerary_bookings_stamp"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  new.updated_by := auth.uid();
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."itinerary_bookings_stamp"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."local_tip_authors_person_relation"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'pg_temp'
@@ -1066,10 +1101,12 @@ CREATE TABLE IF NOT EXISTS "public"."itineraries" (
     "status" "public"."itinerary_status" DEFAULT 'draft'::"public"."itinerary_status" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "day_titles" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "travelers" smallint,
     CONSTRAINT "itineraries_day_titles_within_days" CHECK (("cardinality"("day_titles") <= "days")),
     CONSTRAINT "itineraries_days_range" CHECK ((("days" >= 1) AND ("days" <= 60))),
     CONSTRAINT "itineraries_template_iff_editorial" CHECK ((("owner_id" IS NULL) = "is_template")),
-    CONSTRAINT "itineraries_title_length" CHECK ((("char_length"("btrim"("title")) >= 1) AND ("char_length"("btrim"("title")) <= 200)))
+    CONSTRAINT "itineraries_title_length" CHECK ((("char_length"("btrim"("title")) >= 1) AND ("char_length"("btrim"("title")) <= 200))),
+    CONSTRAINT "itineraries_travelers_range" CHECK ((("travelers" >= 1) AND ("travelers" <= 30)))
 );
 
 
@@ -1109,6 +1146,23 @@ CREATE OR REPLACE VIEW "public"."item_vote_balances" WITH ("security_invoker"='t
 
 
 ALTER VIEW "public"."item_vote_balances" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."itinerary_bookings" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "itinerary_id" "uuid" NOT NULL,
+    "kind" "public"."booking_kind" NOT NULL,
+    "activity_id" "uuid",
+    "partner" "public"."partner",
+    "status" "public"."booking_status" DEFAULT 'to_book'::"public"."booking_status" NOT NULL,
+    "updated_by" "uuid",
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "itinerary_bookings_activity_iff_kind" CHECK ((("kind" = 'activity'::"public"."booking_kind") = ("activity_id" IS NOT NULL)))
+);
+
+
+ALTER TABLE "public"."itinerary_bookings" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."points_ledger" (
@@ -1608,6 +1662,16 @@ ALTER TABLE ONLY "public"."itineraries"
 
 
 
+ALTER TABLE ONLY "public"."itinerary_bookings"
+    ADD CONSTRAINT "itinerary_bookings_item_unique" UNIQUE NULLS NOT DISTINCT ("itinerary_id", "kind", "activity_id");
+
+
+
+ALTER TABLE ONLY "public"."itinerary_bookings"
+    ADD CONSTRAINT "itinerary_bookings_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."itinerary_items"
     ADD CONSTRAINT "itinerary_items_pkey" PRIMARY KEY ("id");
 
@@ -1867,6 +1931,10 @@ CREATE OR REPLACE TRIGGER "groups_add_owner_member" AFTER INSERT ON "public"."gr
 
 
 
+CREATE OR REPLACE TRIGGER "itinerary_bookings_stamp" BEFORE INSERT OR UPDATE ON "public"."itinerary_bookings" FOR EACH ROW EXECUTE FUNCTION "public"."itinerary_bookings_stamp"();
+
+
+
 CREATE OR REPLACE TRIGGER "local_tip_authors_person_relation" BEFORE UPDATE OF "kind" ON "public"."local_tip_authors" FOR EACH ROW EXECUTE FUNCTION "public"."local_tip_authors_person_relation"();
 
 
@@ -2018,6 +2086,21 @@ ALTER TABLE ONLY "public"."itineraries"
 
 ALTER TABLE ONLY "public"."itineraries"
     ADD CONSTRAINT "itineraries_template_id_itineraries_id_fk" FOREIGN KEY ("template_id") REFERENCES "public"."itineraries"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_bookings"
+    ADD CONSTRAINT "itinerary_bookings_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_bookings"
+    ADD CONSTRAINT "itinerary_bookings_itinerary_id_itineraries_id_fk" FOREIGN KEY ("itinerary_id") REFERENCES "public"."itineraries"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_bookings"
+    ADD CONSTRAINT "itinerary_bookings_updated_by_profiles_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
 
@@ -2438,6 +2521,27 @@ CREATE POLICY "itineraries_update" ON "public"."itineraries" FOR UPDATE TO "auth
 
 
 
+ALTER TABLE "public"."itinerary_bookings" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "itinerary_bookings_delete" ON "public"."itinerary_bookings" FOR DELETE TO "authenticated" USING ("public"."can_edit_itinerary"("itinerary_id"));
+
+
+
+CREATE POLICY "itinerary_bookings_insert" ON "public"."itinerary_bookings" FOR INSERT TO "authenticated" WITH CHECK (("public"."can_edit_itinerary"("itinerary_id") AND (EXISTS ( SELECT 1
+   FROM "public"."itineraries" "i"
+  WHERE (("i"."id" = "itinerary_bookings"."itinerary_id") AND (NOT "i"."is_template"))))));
+
+
+
+CREATE POLICY "itinerary_bookings_select" ON "public"."itinerary_bookings" FOR SELECT TO "authenticated" USING ("public"."can_access_itinerary"("itinerary_id"));
+
+
+
+CREATE POLICY "itinerary_bookings_update" ON "public"."itinerary_bookings" FOR UPDATE TO "authenticated" USING ("public"."can_edit_itinerary"("itinerary_id")) WITH CHECK ("public"."can_edit_itinerary"("itinerary_id"));
+
+
+
 ALTER TABLE "public"."itinerary_items" ENABLE ROW LEVEL SECURITY;
 
 
@@ -2797,6 +2901,12 @@ GRANT ALL ON FUNCTION "public"."is_group_owner"("gid" "uuid") TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."itinerary_bookings_stamp"() TO "anon";
+GRANT ALL ON FUNCTION "public"."itinerary_bookings_stamp"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."itinerary_bookings_stamp"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."local_tip_authors_person_relation"() TO "anon";
 GRANT ALL ON FUNCTION "public"."local_tip_authors_person_relation"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."local_tip_authors_person_relation"() TO "service_role";
@@ -3144,6 +3254,10 @@ GRANT INSERT("day_titles"),UPDATE("day_titles") ON TABLE "public"."itineraries" 
 
 
 
+GRANT INSERT("travelers"),UPDATE("travelers") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."itinerary_items" TO "service_role";
 GRANT SELECT ON TABLE "public"."itinerary_items" TO "anon";
 GRANT SELECT,DELETE ON TABLE "public"."itinerary_items" TO "authenticated";
@@ -3188,6 +3302,27 @@ GRANT INSERT("notes"),UPDATE("notes") ON TABLE "public"."itinerary_items" TO "au
 
 GRANT ALL ON TABLE "public"."item_vote_balances" TO "service_role";
 GRANT SELECT ON TABLE "public"."item_vote_balances" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."itinerary_bookings" TO "service_role";
+GRANT SELECT,DELETE ON TABLE "public"."itinerary_bookings" TO "authenticated";
+
+
+
+GRANT INSERT("itinerary_id") ON TABLE "public"."itinerary_bookings" TO "authenticated";
+
+
+
+GRANT INSERT("kind") ON TABLE "public"."itinerary_bookings" TO "authenticated";
+
+
+
+GRANT INSERT("activity_id") ON TABLE "public"."itinerary_bookings" TO "authenticated";
+
+
+
+GRANT INSERT("status"),UPDATE("status") ON TABLE "public"."itinerary_bookings" TO "authenticated";
 
 
 

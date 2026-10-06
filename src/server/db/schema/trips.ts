@@ -11,10 +11,11 @@ import {
   time,
   timestamp,
   uuid,
+  unique,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { activities, places } from "./catalog";
-import { groupRole, inviteStatus, itineraryStatus } from "./enums";
+import { bookingKind, bookingStatus, groupRole, inviteStatus, itineraryStatus, partner } from "./enums";
 import { profiles } from "./profiles";
 
 // Itinerari e gruppi stanno nello stesso file: si referenziano a vicenda
@@ -35,6 +36,8 @@ export const itineraries = pgTable(
     }),
     startDate: date("start_date"),
     days: smallint("days").notNull(),
+    // Quante persone viaggiano (M5): si chiede quando si crea il viaggio; null = non indicato.
+    travelers: smallint("travelers"),
     // Titolo editoriale di ogni giorno ("Noto e costa"), per indice. Un giorno senza titolo
     // mostra i luoghi delle sue tappe. Chi copia un itinerario pronto eredita i titoli.
     dayTitles: text("day_titles").array().notNull().default(sql`'{}'`),
@@ -48,6 +51,32 @@ export const itineraries = pgTable(
     check("itineraries_title_length", sql`char_length(btrim(${t.title})) between 1 and 200`),
     check("itineraries_template_iff_editorial", sql`(${t.ownerId} is null) = ${t.isTemplate}`),
     check("itineraries_day_titles_within_days", sql`cardinality(${t.dayTitles}) <= ${t.days}`),
+    check("itineraries_travelers_range", sql`${t.travelers} between 1 and 30`),
+  ],
+);
+
+// Checklist "Da prenotare" (schema 2e, con il builder M5). Una riga per cosa da prenotare:
+// un'attività del viaggio, l'alloggio, l'auto, il volo. Lo stato lo segna l'utente.
+// updated_by e updated_at li scrive un trigger, non il client.
+export const itineraryBookings = pgTable(
+  "itinerary_bookings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    itineraryId: uuid("itinerary_id")
+      .notNull()
+      .references(() => itineraries.id, { onDelete: "cascade" }),
+    kind: bookingKind("kind").notNull(),
+    activityId: uuid("activity_id").references(() => activities.id, { onDelete: "cascade" }),
+    // Partner verso cui si prenota: arriva con i link della M6.
+    partner: partner("partner"),
+    status: bookingStatus("status").notNull().default("to_book"),
+    updatedBy: uuid("updated_by").references(() => profiles.id, { onDelete: "set null" }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("itinerary_bookings_item_unique").on(t.itineraryId, t.kind, t.activityId).nullsNotDistinct(),
+    check("itinerary_bookings_activity_iff_kind", sql`(${t.kind} = 'activity') = (${t.activityId} is not null)`),
   ],
 );
 

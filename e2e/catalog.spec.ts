@@ -81,10 +81,12 @@ test("scheda attività senza offerte: nessuna offerta e nessun pulsante del part
 test("scheda attività su mobile: la barra ha l'offerta principale e non copre il footer", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/it/attivita/demo-zingaro");
-  const bar = page.locator("div.fixed.bottom-0").filter({ has: page.locator('[data-pending-id="activity.add-to-trip"]') });
-  await expect(bar.getByRole("link")).toHaveCount(1);
-  await expect(bar.getByRole("link")).toContainText("GetYourGuide");
-  await expect(bar.getByRole("link")).toContainText("da 45 €");
+  const bar = page.locator("div.fixed.bottom-0").filter({ has: page.getByRole("link", { name: "Aggiungi al viaggio" }) });
+  await expect(bar.getByRole("link", { name: "Aggiungi al viaggio" })).toHaveAttribute("href", "/it/viaggi/aggiungi?attivita=demo-zingaro");
+  const offer = bar.locator('a[href^="/api/go/"]');
+  await expect(offer).toHaveCount(1);
+  await expect(offer).toContainText("GetYourGuide");
+  await expect(offer).toContainText("da 45 €");
 
   // Lo spazio in fondo arriva quando la barra è misurata: si scorre di nuovo a ogni tentativo.
   const footer = page.locator("footer").last();
@@ -103,9 +105,9 @@ test("liste e schede: niente Salva e Aggiungi finché non esistono; la card dell
     await expect(page.getByRole("button", { name: "Aggiungi", exact: true }), path).toHaveCount(0);
     await expect(page.locator('[data-pending-id^="card."], [data-pending-id="activity.save"]'), path).toHaveCount(0);
   }
-  // Resta l'azione principale della pagina, in sospeso.
+  // L'azione principale della pagina porta alla scelta del viaggio (M5).
   await page.goto("/it/attivita/demo-zingaro");
-  await expect(page.locator('[data-pending-id="activity.add-to-trip"]').first()).toHaveAttribute("data-pending", "M5");
+  await expect(page.getByRole("link", { name: "Aggiungi al viaggio" }).first()).toHaveAttribute("href", "/it/viaggi/aggiungi?attivita=demo-zingaro");
 
   await page.goto("/it");
   await expect(page.getByText("Esempio · Giorno 1")).toBeVisible();

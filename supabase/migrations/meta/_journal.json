@@ -190,6 +190,13 @@
       "when": 1791285633791,
       "tag": "20261006112033_areas",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791291021695,
+      "tag": "20261006125021_itinerary_bookings",
+      "breakpoints": true
     }
   ]
 }

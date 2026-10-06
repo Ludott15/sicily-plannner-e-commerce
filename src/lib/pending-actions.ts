@@ -9,15 +9,13 @@
 
 export const PENDING_ACTIONS = {
   "home.points": "M9",
-  "activity.add-to-trip": "M5",
-  "itinerary.use": "M5",
-  "tabbar.trips": "M5",
   "tabbar.shop": "M10",
   "about.editorial": "testi",
   "about.founder": "testi",
   "onboarding.privacy": "testi",
   "preferences.consent": "testi",
   "proposal.car-rental": "M6",
+  "booking.partner-link": "M6",
   "legal.privacy": "legale",
   "legal.cookie": "legale",
   "legal.terms": "legale",

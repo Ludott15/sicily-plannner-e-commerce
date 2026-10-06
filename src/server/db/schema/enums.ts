@@ -52,3 +52,7 @@ export const orderStatus = pgEnum("order_status", [
 export const localTipAuthorKind = pgEnum("local_tip_author_kind", ["editorial", "person"]);
 // Auto nel viaggio: propria, a noleggio, nessuna (onboarding, domanda "Budget e spostamenti").
 export const carAccess = pgEnum("car_access", ["own", "rental", "none"]);
+// Prenotazioni dell'itinerario (checklist "Da prenotare", M5): cosa si prenota e se l'utente
+// l'ha segnato come fatto. Lo stato lo segna l'utente, non riceviamo conferme dai partner.
+export const bookingKind = pgEnum("booking_kind", ["activity", "lodging", "car", "flight"]);
+export const bookingStatus = pgEnum("booking_status", ["to_book", "booked"]);

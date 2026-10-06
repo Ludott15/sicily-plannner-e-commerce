@@ -13,8 +13,8 @@ import { proposeTrips, type AreaReason, type Reason } from "@/server/personaliza
 // motore (server/personalization/engine.ts), una per area di viaggio, ognuna con il perché
 // dell'area e ogni tappa con "Per te" e i suoi motivi. Se l'utente non ha scelto interessi
 // ("Salta" ovunque) i viaggi sono un punto di partenza: la pagina lo dice e non mostra "Per te".
-// Le proposte si calcolano a ogni visita dalle risposte salvate: salvarle come itinerario
-// arriva con il builder (M5). Non indicizzata.
+// Le proposte si calcolano a ogni visita dalle risposte salvate; "Salva questo viaggio" porta a
+// /viaggio/salva (date e persone), che le ricalcola sul server e crea l'itinerario. Non indicizzata.
 type Props = { params: Promise<{ locale: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -116,6 +116,15 @@ export default async function ProposalsPage({ params }: Props) {
                 {t("proposalTitle", { n: i + 1, area: areas.get(proposal.area) ?? proposal.area })}
               </h2>
               <p className="text-body-s text-lava-muted">{t("proposalMeta", { days: proposal.days.length })}</p>
+              <div>
+                <ButtonLink
+                  href={`/viaggio/salva?area=${proposal.area}${proposal.variant ? `&variante=${proposal.variant}` : ""}`}
+                  variant="primary"
+                  size="sm"
+                >
+                  {t("saveTrip")}
+                </ButtonLink>
+              </div>
               <div className="flex flex-col gap-1">
                 <h3 className="text-label uppercase text-lava-muted">{t("whyArea")}</h3>
                 <ul className="flex list-disc flex-col gap-1 pl-5 text-body-s">
