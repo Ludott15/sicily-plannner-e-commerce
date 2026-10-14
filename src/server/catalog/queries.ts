@@ -1,7 +1,9 @@
 import "server-only";
 import { cache } from "react";
-import { and, asc, desc, eq, exists, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, exists, gte, inArray, isNotNull, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import { activityCoverChain, itineraryCoverChain, placeCoverChain, type CoverMedia, type ResolvedCover } from "@/lib/media";
+import { templateFacts } from "@/lib/itinerary-checks";
+import { DAY_BUCKET_RANGE, NO_TEMPLATE_FILTERS, type TemplateFilters } from "@/lib/template-filters";
 import { dbPublic } from "@/server/db/public";
 import type { UserTx } from "@/server/db/user";
 import {
@@ -12,6 +14,7 @@ import {
   interests,
   itineraries,
   itineraryItems,
+  itineraryNights,
   media,
   places,
 } from "@/server/db/schema";
@@ -204,7 +207,7 @@ export const getPlace = cache((slug: string) =>
 );
 
 // Itinerari pronti (template editoriali pubblicati) con i luoghi toccati, in ordine di visita.
-async function templateSummaries(tx: UserTx, where = sql`true`) {
+async function templateSummaries(tx: UserTx, where?: SQL) {
   const templates = await tx
     .select({
       id: itineraries.id,
@@ -260,9 +263,61 @@ async function templateSummaries(tx: UserTx, where = sql`true`) {
   });
 }
 
+// Filtri della lista (src/lib/template-filters.ts) come condizione sulla query dei template.
+function templateFilterWhere(filters: TemplateFilters): SQL | undefined {
+  const parts: SQL[] = [];
+  if (filters.days.length > 0) {
+    const ranges = filters.days.map((bucket) => {
+      const range = DAY_BUCKET_RANGE[bucket];
+      return range.max === null
+        ? gte(itineraries.days, range.min)
+        : and(gte(itineraries.days, range.min), lte(itineraries.days, range.max));
+    });
+    parts.push(or(...ranges) ?? sql`false`);
+  }
+  if (filters.area !== null) {
+    parts.push(sql`${itineraries.id} in (
+      select ii.itinerary_id from public.itinerary_items ii
+      left join public.activities a on a.id = ii.activity_id
+      join public.places p on p.id = coalesce(ii.place_id, a.place_id)
+      join public.areas ar on ar.id = p.area_id
+      where ar.slug = ${filters.area})`);
+  }
+  if (filters.party !== null) {
+    parts.push(sql`${itineraries.suitableFor} @> array[${filters.party}]::public.travel_party[]`);
+  }
+  // Senza mesi consigliati l'itinerario vale tutto l'anno.
+  if (filters.month !== null) {
+    parts.push(
+      sql`(cardinality(${itineraries.seasonMonths}) = 0 or ${itineraries.seasonMonths} @> array[${filters.month}]::smallint[])`,
+    );
+  }
+  return parts.length > 0 ? and(...parts) : undefined;
+}
+
 export type TemplateSummary = Awaited<ReturnType<typeof listTemplates>>[number];
 
-export const listTemplates = cache(() => dbPublic((tx) => templateSummaries(tx)));
+// Senza filtri: tutti gli itinerari pronti pubblicati (home e pagine che non filtrano).
+export const listTemplates = cache((filters: TemplateFilters = NO_TEMPLATE_FILTERS) =>
+  dbPublic((tx) => templateSummaries(tx, templateFilterWhere(filters))),
+);
+
+// Aree toccate dagli itinerari pronti pubblicati: le opzioni del filtro "area".
+export const listTemplateAreas = cache(() =>
+  dbPublic((tx) =>
+    tx
+      .selectDistinct({ slug: areas.slug, nameIt: areas.nameIt, nameEn: areas.nameEn, sort: areas.sort })
+      .from(itineraryItems)
+      .innerJoin(
+        itineraries,
+        and(eq(itineraries.id, itineraryItems.itineraryId), eq(itineraries.isTemplate, true), isNotNull(itineraries.slug)),
+      )
+      .leftJoin(activities, eq(activities.id, itineraryItems.activityId))
+      .innerJoin(places, eq(places.id, sql`coalesce(${itineraryItems.placeId}, ${activities.placeId})`))
+      .innerJoin(areas, eq(areas.id, places.areaId))
+      .orderBy(asc(areas.sort), asc(areas.nameIt)),
+  ),
+);
 
 // Itinerari pronti che passano da un luogo.
 export const listTemplatesThroughPlace = cache((placeId: string) =>
@@ -278,6 +333,9 @@ export const listTemplatesThroughPlace = cache((placeId: string) =>
   ),
 );
 
+// Scheda di un itinerario pronto: testi, tappe con fascia e nota, notti, copertina e fatti
+// (budget, auto, aree). Le attività non visibili al pubblico (inattive) risultano senza attività
+// e non entrano nei fatti: la RLS le nasconde già.
 export const getTemplate = cache((slug: string) =>
   dbPublic(async (tx) => {
     const [itinerary] = await tx
@@ -285,8 +343,14 @@ export const getTemplate = cache((slug: string) =>
         id: itineraries.id,
         slug: itineraries.slug,
         title: itineraries.title,
+        subtitle: itineraries.subtitle,
+        description: itineraries.description,
         days: itineraries.days,
         dayTitles: itineraries.dayTitles,
+        dayIntros: itineraries.dayIntros,
+        pace: itineraries.pace,
+        suitableFor: itineraries.suitableFor,
+        seasonMonths: itineraries.seasonMonths,
         ownCover: coverJson(itineraries.coverMediaId),
       })
       .from(itineraries)
@@ -299,16 +363,21 @@ export const getTemplate = cache((slug: string) =>
         dayIndex: itineraryItems.dayIndex,
         position: itineraryItems.position,
         startTime: itineraryItems.startTime,
+        timeSlot: itineraryItems.timeSlot,
         customTitle: itineraryItems.customTitle,
         notes: itineraryItems.notes,
         activityId: activities.id,
         activitySlug: activities.slug,
         activityTitle: activities.title,
         activityDurationMin: activities.durationMin,
+        onSitePriceEur: activities.onSitePriceEur,
         requiresCar: activities.requiresCar,
         placeId: places.id,
         placeSlug: places.slug,
         placeName: places.name,
+        placeAreaId: places.areaId,
+        areaNameIt: areas.nameIt,
+        areaNameEn: areas.nameEn,
         placeCover: coverJson(places.coverMediaId),
         areaCover: areaCoverJson(places.areaId),
       })
@@ -316,8 +385,42 @@ export const getTemplate = cache((slug: string) =>
       .leftJoin(activities, eq(activities.id, itineraryItems.activityId))
       // Una voce può avere un'attività oppure solo un luogo.
       .leftJoin(places, eq(places.id, sql`coalesce(${itineraryItems.placeId}, ${activities.placeId})`))
+      .leftJoin(areas, eq(areas.id, places.areaId))
       .where(eq(itineraryItems.itineraryId, itinerary.id))
       .orderBy(asc(itineraryItems.dayIndex), asc(itineraryItems.position));
+
+    const nights = await tx
+      .select({
+        nightIndex: itineraryNights.nightIndex,
+        areaNameIt: areas.nameIt,
+        areaNameEn: areas.nameEn,
+        placeName: places.name,
+      })
+      .from(itineraryNights)
+      .leftJoin(areas, eq(areas.id, itineraryNights.areaId))
+      .leftJoin(places, eq(places.id, itineraryNights.placeId))
+      .where(eq(itineraryNights.itineraryId, itinerary.id))
+      .orderBy(asc(itineraryNights.nightIndex));
+
+    const facts = templateFacts({
+      days: itinerary.days,
+      stops: items.map((item) => ({
+        activity:
+          item.activityId === null
+            ? null
+            : {
+                onSitePriceEur: item.onSitePriceEur === null ? null : Number(item.onSitePriceEur),
+                requiresCar: item.requiresCar ?? false,
+              },
+        placeAreaId: item.placeAreaId,
+      })),
+    });
+    const areaNames = new Map<string, { nameIt: string; nameEn: string }>();
+    for (const item of items) {
+      if (item.placeAreaId && item.areaNameIt && !areaNames.has(item.placeAreaId)) {
+        areaNames.set(item.placeAreaId, { nameIt: item.areaNameIt, nameEn: item.areaNameEn ?? item.areaNameIt });
+      }
+    }
 
     const { ownCover, ...rest } = itinerary;
     const first = items[0];
@@ -325,6 +428,15 @@ export const getTemplate = cache((slug: string) =>
       ...rest,
       cover: itineraryCoverChain({ own: ownCover, firstStop: first?.placeCover, area: first?.areaCover }),
       items,
+      nights,
+      facts: {
+        budgetPerDayEur: facts.budgetPerDayEur,
+        requiresCar: facts.requiresCar,
+        areas: facts.areaIds.flatMap((id) => {
+          const area = areaNames.get(id);
+          return area ? [area] : [];
+        }),
+      },
     };
   }),
 );

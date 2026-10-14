@@ -170,6 +170,17 @@ CREATE TYPE "public"."point_reason" AS ENUM (
 ALTER TYPE "public"."point_reason" OWNER TO "postgres";
 
 
+CREATE TYPE "public"."time_slot" AS ENUM (
+    'morning',
+    'lunch',
+    'afternoon',
+    'evening'
+);
+
+
+ALTER TYPE "public"."time_slot" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."travel_party" AS ENUM (
     'solo',
     'couple',
@@ -897,6 +908,18 @@ $$;
 ALTER FUNCTION "public"."season_for"("ts" timestamp with time zone) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."text_array_max_length"("p_values" "text"[]) RETURNS integer
+    LANGUAGE "sql" IMMUTABLE PARALLEL SAFE
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select coalesce(max(char_length(v)), 0)::integer
+  from unnest(p_values) as v;
+$$;
+
+
+ALTER FUNCTION "public"."text_array_max_length"("p_values" "text"[]) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -1292,8 +1315,19 @@ CREATE TABLE IF NOT EXISTS "public"."itineraries" (
     "day_titles" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
     "travelers" smallint,
     "cover_media_id" "uuid",
+    "subtitle" "text",
+    "description" "text",
+    "season_months" smallint[] DEFAULT '{}'::smallint[] NOT NULL,
+    "suitable_for" "public"."travel_party"[] DEFAULT '{}'::"public"."travel_party"[] NOT NULL,
+    "pace" "public"."trip_pace",
+    "day_intros" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    CONSTRAINT "itineraries_day_intros_length" CHECK (("public"."text_array_max_length"("day_intros") <= 280)),
+    CONSTRAINT "itineraries_day_intros_within_days" CHECK (("cardinality"("day_intros") <= "days")),
     CONSTRAINT "itineraries_day_titles_within_days" CHECK (("cardinality"("day_titles") <= "days")),
     CONSTRAINT "itineraries_days_range" CHECK ((("days" >= 1) AND ("days" <= 60))),
+    CONSTRAINT "itineraries_description_length" CHECK (("char_length"("description") <= 2000)),
+    CONSTRAINT "itineraries_season_months_range" CHECK (("season_months" <@ ARRAY[(1)::smallint, (2)::smallint, (3)::smallint, (4)::smallint, (5)::smallint, (6)::smallint, (7)::smallint, (8)::smallint, (9)::smallint, (10)::smallint, (11)::smallint, (12)::smallint])),
+    CONSTRAINT "itineraries_subtitle_length" CHECK (("char_length"("subtitle") <= 140)),
     CONSTRAINT "itineraries_template_iff_editorial" CHECK ((("owner_id" IS NULL) = "is_template")),
     CONSTRAINT "itineraries_title_length" CHECK ((("char_length"("btrim"("title")) >= 1) AND ("char_length"("btrim"("title")) <= 200))),
     CONSTRAINT "itineraries_travelers_range" CHECK ((("travelers" >= 1) AND ("travelers" <= 30)))
@@ -1314,8 +1348,10 @@ CREATE TABLE IF NOT EXISTS "public"."itinerary_items" (
     "start_time" time without time zone,
     "notes" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "time_slot" "public"."time_slot",
     CONSTRAINT "itinerary_items_day_index_non_negative" CHECK (("day_index" >= 0)),
     CONSTRAINT "itinerary_items_has_subject" CHECK ((("activity_id" IS NOT NULL) OR ("place_id" IS NOT NULL) OR ("custom_title" IS NOT NULL))),
+    CONSTRAINT "itinerary_items_notes_length" CHECK (("char_length"("notes") <= 280)),
     CONSTRAINT "itinerary_items_position_non_negative" CHECK (("position" >= 0))
 );
 
@@ -1353,6 +1389,20 @@ CREATE TABLE IF NOT EXISTS "public"."itinerary_bookings" (
 
 
 ALTER TABLE "public"."itinerary_bookings" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."itinerary_nights" (
+    "itinerary_id" "uuid" NOT NULL,
+    "night_index" smallint NOT NULL,
+    "area_id" "uuid",
+    "place_id" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "itinerary_nights_area_or_place" CHECK ((("area_id" IS NOT NULL) OR ("place_id" IS NOT NULL))),
+    CONSTRAINT "itinerary_nights_index_range" CHECK ((("night_index" >= 1) AND ("night_index" <= 59)))
+);
+
+
+ALTER TABLE "public"."itinerary_nights" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."points_ledger" (
@@ -1940,6 +1990,11 @@ ALTER TABLE ONLY "public"."itinerary_items"
 
 
 
+ALTER TABLE ONLY "public"."itinerary_nights"
+    ADD CONSTRAINT "itinerary_nights_itinerary_id_night_index_pk" PRIMARY KEY ("itinerary_id", "night_index");
+
+
+
 ALTER TABLE ONLY "public"."local_tip_authors"
     ADD CONSTRAINT "local_tip_authors_pkey" PRIMARY KEY ("id");
 
@@ -2141,6 +2196,14 @@ CREATE INDEX "itineraries_owner_id_idx" ON "public"."itineraries" USING "btree" 
 
 
 CREATE INDEX "itinerary_items_itinerary_day_position_idx" ON "public"."itinerary_items" USING "btree" ("itinerary_id", "day_index", "position");
+
+
+
+CREATE INDEX "itinerary_nights_area_id_idx" ON "public"."itinerary_nights" USING "btree" ("area_id");
+
+
+
+CREATE INDEX "itinerary_nights_place_id_idx" ON "public"."itinerary_nights" USING "btree" ("place_id");
 
 
 
@@ -2445,6 +2508,21 @@ ALTER TABLE ONLY "public"."itinerary_items"
 
 ALTER TABLE ONLY "public"."itinerary_items"
     ADD CONSTRAINT "itinerary_items_place_id_places_id_fk" FOREIGN KEY ("place_id") REFERENCES "public"."places"("id") ON DELETE RESTRICT;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_nights"
+    ADD CONSTRAINT "itinerary_nights_area_id_areas_id_fk" FOREIGN KEY ("area_id") REFERENCES "public"."areas"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_nights"
+    ADD CONSTRAINT "itinerary_nights_itinerary_id_itineraries_id_fk" FOREIGN KEY ("itinerary_id") REFERENCES "public"."itineraries"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_nights"
+    ADD CONSTRAINT "itinerary_nights_place_id_places_id_fk" FOREIGN KEY ("place_id") REFERENCES "public"."places"("id") ON DELETE CASCADE;
 
 
 
@@ -2927,6 +3005,25 @@ CREATE POLICY "itinerary_items_update" ON "public"."itinerary_items" FOR UPDATE 
 
 
 
+ALTER TABLE "public"."itinerary_nights" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "itinerary_nights_delete" ON "public"."itinerary_nights" FOR DELETE TO "authenticated" USING ("public"."can_edit_itinerary"("itinerary_id"));
+
+
+
+CREATE POLICY "itinerary_nights_insert" ON "public"."itinerary_nights" FOR INSERT TO "authenticated" WITH CHECK ("public"."can_edit_itinerary"("itinerary_id"));
+
+
+
+CREATE POLICY "itinerary_nights_select" ON "public"."itinerary_nights" FOR SELECT TO "authenticated", "anon" USING ("public"."can_access_itinerary"("itinerary_id"));
+
+
+
+CREATE POLICY "itinerary_nights_update" ON "public"."itinerary_nights" FOR UPDATE TO "authenticated" USING ("public"."can_edit_itinerary"("itinerary_id")) WITH CHECK ("public"."can_edit_itinerary"("itinerary_id"));
+
+
+
 ALTER TABLE "public"."local_tip_authors" ENABLE ROW LEVEL SECURITY;
 
 
@@ -3361,6 +3458,12 @@ GRANT ALL ON FUNCTION "public"."season_for"("ts" timestamp with time zone) TO "s
 
 
 
+GRANT ALL ON FUNCTION "public"."text_array_max_length"("p_values" "text"[]) TO "anon";
+GRANT ALL ON FUNCTION "public"."text_array_max_length"("p_values" "text"[]) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."text_array_max_length"("p_values" "text"[]) TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") TO "authenticated";
@@ -3705,6 +3808,30 @@ GRANT INSERT("travelers"),UPDATE("travelers") ON TABLE "public"."itineraries" TO
 
 
 
+GRANT INSERT("subtitle"),UPDATE("subtitle") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("description"),UPDATE("description") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("season_months"),UPDATE("season_months") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("suitable_for"),UPDATE("suitable_for") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("pace"),UPDATE("pace") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
+GRANT INSERT("day_intros"),UPDATE("day_intros") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."itinerary_items" TO "service_role";
 GRANT SELECT ON TABLE "public"."itinerary_items" TO "anon";
 GRANT SELECT,DELETE ON TABLE "public"."itinerary_items" TO "authenticated";
@@ -3747,6 +3874,10 @@ GRANT INSERT("notes"),UPDATE("notes") ON TABLE "public"."itinerary_items" TO "au
 
 
 
+GRANT INSERT("time_slot"),UPDATE("time_slot") ON TABLE "public"."itinerary_items" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."item_vote_balances" TO "service_role";
 GRANT SELECT ON TABLE "public"."item_vote_balances" TO "authenticated";
 
@@ -3770,6 +3901,28 @@ GRANT INSERT("activity_id") ON TABLE "public"."itinerary_bookings" TO "authentic
 
 
 GRANT INSERT("status"),UPDATE("status") ON TABLE "public"."itinerary_bookings" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."itinerary_nights" TO "service_role";
+GRANT SELECT ON TABLE "public"."itinerary_nights" TO "anon";
+GRANT SELECT,DELETE ON TABLE "public"."itinerary_nights" TO "authenticated";
+
+
+
+GRANT INSERT("itinerary_id") ON TABLE "public"."itinerary_nights" TO "authenticated";
+
+
+
+GRANT INSERT("night_index") ON TABLE "public"."itinerary_nights" TO "authenticated";
+
+
+
+GRANT INSERT("area_id"),UPDATE("area_id") ON TABLE "public"."itinerary_nights" TO "authenticated";
+
+
+
+GRANT INSERT("place_id"),UPDATE("place_id") ON TABLE "public"."itinerary_nights" TO "authenticated";
 
 
 

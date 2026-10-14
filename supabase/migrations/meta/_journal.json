@@ -225,6 +225,27 @@
       "when": 1791975716202,
       "tag": "20261014110156_catalog_import_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1791981536891,
+      "tag": "20261014123856_itinerari_pronti",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1791981542480,
+      "tag": "20261014123902_itinerari_pronti_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1791983313831,
+      "tag": "20261014130833_drift-check",
+      "breakpoints": true
     }
   ]
 }

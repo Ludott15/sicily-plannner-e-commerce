@@ -1,9 +1,11 @@
 "use server";
 
-import { and, asc, eq, ne, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { AdminErrorCode, AdminFormState } from "@/lib/admin-form";
+import { PACES, TIME_SLOTS, TRAVEL_PARTIES, isTravelParty, type TravelParty } from "@/lib/itinerary-checks";
 import { routing } from "@/lib/i18n/routing";
 import { PROVINCES } from "@/lib/provinces";
 import { requireAdmin } from "@/server/auth";
@@ -16,8 +18,11 @@ import {
   adminAuditLog,
   itineraries,
   itineraryItems,
+  itineraryNights,
   places,
 } from "@/server/db/schema";
+import { DAILY_HOURS } from "@/server/personalization/config";
+import { templateChecks, unpublishIfChecksFail, type AdminTx } from "./templates.admin";
 
 // Azioni dell'admin del catalogo: Zod → requireAdmin → scrittura con dbAdmin in transazione.
 // Ogni cambio di stato di un'attività (attivazione, disattivazione) aggiunge una riga
@@ -56,6 +61,15 @@ const optionalTextMax = (max: number) =>
 // Link alla fonte: solo http o https, vuoto = null.
 const optionalSourceUrl = optionalTextMax(2000).pipe(z.url({ protocol: /^https?$/ }).max(2000).nullable());
 
+// Scelta singola facoltativa (select del form): vuota o assente = null.
+function optionalEnum<const T extends readonly [string, ...string[]]>(values: T) {
+  return z
+    .enum(values)
+    .or(z.literal(""))
+    .optional()
+    .transform((v) => (v === undefined || v === "" ? null : v));
+}
+
 function dbErrorCode(error: unknown): AdminErrorCode {
   const cause = (error as { cause?: { code?: string; message?: string; constraint_name?: string } })?.cause ?? error;
   const { code, message, constraint_name: constraint } = cause as {
@@ -66,6 +80,7 @@ function dbErrorCode(error: unknown): AdminErrorCode {
   if (message === "activity_without_tags") return "activity_without_tags";
   if (message === "activity_place_inactive") return "activity_place_inactive";
   if (message === "place_has_active_activities") return "place_has_active_activities";
+  if (message === "template_days_below_stops") return "template_days_below_stops";
   // Due luoghi con l'hero nella stessa transazione: il vincolo non si può violare senza concorrenza.
   if (code === "23505" && constraint === "places_single_home_hero") return "failed";
   if (code === "23505") return constraint?.includes("partner_product") ? "partner_product_taken" : "slug_taken";
@@ -260,13 +275,76 @@ const templateSchema = z.object({
     .transform((v) => (v === "" ? null : v))
     .pipe(slugSchema.nullable()),
   days: z.coerce.number().int().min(1).max(60),
+  subtitle: optionalTextMax(140),
+  description: optionalTextMax(2000),
+  pace: optionalEnum(PACES),
 });
 
+const DAY_INTRO_MAX = 280;
+const NIGHT_REF = /^(area|place):(.+)$/;
+
+type NightInput = { nightIndex: number; areaId: string | null; placeId: string | null };
+
+// Mesi consigliati: solo interi da 1 a 12, senza ripetizioni. Vuoto = tutto l'anno.
+function readSeasonMonths(formData: FormData): number[] | null {
+  const months = formData.getAll("seasonMonths").map((value) => Number(value));
+  if (months.some((month) => !Number.isInteger(month) || month < 1 || month > 12)) return null;
+  return [...new Set(months)].sort((a, b) => a - b);
+}
+
+function readSuitableFor(formData: FormData): TravelParty[] | null {
+  const values = formData.getAll("suitableFor").map((value) => String(value));
+  if (!values.every((value) => isTravelParty(value))) return null;
+  return TRAVEL_PARTIES.filter((party) => values.includes(party));
+}
+
+// Un'introduzione per giorno, come i titoli: le ultime vuote si tolgono, quelle in mezzo restano "".
+function readDayIntros(formData: FormData, days: number): string[] | null {
+  const intros = Array.from({ length: days }, (_, i) => String(formData.get(`dayIntro_${i}`) ?? "").trim());
+  if (intros.some((intro) => intro.length > DAY_INTRO_MAX)) return null;
+  while (intros.length > 0 && intros.at(-1) === "") intros.pop();
+  return intros;
+}
+
+// Notti 1..days-1 ("area:<uuid>", "place:<uuid>" o vuoto). La notte n sta dopo il giorno n.
+function readNights(formData: FormData, days: number): NightInput[] | null {
+  const nights: NightInput[] = [];
+  for (let nightIndex = 1; nightIndex < days; nightIndex++) {
+    const raw = String(formData.get(`night_${nightIndex}`) ?? "").trim();
+    if (raw === "") continue;
+    const match = NIGHT_REF.exec(raw);
+    const id = z.uuid().safeParse(match?.[2]);
+    if (!match || !id.success) return null;
+    nights.push({
+      nightIndex,
+      areaId: match[1] === "area" ? id.data : null,
+      placeId: match[1] === "place" ? id.data : null,
+    });
+  }
+  return nights;
+}
+
+// Le notti si riscrivono per intero: poche righe, una cancellazione e un insert.
+async function replaceNights(tx: AdminTx, itineraryId: string, nights: NightInput[]) {
+  await tx.delete(itineraryNights).where(eq(itineraryNights.itineraryId, itineraryId));
+  if (nights.length > 0) {
+    await tx.insert(itineraryNights).values(nights.map((night) => ({ itineraryId, ...night })));
+  }
+}
+
+// Salvataggio dell'itinerario pronto. Lo slug (pubblicazione) si scrive solo se tutti i controlli
+// di pubblicazione passano: altrimenti non è pubblicato (anche se lo era) e la risposta è template_checks_failed.
+// Un template nuovo nasce sempre in bozza: se lo si voleva pubblicare, si va alla pagina di modifica.
 export async function saveTemplate(_prev: AdminFormState, formData: FormData): Promise<AdminFormState> {
   const parsed = templateSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error", code: "invalid" };
+  const { id, locale, slug, ...fields } = parsed.data;
+  const seasonMonths = readSeasonMonths(formData);
+  const suitableFor = readSuitableFor(formData);
+  const dayIntros = readDayIntros(formData, fields.days);
+  const nights = readNights(formData, fields.days);
+  if (!seasonMonths || !suitableFor || !dayIntros || !nights) return { status: "error", code: "invalid" };
   await requireAdmin();
-  const { id, locale, ...fields } = parsed.data;
 
   // Titoli dei giorni: uno per giorno; gli ultimi vuoti si tolgono, quelli in mezzo restano "".
   const dayTitles = Array.from({ length: fields.days }, (_, i) =>
@@ -274,67 +352,158 @@ export async function saveTemplate(_prev: AdminFormState, formData: FormData): P
   );
   while (dayTitles.length > 0 && dayTitles.at(-1) === "") dayTitles.pop();
 
-  let savedId: string;
+  const values = {
+    title: fields.title,
+    days: fields.days,
+    subtitle: fields.subtitle,
+    description: fields.description,
+    pace: fields.pace,
+    seasonMonths,
+    suitableFor,
+    dayIntros,
+    dayTitles,
+  };
+
+  let saved: { id: string; publishBlocked: boolean };
   try {
-    if (id) {
-      await dbAdmin
-        .update(itineraries)
-        .set({ ...fields, dayTitles })
-        .where(and(eq(itineraries.id, id), eq(itineraries.isTemplate, true)));
-      savedId = id;
-    } else {
-      const [row] = await dbAdmin
+    saved = await dbAdmin.transaction(async (tx) => {
+      if (id) {
+        const [previous] = await tx
+          .select({ slug: itineraries.slug })
+          .from(itineraries)
+          .where(and(eq(itineraries.id, id), eq(itineraries.isTemplate, true)));
+        if (!previous) throw new Error("not_found");
+        // Meno giorni delle tappe salvate: le tappe oltre l'ultimo giorno sparirebbero dall'editor.
+        const [last] = await tx
+          .select({ lastDay: sql<number | null>`max(${itineraryItems.dayIndex})` })
+          .from(itineraryItems)
+          .where(eq(itineraryItems.itineraryId, id));
+        const lastDay = last?.lastDay ?? null;
+        if (lastDay !== null && lastDay >= values.days) throw new Error("template_days_below_stops");
+        // Senza slug la pubblicazione si toglie. Con uno, lo slug si scrive solo se i controlli passano:
+        // altrimenti si toglie anche quello già online, così la pagina pubblica sparisce finché non si corregge.
+        await tx
+          .update(itineraries)
+          .set({ ...values, slug: slug === null ? null : previous.slug })
+          .where(eq(itineraries.id, id));
+        await replaceNights(tx, id, nights);
+        if (slug === null) return { id, publishBlocked: false };
+        const checks = await templateChecks(tx, id, DAILY_HOURS);
+        if (!checks.every((check) => check.ok)) {
+          await tx.update(itineraries).set({ slug: null }).where(eq(itineraries.id, id));
+          return { id, publishBlocked: true };
+        }
+        await tx.update(itineraries).set({ slug }).where(eq(itineraries.id, id));
+        return { id, publishBlocked: false };
+      }
+      const [row] = await tx
         .insert(itineraries)
-        .values({ ...fields, dayTitles, ownerId: null, isTemplate: true, status: "planned" })
+        .values({ ...values, slug: null, ownerId: null, isTemplate: true, status: "planned" })
         .returning({ id: itineraries.id });
-      savedId = row!.id;
-    }
+      if (!row) throw new Error("insert_failed");
+      await replaceNights(tx, row.id, nights);
+      return { id: row.id, publishBlocked: slug !== null };
+    });
   } catch (error) {
     return { status: "error", code: dbErrorCode(error) };
   }
-  redirect(`/${locale}/admin/itinerari/${savedId}?salvato=1`);
+
+  if (saved.publishBlocked) {
+    if (id) {
+      // Modifica: la pagina resta qui e mostra l'elenco dei controlli aggiornato.
+      revalidatePath(`/${locale}/admin/itinerari/${saved.id}`);
+      return { status: "error", code: "template_checks_failed" };
+    }
+    redirect(`/${locale}/admin/itinerari/${saved.id}?controlli=1`);
+  }
+  redirect(`/${locale}/admin/itinerari/${saved.id}?salvato=1`);
 }
 
+// Una tappa è un'attività, un luogo o un titolo libero (in quest'ordine di precedenza).
 const itemSchema = z.object({
   locale: localeSchema,
   templateId: z.uuid(),
   dayIndex: z.coerce.number().int().min(0).max(59),
   activityId: z.uuid().optional().or(z.literal("").transform(() => undefined)),
+  placeId: z.uuid().optional().or(z.literal("").transform(() => undefined)),
   customTitle: optionalText.optional(),
-  startTime: z
-    .string()
-    .trim()
-    .regex(/^(\d{1,2}:\d{2})?$/)
-    .transform((v) => (v === "" ? null : v)),
+  timeSlot: optionalEnum(TIME_SLOTS),
+  notes: optionalTextMax(280),
 });
 
-export async function addTemplateItem(formData: FormData) {
+export async function addTemplateItem(_prev: AdminFormState, formData: FormData): Promise<AdminFormState> {
   const parsed = itemSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success || (!parsed.data.activityId && !parsed.data.customTitle)) return;
+  if (!parsed.success) return { status: "error", code: "invalid" };
+  const { locale, templateId, dayIndex, activityId, placeId, customTitle, timeSlot, notes } = parsed.data;
+  const subject = activityId
+    ? { activityId, placeId: null, customTitle: null }
+    : placeId
+      ? { activityId: null, placeId, customTitle: null }
+      : customTitle
+        ? { activityId: null, placeId: null, customTitle }
+        : null;
+  if (!subject) return { status: "error", code: "invalid" };
   await requireAdmin();
-  const { locale, templateId, dayIndex, activityId, customTitle, startTime } = parsed.data;
 
-  await dbAdmin.transaction(async (tx) => {
-    const [{ next }] = (await tx.execute<{ next: number }>(
-      sql`select coalesce(max(position) + 1, 0)::int as next from public.itinerary_items where itinerary_id = ${templateId} and day_index = ${dayIndex}`,
-    )) as unknown as [{ next: number }];
-    await tx.insert(itineraryItems).values({
-      itineraryId: templateId,
-      dayIndex,
-      position: next,
-      activityId: activityId ?? null,
-      customTitle: activityId ? null : (customTitle ?? null),
-      startTime,
+  try {
+    await dbAdmin.transaction(async (tx) => {
+      // Il giorno deve esistere nel template: una tappa oltre l'ultimo giorno sparirebbe dall'editor.
+      const [template] = await tx
+        .select({ days: itineraries.days })
+        .from(itineraries)
+        .where(and(eq(itineraries.id, templateId), eq(itineraries.isTemplate, true)));
+      if (!template || dayIndex >= template.days) throw new Error("invalid_item");
+      const [{ next }] = (await tx.execute<{ next: number }>(
+        sql`select coalesce(max(position) + 1, 0)::int as next from public.itinerary_items where itinerary_id = ${templateId} and day_index = ${dayIndex}`,
+      )) as unknown as [{ next: number }];
+      await tx.insert(itineraryItems).values({
+        itineraryId: templateId,
+        dayIndex,
+        position: next,
+        ...subject,
+        timeSlot,
+        notes,
+      });
+      await unpublishIfChecksFail(tx, templateId, DAILY_HOURS);
     });
-  });
-  redirect(`/${locale}/admin/itinerari/${templateId}#giorno-${dayIndex + 1}`);
+  } catch (error) {
+    const invalid = error instanceof Error && error.message === "invalid_item";
+    return { status: "error", code: invalid ? "invalid" : dbErrorCode(error) };
+  }
+  // Niente redirect: con la sola ancora diversa (#giorno-N) Next non ricaricherebbe i dati.
+  revalidatePath(`/${locale}/admin/itinerari/${templateId}`);
+  return { status: "saved" };
+}
+
+// Ora indicativa e nota di una tappa.
+const itemUpdateSchema = z.object({
+  locale: localeSchema,
+  templateId: z.uuid(),
+  itemId: z.uuid(),
+  timeSlot: optionalEnum(TIME_SLOTS),
+  notes: optionalTextMax(280),
+});
+
+export async function updateTemplateItem(_prev: AdminFormState, formData: FormData): Promise<AdminFormState> {
+  const parsed = itemUpdateSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { status: "error", code: "invalid" };
+  await requireAdmin();
+  const { locale, templateId, itemId, timeSlot, notes } = parsed.data;
+
+  const updated = await dbAdmin
+    .update(itineraryItems)
+    .set({ timeSlot, notes })
+    .where(and(eq(itineraryItems.id, itemId), eq(itineraryItems.itineraryId, templateId)))
+    .returning({ id: itineraryItems.id });
+  if (updated.length === 0) return { status: "error", code: "invalid" };
+  revalidatePath(`/${locale}/admin/itinerari/${templateId}`);
+  return { status: "saved" };
 }
 
 const itemRefSchema = z.object({
   locale: localeSchema,
   templateId: z.uuid(),
   itemId: z.uuid(),
-  direction: z.enum(["up", "down"]).optional(),
 });
 
 export async function deleteTemplateItem(formData: FormData) {
@@ -342,34 +511,96 @@ export async function deleteTemplateItem(formData: FormData) {
   if (!parsed.success) return;
   await requireAdmin();
   const { locale, templateId, itemId } = parsed.data;
-  await dbAdmin
-    .delete(itineraryItems)
-    .where(and(eq(itineraryItems.id, itemId), eq(itineraryItems.itineraryId, templateId)));
+  await dbAdmin.transaction(async (tx) => {
+    await tx
+      .delete(itineraryItems)
+      .where(and(eq(itineraryItems.id, itemId), eq(itineraryItems.itineraryId, templateId)));
+    await unpublishIfChecksFail(tx, templateId, DAILY_HOURS);
+  });
   redirect(`/${locale}/admin/itinerari/${templateId}`);
 }
 
-// Sposta una tappa di un posto nello stesso giorno, scambiando la posizione con la vicina.
-export async function moveTemplateItem(formData: FormData) {
-  const parsed = itemRefSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success || !parsed.data.direction) return;
-  await requireAdmin();
-  const { locale, templateId, itemId, direction } = parsed.data;
+const reorderSchema = z.object({
+  locale: localeSchema,
+  templateId: z.uuid(),
+  items: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        dayIndex: z.number().int().min(0).max(59),
+        position: z.number().int().min(0).max(9999),
+      }),
+    )
+    .min(1)
+    .max(1000),
+});
 
-  await dbAdmin.transaction(async (tx) => {
-    const [item] = await tx.select().from(itineraryItems).where(eq(itineraryItems.id, itemId));
-    if (!item || item.itineraryId !== templateId) return;
-    const day = await tx
-      .select({ id: itineraryItems.id, position: itineraryItems.position })
-      .from(itineraryItems)
-      .where(and(eq(itineraryItems.itineraryId, templateId), eq(itineraryItems.dayIndex, item.dayIndex)))
-      .orderBy(asc(itineraryItems.position));
-    const index = day.findIndex((d) => d.id === itemId);
-    const other = day[direction === "up" ? index - 1 : index + 1];
-    if (!other) return;
-    await tx.update(itineraryItems).set({ position: other.position }).where(eq(itineraryItems.id, itemId));
-    await tx.update(itineraryItems).set({ position: item.position }).where(eq(itineraryItems.id, other.id));
+function parseJsonValue(value: FormDataEntryValue | null): unknown {
+  if (typeof value !== "string") return undefined;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
+// Ordine di tutte le tappe di un itinerario dopo un trascinamento. "items" è il JSON
+// [{ id, dayIndex, position }] con tutte le tappe del template: le posizioni si riscrivono 0..n per giorno.
+export async function reorderTemplateItems(formData: FormData): Promise<AdminFormState> {
+  const parsed = reorderSchema.safeParse({
+    locale: formData.get("locale"),
+    templateId: formData.get("templateId"),
+    items: parseJsonValue(formData.get("items")),
   });
-  redirect(`/${locale}/admin/itinerari/${templateId}`);
+  if (!parsed.success) return { status: "error", code: "invalid" };
+  const { locale, templateId, items } = parsed.data;
+  const ids = items.map((item) => item.id);
+  if (new Set(ids).size !== ids.length) return { status: "error", code: "invalid" };
+  await requireAdmin();
+
+  // Per giorno, nell'ordine della posizione indicata (a parità vale l'ordine dell'elenco).
+  const byDay = new Map<number, typeof items>();
+  for (const item of items) {
+    byDay.set(item.dayIndex, [...(byDay.get(item.dayIndex) ?? []), item]);
+  }
+  const rows = [...byDay.values()].flatMap((day) =>
+    [...day]
+      .sort((a, b) => a.position - b.position)
+      .map((item, position) => ({ id: item.id, dayIndex: item.dayIndex, position })),
+  );
+
+  try {
+    await dbAdmin.transaction(async (tx) => {
+      const [template] = await tx
+        .select({ days: itineraries.days })
+        .from(itineraries)
+        .where(and(eq(itineraries.id, templateId), eq(itineraries.isTemplate, true)));
+      const stored = await tx
+        .select({ id: itineraryItems.id })
+        .from(itineraryItems)
+        .where(eq(itineraryItems.itineraryId, templateId));
+      const storedIds = new Set(stored.map((row) => row.id));
+      const complete = stored.length === items.length && items.every((item) => storedIds.has(item.id));
+      if (!template || !complete || items.some((item) => item.dayIndex >= template.days)) {
+        throw new Error("reorder_invalid");
+      }
+      // Una sola UPDATE con tutte le righe, niente query nel ciclo.
+      await tx.execute(sql`
+        update public.itinerary_items as i
+        set day_index = v.day_index, position = v.position
+        from (values ${sql.join(
+          rows.map((row) => sql`(${row.id}::uuid, ${row.dayIndex}::smallint, ${row.position}::smallint)`),
+          sql`, `,
+        )}) as v(id, day_index, position)
+        where i.id = v.id and i.itinerary_id = ${templateId}::uuid`);
+      await unpublishIfChecksFail(tx, templateId, DAILY_HOURS);
+    });
+  } catch (error) {
+    const invalid = error instanceof Error && error.message === "reorder_invalid";
+    return { status: "error", code: invalid ? "invalid" : dbErrorCode(error) };
+  }
+  revalidatePath(`/${locale}/admin/itinerari/${templateId}`);
+  return { status: "saved" };
 }
 
 // ---------------------------------------------------------------------------

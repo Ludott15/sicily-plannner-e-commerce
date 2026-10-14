@@ -3,6 +3,8 @@ import { pgEnum } from "drizzle-orm/pg-core";
 export const userRole = pgEnum("user_role", ["user", "admin"]);
 export const tripPace = pgEnum("trip_pace", ["relaxed", "balanced", "intense"]);
 export const travelParty = pgEnum("travel_party", ["solo", "couple", "family", "friends"]);
+// Ora indicativa di una tappa dell'itinerario (editor admin e builder): mattina, pranzo, pomeriggio, sera.
+export const timeSlot = pgEnum("time_slot", ["morning", "lunch", "afternoon", "evening"]);
 export const partner = pgEnum("partner", [
   "travelpayouts",
   "getyourguide",

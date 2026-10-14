@@ -235,3 +235,25 @@ a.is-tabbar__item { color: var(--lava-muted); }
   @keyframes is-fade { from { opacity: 1; } to { opacity: 0; } }
 }
 }
+
+/* Stampa dell'itinerario pronto (1.3): niente intestazione, piè di pagina, barre e pulsanti del sito;
+   tutti i giorni in fila, ognuno dalla sua pagina. L'intestazione della pagina (article > header) resta. */
+@media print {
+  header:not(article header), footer, nav, .fixed, .is-btn, .is-days, .is-tabbar {
+    display: none !important;
+  }
+  [data-day-panel] {
+    display: grid !important;
+  }
+  [data-day-panel] + [data-day-panel] {
+    break-before: page;
+  }
+  .is-stop {
+    break-inside: avoid;
+  }
+  .is-stop__body,
+  .is-card,
+  .is-localtip {
+    box-shadow: none;
+  }
+}

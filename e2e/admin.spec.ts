@@ -42,7 +42,7 @@ test("admin: crea un'attività, non la attiva senza interessi, la attiva con un 
   expect(audit.map((r) => r.action)).toEqual(["activity.activate"]);
 });
 
-test("admin: itinerario pronto con titoli dei giorni, una tappa e pubblicazione con slug", async ({ page, request }) => {
+test("admin: itinerario pronto in bozza, con una tappa nella sua fascia oraria", async ({ page, request }) => {
   const email = await signUpWithCode(page, request);
   const { withDb } = await import("./db.mjs");
   await withDb((sql) => sql`update profiles set role = 'admin' where id = (select id from auth.users where email = ${email})`);
@@ -52,27 +52,17 @@ test("admin: itinerario pronto con titoli dei giorni, una tappa e pubblicazione 
   await page.getByLabel("Titolo", { exact: true }).fill("e2e- Itinerario di prova");
   await page.getByLabel("Numero di giorni").fill("2");
   await page.getByLabel("Titolo del giorno 1").fill("Palermo antica");
-  await page.getByRole("button", { name: "Salva" }).click();
-  await expect(page.getByRole("status")).toHaveText("Salvato.");
+  await page.getByRole("button", { name: "Salva", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Salvato." })).toHaveText("Salvato.");
 
-  // Senza slug non è pubblicato.
-  const templateUrl = page.url().split("?")[0]!;
+  // Senza slug non è pubblicato: la tappa si aggiunge con la fascia oraria, non con un orario.
   const day1 = page.locator("#giorno-1");
   await day1.getByLabel("Attività").selectOption({ label: "Palazzo dei Normanni e Cappella Palatina" });
-  await day1.getByLabel("Orario").fill("10:00");
+  await day1.getByLabel("Fascia oraria").first().selectOption("morning");
   await day1.getByRole("button", { name: "Aggiungi tappa" }).click();
   await expect(page.locator("#giorno-1")).toContainText("Palazzo dei Normanni e Cappella Palatina");
+  await expect(page.locator("#giorno-1").getByLabel("Fascia oraria").first()).toHaveValue("morning");
   expect((await request.get(`/it/itinerari/${slug}`)).status()).toBe(404);
-
-  await page.goto(templateUrl);
-  await page.getByLabel("Slug per la pubblicazione").fill(slug);
-  await page.getByRole("button", { name: "Salva" }).click();
-  await expect(page.getByRole("status")).toHaveText("Salvato.");
-
-  await page.goto(`/it/itinerari/${slug}`);
-  const days = page.getByRole("navigation", { name: "Giorni" }).getByRole("button");
-  await expect(days.nth(0)).toHaveText(/Giorno 1 · Palermo antica/);
-  await expect(page.getByRole("link", { name: "Palazzo dei Normanni e Cappella Palatina" })).toBeVisible();
 });
 
 test("admin: coda Da riverificare, nuovo consiglio e riverifica", async ({ page, request }) => {
