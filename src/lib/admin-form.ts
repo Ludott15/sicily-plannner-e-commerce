@@ -7,6 +7,8 @@ export type AdminErrorCode =
   | "slug_taken"
   | "partner_product_taken"
   | "day_titles_exceed_days"
+  | "template_checks_failed"
+  | "template_days_below_stops"
   | "person_tip_without_relation"
   | "author_without_consent"
   | "author_license_required"

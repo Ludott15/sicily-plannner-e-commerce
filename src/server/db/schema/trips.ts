@@ -14,8 +14,18 @@ import {
   unique,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import { activities, places } from "./catalog";
-import { bookingKind, bookingStatus, groupRole, inviteStatus, itineraryStatus, partner } from "./enums";
+import { activities, areas, places } from "./catalog";
+import {
+  bookingKind,
+  bookingStatus,
+  groupRole,
+  inviteStatus,
+  itineraryStatus,
+  partner,
+  timeSlot,
+  travelParty,
+  tripPace,
+} from "./enums";
 import { media } from "./media";
 import { profiles } from "./profiles";
 
@@ -42,6 +52,18 @@ export const itineraries = pgTable(
     // Titolo editoriale di ogni giorno ("Noto e costa"), per indice. Un giorno senza titolo
     // mostra i luoghi delle sue tappe. Chi copia un itinerario pronto eredita i titoli.
     dayTitles: text("day_titles").array().notNull().default(sql`'{}'`),
+    // Campi editoriali degli itinerari pronti (1.3). Il sottotitolo è una riga sotto il titolo,
+    // la descrizione il testo di presentazione.
+    subtitle: text("subtitle"),
+    description: text("description"),
+    // Mesi consigliati (1..12); vuoto = tutto l'anno.
+    seasonMonths: smallint("season_months").array().notNull().default(sql`'{}'`),
+    // Per chi è adatto l'itinerario (coppia, famiglia, amici, solo).
+    suitableFor: travelParty("suitable_for").array().notNull().default(sql`'{}'`),
+    // Ritmo del viaggio: obbligatorio per pubblicare un template (controlli di pubblicazione).
+    pace: tripPace("pace"),
+    // Introduzione di ogni giorno, per indice, come i titoli. Massimo 280 caratteri ciascuna.
+    dayIntros: text("day_intros").array().notNull().default(sql`'{}'`),
     status: itineraryStatus("status").notNull().default("draft"),
     // Copertina degli itinerari pronti; senza, quella del luogo della prima tappa.
     coverMediaId: uuid("cover_media_id").references(() => media.id, { onDelete: "set null" }),
@@ -56,6 +78,14 @@ export const itineraries = pgTable(
     check("itineraries_template_iff_editorial", sql`(${t.ownerId} is null) = ${t.isTemplate}`),
     check("itineraries_day_titles_within_days", sql`cardinality(${t.dayTitles}) <= ${t.days}`),
     check("itineraries_travelers_range", sql`${t.travelers} between 1 and 30`),
+    check("itineraries_subtitle_length", sql`char_length(${t.subtitle}) <= 140`),
+    check("itineraries_description_length", sql`char_length(${t.description}) <= 2000`),
+    check(
+      "itineraries_season_months_range",
+      sql`${t.seasonMonths} <@ array[1,2,3,4,5,6,7,8,9,10,11,12]::smallint[]`,
+    ),
+    check("itineraries_day_intros_within_days", sql`cardinality(${t.dayIntros}) <= ${t.days}`),
+    check("itineraries_day_intros_length", sql`public.text_array_max_length(${t.dayIntros}) <= 280`),
   ],
 );
 
@@ -96,7 +126,10 @@ export const itineraryItems = pgTable(
     activityId: uuid("activity_id").references(() => activities.id, { onDelete: "restrict" }),
     placeId: uuid("place_id").references(() => places.id, { onDelete: "restrict" }),
     customTitle: text("custom_title"),
+    // Ora di inizio: non più scritta dall'editor dei template (1.3), che usa timeSlot.
     startTime: time("start_time"),
+    // Ora indicativa della tappa (mattina, pranzo, pomeriggio, sera).
+    timeSlot: timeSlot("time_slot"),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -108,6 +141,31 @@ export const itineraryItems = pgTable(
       "itinerary_items_has_subject",
       sql`${t.activityId} is not null or ${t.placeId} is not null or ${t.customTitle} is not null`,
     ),
+    check("itinerary_items_notes_length", sql`char_length(${t.notes}) <= 280`),
+  ],
+);
+
+// Dove dormire, per notte: la notte n sta tra il giorno n e il giorno n+1.
+// Almeno uno tra area e luogo. Il collegamento agli alloggi arriva con la verticale alloggi (3.1).
+export const itineraryNights = pgTable(
+  "itinerary_nights",
+  {
+    itineraryId: uuid("itinerary_id")
+      .notNull()
+      .references(() => itineraries.id, { onDelete: "cascade" }),
+    nightIndex: smallint("night_index").notNull(),
+    // Cancellando l'area o il luogo, la notte che lo indicava sparisce (il check area_or_place
+    // non ammette una notte senza né area né luogo, quindi "set null" farebbe fallire la cancellazione).
+    areaId: uuid("area_id").references(() => areas.id, { onDelete: "cascade" }),
+    placeId: uuid("place_id").references(() => places.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.itineraryId, t.nightIndex] }),
+    index("itinerary_nights_area_id_idx").on(t.areaId),
+    index("itinerary_nights_place_id_idx").on(t.placeId),
+    check("itinerary_nights_index_range", sql`${t.nightIndex} between 1 and 59`),
+    check("itinerary_nights_area_or_place", sql`${t.areaId} is not null or ${t.placeId} is not null`),
   ],
 );
 
