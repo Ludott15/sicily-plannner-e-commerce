@@ -271,6 +271,39 @@ from (values
 left join public.activities a on a.slug = v.activity_slug
 left join public.places p on p.slug = v.place_slug;
 
+-- Itinerari predefiniti (template editoriali)
+insert into public.itineraries (owner_id, title, slug, is_template, days, status)
+values
+  (null, '[DEMO] Weekend a Palermo e dintorni', 'demo-weekend-palermo', true, 3, 'planned'),
+  (null, '[DEMO] Sicilia orientale in cinque giorni', 'demo-sicilia-orientale', true, 5, 'planned');
+
+update public.itineraries set day_titles = '{"Palermo","Monreale e Palermo","Cefalù"}' where slug = 'demo-weekend-palermo';
+update public.itineraries set day_titles = '{"Catania","Etna","Taormina","Ortigia"}' where slug = 'demo-sicilia-orientale';
+
+insert into public.itinerary_items (itinerary_id, day_index, position, activity_id, start_time)
+select i.id, v.day_index, v.position, a.id, v.start_time::time
+from (values
+  ('demo-weekend-palermo', 0, 0, 'demo-mercato-ballaro', '10:00'),
+  ('demo-weekend-palermo', 0, 1, 'demo-palazzo-normanni', '15:00'),
+  ('demo-weekend-palermo', 0, 2, 'demo-palermo-notte', '20:00'),
+  ('demo-weekend-palermo', 1, 0, 'demo-duomo-monreale', '09:30'),
+  ('demo-weekend-palermo', 1, 1, 'demo-teatro-massimo', '16:00'),
+  ('demo-weekend-palermo', 2, 0, 'demo-rocca-cefalu', '08:30'),
+  ('demo-weekend-palermo', 2, 1, 'demo-spiaggia-cefalu', '13:00'),
+  ('demo-sicilia-orientale', 0, 0, 'demo-pescheria-catania', '08:30'),
+  ('demo-sicilia-orientale', 0, 1, 'demo-catania-barocca', '10:30'),
+  ('demo-sicilia-orientale', 1, 0, 'demo-crateri-etna', '08:00'),
+  ('demo-sicilia-orientale', 1, 1, 'demo-cantina-etna', '17:00'),
+  ('demo-sicilia-orientale', 2, 0, 'demo-teatro-taormina', '09:00'),
+  ('demo-sicilia-orientale', 2, 1, 'demo-isola-bella', '14:00'),
+  ('demo-sicilia-orientale', 3, 0, 'demo-ortigia-tour', '09:30'),
+  ('demo-sicilia-orientale', 3, 1, 'demo-neapolis', '15:00'),
+  ('demo-sicilia-orientale', 4, 0, 'demo-noto-barocco', '09:30'),
+  ('demo-sicilia-orientale', 4, 1, 'demo-vendicari', '14:30')
+) as v(itinerary_slug, day_index, position, activity_slug, start_time)
+join public.itineraries i on i.slug = v.itinerary_slug
+join public.activities a on a.slug = v.activity_slug;
+
 -- Itinerari pronti (template editoriali): sei demo, tutti pubblicati e tutti con i controlli di
 -- pubblicazione ok (src/lib/itinerary-checks.ts): ritmo, tappe attive e nei mesi consigliati,
 -- minuti del giorno entro il ritmo, copertina foto con testo alternativo (prima tappa).
