@@ -13,6 +13,7 @@ Aggiornato da ogni PR. "In PR" = aperta e in attesa di merge; le PR dei passi su
 | Passo | Stato | Branch |
 | --- | --- | --- |
 | 1.1 Import CSV del catalogo | Fatto (#34); rifiniture (2 MB, coordinate in Sicilia, modello con esempi, guida Excel) in PR | `roadmap/1.1-import-csv-rifiniture` |
+| 1.2 Home | In PR: hero con foto, carosello "Dove andare in Sicilia", itinerari pronti con aree | `roadmap/1.2-home` |
 
 ---
 

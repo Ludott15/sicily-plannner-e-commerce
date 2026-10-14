@@ -74,6 +74,18 @@
 .is-price { font-size: 14px; color: var(--lava-muted); }
 .is-price strong { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--lava); }
 
+/* Card di un luogo (carosello della home, docs/design/components/PlaceCard/README.md). Come la
+   card attività: tutta la card porta alla pagina con un link esteso, niente controlli annidati. */
+.is-place { position: relative; display: flex; flex-direction: column; gap: var(--space-3); color: var(--lava); text-decoration: none; }
+.is-place:has(.is-place__link:focus-visible) .is-place__media { outline: 2px solid var(--focus); outline-offset: 2px; }
+.is-place__link { color: inherit; text-decoration: none; }
+.is-place__link:focus-visible { outline: none; }
+.is-place__link::after { content: ""; position: absolute; inset: 0; z-index: 1; }
+.is-place__media { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--card-edge); background: var(--calce-sunk); box-shadow: var(--shadow-card); }
+.is-place__media img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--dur-fast) var(--ease-out); }
+.is-place:hover .is-place__media img { transform: scale(1.03); }
+.is-place__body { display: flex; flex-direction: column; gap: var(--space-1); }
+
 /* Voce locale */
 .is-localtip { background: var(--ink); color: var(--on-ink); border: 1px solid var(--ink-edge); border-radius: var(--radius-lg); padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-4); }
 .is-localtip__label { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-label); }
@@ -216,8 +228,8 @@ a.is-tabbar__item { color: var(--lava-muted); }
 .is-bookings__disclose { display: block; margin-top: var(--space-3); font-size: 12px; line-height: 16px; color: var(--lava-muted); }
 
 @media (prefers-reduced-motion: reduce) {
-  .is-btn, .is-chip, .is-card, .is-card__ph, .is-card__media img, .is-product, .is-scale__pip, .is-points { transition: opacity var(--dur-fast) linear; transition-delay: 0ms; }
-  .is-card:hover, .is-product:hover, .is-card:hover .is-card__ph, .is-card:hover .is-card__media img { transform: none; }
+  .is-btn, .is-chip, .is-card, .is-card__ph, .is-card__media img, .is-place__media img, .is-product, .is-scale__pip, .is-points { transition: opacity var(--dur-fast) linear; transition-delay: 0ms; }
+  .is-card:hover, .is-product:hover, .is-card:hover .is-card__ph, .is-card:hover .is-card__media img, .is-place:hover .is-place__media img { transform: none; }
   .is-stamp--new, .is-route--draw::before, .is-route--draw .is-stop__dot, .is-vote__count, .is-chip[aria-pressed="true"] .is-chip__check { animation: none; }
   .is-points__gain { animation: is-fade var(--dur-fast) linear forwards; }
   @keyframes is-fade { from { opacity: 1; } to { opacity: 0; } }

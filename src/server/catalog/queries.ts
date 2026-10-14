@@ -1,13 +1,14 @@
 import "server-only";
 import { cache } from "react";
 import { and, asc, desc, eq, exists, inArray, isNotNull, ne, sql } from "drizzle-orm";
-import { activityCoverChain, itineraryCoverChain, placeCoverChain, type CoverMedia } from "@/lib/media";
+import { activityCoverChain, itineraryCoverChain, placeCoverChain, type CoverMedia, type ResolvedCover } from "@/lib/media";
 import { dbPublic } from "@/server/db/public";
 import type { UserTx } from "@/server/db/user";
 import {
   activities,
   activityInterests,
   activityOffers,
+  areas,
   interests,
   itineraries,
   itineraryItems,
@@ -223,11 +224,14 @@ async function templateSummaries(tx: UserTx, where = sql`true`) {
       placeName: places.name,
       placeCover: coverJson(places.coverMediaId),
       areaCover: areaCoverJson(places.areaId),
+      areaNameIt: areas.nameIt,
+      areaNameEn: areas.nameEn,
       requiresCar: activities.requiresCar,
     })
     .from(itineraryItems)
     .leftJoin(activities, eq(activities.id, itineraryItems.activityId))
     .leftJoin(places, eq(places.id, sql`coalesce(${itineraryItems.placeId}, ${activities.placeId})`))
+    .leftJoin(areas, eq(areas.id, places.areaId))
     .where(
       inArray(
         itineraryItems.itineraryId,
@@ -239,12 +243,17 @@ async function templateSummaries(tx: UserTx, where = sql`true`) {
   return templates.map(({ ownCover, ...t }) => {
     const own = stops.filter((s) => s.itineraryId === t.id);
     const placeNames = [...new Set(own.flatMap((s) => (s.placeName ? [s.placeName] : [])))];
+    // Aree dei luoghi toccati, senza ripetizioni, in ordine di prima apparizione.
+    const areaNamesIt = [...new Set(own.flatMap((s) => (s.areaNameIt ? [s.areaNameIt] : [])))];
+    const areaNamesEn = [...new Set(own.flatMap((s) => (s.areaNameEn ? [s.areaNameEn] : [])))];
     // Catena: copertina propria → luogo della prima tappa → area di quel luogo.
     const first = own[0];
     return {
       ...t,
       slug: t.slug!,
       placeNames,
+      areaNamesIt,
+      areaNamesEn,
       cover: itineraryCoverChain({ own: ownCover, firstStop: first?.placeCover, area: first?.areaCover }),
       requiresCar: own.some((s) => s.requiresCar),
     };
@@ -363,21 +372,59 @@ export const listActivityOffers = cache((activityId: string) =>
 // Luoghi in evidenza (carosello della home): solo quelli con una foto vera propria e
 // pubblica. Un luogo la cui foto è bloccata (alt mancante, autorizzazione scaduta…) esce dal
 // carosello senza toccare gli altri: la RLS di media lo nasconde e la riga si scarta qui.
+export type FeaturedPlace = {
+  id: string;
+  slug: string;
+  name: string;
+  taglineIt: string | null;
+  areaNameIt: string | null;
+  areaNameEn: string | null;
+  cover: CoverMedia;
+};
+
 export const listFeaturedPlaces = cache(() =>
-  dbPublic(async (tx) => {
+  dbPublic(async (tx): Promise<FeaturedPlace[]> => {
     const rows = await tx
       .select({
         id: places.id,
         slug: places.slug,
         name: places.name,
-        areaId: places.areaId,
-        featuredOrder: places.featuredOrder,
+        taglineIt: places.taglineIt,
+        areaNameIt: areas.nameIt,
+        areaNameEn: areas.nameEn,
         cover: coverJson(places.coverMediaId),
       })
       .from(places)
-      .where(eq(places.isFeatured, true))
+      .leftJoin(areas, eq(areas.id, places.areaId))
+      .where(and(eq(places.isFeatured, true), eq(places.isActive, true)))
       .orderBy(sql`${places.featuredOrder} asc nulls last`, asc(places.name));
     return rows.flatMap((r) => (r.cover?.kind === "photo" ? [{ ...r, cover: r.cover }] : []));
+  }),
+);
+
+// Hero della home: il luogo con is_home_hero (al più uno, attivo). La copertina è la sua foto
+// propria se è una foto; altrimenti l'illustrazione della sua area; se mancano entrambe, null.
+export type HomeHero = { placeName: string; placeSlug: string; cover: ResolvedCover };
+
+export const getHomeHero = cache(() =>
+  dbPublic(async (tx): Promise<HomeHero | null> => {
+    const [row] = await tx
+      .select({
+        placeName: places.name,
+        placeSlug: places.slug,
+        ownCover: coverJson(places.coverMediaId),
+        areaCover: areaCoverJson(places.areaId),
+      })
+      .from(places)
+      .where(and(eq(places.isHomeHero, true), eq(places.isActive, true)))
+      .limit(1);
+    if (!row) return null;
+    const own = row.ownCover?.kind === "photo" ? row.ownCover : null;
+    return {
+      placeName: row.placeName,
+      placeSlug: row.placeSlug,
+      cover: placeCoverChain({ own, area: row.areaCover }),
+    };
   }),
 );
 
