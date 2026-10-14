@@ -17,6 +17,17 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "3mb",
     },
   },
+  async redirects() {
+    return [
+      // Pagina delle affiliazioni (passo 3.1): il vecchio percorso /link-affiliati resta per i link
+      // già in circolazione. 308 (permanente), come da docs Next 16 (redirects in next.config).
+      {
+        source: "/:locale(it|en)/link-affiliati",
+        destination: "/:locale/affiliazioni",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

@@ -1,9 +1,81 @@
 import { sql } from "drizzle-orm";
-import { check, index, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  index,
+  integer,
+  numeric,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { activities, activityOffers } from "./catalog";
 import { partner } from "./enums";
 import { profiles } from "./profiles";
 import { itineraries } from "./trips";
+
+// Configurazione dei partner (passo 3.1): una riga per partner, modificabile dall'admin.
+// Template e host sono letti solo dal server (affiliate_partner_config o dbAdmin): il client
+// legge solo partner, name, verticals e is_active (grant di colonna in post-tables.sql).
+// Aggiungere un partner = un valore dell'enum partner + una riga qui (migrazione) + la variabile
+// d'ambiente indicata in partner_id_env. Template e parametri: da confermare con i termini di
+// ogni programma (docs/LANCIO.md).
+export const affiliatePartners = pgTable(
+  "affiliate_partners",
+  {
+    partner: partner("partner").primaryKey(),
+    name: text("name").notNull(),
+    verticals: text("verticals").array().notNull(),
+    // Null per i partner che si collegano solo tramite offerte (o per link costruiti altrove).
+    // Segnaposto: {query} {checkin} {checkout} {adults} {airport} {partner_id} {subid} {locale}.
+    searchUrlTemplate: text("search_url_template"),
+    // Host esatti ammessi come destinazione (minuscolo, senza porta).
+    allowedHosts: text("allowed_hosts").array().notNull().default(sql`'{}'`),
+    // Nome del parametro in cui va il subid; null se il partner non ne usa uno.
+    subidParam: text("subid_param"),
+    // Nome della variabile d'ambiente con l'ID del partner (mai il valore).
+    partnerIdEnv: text("partner_id_env"),
+    isActive: boolean("is_active").notNull().default(false),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check("affiliate_partners_partner_not_internal", sql`${t.partner} <> 'internal'`),
+    check(
+      "affiliate_partners_verticals_valid",
+      sql`cardinality(${t.verticals}) > 0 and ${t.verticals} <@ array['activity','lodging','car','flight']::text[]`,
+    ),
+    check(
+      "affiliate_partners_template_https",
+      sql`${t.searchUrlTemplate} is null or ${t.searchUrlTemplate} ~ '^https://'`,
+    ),
+    check(
+      "affiliate_partners_subid_param_format",
+      sql`${t.subidParam} is null or ${t.subidParam} ~ '^[a-z][a-z0-9_]{0,19}$'`,
+    ),
+    check(
+      "affiliate_partners_partner_id_env_format",
+      sql`${t.partnerIdEnv} is null or ${t.partnerIdEnv} ~ '^[A-Z][A-Z0-9_]*$'`,
+    ),
+    check(
+      "affiliate_partners_active_has_hosts",
+      sql`not ${t.isActive} or cardinality(${t.allowedHosts}) > 0`,
+    ),
+  ],
+);
+
+// Contatore a finestra fissa per il rate limit dei click (/api/go). Il bucket è un HMAC calcolato
+// dal server: nessuna lettura dal client (RLS attiva, nessun grant), solo hit_rate_limit.
+export const rateLimitHits = pgTable(
+  "rate_limit_hits",
+  {
+    bucket: text("bucket").notNull(),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    hits: integer("hits").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.bucket, t.windowStart] })],
+);
 
 // Ogni click in uscita passa da /api/go e lascia una riga con subid univoco.
 export const affiliateClicks = pgTable(

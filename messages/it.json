@@ -204,7 +204,6 @@
     "relationVerifiedAt": "{relation} · verificato a {date}",
     "offerFrom": "da",
     "offerCta": "Vedi disponibilità su {partner}",
-    "offerDisclose": "Prenoti sul sito di {partner}. Riceviamo una commissione, il prezzo per te non cambia.",
     "offerRating": "{rating} su 5 · {count, plural, one {# recensione} other {# recensioni}}",
     "freeCancellation": "Cancellazione gratuita",
     "priceUpdated": "aggiornato {when}",
@@ -787,7 +786,24 @@
     "editorDragOver": "Tappa «{title}» sopra la posizione {position} del giorno {day}.",
     "editorDragOverDay": "Tappa «{title}» sopra il giorno {day}, che è vuoto.",
     "editorDragEnd": "Tappa «{title}» posata nel giorno {day}, posizione {position}.",
-    "editorDragCancel": "Spostamento annullato: la tappa è rimasta dov'era."
+    "editorDragCancel": "Spostamento annullato: la tappa è rimasta dov'era.",
+    "partners": "Partner",
+    "partnersTitle": "Partner affiliati",
+    "partnersIntro": "Configurazione di ogni partner: verticali, link di ricerca, host ammessi e nome della variabile con l'ID. L'ID non si vede qui: si sa solo se è impostato.",
+    "partnerActive": "Attivo",
+    "partnerInactive": "Inattivo",
+    "partnerName": "Nome",
+    "partnerEnvName": "Variabile d'ambiente con l'ID del partner",
+    "partnerEnvSet": "ID impostato nell'ambiente",
+    "partnerEnvUnset": "ID non impostato: la verticale è in arrivo",
+    "partnerVerticals": "Verticali",
+    "partnerTemplate": "Link di ricerca (https, con i segnaposto tra graffe)",
+    "partnerTemplateHint": "Segnaposto: {query} {checkin} {checkout} {adults} {airport} {partner_id} {subid} {locale}. Da confermare con i termini del programma.",
+    "partnerHosts": "Host ammessi",
+    "partnerHostsHint": "Host esatti, separati da virgola: il link va solo lì.",
+    "partnerSubid": "Parametro del subid",
+    "partnerSaved": "Partner salvato.",
+    "partnerEnvNone": "Nessuna"
   },
   "Og": {
     "activity": "Attività · {province}",
@@ -810,7 +826,17 @@
     "bookingTitle": "Prenoti sul sito del partner",
     "bookingText": "Il pulsante dell'offerta apre il sito del partner, dove scegli la data, paghi e ricevi la conferma. Condizioni, cancellazione e assistenza della prenotazione sono quelle del partner.",
     "clickTitle": "Cosa registriamo",
-    "clickText": "Prima di aprire il sito del partner registriamo il click con un codice casuale, che passa al partner nel link: serve a sapere quali pagine portano prenotazioni e a ricevere la commissione. Come trattiamo questi dati è scritto nella <privacy>informativa sulla privacy</privacy>."
+    "clickText": "Prima di aprire il sito del partner registriamo il click con un codice casuale, che passa al partner nel link: serve a sapere quali pagine portano prenotazioni e a ricevere la commissione. Come trattiamo questi dati è scritto nella <privacy>informativa sulla privacy</privacy>.",
+    "disclosure": "Link affiliato: se prenoti, {partner} ci riconosce una commissione, a te non costa di più.",
+    "activePartnersTitle": "Partner attivi",
+    "activePartnersIntro": "Questi sono i partner con cui lavoriamo oggi. Ogni link dice quale partner è, prima del click.",
+    "activePartnersEmpty": "Nessun partner è attivo in questo momento.",
+    "verticalName": {
+      "lodging": "Alloggi",
+      "car": "Noleggio auto",
+      "activity": "Attività",
+      "flight": "Voli"
+    }
   },
   "Legal": {
     "eyebrow": "Informazioni legali",
@@ -1125,7 +1151,12 @@
     "sharedEmptyDay": "Nessuna tappa in questo giorno.",
     "inviteTitle": "Vuoi un viaggio tutto tuo?",
     "inviteBody": "Costruisci il tuo itinerario in Sicilia in pochi minuti.",
-    "flightSearchAction": "Cerca voli"
+    "flightSearchAction": "Cerca voli",
+    "chooseLodging": "Scegli dove dormire",
+    "compareCars": "Confronta noleggi",
+    "lodgingMissing": "Per cercare un alloggio servono la zona della prima notte e le date del viaggio.",
+    "carMissing": "Per confrontare i noleggi servono l'aeroporto di arrivo e le date del viaggio.",
+    "openActivity": "Apri l'attività"
   },
   "Media": {
     "photoCredit": "Foto:",
@@ -1183,7 +1214,6 @@
     "unconfigured": "I prezzi dei voli non sono ancora disponibili. Puoi cercare direttamente sul sito del partner.",
     "unavailable": "Non riusciamo a leggere i prezzi in questo momento. Riprova tra poco o cerca direttamente sul sito del partner.",
     "linkUnconfigured": "I link ai voli non sono attivi in questo momento.",
-    "affiliateDisclose": "Link affiliato: se prenoti, Aviasales ci riconosce una commissione, a te non costa di più.",
     "priceDisclaimer": "I prezzi sono indicativi: il prezzo finale lo mostra il partner prima del pagamento.",
     "calendarTitle": "Prezzi giorno per giorno, {month}",
     "calendarEmpty": "Per questo mese non ci sono prezzi da mostrare.",
@@ -1193,5 +1223,40 @@
     "routeTitle": "Voli da {origin} a {destination}",
     "routeDescription": "Prezzi indicativi dei voli da {origin} a {destination}, con la data di aggiornamento.",
     "routeIntro": "Scegli la data di andata: il calendario mostra il prezzo più basso per ogni giorno del mese."
+  },
+  "Verticals": {
+    "comingSoon": "In arrivo",
+    "unavailable": "Questo collegamento non è disponibile al momento. Riprova più tardi.",
+    "rateLimited": "Troppi click in poco tempo. Riprova tra un minuto."
+  },
+  "Lodging": {
+    "title": "Dove dormire",
+    "intro": "Scegli la zona del viaggio, le date e quante persone siete: la ricerca si apre sul sito del partner, dove vedi disponibilità e prezzi.",
+    "placeLabel": "Zona o città",
+    "placePlaceholder": "Scegli una zona",
+    "placeGroupAreas": "Zone di viaggio",
+    "placeGroupCities": "Città",
+    "checkin": "Arrivo",
+    "checkout": "Partenza",
+    "people": "Persone",
+    "submit": "Cerca alloggi",
+    "searchOn": "Cerca su {partner}",
+    "pickPlace": "Scegli una zona o una città per cercare.",
+    "needDates": "Scegli la data di arrivo e quella di partenza: la partenza dopo l'arrivo.",
+    "comingSoonText": "La ricerca degli alloggi arriva a breve."
+  },
+  "Cars": {
+    "title": "Noleggio auto",
+    "intro": "Confronta le offerte di noleggio dall'aeroporto da cui ritiri l'auto. La ricerca si apre sul sito del partner.",
+    "airportLabel": "Aeroporto di ritiro",
+    "airportPlaceholder": "Scegli un aeroporto",
+    "airportOption": "{name}, {city} ({iata})",
+    "pickup": "Ritiro",
+    "dropoff": "Riconsegna",
+    "submit": "Cerca noleggi",
+    "searchOn": "Confronta su {partner}",
+    "pickAirport": "Scegli l'aeroporto di ritiro per cercare.",
+    "needDates": "Scegli la data di ritiro e quella di riconsegna: la riconsegna dopo il ritiro.",
+    "comingSoonText": "Il confronto dei noleggi arriva a breve."
   }
 }

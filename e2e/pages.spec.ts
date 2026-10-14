@@ -3,10 +3,11 @@ import { expect, test } from "@playwright/test";
 // Pagine pubbliche: sitemap, immagini di anteprima, Chi siamo e link affiliati, pagine legali,
 // 404 e banner dei cookie.
 
-test("sitemap: link affiliati nelle due lingue; pagine con testi in sospeso, admin e profilo no", async ({ request }) => {
+test("sitemap: affiliazioni nelle due lingue; pagine con testi in sospeso, admin e profilo no", async ({ request }) => {
   const sitemap = await (await request.get("/sitemap.xml")).text();
-  expect(sitemap).toContain("http://localhost:3000/it/link-affiliati");
-  expect(sitemap).toContain("http://localhost:3000/en/link-affiliati");
+  expect(sitemap).toContain("http://localhost:3000/it/affiliazioni");
+  expect(sitemap).toContain("http://localhost:3000/en/affiliazioni");
+  expect(sitemap).not.toContain("/link-affiliati");
   // Chi siamo e pagine legali hanno ancora il segnaposto: fuori dalla sitemap finché non sono scritte.
   for (const path of ["/chi-siamo", "/privacy", "/cookie", "/condizioni-di-vendita"]) {
     expect(sitemap, path).not.toContain(path);
@@ -26,7 +27,7 @@ test("pagine con testi in sospeso: noindex, \"Testo in preparazione\" e nessuna 
     expect(text, path).not.toMatch(/(Legal|Design|About)\./);
   }
   // Le pagine con testo vero restano indicizzabili.
-  await page.goto("/it/link-affiliati");
+  await page.goto("/it/affiliazioni");
   await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
 });
 

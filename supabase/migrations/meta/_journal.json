@@ -267,6 +267,27 @@
       "when": 1791996235194,
       "tag": "20261014164355_voli_click",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791999692577,
+      "tag": "20261014174132_partner_nuovi",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1791999695988,
+      "tag": "20261014174135_affiliati_partner",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1791999699824,
+      "tag": "20261014174139_affiliati_funzioni",
+      "breakpoints": true
     }
   ]
 }

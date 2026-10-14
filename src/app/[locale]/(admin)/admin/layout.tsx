@@ -32,6 +32,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <Link href="/admin/copertura" className="text-body font-semibold text-lava">
           {t("coverage")}
         </Link>
+        <Link href="/admin/partner" className="text-body font-semibold text-lava">
+          {t("partners")}
+        </Link>
       </nav>
       <div className="py-8">{children}</div>
     </div>

@@ -11,6 +11,11 @@ export const partner = pgEnum("partner", [
   "viator",
   "car_rental",
   "internal",
+  // Passo 3.1 (M6): alloggi, noleggio auto e attività di Civitatis. Aggiunti con
+  // custom-1-enum.sql (migrazione a sé: un valore di enum non si usa nella transazione che lo aggiunge).
+  "booking",
+  "discovercars",
+  "civitatis",
 ]);
 export const eventType = pgEnum("event_type", [
   "view",

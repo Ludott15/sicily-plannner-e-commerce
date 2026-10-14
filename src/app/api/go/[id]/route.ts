@@ -5,10 +5,11 @@ import { CONSENT_COOKIE } from "@/lib/consent";
 import { routing } from "@/lib/i18n/routing";
 import { ANON_COOKIE, analyticsConsentFromCookie, anonIdFor, setAnonCookie } from "@/server/affiliates/anon-cookie";
 import { resolveAffiliateClick } from "@/server/affiliates/go";
+import { allowGoClick, goRateLimitedResponse } from "@/server/affiliates/rate-limit";
 import { getUser } from "@/server/auth";
 
 // Uscita verso un partner affiliato: [id] è un'offerta (activity_offers). Registra il click
-// con subid e risponde con 302.
+// con subid e risponde con 302. Rate limit per IP e utente (src/server/affiliates/rate-limit.ts).
 // Il cookie anon_id (identificativo anonimo dei visitatori senza account) si imposta e si
 // legge solo con il consenso ai cookie non tecnici ("accepted", src/lib/consent.ts): senza
 // consenso il click si registra comunque, con il solo subid e senza anon_id.
@@ -19,10 +20,12 @@ import { getUser } from "@/server/auth";
 const contextSchema = z.enum(["page", "itinerary", "chat", "flights"]).catch("page");
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getUser();
   const { id } = await params;
   const { searchParams, origin } = request.nextUrl;
   const lang = searchParams.get("l");
   const locale = hasLocale(routing.locales, lang) ? lang : routing.defaultLocale;
+  if (!(await allowGoClick(request, user))) return goRateLimitedResponse(origin, `/${locale}/attivita`);
   const fallback = (slug: string | null) =>
     NextResponse.redirect(
       new URL(slug ? `/${locale}/attivita/${slug}?avviso=non-prenotabile` : `/${locale}/attivita`, origin),
@@ -40,7 +43,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     context: contextSchema.parse(searchParams.get("c")),
     itineraryId: itinerary.success ? itinerary.data : null,
     anonId,
-    user: await getUser(),
+    user,
   });
   if (result.kind === "unavailable") return fallback(result.slug);
 

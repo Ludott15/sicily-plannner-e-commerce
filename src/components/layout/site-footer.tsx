@@ -53,7 +53,7 @@ export async function SiteFooter() {
               {(
                 [
                   ["/chi-siamo", "about"],
-                  ["/link-affiliati", "affiliateLinks"],
+                  ["/affiliazioni", "affiliateLinks"],
                   ["/crediti-foto", "photoCredits"],
                 ] as const
               ).map(([href, key]) => (

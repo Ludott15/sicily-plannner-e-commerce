@@ -7,6 +7,7 @@ import { getDeparture } from "@/lib/flights/departures";
 import { routing } from "@/lib/i18n/routing";
 import { ANON_COOKIE, analyticsConsentFromCookie, anonIdFor, setAnonCookie } from "@/server/affiliates/anon-cookie";
 import { newSubid } from "@/server/affiliates/links";
+import { allowGoClick, goRateLimitedResponse } from "@/server/affiliates/rate-limit";
 import { getUser } from "@/server/auth";
 import { recordFlightClick } from "@/server/flights/click";
 import { parseFlightLinkQuery, verifyFlightLink } from "@/server/flights/links";
@@ -15,6 +16,7 @@ import { parseFlightLinkQuery, verifyFlightLink } from "@/server/flights/links";
 // la route verifica firma e scadenza, costruisce l'URL di destinazione con host fisso, registra
 // il click e risponde 302. Nessun parametro della richiesta diventa URL: eventuali url, target
 // o host extra vengono ignorati. Senza FLIGHT_LINK_SECRET ogni richiesta è rifiutata.
+// Rate limit condiviso con /api/go/[id] e /api/go/v (passo 3.1).
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
@@ -33,7 +35,11 @@ function isAviasalesUrl(value: string): boolean {
 }
 
 export async function GET(request: NextRequest) {
+  const user = await getUser();
   const { searchParams, origin } = request.nextUrl;
+  const lang = searchParams.get("l");
+  const locale = hasLocale(routing.locales, lang) ? lang : routing.defaultLocale;
+  if (!(await allowGoClick(request, user))) return goRateLimitedResponse(origin, `/${locale}/voli`);
   if (!searchParams.get("s")) return invalid("invalid_signature");
 
   const parsed = parseFlightLinkQuery(searchParams);
@@ -45,8 +51,6 @@ export async function GET(request: NextRequest) {
   const { link } = parsed;
   if (getDeparture(link.origin) === null || !isSicilyAirport(link.destination)) return invalid("invalid_params");
 
-  const lang = searchParams.get("l");
-  const locale = hasLocale(routing.locales, lang) ? lang : routing.defaultLocale;
   const cookieValue = request.cookies.get(ANON_COOKIE)?.value;
   const anonId = anonIdFor(cookieValue, analyticsConsentFromCookie(request.cookies.get(CONSENT_COOKIE)?.value));
   const subId = newSubid();
@@ -69,7 +73,7 @@ export async function GET(request: NextRequest) {
   }
 
   const recorded = await recordFlightClick({
-    user: await getUser(),
+    user,
     subId,
     context: link.context,
     targetUrl: target.toString(),

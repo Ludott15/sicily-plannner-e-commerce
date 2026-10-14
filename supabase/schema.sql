@@ -148,7 +148,10 @@ CREATE TYPE "public"."partner" AS ENUM (
     'getyourguide',
     'viator',
     'car_rental',
-    'internal'
+    'internal',
+    'booking',
+    'discovercars',
+    'civitatis'
 );
 
 
@@ -286,21 +289,18 @@ $$;
 ALTER FUNCTION "public"."admin_audit_log_immutable"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."affiliate_subid_param"("p_partner" "public"."partner") RETURNS "text"
-    LANGUAGE "sql" IMMUTABLE
+CREATE OR REPLACE FUNCTION "public"."affiliate_partner_config"("p_partner" "public"."partner") RETURNS TABLE("partner" "public"."partner", "name" "text", "verticals" "text"[], "search_url_template" "text", "allowed_hosts" "text"[], "subid_param" "text", "partner_id_env" "text", "is_active" boolean)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
     AS $$
-  select case p_partner
-    when 'getyourguide' then 'cmp'
-    when 'viator' then 'campaign'
-    when 'travelpayouts' then 'sub_id'
-    when 'car_rental' then 'subid'
-    else null
-  end
+  select p.partner, p.name, p.verticals, p.search_url_template, p.allowed_hosts,
+         p.subid_param, p.partner_id_env, p.is_active
+  from public.affiliate_partners p
+  where p.partner = p_partner
 $$;
 
 
-ALTER FUNCTION "public"."affiliate_subid_param"("p_partner" "public"."partner") OWNER TO "postgres";
+ALTER FUNCTION "public"."affiliate_partner_config"("p_partner" "public"."partner") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") RETURNS boolean
@@ -613,6 +613,52 @@ $$;
 ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."hit_rate_limit"("p_bucket" "text", "p_limit" integer, "p_window_seconds" integer) RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $_$
+declare
+  v_window timestamptz;
+  v_hits int;
+begin
+  if p_bucket is null or p_bucket !~ '^[A-Za-z0-9_-]{16,128}$' then
+    raise exception 'invalid_rate_limit' using errcode = 'P0001';
+  end if;
+
+  if p_limit is null or p_limit < 1 or p_limit > 100000 then
+    raise exception 'invalid_rate_limit' using errcode = 'P0001';
+  end if;
+
+  if p_window_seconds is null or p_window_seconds < 1 or p_window_seconds > 86400 then
+    raise exception 'invalid_rate_limit' using errcode = 'P0001';
+  end if;
+
+  v_window := to_timestamp(
+    (floor(extract(epoch from now()) / p_window_seconds) * p_window_seconds)::double precision
+  );
+
+  insert into public.rate_limit_hits (bucket, window_start, hits)
+  values (p_bucket, v_window, 1)
+  on conflict (bucket, window_start)
+  do update set hits = public.rate_limit_hits.hits + 1
+  returning hits into v_hits;
+
+  delete from public.rate_limit_hits r
+  where (r.bucket, r.window_start) in (
+    select x.bucket, x.window_start
+    from public.rate_limit_hits x
+    where x.window_start < now() - interval '1 day'
+    limit 500
+  );
+
+  return v_hits <= p_limit;
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."hit_rate_limit"("p_bucket" "text", "p_limit" integer, "p_window_seconds" integer) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."invite_preview"("p_token" "text") RETURNS TABLE("group_id" "uuid", "group_name" "text", "owner_display_name" "text", "owner_avatar_url" "text", "itinerary_id" "uuid", "itinerary_title" "text", "itinerary_days" smallint, "expires_at" timestamp with time zone)
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -831,7 +877,8 @@ CREATE OR REPLACE FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid"
 declare
   v_uid uuid := auth.uid();
   v_offer public.activity_offers;
-  v_param text;
+  v_partner public.affiliate_partners;
+  v_host text;
   v_target text;
 begin
   select o.* into v_offer
@@ -840,6 +887,21 @@ begin
   where o.id = p_offer_id and o.is_active and a.is_active;
   if not found then
     raise exception 'offer_not_bookable' using errcode = 'P0001';
+  end if;
+
+  select p.* into v_partner
+  from public.affiliate_partners p
+  where p.partner = v_offer.partner;
+  if not found or not v_partner.is_active then
+    raise exception 'partner_not_active' using errcode = 'P0001';
+  end if;
+
+  -- Host esatto dell'URL del partner: niente userinfo (user@host), porta o host nel percorso.
+  v_host := lower(substring(v_offer.affiliate_url from '^https://([^/?#]+)'));
+  if v_host is null or not exists (
+    select 1 from unnest(v_partner.allowed_hosts) h where lower(h) = v_host
+  ) then
+    raise exception 'target_not_allowed' using errcode = 'P0001';
   end if;
 
   if p_subid !~ '^[a-z0-9]{12,32}$' then
@@ -856,11 +918,10 @@ begin
 
   -- Il parametro si aggiunge in coda senza riscrivere l'URL di base; con un frammento (#)
   -- l'URL resta com'è.
-  v_param := public.affiliate_subid_param(v_offer.partner);
   v_target := case
-    when v_param is null or position('#' in v_offer.affiliate_url) > 0 then v_offer.affiliate_url
-    when position('?' in v_offer.affiliate_url) > 0 then v_offer.affiliate_url || '&' || v_param || '=' || p_subid
-    else v_offer.affiliate_url || '?' || v_param || '=' || p_subid
+    when v_partner.subid_param is null or position('#' in v_offer.affiliate_url) > 0 then v_offer.affiliate_url
+    when position('?' in v_offer.affiliate_url) > 0 then v_offer.affiliate_url || '&' || v_partner.subid_param || '=' || p_subid
+    else v_offer.affiliate_url || '?' || v_partner.subid_param || '=' || p_subid
   end;
 
   insert into public.affiliate_clicks
@@ -924,6 +985,71 @@ $_$;
 
 
 ALTER FUNCTION "public"."record_flight_click"("p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."record_vertical_click"("p_partner" "public"."partner", "p_vertical" "text", "p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text" DEFAULT NULL::"text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $_$
+declare
+  v_uid uuid := auth.uid();
+  v_partner public.affiliate_partners;
+  v_host text;
+begin
+  select p.* into v_partner
+  from public.affiliate_partners p
+  where p.partner = p_partner;
+  if not found or not v_partner.is_active then
+    raise exception 'partner_not_active' using errcode = 'P0001';
+  end if;
+
+  if p_vertical not in ('activity', 'lodging', 'car', 'flight') or not (p_vertical = any (v_partner.verticals)) then
+    raise exception 'vertical_not_allowed' using errcode = 'P0001';
+  end if;
+
+  if p_subid !~ '^[a-z0-9]{12,32}$' then
+    raise exception 'invalid_subid' using errcode = 'P0001';
+  end if;
+
+  if p_anon_id is not null and p_anon_id !~ '^[0-9a-f-]{36}$' then
+    raise exception 'invalid_anon_id' using errcode = 'P0001';
+  end if;
+
+  if p_context not in ('page', 'itinerary', 'chat', 'flights') then
+    raise exception 'invalid_context' using errcode = 'P0001';
+  end if;
+
+  if p_target_url !~ '^https://' then
+    raise exception 'target_not_allowed' using errcode = 'P0001';
+  end if;
+
+  v_host := lower(substring(p_target_url from '^https://([^/?#]+)'));
+  if v_host is null or not exists (
+    select 1 from unnest(v_partner.allowed_hosts) h where lower(h) = v_host
+  ) then
+    raise exception 'target_not_allowed' using errcode = 'P0001';
+  end if;
+
+  if p_itinerary_id is not null and not public.can_access_itinerary(p_itinerary_id) then
+    raise exception 'itinerary_not_accessible' using errcode = 'P0001';
+  end if;
+
+  insert into public.affiliate_clicks
+    (user_id, activity_id, offer_id, partner, target_url, subid, context, itinerary_id, anon_id)
+  values
+    (v_uid, null, null, p_partner, p_target_url, p_subid, p_context, p_itinerary_id, p_anon_id);
+
+  if v_uid is not null then
+    insert into public.user_events (user_id, type, activity_id, itinerary_id)
+    values (v_uid, 'affiliate_click', null, p_itinerary_id);
+  end if;
+
+  return p_subid;
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."record_vertical_click"("p_partner" "public"."partner", "p_vertical" "text", "p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."refresh_leaderboard"() RETURNS "void"
@@ -1200,6 +1326,28 @@ CREATE TABLE IF NOT EXISTS "public"."affiliate_conversions" (
 
 
 ALTER TABLE "public"."affiliate_conversions" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."affiliate_partners" (
+    "partner" "public"."partner" NOT NULL,
+    "name" "text" NOT NULL,
+    "verticals" "text"[] NOT NULL,
+    "search_url_template" "text",
+    "allowed_hosts" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "subid_param" "text",
+    "partner_id_env" "text",
+    "is_active" boolean DEFAULT false NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "affiliate_partners_active_has_hosts" CHECK (((NOT "is_active") OR ("cardinality"("allowed_hosts") > 0))),
+    CONSTRAINT "affiliate_partners_partner_id_env_format" CHECK ((("partner_id_env" IS NULL) OR ("partner_id_env" ~ '^[A-Z][A-Z0-9_]*$'::"text"))),
+    CONSTRAINT "affiliate_partners_partner_not_internal" CHECK (("partner" <> 'internal'::"public"."partner")),
+    CONSTRAINT "affiliate_partners_subid_param_format" CHECK ((("subid_param" IS NULL) OR ("subid_param" ~ '^[a-z][a-z0-9_]{0,19}$'::"text"))),
+    CONSTRAINT "affiliate_partners_template_https" CHECK ((("search_url_template" IS NULL) OR ("search_url_template" ~ '^https://'::"text"))),
+    CONSTRAINT "affiliate_partners_verticals_valid" CHECK ((("cardinality"("verticals") > 0) AND ("verticals" <@ ARRAY['activity'::"text", 'lodging'::"text", 'car'::"text", 'flight'::"text"])))
+);
+
+
+ALTER TABLE "public"."affiliate_partners" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."areas" (
@@ -1853,6 +2001,16 @@ CREATE OR REPLACE VIEW "public"."public_reviews" WITH ("security_barrier"='true'
 ALTER VIEW "public"."public_reviews" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."rate_limit_hits" (
+    "bucket" "text" NOT NULL,
+    "window_start" timestamp with time zone NOT NULL,
+    "hits" integer DEFAULT 0 NOT NULL
+);
+
+
+ALTER TABLE "public"."rate_limit_hits" OWNER TO "postgres";
+
+
 CREATE OR REPLACE VIEW "public"."seasonal_leaderboard" WITH ("security_barrier"='true') AS
  SELECT "t"."season",
     ("rank"() OVER (PARTITION BY "t"."season" ORDER BY "t"."total_points" DESC))::integer AS "rank",
@@ -2007,6 +2165,11 @@ ALTER TABLE ONLY "public"."affiliate_clicks"
 
 ALTER TABLE ONLY "public"."affiliate_conversions"
     ADD CONSTRAINT "affiliate_conversions_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."affiliate_partners"
+    ADD CONSTRAINT "affiliate_partners_pkey" PRIMARY KEY ("partner");
 
 
 
@@ -2207,6 +2370,11 @@ ALTER TABLE ONLY "public"."products"
 
 ALTER TABLE ONLY "public"."profiles"
     ADD CONSTRAINT "profiles_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."rate_limit_hits"
+    ADD CONSTRAINT "rate_limit_hits_bucket_window_start_pk" PRIMARY KEY ("bucket", "window_start");
 
 
 
@@ -2926,6 +3094,21 @@ CREATE POLICY "affiliate_conversions_select_admin" ON "public"."affiliate_conver
 
 
 
+ALTER TABLE "public"."affiliate_partners" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "affiliate_partners_select_anon" ON "public"."affiliate_partners" FOR SELECT TO "anon" USING ("is_active");
+
+
+
+CREATE POLICY "affiliate_partners_select_authenticated" ON "public"."affiliate_partners" FOR SELECT TO "authenticated" USING (("is_active" OR ( SELECT "public"."is_admin"() AS "is_admin")));
+
+
+
+CREATE POLICY "affiliate_partners_update_admin" ON "public"."affiliate_partners" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
 ALTER TABLE "public"."areas" ENABLE ROW LEVEL SECURITY;
 
 
@@ -3358,6 +3541,9 @@ CREATE POLICY "profiles_update_own" ON "public"."profiles" FOR UPDATE TO "authen
 
 
 
+ALTER TABLE "public"."rate_limit_hits" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."reviews" ENABLE ROW LEVEL SECURITY;
 
 
@@ -3437,8 +3623,10 @@ GRANT ALL ON FUNCTION "public"."admin_audit_log_immutable"() TO "service_role";
 
 
 
-REVOKE ALL ON FUNCTION "public"."affiliate_subid_param"("p_partner" "public"."partner") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."affiliate_subid_param"("p_partner" "public"."partner") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."affiliate_partner_config"("p_partner" "public"."partner") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."affiliate_partner_config"("p_partner" "public"."partner") TO "anon";
+GRANT ALL ON FUNCTION "public"."affiliate_partner_config"("p_partner" "public"."partner") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."affiliate_partner_config"("p_partner" "public"."partner") TO "service_role";
 
 
 
@@ -3516,6 +3704,13 @@ GRANT ALL ON FUNCTION "public"."groups_add_owner_member"() TO "service_role";
 
 REVOKE ALL ON FUNCTION "public"."handle_new_user"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."hit_rate_limit"("p_bucket" "text", "p_limit" integer, "p_window_seconds" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."hit_rate_limit"("p_bucket" "text", "p_limit" integer, "p_window_seconds" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."hit_rate_limit"("p_bucket" "text", "p_limit" integer, "p_window_seconds" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."hit_rate_limit"("p_bucket" "text", "p_limit" integer, "p_window_seconds" integer) TO "service_role";
 
 
 
@@ -3609,6 +3804,13 @@ REVOKE ALL ON FUNCTION "public"."record_flight_click"("p_subid" "text", "p_conte
 GRANT ALL ON FUNCTION "public"."record_flight_click"("p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."record_flight_click"("p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."record_flight_click"("p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."record_vertical_click"("p_partner" "public"."partner", "p_vertical" "text", "p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."record_vertical_click"("p_partner" "public"."partner", "p_vertical" "text", "p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."record_vertical_click"("p_partner" "public"."partner", "p_vertical" "text", "p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."record_vertical_click"("p_partner" "public"."partner", "p_vertical" "text", "p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "service_role";
 
 
 
@@ -3768,6 +3970,50 @@ GRANT SELECT ON TABLE "public"."affiliate_clicks" TO "authenticated";
 
 GRANT ALL ON TABLE "public"."affiliate_conversions" TO "service_role";
 GRANT SELECT ON TABLE "public"."affiliate_conversions" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."affiliate_partners" TO "service_role";
+
+
+
+GRANT SELECT("partner") ON TABLE "public"."affiliate_partners" TO "anon";
+GRANT SELECT("partner") ON TABLE "public"."affiliate_partners" TO "authenticated";
+
+
+
+GRANT SELECT("name") ON TABLE "public"."affiliate_partners" TO "anon";
+GRANT SELECT("name"),UPDATE("name") ON TABLE "public"."affiliate_partners" TO "authenticated";
+
+
+
+GRANT SELECT("verticals") ON TABLE "public"."affiliate_partners" TO "anon";
+GRANT SELECT("verticals"),UPDATE("verticals") ON TABLE "public"."affiliate_partners" TO "authenticated";
+
+
+
+GRANT UPDATE("search_url_template") ON TABLE "public"."affiliate_partners" TO "authenticated";
+
+
+
+GRANT UPDATE("allowed_hosts") ON TABLE "public"."affiliate_partners" TO "authenticated";
+
+
+
+GRANT UPDATE("subid_param") ON TABLE "public"."affiliate_partners" TO "authenticated";
+
+
+
+GRANT UPDATE("partner_id_env") ON TABLE "public"."affiliate_partners" TO "authenticated";
+
+
+
+GRANT SELECT("is_active") ON TABLE "public"."affiliate_partners" TO "anon";
+GRANT SELECT("is_active"),UPDATE("is_active") ON TABLE "public"."affiliate_partners" TO "authenticated";
+
+
+
+GRANT UPDATE("updated_at") ON TABLE "public"."affiliate_partners" TO "authenticated";
 
 
 
@@ -4365,6 +4611,10 @@ GRANT INSERT("body"),UPDATE("body") ON TABLE "public"."reviews" TO "authenticate
 GRANT ALL ON TABLE "public"."public_reviews" TO "service_role";
 GRANT SELECT ON TABLE "public"."public_reviews" TO "anon";
 GRANT SELECT ON TABLE "public"."public_reviews" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."rate_limit_hits" TO "service_role";
 
 
 

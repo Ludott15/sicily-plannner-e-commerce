@@ -204,7 +204,6 @@
     "relationVerifiedAt": "{relation} · checked in {date}",
     "offerFrom": "from",
     "offerCta": "See availability on {partner}",
-    "offerDisclose": "You book on the {partner} website. We earn a commission; your price doesn't change.",
     "offerRating": "{rating} out of 5 · {count, plural, one {# review} other {# reviews}}",
     "freeCancellation": "Free cancellation",
     "priceUpdated": "updated {when}",
@@ -787,7 +786,24 @@
     "editorDragOver": "Stop «{title}» over position {position} of day {day}.",
     "editorDragOverDay": "Stop «{title}» over day {day}, which is empty.",
     "editorDragEnd": "Stop «{title}» dropped on day {day}, position {position}.",
-    "editorDragCancel": "Move cancelled: the stop stayed where it was."
+    "editorDragCancel": "Move cancelled: the stop stayed where it was.",
+    "partners": "Partners",
+    "partnersTitle": "Affiliate partners",
+    "partnersIntro": "Settings for each partner: verticals, search links, allowed hosts and the name of the variable holding the ID. The ID is not shown here: we only know whether it is set.",
+    "partnerActive": "Active",
+    "partnerInactive": "Inactive",
+    "partnerName": "Name",
+    "partnerEnvName": "Environment variable with the partner ID",
+    "partnerEnvSet": "ID set in the environment",
+    "partnerEnvUnset": "ID not set: the vertical is coming soon",
+    "partnerVerticals": "Verticals",
+    "partnerTemplate": "Search link (https, with placeholders in braces)",
+    "partnerTemplateHint": "Placeholders: {query} {checkin} {checkout} {adults} {airport} {partner_id} {subid} {locale}. To be confirmed with the program terms.",
+    "partnerHosts": "Allowed hosts",
+    "partnerHostsHint": "Exact hosts, separated by commas: the link goes only there.",
+    "partnerSubid": "Subid parameter",
+    "partnerSaved": "Partner saved.",
+    "partnerEnvNone": "None"
   },
   "Og": {
     "activity": "Activity · {province}",
@@ -810,7 +826,17 @@
     "bookingTitle": "You book on the partner's website",
     "bookingText": "The offer button opens the partner's website, where you choose the date, pay and get the confirmation. Booking terms, cancellation and support are the partner's.",
     "clickTitle": "What we record",
-    "clickText": "Before opening the partner's website we record the click with a random code, which goes to the partner in the link: it tells us which pages lead to bookings and lets us receive the commission. How we handle this data is described in the <privacy>privacy notice</privacy>."
+    "clickText": "Before opening the partner's website we record the click with a random code, which goes to the partner in the link: it tells us which pages lead to bookings and lets us receive the commission. How we handle this data is described in the <privacy>privacy notice</privacy>.",
+    "disclosure": "Affiliate link: if you book, {partner} pays us a commission. It does not cost you more.",
+    "activePartnersTitle": "Active partners",
+    "activePartnersIntro": "These are the partners we work with today. Each link says which partner it is, before you click.",
+    "activePartnersEmpty": "No partner is active at the moment.",
+    "verticalName": {
+      "lodging": "Stays",
+      "car": "Car rental",
+      "activity": "Activities",
+      "flight": "Flights"
+    }
   },
   "Legal": {
     "eyebrow": "Legal information",
@@ -1125,7 +1151,12 @@
     "sharedEmptyDay": "No stops on this day.",
     "inviteTitle": "Want a trip of your own?",
     "inviteBody": "Build your own itinerary in Sicily in a few minutes.",
-    "flightSearchAction": "Search flights"
+    "flightSearchAction": "Search flights",
+    "chooseLodging": "Choose where to stay",
+    "compareCars": "Compare car rentals",
+    "lodgingMissing": "To search for a stay we need the area of the first night and the trip dates.",
+    "carMissing": "To compare car rentals we need the arrival airport and the trip dates.",
+    "openActivity": "Open the activity"
   },
   "Media": {
     "photoCredit": "Photo:",
@@ -1183,7 +1214,6 @@
     "unconfigured": "Flight prices are not available yet. You can search directly on the partner's site.",
     "unavailable": "We cannot read prices right now. Try again shortly or search directly on the partner's site.",
     "linkUnconfigured": "Flight links are not active at the moment.",
-    "affiliateDisclose": "Affiliate link: if you book, Aviasales pays us a commission, and it costs you no more.",
     "priceDisclaimer": "Prices are indicative: the partner shows the final price before payment.",
     "calendarTitle": "Prices day by day, {month}",
     "calendarEmpty": "There are no prices to show for this month.",
@@ -1193,5 +1223,40 @@
     "routeTitle": "Flights from {origin} to {destination}",
     "routeDescription": "Indicative fares from {origin} to {destination}, with the date they were updated.",
     "routeIntro": "Pick a departure date: the calendar shows the lowest price for each day of the month."
+  },
+  "Verticals": {
+    "comingSoon": "Coming soon",
+    "unavailable": "This link is not available right now. Please try again later.",
+    "rateLimited": "Too many clicks in a short time. Try again in a minute."
+  },
+  "Lodging": {
+    "title": "Where to stay",
+    "intro": "Choose the area of the trip, the dates and how many of you are going: the search opens on the partner's site, where you see availability and prices.",
+    "placeLabel": "Area or city",
+    "placePlaceholder": "Choose an area",
+    "placeGroupAreas": "Travel areas",
+    "placeGroupCities": "Cities",
+    "checkin": "Arrival",
+    "checkout": "Departure",
+    "people": "Guests",
+    "submit": "Search stays",
+    "searchOn": "Search on {partner}",
+    "pickPlace": "Choose an area or a city to search.",
+    "needDates": "Choose the arrival and departure dates: departure after arrival.",
+    "comingSoonText": "Stay search is coming soon."
+  },
+  "Cars": {
+    "title": "Car rental",
+    "intro": "Compare rental offers from the airport where you pick up the car. The search opens on the partner's site.",
+    "airportLabel": "Pick-up airport",
+    "airportPlaceholder": "Choose an airport",
+    "airportOption": "{name}, {city} ({iata})",
+    "pickup": "Pick-up",
+    "dropoff": "Drop-off",
+    "submit": "Search cars",
+    "searchOn": "Compare on {partner}",
+    "pickAirport": "Choose the pick-up airport to search.",
+    "needDates": "Choose the pick-up and drop-off dates: drop-off after pick-up.",
+    "comingSoonText": "Car rental comparison is coming soon."
   }
 }

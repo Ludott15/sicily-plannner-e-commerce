@@ -16,7 +16,10 @@ import { listActivities, listActivityFilterOptions } from "@/server/catalog/quer
 // lista filtrata la renderizza il server, il canonical resta la lista completa.
 // Stato vuoto (schemi.md): una frase che dice cosa fare e un'azione.
 
-type Props = { params: Promise<{ locale: string }>; searchParams: Promise<ActivitySearchParams> };
+type Props = {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<ActivitySearchParams & { avviso?: string }>;
+};
 
 export async function generateMetadata({ params }: Omit<Props, "searchParams">): Promise<Metadata> {
   const { locale } = await params;
@@ -33,8 +36,9 @@ export default async function ActivitiesPage({ params, searchParams }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [t, labels, options, search] = await Promise.all([
+  const [t, tVert, labels, options, search] = await Promise.all([
     getTranslations("Catalog"),
+    getTranslations("Verticals"),
     interestLabels(locale),
     listActivityFilterOptions(),
     searchParams,
@@ -49,6 +53,12 @@ export default async function ActivitiesPage({ params, searchParams }: Props) {
         {t("activitiesTitle")}
       </h1>
       <p className="mt-3 max-w-2xl text-body-l text-lava-muted">{t("activitiesDescription")}</p>
+
+      {search.avviso === "troppi-click" && (
+        <p role="alert" className="mt-6 rounded-lg border border-card-edge bg-calce-raised p-4 text-body">
+          {tVert("rateLimited")}
+        </p>
+      )}
 
       {options.interests.length + options.provinces.length > 0 && (
         <ActivityFilters
