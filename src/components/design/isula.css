@@ -81,10 +81,14 @@
 .is-place__link { color: inherit; text-decoration: none; }
 .is-place__link:focus-visible { outline: none; }
 .is-place__link::after { content: ""; position: absolute; inset: 0; z-index: 1; }
-.is-place__media { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--card-edge); background: var(--calce-sunk); box-shadow: var(--shadow-card); }
+.is-place__media { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border-radius: var(--radius-lg); background: var(--calce-sunk); }
 .is-place__media img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--dur-fast) var(--ease-out); }
 .is-place:hover .is-place__media img { transform: scale(1.03); }
 .is-place__body { display: flex; flex-direction: column; gap: var(--space-1); }
+/* Lista orizzontale dei luoghi: barra di scorrimento nascosta. Si scorre con il dito, il trackpad,
+   la tastiera o le frecce (da md). La card successiva sporge: così si capisce che c'è altro. */
+.is-places { scrollbar-width: none; -ms-overflow-style: none; }
+.is-places::-webkit-scrollbar { display: none; }
 
 /* Voce locale */
 .is-localtip { background: var(--ink); color: var(--on-ink); border: 1px solid var(--ink-edge); border-radius: var(--radius-lg); padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-4); }

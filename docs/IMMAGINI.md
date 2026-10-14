@@ -47,6 +47,7 @@ Un anello vale solo se il media è *usabile* (`public.media_is_usable`): testo a
 ## Didascalie e crediti
 
 - Sotto le immagini di pagina: "Foto: autore, licenza" con i link, più "modificata"; per le illustrazioni "Illustrazione di Isula" (`CoverFigure`).
+- Eccezione: la foto grande della home non ha didascalia; autore e licenza sono in /crediti-foto (da confermare con chi scrive i testi legali per le licenze CC BY e CC BY-SA).
 - `/crediti-foto` elenca tutti i media pubblici con autore, licenza e fonte (la pagina del file su Wikimedia Commons), è nella sitemap e nel footer.
 - `source_url` è interno: il pubblico vede solo `source_link`, cioè `source_url` quando è una pagina di commons.wikimedia.org.
 
