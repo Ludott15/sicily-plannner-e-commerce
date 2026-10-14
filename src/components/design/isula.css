@@ -257,3 +257,24 @@ a.is-tabbar__item { color: var(--lava-muted); }
     box-shadow: none;
   }
 }
+
+/* Pagina del viaggio (1.4): nella stampa restano il titolo, i giorni con tappe e note, gli avvisi.
+   Spariscono gli strumenti di modifica (azioni, moduli, pulsanti su/giù), la colonna laterale
+   (checklist, link pubblico, impostazioni) e le zone di trascinamento. La nota del giorno e quella
+   della tappa si stampano come testo (.is-trip-print-note). */
+.is-trip-print-note {
+  display: none;
+}
+
+@media print {
+  .is-trip-tools,
+  .is-trip-aside {
+    display: none !important;
+  }
+  .is-trip-print-note {
+    display: block;
+  }
+  .is-trip-page h1 {
+    break-after: avoid;
+  }
+}
