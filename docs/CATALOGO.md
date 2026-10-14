@@ -40,6 +40,8 @@ Il modello si scarica dalla pagina di importazione: intestazione e due righe di 
 ### Preparare il file in Excel o Google Sheets
 
 - **Excel:** apri il modello, cancella le due righe `demo-`, compila una riga per attività e salva con **File → Salva con nome → CSV UTF-8 (delimitato da virgole)**. Excel in italiano può usare il punto e virgola come separatore: va bene, si riconosce da solo. Evita "CSV (Macintosh)" e "CSV (MS-DOS)", che rovinano gli accenti.
+- Se Excel apre il modello con tutto in una sola colonna, non modificare nulla: usa **Dati → Da testo/CSV**, scegli la **virgola** come separatore e poi salva come sopra.
+- Il riquadro delle coordinate è approssimato (comprende anche Malta e un tratto di costa calabra): serve a scartare gli errori grossolani, non sostituisce il controllo nella coda "Da verificare".
 - **Google Sheets:** **File → Importa** il modello, compila e poi **File → Scarica → Valori separati da virgola (.csv)**.
 - Le colonne con un elenco (`season_months`, `diets_suitable`, `interests`) si scrivono così come sono, es. `mare:3;storia:2`: Excel e Sheets aggiungono da soli le virgolette quando servono.
 - Le coordinate si copiano da Google Maps (clic destro sul punto): il primo numero è la latitudine.
