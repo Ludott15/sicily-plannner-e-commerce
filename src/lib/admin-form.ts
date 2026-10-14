@@ -2,6 +2,8 @@
 export type AdminErrorCode =
   | "invalid"
   | "activity_without_tags"
+  | "activity_place_inactive"
+  | "place_has_active_activities"
   | "slug_taken"
   | "partner_product_taken"
   | "day_titles_exceed_days"

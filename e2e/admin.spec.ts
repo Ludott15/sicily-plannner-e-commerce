@@ -17,7 +17,7 @@ test("admin: crea un'attività, non la attiva senza interessi, la attiva con un 
 
   const slug = `e2e-attivita-${Date.now()}`;
   await page.goto("/it/admin/attivita/nuova");
-  await page.getByLabel("Titolo").fill("e2e- Attività di prova");
+  await page.getByLabel("Titolo", { exact: true }).fill("e2e- Attività di prova");
   await page.getByLabel("Slug (indirizzo della pagina)").fill(slug);
   await page.getByLabel("Luogo").selectOption({ label: "Palermo" });
   await page.getByLabel("Durata (minuti)").fill("90");

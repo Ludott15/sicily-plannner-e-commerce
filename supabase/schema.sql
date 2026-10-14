@@ -401,6 +401,54 @@ $$;
 ALTER FUNCTION "public"."check_activity_has_tags"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."check_activity_place_active"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if exists (
+    select 1
+    from public.activities a
+    join public.places p on p.id = a.place_id
+    where a.id = new.id
+      and a.is_active
+      and not p.is_active
+  ) then
+    raise exception 'activity_place_inactive' using errcode = 'P0001';
+  end if;
+
+  return null;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."check_activity_place_active"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."check_place_has_active_activities"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if exists (
+    select 1
+    from public.places p
+    join public.activities a on a.place_id = p.id
+    where p.id = new.id
+      and not p.is_active
+      and a.is_active
+  ) then
+    raise exception 'place_has_active_activities' using errcode = 'P0001';
+  end if;
+
+  return null;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."check_place_has_active_activities"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -670,7 +718,7 @@ CREATE OR REPLACE FUNCTION "public"."media_is_public"("p_media_id" "uuid") RETUR
     SET "search_path" TO 'public', 'pg_temp'
     AS $$
   select public.media_is_usable(p_media_id) and (
-    exists (select 1 from public.places where cover_media_id = p_media_id)
+    exists (select 1 from public.places where cover_media_id = p_media_id and is_active)
     or exists (select 1 from public.areas where cover_media_id = p_media_id)
     or exists (select 1 from public.activities where cover_media_id = p_media_id and is_active)
     or exists (
@@ -902,6 +950,8 @@ CREATE TABLE IF NOT EXISTS "public"."activities" (
     "on_site_price_eur" numeric(8,2),
     "diet_friendly" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
     "cover_media_id" "uuid",
+    "title_en" "text",
+    "needs_review" boolean DEFAULT false NOT NULL,
     CONSTRAINT "activities_diet_friendly_valid" CHECK (("diet_friendly" <@ '{vegetarian,vegan,gluten_free,lactose_free}'::"text"[])),
     CONSTRAINT "activities_duration_positive" CHECK (("duration_min" > 0)),
     CONSTRAINT "activities_on_site_price_non_negative" CHECK (("on_site_price_eur" >= (0)::numeric)),
@@ -950,6 +1000,21 @@ CREATE TABLE IF NOT EXISTS "public"."activity_offers" (
 
 
 ALTER TABLE "public"."activity_offers" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."activity_sources" (
+    "activity_id" "uuid" NOT NULL,
+    "source_url" "text",
+    "notes" "text",
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "activity_sources_notes_length" CHECK (("char_length"("notes") <= 2000)),
+    CONSTRAINT "activity_sources_source_url_format" CHECK (("source_url" ~ '^https?://'::"text")),
+    CONSTRAINT "activity_sources_source_url_length" CHECK (("char_length"("source_url") <= 2000))
+);
+
+
+ALTER TABLE "public"."activity_sources" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."admin_audit_log" (
@@ -1494,8 +1559,12 @@ CREATE TABLE IF NOT EXISTS "public"."places" (
     "is_featured" boolean DEFAULT false NOT NULL,
     "featured_order" smallint,
     "is_home_hero" boolean DEFAULT false NOT NULL,
+    "tagline_it" "text",
+    "is_active" boolean DEFAULT true NOT NULL,
+    "needs_review" boolean DEFAULT false NOT NULL,
     CONSTRAINT "places_lat_range" CHECK ((("lat" >= ('-90'::integer)::double precision) AND ("lat" <= (90)::double precision))),
-    CONSTRAINT "places_lng_range" CHECK ((("lng" >= ('-180'::integer)::double precision) AND ("lng" <= (180)::double precision)))
+    CONSTRAINT "places_lng_range" CHECK ((("lng" >= ('-180'::integer)::double precision) AND ("lng" <= (180)::double precision))),
+    CONSTRAINT "places_tagline_it_length" CHECK (("char_length"("tagline_it") <= 90))
 );
 
 
@@ -1751,6 +1820,11 @@ ALTER TABLE ONLY "public"."activity_offers"
 
 
 
+ALTER TABLE ONLY "public"."activity_sources"
+    ADD CONSTRAINT "activity_sources_pkey" PRIMARY KEY ("activity_id");
+
+
+
 ALTER TABLE ONLY "public"."admin_audit_log"
     ADD CONSTRAINT "admin_audit_log_pkey" PRIMARY KEY ("id");
 
@@ -1994,6 +2068,10 @@ CREATE INDEX "activities_embedding_idx" ON "public"."activities" USING "hnsw" ("
 
 
 
+CREATE INDEX "activities_needs_review_idx" ON "public"."activities" USING "btree" ("needs_review") WHERE "needs_review";
+
+
+
 CREATE INDEX "activities_place_id_idx" ON "public"."activities" USING "btree" ("place_id");
 
 
@@ -2138,6 +2216,10 @@ CREATE CONSTRAINT TRIGGER "activity_interests_keep_active_tagged" AFTER DELETE O
 
 
 
+CREATE CONSTRAINT TRIGGER "activity_place_inactive" AFTER INSERT OR UPDATE OF "is_active", "place_id" ON "public"."activities" DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN ("new"."is_active") EXECUTE FUNCTION "public"."check_activity_place_active"();
+
+
+
 CREATE OR REPLACE TRIGGER "admin_audit_log_immutable" BEFORE DELETE OR UPDATE ON "public"."admin_audit_log" FOR EACH ROW EXECUTE FUNCTION "public"."admin_audit_log_immutable"();
 
 
@@ -2163,6 +2245,10 @@ CREATE OR REPLACE TRIGGER "local_tips_person_relation" BEFORE INSERT OR UPDATE O
 
 
 CREATE OR REPLACE TRIGGER "media_touch_updated_at" BEFORE UPDATE ON "public"."media" FOR EACH ROW EXECUTE FUNCTION "public"."media_touch_updated_at"();
+
+
+
+CREATE CONSTRAINT TRIGGER "place_has_active_activities" AFTER UPDATE OF "is_active" ON "public"."places" DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN ((NOT "new"."is_active")) EXECUTE FUNCTION "public"."check_place_has_active_activities"();
 
 
 
@@ -2204,6 +2290,11 @@ ALTER TABLE ONLY "public"."activity_interests"
 
 ALTER TABLE ONLY "public"."activity_offers"
     ADD CONSTRAINT "activity_offers_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."activity_sources"
+    ADD CONSTRAINT "activity_sources_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE CASCADE;
 
 
 
@@ -2574,6 +2665,25 @@ CREATE POLICY "activity_offers_update_admin" ON "public"."activity_offers" FOR U
 
 
 
+ALTER TABLE "public"."activity_sources" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "activity_sources_delete_admin" ON "public"."activity_sources" FOR DELETE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "activity_sources_insert_admin" ON "public"."activity_sources" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "activity_sources_select_admin" ON "public"."activity_sources" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "activity_sources_update_admin" ON "public"."activity_sources" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
 ALTER TABLE "public"."admin_audit_log" ENABLE ROW LEVEL SECURITY;
 
 
@@ -2902,7 +3012,11 @@ CREATE POLICY "places_insert_admin" ON "public"."places" FOR INSERT TO "authenti
 
 
 
-CREATE POLICY "places_select_all" ON "public"."places" FOR SELECT TO "authenticated", "anon" USING (true);
+CREATE POLICY "places_select_active_anon" ON "public"."places" FOR SELECT TO "anon" USING ("is_active");
+
+
+
+CREATE POLICY "places_select_active_or_admin" ON "public"."places" FOR SELECT TO "authenticated" USING (("is_active" OR ( SELECT "public"."is_admin"() AS "is_admin")));
 
 
 
@@ -3101,6 +3215,16 @@ GRANT ALL ON FUNCTION "public"."can_vote_item"("item_id" "uuid") TO "service_rol
 
 REVOKE ALL ON FUNCTION "public"."check_activity_has_tags"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."check_activity_has_tags"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."check_activity_place_active"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."check_activity_place_active"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."check_place_has_active_activities"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."check_place_has_active_activities"() TO "service_role";
 
 
 
@@ -3323,6 +3447,31 @@ GRANT SELECT("is_active") ON TABLE "public"."activity_offers" TO "authenticated"
 
 GRANT SELECT("created_at") ON TABLE "public"."activity_offers" TO "anon";
 GRANT SELECT("created_at") ON TABLE "public"."activity_offers" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."activity_sources" TO "service_role";
+GRANT DELETE ON TABLE "public"."activity_sources" TO "authenticated";
+
+
+
+GRANT SELECT("activity_id"),INSERT("activity_id") ON TABLE "public"."activity_sources" TO "authenticated";
+
+
+
+GRANT SELECT("source_url"),INSERT("source_url"),UPDATE("source_url") ON TABLE "public"."activity_sources" TO "authenticated";
+
+
+
+GRANT SELECT("notes"),INSERT("notes"),UPDATE("notes") ON TABLE "public"."activity_sources" TO "authenticated";
+
+
+
+GRANT SELECT("updated_at"),UPDATE("updated_at") ON TABLE "public"."activity_sources" TO "authenticated";
+
+
+
+GRANT SELECT("created_at") ON TABLE "public"."activity_sources" TO "authenticated";
 
 
 

@@ -211,6 +211,20 @@
       "when": 1791296284204,
       "tag": "20261006141804_media_rls_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791975710238,
+      "tag": "20261014110150_catalog_import",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1791975716202,
+      "tag": "20261014110156_catalog_import_rls",
+      "breakpoints": true
     }
   ]
 }
