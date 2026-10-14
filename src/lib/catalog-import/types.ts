@@ -16,6 +16,7 @@ export type ImportIssueCode =
   | "notes_too_long"
   | "tagline_too_long"
   | "coordinates_invalid"
+  | "coordinates_outside_sicily"
   | "province_invalid"
   | "place_missing_data"
   | "area_unknown"

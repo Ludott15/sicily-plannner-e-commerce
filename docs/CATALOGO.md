@@ -13,7 +13,7 @@ Regole per chi prepara le attività fuori dal codice (foglio di calcolo) e le ca
 
 ## Il file
 
-Il modello (solo intestazione) si scarica dalla pagina di importazione. CSV in UTF-8, una riga per attività, al massimo 1000 righe e 1 MB. Il separatore può essere la virgola o il punto e virgola (quello che usa Excel in italiano): si riconosce dall'intestazione. Con il punto e virgola come separatore, i campi che contengono un elenco vanno tra virgolette, oppure gli elementi si separano con `|`.
+Il modello si scarica dalla pagina di importazione: intestazione e due righe di esempio `demo-` da cancellare. CSV in UTF-8 (con o senza BOM), una riga per attività, al massimo 2000 righe e 2 MB. Il separatore può essere la virgola o il punto e virgola (quello che usa Excel in italiano): si riconosce dall'intestazione. Con il punto e virgola come separatore, i campi che contengono un elenco vanno tra virgolette, oppure gli elementi si separano con `|`.
 
 | Colonna | Obbligatoria | Contenuto |
 | --- | --- | --- |
@@ -24,7 +24,7 @@ Il modello (solo intestazione) si scarica dalla pagina di importazione. CSV in U
 | `place_slug` | sì | Slug del luogo. Se esiste, si usa quel luogo e le altre colonne del luogo si ignorano (l'anteprima lo segnala). |
 | `place_name` | per luogo nuovo | Nome del luogo. |
 | `place_province` | per luogo nuovo | Sigla della provincia (PA, CT, TP…). |
-| `place_lat`, `place_lng` | per luogo nuovo | Coordinate decimali (punto o virgola). |
+| `place_lat`, `place_lng` | per luogo nuovo | Coordinate decimali (punto o virgola), dentro la Sicilia: latitudine 35,4–38,9, longitudine 11,9–15,7 (isole minori comprese). Fuori da questo riquadro la riga è scartata. |
 | `place_tagline_it` | no | Una riga sul luogo, max 90 caratteri. |
 | `description_it` | no | Descrizione con parole proprie. |
 | `duration_min` | sì | Durata in minuti (1–1440). |
@@ -36,6 +36,14 @@ Il modello (solo intestazione) si scarica dalla pagina di importazione. CSV in U
 | `image_file` | no | Nome di un file già caricato in Immagini (cercato su `original_filename`): se ce n'è uno solo diventa la copertina dell'attività. |
 | `source_url` | no | Fonte consultata (http/https). Interna. |
 | `notes` | no | Note per la redazione (max 2000 caratteri). Interne. |
+
+### Preparare il file in Excel o Google Sheets
+
+- **Excel:** apri il modello, cancella le due righe `demo-`, compila una riga per attività e salva con **File → Salva con nome → CSV UTF-8 (delimitato da virgole)**. Excel in italiano può usare il punto e virgola come separatore: va bene, si riconosce da solo. Evita "CSV (Macintosh)" e "CSV (MS-DOS)", che rovinano gli accenti.
+- **Google Sheets:** **File → Importa** il modello, compila e poi **File → Scarica → Valori separati da virgola (.csv)**.
+- Le colonne con un elenco (`season_months`, `diets_suitable`, `interests`) si scrivono così come sono, es. `mare:3;storia:2`: Excel e Sheets aggiungono da soli le virgolette quando servono.
+- Le coordinate si copiano da Google Maps (clic destro sul punto): il primo numero è la latitudine.
+- Prima di confermare guarda l'anteprima: le righe scartate indicano colonna, valore e motivo.
 
 ### Interessi
 

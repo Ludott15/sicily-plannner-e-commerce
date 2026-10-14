@@ -574,7 +574,7 @@
     "importBack": "Torna alle attività",
     "importDownloadTemplate": "Scarica il modello",
     "importFile": "File CSV",
-    "importFileHint": "Massimo 1 MB e 1000 righe. Separatore virgola o punto e virgola.",
+    "importFileHint": "Massimo 2 MB e 2000 righe. Separatore virgola o punto e virgola.",
     "importPreview": "Anteprima",
     "importCommit": "Importa {count, plural, one {una riga} other {# righe}}",
     "importPending": "Lettura del file…",
@@ -599,11 +599,11 @@
     "importReviewLink": "Vai alle attività da verificare",
     "importErrors": {
       "file_missing": "Scegli un file CSV.",
-      "file_too_large": "Il file supera 1 MB.",
+      "file_too_large": "Il file supera 2 MB.",
       "file_not_csv": "Il file deve avere estensione .csv.",
       "file_empty": "Il file è vuoto.",
       "header_invalid": "Le intestazioni non sono valide: scarica il modello e usa le sue colonne.",
-      "too_many_rows": "Il file ha più di 1000 righe.",
+      "too_many_rows": "Il file ha più di 2000 righe.",
       "failed": "Importazione non riuscita. Riprova."
     },
     "importIssues": {
@@ -629,7 +629,8 @@
       "place_inactive_for_active": "L'attività è attiva: non può passare a un luogo non pubblicato.",
       "image_not_found": "Immagine non trovata: la copertina resta invariata.",
       "image_ambiguous": "Più immagini con lo stesso nome: la copertina resta invariata.",
-      "place_data_ignored": "Il luogo esiste già: i suoi dati in questa riga vengono ignorati."
+      "place_data_ignored": "Il luogo esiste già: i suoi dati in questa riga vengono ignorati.",
+      "coordinates_outside_sicily": "Coordinate fuori dalla Sicilia: controlla latitudine e longitudine (isole minori incluse)."
     },
     "reviewLink": "Da verificare",
     "reviewTitle": "Da verificare",
