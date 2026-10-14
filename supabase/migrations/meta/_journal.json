@@ -239,13 +239,6 @@
       "when": 1791981542480,
       "tag": "20261014123902_itinerari_pronti_rls",
       "breakpoints": true
-    },
-    {
-      "idx": 34,
-      "version": "7",
-      "when": 1791983313831,
-      "tag": "20261014130833_drift-check",
-      "breakpoints": true
     }
   ]
 }
