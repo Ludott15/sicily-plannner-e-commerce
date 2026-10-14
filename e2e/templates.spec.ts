@@ -62,9 +62,14 @@ test("admin: riordino da tastiera e spostamento di una tappa al giorno 2", async
   // Trascinamento da tastiera: spazio per prendere la tappa A, freccia giù, spazio per posarla dopo B.
   const day1 = page.locator("#giorno-1 li");
   await day1.filter({ hasText: "e2e- Tappa A" }).getByRole("button", { name: "Trascina per spostare" }).focus();
+  // dnd-kit misura le posizioni nei frame successivi: dopo ogni tasto si aspetta l'annuncio.
+  const live = page.locator('[id^="DndLiveRegion"]');
   await page.keyboard.press("Space");
+  await expect(live).toContainText("Tappa «e2e- Tappa A»");
   await page.keyboard.press("ArrowDown");
+  await expect(live).toContainText("sopra la posizione 2 del giorno 1");
   await page.keyboard.press("Space");
+  await expect(live).toContainText("posata nel giorno 1, posizione 2");
   await expect(page.getByRole("status").filter({ hasText: "Ordine delle tappe salvato." })).toHaveText("Ordine delle tappe salvato.");
   await expect(day1.first()).toContainText("e2e- Tappa B");
 
