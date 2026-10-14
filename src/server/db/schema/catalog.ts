@@ -58,6 +58,13 @@ export const places = pgTable(
     lat: doublePrecision("lat").notNull(),
     lng: doublePrecision("lng").notNull(),
     description: text("description"),
+    // Una riga di presentazione, mostrata sotto il nome (massimo 90 caratteri).
+    taglineIt: text("tagline_it"),
+    // Un luogo inattivo non è visibile al pubblico: le attività attive non possono averne uno
+    // (trigger activity_place_inactive). I luoghi esistenti restano attivi.
+    isActive: boolean("is_active").notNull().default(true),
+    // Coordinate o dati arrivati da un import, da verificare in admin.
+    needsReview: boolean("needs_review").notNull().default(false),
     // Non più usata dalle pagine (sostituita da cover_media_id): resta finché non si verifica
     // che in produzione sia vuota, poi si elimina con una migrazione.
     coverImage: text("cover_image"),
@@ -75,6 +82,7 @@ export const places = pgTable(
     uniqueIndex("places_single_home_hero").on(t.isHomeHero).where(sql`${t.isHomeHero}`),
     check("places_lat_range", sql`${t.lat} between -90 and 90`),
     check("places_lng_range", sql`${t.lng} between -180 and 180`),
+    check("places_tagline_it_length", sql`char_length(${t.taglineIt}) <= 90`),
   ],
 );
 
@@ -87,6 +95,8 @@ export const activities = pgTable(
       .notNull()
       .references(() => places.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
+    // Nome in inglese: solo memorizzato, le pagine pubbliche non lo usano ancora.
+    titleEn: text("title_en"),
     description: text("description"),
     durationMin: integer("duration_min").notNull(),
     // Prezzo pagato in loco (ingresso, biglietto): un metadato, mai un'offerta.
@@ -104,6 +114,8 @@ export const activities = pgTable(
     dietFriendly: text("diet_friendly").array().notNull().default(sql`'{}'`),
     // Nasce inattiva: si attiva solo con almeno un tag di interesse (trigger activities_require_tags).
     isActive: boolean("is_active").notNull().default(false),
+    // Creata o aggiornata da un import, da verificare in admin (coda "da verificare").
+    needsReview: boolean("needs_review").notNull().default(false),
     coverMediaId: uuid("cover_media_id").references(() => media.id, { onDelete: "set null" }),
     syncedAt: timestamp("synced_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -111,6 +123,7 @@ export const activities = pgTable(
   (t) => [
     index("activities_place_id_idx").on(t.placeId),
     index("activities_cover_media_id_idx").on(t.coverMediaId),
+    index("activities_needs_review_idx").on(t.needsReview).where(sql`${t.needsReview}`),
     index("activities_embedding_idx").using("hnsw", t.embedding.op("vector_cosine_ops")),
     check("activities_duration_positive", sql`${t.durationMin} > 0`),
     check("activities_on_site_price_non_negative", sql`${t.onSitePriceEur} >= 0`),
@@ -174,5 +187,25 @@ export const activityOffers = pgTable(
     check("activity_offers_currency_format", sql`${t.currency} ~ '^[A-Z]{3}$'`),
     check("activity_offers_rating_range", sql`${t.rating} between 0 and 5`),
     check("activity_offers_reviews_count_non_negative", sql`${t.reviewsCount} >= 0`),
+  ],
+);
+
+// Fonte e note interne di un'attività (importate dal CSV o scritte in admin). Solo admin: non
+// esce mai nelle pagine pubbliche (RLS in supabase/migrations, grant per colonna solo ad authenticated).
+export const activitySources = pgTable(
+  "activity_sources",
+  {
+    activityId: uuid("activity_id")
+      .primaryKey()
+      .references(() => activities.id, { onDelete: "cascade" }),
+    sourceUrl: text("source_url"),
+    notes: text("notes"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check("activity_sources_source_url_format", sql`${t.sourceUrl} ~ '^https?://'`),
+    check("activity_sources_source_url_length", sql`char_length(${t.sourceUrl}) <= 2000`),
+    check("activity_sources_notes_length", sql`char_length(${t.notes}) <= 2000`),
   ],
 );

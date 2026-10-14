@@ -14,7 +14,18 @@ export default async function NewPlacePage({ params }: { params: Promise<{ local
       <PlaceForm
         action={savePlace}
         locale={locale}
-        values={{ name: "", slug: "", province: "PA", areaId: null, lat: null, lng: null, description: null }}
+        values={{
+          name: "",
+          slug: "",
+          province: "PA",
+          areaId: null,
+          lat: null,
+          lng: null,
+          description: null,
+          taglineIt: "",
+          isActive: true,
+          needsReview: false,
+        }}
         areas={areas.map((a) => ({ id: a.id, name: locale === "en" ? a.nameEn : a.nameIt }))}
       />
     </section>

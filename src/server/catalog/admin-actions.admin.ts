@@ -8,7 +8,16 @@ import { routing } from "@/lib/i18n/routing";
 import { PROVINCES } from "@/lib/provinces";
 import { requireAdmin } from "@/server/auth";
 import { dbAdmin } from "@/server/db/admin";
-import { activities, activityInterests, activityOffers, adminAuditLog, itineraries, itineraryItems, places } from "@/server/db/schema";
+import {
+  activities,
+  activityInterests,
+  activityOffers,
+  activitySources,
+  adminAuditLog,
+  itineraries,
+  itineraryItems,
+  places,
+} from "@/server/db/schema";
 
 // Azioni dell'admin del catalogo: Zod → requireAdmin → scrittura con dbAdmin in transazione.
 // Ogni cambio di stato di un'attività (attivazione, disattivazione) aggiunge una riga
@@ -36,6 +45,16 @@ const checkbox = z
   .string()
   .optional()
   .transform((v) => v === "on");
+// Testo facoltativo con limite di lunghezza: vuoto = null.
+const optionalTextMax = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .transform((v) => (v ? v : null));
+// Link alla fonte: solo http o https, vuoto = null.
+const optionalSourceUrl = optionalTextMax(2000).pipe(z.url({ protocol: /^https?$/ }).max(2000).nullable());
 
 function dbErrorCode(error: unknown): AdminErrorCode {
   const cause = (error as { cause?: { code?: string; message?: string; constraint_name?: string } })?.cause ?? error;
@@ -45,6 +64,8 @@ function dbErrorCode(error: unknown): AdminErrorCode {
     constraint_name?: string;
   };
   if (message === "activity_without_tags") return "activity_without_tags";
+  if (message === "activity_place_inactive") return "activity_place_inactive";
+  if (message === "place_has_active_activities") return "place_has_active_activities";
   if (code === "23505") return constraint?.includes("partner_product") ? "partner_product_taken" : "slug_taken";
   if (code === "23514" && constraint?.includes("day_titles")) return "day_titles_exceed_days";
   return "failed";
@@ -67,6 +88,11 @@ const activitySchema = z.object({
   accessible: checkbox,
   rating: optionalNumber.pipe(z.number().max(5).nullable()),
   isActive: checkbox,
+  // Import e dati interni: il titolo inglese è solo memorizzato, la fonte e le note non sono mai pubbliche.
+  titleEn: optionalTextMax(200),
+  needsReview: checkbox,
+  sourceUrl: optionalSourceUrl,
+  notes: optionalTextMax(2000),
 });
 
 function readActivityForm(formData: FormData) {
@@ -87,7 +113,7 @@ export async function saveActivity(_prev: AdminFormState, formData: FormData): P
     return { status: "error", code: "invalid" };
   }
   const { user } = await requireAdmin();
-  const { id, locale, isActive, ...fields } = parsed.data;
+  const { id, locale, isActive, sourceUrl, notes, ...fields } = parsed.data;
   if (isActive && tags.length === 0) return { status: "error", code: "activity_without_tags" };
 
   let savedId: string;
@@ -119,6 +145,19 @@ export async function saveActivity(_prev: AdminFormState, formData: FormData): P
         await tx
           .insert(activityInterests)
           .values(tags.map((t) => ({ activityId, interestKey: t.key, strength: t.strength })));
+      }
+
+      // Fonte e note stanno in una tabella a parte, solo admin: se entrambe sono vuote la riga non serve più.
+      if (sourceUrl || notes) {
+        await tx
+          .insert(activitySources)
+          .values({ activityId, sourceUrl, notes })
+          .onConflictDoUpdate({
+            target: activitySources.activityId,
+            set: { sourceUrl, notes, updatedAt: sql`now()` },
+          });
+      } else {
+        await tx.delete(activitySources).where(eq(activitySources.activityId, activityId));
       }
 
       if (previous !== isActive && (previous !== null || isActive)) {
@@ -153,6 +192,11 @@ const placeSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
   description: optionalText,
+  // Didascalia breve per le schede pubbliche (il form la limita a 90 caratteri).
+  taglineIt: optionalTextMax(90),
+  // Un luogo disattivato esce dalle pagine pubbliche; con attività attive il database lo impedisce.
+  isActive: checkbox,
+  needsReview: checkbox,
 });
 
 export async function savePlace(_prev: AdminFormState, formData: FormData): Promise<AdminFormState> {

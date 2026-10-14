@@ -29,9 +29,17 @@ export default async function AdminActivitiesPage({
     <section className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="is-display text-heading-1">{t("activities")}</h1>
-        <ButtonLink href="/admin/attivita/nuova" variant="primary">
-          {t("newActivity")}
-        </ButtonLink>
+        <div className="flex flex-wrap gap-3">
+          <ButtonLink href="/admin/attivita/da-verificare" variant="secondary">
+            {t("reviewLink")}
+          </ButtonLink>
+          <ButtonLink href="/admin/attivita/importa" variant="secondary">
+            {t("importLink")}
+          </ButtonLink>
+          <ButtonLink href="/admin/attivita/nuova" variant="primary">
+            {t("newActivity")}
+          </ButtonLink>
+        </div>
       </div>
       <nav className="is-days" aria-label={t("colState")}>
         {filters.map((f) => (

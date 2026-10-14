@@ -55,6 +55,7 @@ export default async function EditActivityPage({
         values={{
           id: activity.id,
           title: activity.title,
+          titleEn: activity.titleEn ?? "",
           slug: activity.slug,
           placeId: activity.placeId,
           description: activity.description,
@@ -66,6 +67,9 @@ export default async function EditActivityPage({
           seasonMonths: activity.seasonMonths,
           rating: activity.rating,
           isActive: activity.isActive,
+          needsReview: activity.needsReview,
+          sourceUrl: activity.sourceUrl ?? "",
+          notes: activity.notes ?? "",
           tags: activity.tags,
         }}
       />

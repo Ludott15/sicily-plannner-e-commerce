@@ -6,12 +6,14 @@ import { useAdminForm } from "./use-admin-form";
 import type { AdminFormAction } from "@/lib/admin-form";
 import { Checkbox, Field, FormError, Select, TextArea, TextInput } from "./fields";
 
-// Form di un'attività del catalogo. La regola "niente attivazione senza interessi" la
-// verificano l'azione server e il database; qui la si spiega accanto ai campi.
+// Form di un'attività del catalogo. La regola "niente attivazione senza interessi" e
+// "un'attività attiva sta in un luogo pubblicato" le verificano l'azione server e il
+// database; qui le si spiegano accanto ai campi.
 
 export type ActivityFormValues = {
   id?: string;
   title: string;
+  titleEn: string;
   slug: string;
   placeId: string;
   description: string | null;
@@ -23,6 +25,9 @@ export type ActivityFormValues = {
   seasonMonths: number[];
   rating: string | null;
   isActive: boolean;
+  needsReview: boolean;
+  sourceUrl: string;
+  notes: string;
   tags: { key: string; strength: number }[];
 };
 
@@ -53,6 +58,9 @@ export function ActivityForm({
       <div className="grid gap-6 md:grid-cols-2">
         <Field label={t("fieldTitle")} htmlFor="title">
           <TextInput id="title" name="title" defaultValue={values.title} required />
+        </Field>
+        <Field label={t("fieldTitleEn")} htmlFor="titleEn">
+          <TextInput id="titleEn" name="titleEn" defaultValue={values.titleEn} />
         </Field>
         <Field label={t("fieldSlug")} hint={t("fieldSlugHint")} htmlFor="slug">
           <TextInput id="slug" name="slug" defaultValue={values.slug} required pattern="[a-z0-9]+(-[a-z0-9]+)*" />
@@ -89,6 +97,15 @@ export function ActivityForm({
           <Checkbox label={t("fieldRequiresCar")} name="requiresCar" defaultChecked={values.requiresCar} />
           <Checkbox label={t("fieldAccessible")} name="accessible" defaultChecked={values.accessible} />
         </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Field label={t("fieldSourceUrl")} hint={t("internalOnlyHint")} htmlFor="sourceUrl">
+          <TextInput id="sourceUrl" name="sourceUrl" type="url" maxLength={2000} defaultValue={values.sourceUrl} />
+        </Field>
+        <Field label={t("fieldNotes")} hint={t("internalOnlyHint")} htmlFor="notes">
+          <TextArea id="notes" name="notes" maxLength={2000} defaultValue={values.notes} />
+        </Field>
       </div>
 
       <fieldset className="flex flex-col gap-2">
@@ -133,7 +150,10 @@ export function ActivityForm({
         </div>
       </fieldset>
 
-      <Checkbox label={t("fieldActive")} name="isActive" defaultChecked={values.isActive} />
+      <div className="flex flex-col">
+        <Checkbox label={t("fieldActive")} name="isActive" defaultChecked={values.isActive} />
+        <Checkbox label={t("fieldNeedsReview")} name="needsReview" defaultChecked={values.needsReview} />
+      </div>
 
       <div>
         <Button type="submit" variant="primary" disabled={pending}>

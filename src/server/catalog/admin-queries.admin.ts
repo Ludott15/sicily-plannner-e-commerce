@@ -2,7 +2,17 @@ import "server-only";
 import { asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { requireAdmin } from "@/server/auth";
 import { dbAdmin } from "@/server/db/admin";
-import { activities, activityInterests, activityOffers, areas, interests, itineraries, itineraryItems, places } from "@/server/db/schema";
+import {
+  activities,
+  activityInterests,
+  activityOffers,
+  activitySources,
+  areas,
+  interests,
+  itineraries,
+  itineraryItems,
+  places,
+} from "@/server/db/schema";
 
 // Letture dell'admin del catalogo: vedono anche le attività inattive e gli itinerari non
 // pubblicati. Ogni funzione verifica l'admin prima di leggere.
@@ -35,6 +45,7 @@ export async function adminListActivities(filter: "tutte" | "attive" | "da-appro
 
 export async function adminGetActivity(id: string) {
   await requireAdmin();
+  // select() include già title_en e needs_review; fonte e note vengono dalla tabella activity_sources.
   const [activity] = await dbAdmin.select().from(activities).where(eq(activities.id, id));
   if (!activity) return null;
   const tags = await dbAdmin
@@ -42,13 +53,25 @@ export async function adminGetActivity(id: string) {
     .from(activityInterests)
     .where(eq(activityInterests.activityId, id))
     .orderBy(desc(activityInterests.strength));
-  return { ...activity, tags };
+  const [source] = await dbAdmin
+    .select({ sourceUrl: activitySources.sourceUrl, notes: activitySources.notes })
+    .from(activitySources)
+    .where(eq(activitySources.activityId, id));
+  return { ...activity, tags, sourceUrl: source?.sourceUrl ?? null, notes: source?.notes ?? null };
 }
 
 export async function adminListPlaces() {
   await requireAdmin();
   return dbAdmin
-    .select({ id: places.id, name: places.name, slug: places.slug, province: places.province, areaSlug: areas.slug })
+    .select({
+      id: places.id,
+      name: places.name,
+      slug: places.slug,
+      province: places.province,
+      areaSlug: areas.slug,
+      isActive: places.isActive,
+      needsReview: places.needsReview,
+    })
     .from(places)
     .leftJoin(areas, eq(areas.id, places.areaId))
     .orderBy(asc(places.name));

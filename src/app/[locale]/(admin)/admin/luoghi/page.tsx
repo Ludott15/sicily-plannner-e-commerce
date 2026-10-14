@@ -24,9 +24,13 @@ export default async function AdminPlacesPage({ params }: { params: Promise<{ lo
         <ul className="flex flex-col">
           {places.map((p) => (
             <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-2 border-b border-divider py-3">
-              <Link href={`/admin/luoghi/${p.id}`} className="text-body font-semibold">
-                {p.name}
-              </Link>
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <Link href={`/admin/luoghi/${p.id}`} className="text-body font-semibold">
+                  {p.name}
+                </Link>
+                {!p.isActive && <span className="text-body-s font-semibold">{t("placeStateUnpublished")}</span>}
+                {p.needsReview && <span className="text-body-s font-semibold">{t("placeStateReview")}</span>}
+              </div>
               <span className="text-body-s text-lava-muted">
                 {(p.areaSlug && areaName.get(p.areaSlug)) ?? t("noArea")} · {provinceName(p.province)} · {p.slug}
               </span>

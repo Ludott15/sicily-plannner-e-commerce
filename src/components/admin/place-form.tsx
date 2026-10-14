@@ -5,7 +5,7 @@ import { Button } from "@/components/design";
 import { useAdminForm } from "./use-admin-form";
 import type { AdminFormAction } from "@/lib/admin-form";
 import { PROVINCES } from "@/lib/provinces";
-import { Field, FormError, Select, TextArea, TextInput } from "./fields";
+import { Checkbox, Field, FormError, Select, TextArea, TextInput } from "./fields";
 
 export type PlaceFormValues = {
   id?: string;
@@ -16,6 +16,9 @@ export type PlaceFormValues = {
   lat: number | null;
   lng: number | null;
   description: string | null;
+  taglineIt: string | null;
+  isActive: boolean;
+  needsReview: boolean;
 };
 
 export type AreaOption = { id: string; name: string };
@@ -74,10 +77,17 @@ export function PlaceForm({
             <TextInput id="lng" name="lng" inputMode="decimal" defaultValue={values.lng ?? ""} required />
           </Field>
         </div>
+        <Field label={t("fieldTagline")} hint={t("fieldTaglineHint")} htmlFor="taglineIt">
+          <TextInput id="taglineIt" name="taglineIt" maxLength={90} defaultValue={values.taglineIt ?? ""} />
+        </Field>
       </div>
       <Field label={t("fieldDescription")} htmlFor="description">
         <TextArea id="description" name="description" defaultValue={values.description ?? ""} />
       </Field>
+      <div className="flex flex-col">
+        <Checkbox label={t("fieldPublished")} name="isActive" defaultChecked={values.isActive} />
+        <Checkbox label={t("fieldNeedsReview")} name="needsReview" defaultChecked={values.needsReview} />
+      </div>
       <div>
         <Button type="submit" variant="primary" disabled={pending}>
           {t("save")}

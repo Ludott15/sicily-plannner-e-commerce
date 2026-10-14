@@ -18,6 +18,7 @@ export default async function NewActivityPage({ params }: { params: Promise<{ lo
         interests={interests.map((i) => ({ key: i.key, label: locale === "en" ? i.labelEn : i.labelIt }))}
         values={{
           title: "",
+          titleEn: "",
           slug: "",
           placeId: "",
           description: null,
@@ -29,6 +30,9 @@ export default async function NewActivityPage({ params }: { params: Promise<{ lo
           seasonMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
           rating: null,
           isActive: false,
+          needsReview: false,
+          sourceUrl: "",
+          notes: "",
           tags: [],
         }}
       />
