@@ -1,20 +1,25 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { connection } from "next/server";
 import { CatalogLocalTip } from "@/components/catalog/catalog-local-tip";
-import { CoverCaption } from "@/components/catalog/cover-figure";
 import { CoverPicture } from "@/components/catalog/cover-picture";
 import { FeaturedPlaces } from "@/components/catalog/featured-places";
 import { ItineraryCard } from "@/components/catalog/itinerary-card";
 import { PlaceCard } from "@/components/catalog/place-card";
 import { ButtonLink, PendingMarker } from "@/components/design";
 import { Link } from "@/lib/i18n/navigation";
+import type { CoverMedia } from "@/lib/media";
 import { localizedAlternates } from "@/lib/seo";
+import { shuffle } from "@/lib/shuffle";
 import { getHomeHero, listFeaturedPlaces, listTemplates } from "@/server/catalog/queries";
 import { listLatestTips } from "@/server/catalog/tips";
 
 // Home (passo 1.2 della roadmap; docs/design/mockups/README.md: i mockup Home sono superati).
-// Hero con la foto del luogo in evidenza di home (nessun testo sulla foto), carosello dei
-// luoghi con foto propria (solo da quattro), itinerari pronti e voce locale.
+// Hero con la foto di un luogo in evidenza scelto a caso a ogni richiesta (nessun testo sulla
+// foto, nessuna didascalia: i crediti sono in /crediti-foto), carosello dei luoghi con foto
+// propria in ordine casuale, itinerari pronti e voce locale.
+// La pagina è dinamica per scelta: connection() rimanda il rendering alla richiesta, così il
+// mescolamento avviene sul server e i client component non usano Math.random.
 // La pillola "+100 punti a viaggio completato" è in sospeso e nascosta fino alla gamification (M9).
 
 type Props = { params: Promise<{ locale: string }> };
@@ -28,11 +33,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 // Il carosello compare solo con almeno quattro luoghi con foto propria (contratto 1.2).
 const MIN_FEATURED_PLACES = 4;
 
+type HeroImage = { placeName: string; placeSlug: string; media: CoverMedia };
+
 export default async function HomePage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
+  await connection();
 
-  const [t, hero, featured, templates, tips] = await Promise.all([
+  const [t, homeHero, featured, templates, tips] = await Promise.all([
     getTranslations("Home"),
     getHomeHero(),
     listFeaturedPlaces(),
@@ -40,27 +48,33 @@ export default async function HomePage({ params }: Props) {
     listLatestTips(3),
   ]);
 
+  // Hero: un luogo in evidenza a caso. Senza luoghi in evidenza, il luogo di getHomeHero().
+  const [heroPlace] = shuffle(featured);
+  const hero: HeroImage | null = heroPlace
+    ? { placeName: heroPlace.name, placeSlug: heroPlace.slug, media: heroPlace.cover }
+    : homeHero?.cover
+      ? { placeName: homeHero.placeName, placeSlug: homeHero.placeSlug, media: homeHero.cover.media }
+      : null;
+
+  // Carosello: stessi luoghi, ordine casuale a ogni richiesta (il luogo dell'hero può comparire).
+  const carousel = shuffle(featured);
+
   return (
     <>
       {/* Hero: su mobile la foto è a tutta larghezza sopra il testo, su desktop a destra.
-          Senza nessuna foto resta un blocco calce-sunk senza testo. */}
+          Nessun testo e nessuna didascalia sulla foto; il nome del luogo è un link sotto. */}
       <section className="mx-auto grid w-full max-w-[1200px] gap-8 px-4 pt-8 pb-12 md:grid-cols-2 md:items-center md:gap-12 md:px-16 md:py-16">
         {hero && (
           <div className="-mx-4 -mt-8 md:order-2 md:mx-0 md:mt-0">
-            <figure className="flex flex-col gap-2">
-              <div className="relative aspect-[4/3] overflow-hidden bg-calce-sunk md:aspect-[4/5] md:rounded-xl">
-                {hero.cover && (
-                  <CoverPicture
-                    cover={hero.cover.media}
-                    ratio="4x5"
-                    sizes="(min-width: 768px) 50vw, 100vw"
-                    locale={locale}
-                    priority
-                  />
-                )}
-              </div>
-              {hero.cover && <CoverCaption cover={hero.cover.media} className="px-4 md:px-0" />}
-            </figure>
+            <div className="relative aspect-[4/3] overflow-hidden bg-calce-sunk md:aspect-[4/5] md:rounded-xl">
+              <CoverPicture
+                cover={hero.media}
+                ratio="4x5"
+                sizes="(min-width: 768px) 50vw, 100vw"
+                locale={locale}
+                priority
+              />
+            </div>
             <Link href={`/luoghi/${hero.placeSlug}`} className="mt-2 block px-4 text-body-s font-semibold md:px-0">
               {hero.placeName}
             </Link>
@@ -82,7 +96,7 @@ export default async function HomePage({ params }: Props) {
         </div>
       </section>
 
-      {/* Dove andare in Sicilia: luoghi in evidenza con foto propria, nell'ordine dell'admin. */}
+      {/* Dove andare in Sicilia: luoghi in evidenza con foto propria, in ordine casuale. */}
       {featured.length >= MIN_FEATURED_PLACES && (
         <section aria-labelledby="dove-andare" className="mx-auto w-full max-w-[1200px] px-4 py-12 md:px-16 md:py-16">
           <p className="text-label uppercase text-lava-muted">{t("placesEyebrow")}</p>
@@ -91,7 +105,7 @@ export default async function HomePage({ params }: Props) {
           </h2>
           <div className="mt-8">
             <FeaturedPlaces label={t("placesTitle")} prevLabel={t("placesPrev")} nextLabel={t("placesNext")}>
-              {featured.map((place) => (
+              {carousel.map((place) => (
                 <li key={place.id} className="w-[78%] shrink-0 snap-start md:w-[28%]">
                   <PlaceCard
                     slug={place.slug}
