@@ -656,11 +656,9 @@
     "placeStateUnpublished": "Non pubblicato",
     "placeStateReview": "Da verificare",
     "fieldFeatured": "In evidenza in home",
-    "fieldFeaturedHint": "Compare nel carosello della home, con foto propria pubblicata. Il carosello si vede con almeno quattro luoghi.",
+    "fieldFeaturedHint": "Compare nel carosello e può essere scelto per la foto grande in alto",
     "fieldFeaturedOrder": "Ordine in home",
-    "fieldFeaturedOrderHint": "Numero da 1 a 99: il carosello mostra prima i numeri più bassi. Senza numero, il luogo va in fondo.",
-    "fieldHomeHero": "Luogo dell'hero (uno solo)",
-    "fieldHomeHeroHint": "La foto grande in alto nella home. Ne resta uno solo: scegliendo un altro luogo, il precedente esce dall'hero. Serve un luogo pubblicato."
+    "fieldFeaturedOrderHint": "Numero da 1 a 99: il carosello mostra prima i numeri più bassi. Senza numero, il luogo va in fondo."
   },
   "Og": {
     "activity": "Attività · {province}",

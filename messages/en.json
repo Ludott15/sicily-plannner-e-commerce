@@ -656,11 +656,9 @@
     "placeStateUnpublished": "Not published",
     "placeStateReview": "To review",
     "fieldFeatured": "Featured on the home page",
-    "fieldFeaturedHint": "Appears in the home page carousel, with a published photo of its own. The carousel shows up with at least four places.",
+    "fieldFeaturedHint": "Appears in the carousel and can be picked for the large photo at the top",
     "fieldFeaturedOrder": "Order on the home page",
-    "fieldFeaturedOrderHint": "A number from 1 to 99: the carousel shows lower numbers first. Without a number, the place goes last.",
-    "fieldHomeHero": "Home hero place (only one)",
-    "fieldHomeHeroHint": "The large photo at the top of the home page. Only one place at a time: choosing another place removes the previous one from the hero. The place must be published."
+    "fieldFeaturedOrderHint": "A number from 1 to 99: the carousel shows lower numbers first. Without a number, the place goes last."
   },
   "Og": {
     "activity": "Activity · {province}",

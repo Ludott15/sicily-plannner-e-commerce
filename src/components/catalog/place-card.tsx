@@ -20,7 +20,8 @@ export function PlaceCard({ slug, name, areaName, taglineIt, cover, locale }: Pl
   return (
     <article className="is-place">
       <div className="is-place__media">
-        <CoverPicture cover={cover} ratio="4x5" sizes="(min-width: 768px) 28vw, 78vw" locale={locale} />
+        {/* Decorativa: il nome del luogo, con il link, dice già di cosa si tratta. */}
+        <CoverPicture cover={cover} ratio="4x5" sizes="(min-width: 768px) 28vw, 78vw" locale={locale} decorative />
       </div>
       <div className="is-place__body">
         {areaName && <p className="text-label uppercase text-lava-muted">{areaName}</p>}

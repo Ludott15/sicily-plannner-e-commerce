@@ -114,12 +114,18 @@ test("liste e schede: niente Salva e Aggiungi finché non esistono; l'azione del
   await expect(page.getByText("Per te", { exact: true })).toHaveCount(0);
 });
 
-test("home: hero con la foto del luogo in evidenza e carosello con almeno quattro luoghi, tutta la card un link", async ({ page }) => {
+test("home: hero con foto prioritaria senza didascalia e carosello con almeno quattro luoghi, tutta la card un link", async ({ page }) => {
   await page.goto("/it");
 
+  // La foto dell'hero è a caso tra i luoghi in evidenza: si verifica la forma, non il luogo.
   const hero = page.locator("section").filter({ has: page.getByRole("heading", { level: 1 }) }).first();
-  await expect(hero.locator("img")).toBeVisible();
+  const heroImage = hero.locator("img");
+  await expect(heroImage).toBeVisible();
+  await expect(heroImage).toHaveAttribute("loading", "eager");
+  await expect(hero.locator("figcaption")).toHaveCount(0);
+  await expect(hero.getByText("Foto:")).toHaveCount(0);
 
+  // Il carosello è in ordine casuale a ogni richiesta: non si testa l'ordine.
   await expect(page.getByRole("heading", { name: "Dove andare in Sicilia" })).toBeVisible();
   const list = page.getByRole("list", { name: "Dove andare in Sicilia" });
   const items = list.locator(":scope > li");
