@@ -21,7 +21,6 @@ export type PlaceFormValues = {
   needsReview: boolean;
   isFeatured: boolean;
   featuredOrder: number | null;
-  isHomeHero: boolean;
 };
 
 export type AreaOption = { id: string; name: string };
@@ -106,8 +105,6 @@ export function PlaceForm({
       <div className="flex flex-col gap-2">
         <Checkbox label={t("fieldFeatured")} name="isFeatured" defaultChecked={values.isFeatured} />
         <p className="pl-8 text-caption text-lava-muted">{t("fieldFeaturedHint")}</p>
-        <Checkbox label={t("fieldHomeHero")} name="isHomeHero" defaultChecked={values.isHomeHero} />
-        <p className="pl-8 text-caption text-lava-muted">{t("fieldHomeHeroHint")}</p>
       </div>
       <div>
         <Button type="submit" variant="primary" disabled={pending}>

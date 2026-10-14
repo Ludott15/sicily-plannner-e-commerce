@@ -4,9 +4,10 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/design";
 
 // FeaturedPlaces (docs/design/components/PlaceCard/README.md): lista orizzontale di luoghi con
-// scroll-snap. Il server passa le card già renderizzate (li) come children: questo componente
-// gestisce solo le frecce, da md in su, e lo stato degli estremi. Nessuno scorrimento
-// automatico; le card restano link navigabili da tastiera, senza trappole di focus.
+// scroll-snap e barra di scorrimento nascosta (.is-places in isula.css; si scorre con il dito,
+// il trackpad o la tastiera). Il server passa le card già renderizzate (li) come children, già
+// in ordine casuale: questo componente gestisce solo le frecce, da md in su, e lo stato degli
+// estremi. Nessuno scorrimento automatico; le card restano link navigabili da tastiera.
 
 type ChevronProps = { direction: "prev" | "next" };
 
@@ -98,7 +99,7 @@ export function FeaturedPlaces({ label, prevLabel, nextLabel, children }: Featur
       <ul
         ref={listRef}
         aria-label={label}
-        className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:gap-6 md:px-0"
+        className="is-places -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:gap-6 md:px-0"
       >
         {children}
       </ul>

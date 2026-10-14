@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -225,8 +225,8 @@ const placeSchema = z.object({
   // Carosello della home: vuoto = in fondo, a parità di ordine vale il nome.
   isFeatured: checkbox,
   featuredOrder: optionalFeaturedOrder,
-  // Foto dell'hero della home: uno solo; gli altri luoghi perdono il flag nella stessa transazione.
-  isHomeHero: checkbox,
+  // is_home_hero non si modifica più dall'admin (l'hero è casuale tra i luoghi in evidenza): il
+  // campo non è nello schema, quindi il salvataggio lo lascia com'è.
 });
 
 export async function savePlace(_prev: AdminFormState, formData: FormData): Promise<AdminFormState> {
@@ -234,19 +234,10 @@ export async function savePlace(_prev: AdminFormState, formData: FormData): Prom
   if (!parsed.success) return { status: "error", code: "invalid" };
   await requireAdmin();
   const { id, locale, ...values } = parsed.data;
-  // L'hero della home è solo un luogo pubblicato: su un luogo nascosto la home resterebbe senza hero.
-  if (values.isHomeHero && !values.isActive) return { status: "error", code: "invalid" };
 
   let savedId: string;
   try {
     savedId = await dbAdmin.transaction(async (tx) => {
-      // Prima si tolgono gli altri hero (l'indice unico parziale non ammette due righe), poi il salvataggio.
-      if (values.isHomeHero) {
-        await tx
-          .update(places)
-          .set({ isHomeHero: false })
-          .where(id ? and(eq(places.isHomeHero, true), ne(places.id, id)) : eq(places.isHomeHero, true));
-      }
       if (id) {
         await tx.update(places).set(values).where(eq(places.id, id));
         return id;

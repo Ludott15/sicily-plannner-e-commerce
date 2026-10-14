@@ -27,7 +27,6 @@ export default async function NewPlacePage({ params }: { params: Promise<{ local
           needsReview: false,
           isFeatured: false,
           featuredOrder: null,
-          isHomeHero: false,
         }}
         areas={areas.map((a) => ({ id: a.id, name: locale === "en" ? a.nameEn : a.nameIt }))}
       />
