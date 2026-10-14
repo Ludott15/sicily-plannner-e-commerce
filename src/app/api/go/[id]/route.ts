@@ -1,9 +1,9 @@
-import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasLocale } from "next-intl";
 import { z } from "zod";
-import { CONSENT_COOKIE, hasAnalyticsConsent, parseConsent } from "@/lib/consent";
+import { CONSENT_COOKIE } from "@/lib/consent";
 import { routing } from "@/lib/i18n/routing";
+import { ANON_COOKIE, analyticsConsentFromCookie, anonIdFor, setAnonCookie } from "@/server/affiliates/anon-cookie";
 import { resolveAffiliateClick } from "@/server/affiliates/go";
 import { getUser } from "@/server/auth";
 
@@ -14,9 +14,9 @@ import { getUser } from "@/server/auth";
 // consenso il click si registra comunque, con il solo subid e senza anon_id.
 // Mai open redirect: la destinazione viene dal catalogo, i parametri della richiesta
 // scelgono solo contesto, itinerario e lingua della pagina di ripiego.
+// La gestione di anon_id è in src/server/affiliates/anon-cookie.ts, condivisa con /api/go/flight.
 
 const contextSchema = z.enum(["page", "itinerary", "chat", "flights"]).catch("page");
-const ANON_COOKIE = "anon_id";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -32,13 +32,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!z.uuid().safeParse(id).success) return fallback(null);
 
   const itinerary = z.uuid().safeParse(searchParams.get("i"));
-  const consented = hasAnalyticsConsent(parseConsent(request.cookies.get(CONSENT_COOKIE)?.value));
-  const existingAnon = consented ? request.cookies.get(ANON_COOKIE)?.value : undefined;
-  const anonId = consented
-    ? existingAnon && z.uuid().safeParse(existingAnon).success
-      ? existingAnon
-      : randomUUID()
-    : null;
+  const cookieValue = request.cookies.get(ANON_COOKIE)?.value;
+  const anonId = anonIdFor(cookieValue, analyticsConsentFromCookie(request.cookies.get(CONSENT_COOKIE)?.value));
 
   const result = await resolveAffiliateClick({
     offerId: id,
@@ -51,14 +46,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const response = NextResponse.redirect(result.url, 302);
   response.headers.set("Cache-Control", "no-store");
-  if (anonId && anonId !== existingAnon) {
-    response.cookies.set(ANON_COOKIE, anonId, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-    });
-  }
+  setAnonCookie(response, anonId, cookieValue);
   return response;
 }

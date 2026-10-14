@@ -42,7 +42,10 @@
     "placesEyebrow": "Luoghi in evidenza",
     "placesTitle": "Dove andare in Sicilia",
     "placesPrev": "Luoghi precedenti",
-    "placesNext": "Luoghi successivi"
+    "placesNext": "Luoghi successivi",
+    "flightsEyebrow": "Voli",
+    "flightsTitle": "Trova un volo per la Sicilia",
+    "flightsText": "Prezzi indicativi dai partner, con la data di aggiornamento. Il prezzo finale lo conferma il partner."
   },
   "Login": {
     "title": "Accedi",
@@ -894,7 +897,9 @@
       "PMO": "Palermo",
       "TPS": "Trapani",
       "CIY": "Comiso",
-      "unknown": "Non lo so ancora"
+      "unknown": "Non lo so ancora",
+      "LMP": "Lampedusa",
+      "PNL": "Pantelleria"
     },
     "budgetTitle": "Budget e spostamenti",
     "budgetHint": "Il budget è per le attività di un giorno, a persona. Senza auto ti proponiamo solo attività raggiungibili senza auto.",
@@ -962,7 +967,9 @@
     "changeTrip": "Cambia il viaggio",
     "editTastes": "Modifica i tuoi gusti",
     "shortened": "Una sola zona copre al massimo {days, plural, one {# giorno} other {# giorni}}: ecco i tre migliori viaggi di {days, plural, one {# giorno} other {# giorni}}. I viaggi su più zone arrivano presto.",
-    "saveTrip": "Salva questo viaggio"
+    "saveTrip": "Salva questo viaggio",
+    "flightsBarTitle": "Arrivi in Sicilia",
+    "flightsBarText": "Cerca i voli verso la Sicilia: l'arrivo parte da quello scelto nel tuo profilo."
   },
   "Preferences": {
     "title": "Preferenze",
@@ -1117,7 +1124,8 @@
     "sharedReadOnly": "Sola lettura: il viaggio è di chi l'ha creato.",
     "sharedEmptyDay": "Nessuna tappa in questo giorno.",
     "inviteTitle": "Vuoi un viaggio tutto tuo?",
-    "inviteBody": "Costruisci il tuo itinerario in Sicilia in pochi minuti."
+    "inviteBody": "Costruisci il tuo itinerario in Sicilia in pochi minuti.",
+    "flightSearchAction": "Cerca voli"
   },
   "Media": {
     "photoCredit": "Foto:",
@@ -1132,5 +1140,58 @@
     "license": "Licenza",
     "source": "Fonte",
     "illustrations": "{count, plural, one {Una illustrazione} other {# illustrazioni}} della redazione di Isula."
+  },
+  "Flights": {
+    "title": "Voli verso la Sicilia",
+    "description": "Prezzi indicativi dei voli verso Catania, Palermo, Trapani, Comiso, Lampedusa e Pantelleria, con la data di aggiornamento.",
+    "eyebrow": "Voli",
+    "intro": "Confronta i prezzi indicativi dei voli verso la Sicilia. Il prezzo finale lo conferma il partner al momento della prenotazione.",
+    "formTitle": "Cerca un volo verso la Sicilia",
+    "tripType": "Tipo di viaggio",
+    "oneWay": "Solo andata",
+    "roundTrip": "Andata e ritorno",
+    "origin": "Partenza",
+    "originPlaceholder": "Città o aeroporto",
+    "originHint": "Scrivi una città, un nome o un codice, per esempio Milano o MXP.",
+    "originListLabel": "Aeroporti di partenza",
+    "originNoResults": "Nessun aeroporto trovato. Prova con la città o il codice IATA.",
+    "originSicily": "Sei già in Sicilia: scegli un aeroporto di partenza fuori dall'isola.",
+    "originRequired": "Scegli un aeroporto di partenza dalla lista.",
+    "destination": "Arrivo in Sicilia",
+    "departure": "Andata",
+    "returnDate": "Ritorno",
+    "dateRequired": "Scegli la data di andata.",
+    "returnBeforeDeparture": "Scegli una data di ritorno dopo l'andata.",
+    "passengers": "Passeggeri",
+    "passengersOption": "{count, plural, one {# passeggero} other {# passeggeri}}",
+    "swap": "Scambia",
+    "swapDisabled": "Lo scambio non è disponibile: l'arrivo è sempre un aeroporto siciliano.",
+    "submit": "Cerca voli",
+    "searching": "Cerco i voli…",
+    "fromTrip": "Date e persone prese dal tuo viaggio.",
+    "priceNote": "Prezzi indicativi dai partner, con la data di aggiornamento.",
+    "resultsTitle": "Prezzi per {airport}",
+    "resultsHeading": "Prezzi trovati",
+    "priceFrom": "da {price}",
+    "airline": "Compagnia {airline}",
+    "direct": "Diretto",
+    "stops": "{count, plural, one {# scalo} other {# scali}}",
+    "priceUpdated": "Prezzo indicativo, aggiornato il {when}",
+    "seeFlight": "Vedi il volo",
+    "searchOnPartner": "Cerca su {partner}",
+    "noFlights": "Nessun volo trovato per questa data.",
+    "unconfigured": "I prezzi dei voli non sono ancora disponibili. Puoi cercare direttamente sul sito del partner.",
+    "unavailable": "Non riusciamo a leggere i prezzi in questo momento. Riprova tra poco o cerca direttamente sul sito del partner.",
+    "linkUnconfigured": "I link ai voli non sono attivi in questo momento.",
+    "affiliateDisclose": "Link affiliato: se prenoti, Aviasales ci riconosce una commissione, a te non costa di più.",
+    "priceDisclaimer": "I prezzi sono indicativi: il prezzo finale lo mostra il partner prima del pagamento.",
+    "calendarTitle": "Prezzi giorno per giorno, {month}",
+    "calendarEmpty": "Per questo mese non ci sono prezzi da mostrare.",
+    "noOrigin": "Scegli l'aeroporto di partenza per vedere i prezzi.",
+    "noDeparture": "Scegli la data di andata per vedere i prezzi.",
+    "linkUnavailable": "Non siamo riusciti ad aprire il volo. Riprova tra poco.",
+    "routeTitle": "Voli da {origin} a {destination}",
+    "routeDescription": "Prezzi indicativi dei voli da {origin} a {destination}, con la data di aggiornamento.",
+    "routeIntro": "Scegli la data di andata: il calendario mostra il prezzo più basso per ogni giorno del mese."
   }
 }

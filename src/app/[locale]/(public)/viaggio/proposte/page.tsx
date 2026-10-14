@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ButtonLink, ItineraryStop, PendingButton, Route } from "@/components/design";
+import { FlightSearch } from "@/components/flights/flight-search";
 import { ClearOnboardingDraft } from "@/components/onboarding/onboarding-flow";
+import { isSicilyAirport } from "@/lib/flights/airports";
 import { formatDuration } from "@/lib/format";
 import { redirect } from "@/lib/i18n/navigation";
 import { getUser } from "@/server/auth";
@@ -94,6 +96,27 @@ export default async function ProposalsPage({ params }: Props) {
           </ButtonLink>
         </div>
       </div>
+
+      {/* Barra voli (passo 2.1): l'arrivo è quello del profilo, se è un aeroporto siciliano. */}
+      <section aria-labelledby="proposte-voli" className="mt-10 flex flex-col gap-4">
+        <div className="max-w-2xl">
+          <h2 id="proposte-voli" className="is-display text-heading-2">
+            {t("flightsBarTitle")}
+          </h2>
+          <p className="mt-2 text-body text-pretty text-lava-muted">{t("flightsBarText")}</p>
+        </div>
+        <FlightSearch
+          variant="compact"
+          initial={{
+            origin: null,
+            destination: saved.airport && isSicilyAirport(saved.airport) ? saved.airport : null,
+            departure: null,
+            returnDate: null,
+            passengers: 1,
+            itineraryId: null,
+          }}
+        />
+      </section>
 
       {shortened && (
         <p role="note" className="mt-8 rounded-lg border border-card-edge bg-calce-raised p-4 text-body">
