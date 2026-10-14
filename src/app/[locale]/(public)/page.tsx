@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CatalogLocalTip } from "@/components/catalog/catalog-local-tip";
+import { CoverCaption } from "@/components/catalog/cover-figure";
+import { CoverPicture } from "@/components/catalog/cover-picture";
+import { FeaturedPlaces } from "@/components/catalog/featured-places";
 import { ItineraryCard } from "@/components/catalog/itinerary-card";
-import { ButtonLink, interestDomain, PendingMarker } from "@/components/design";
+import { PlaceCard } from "@/components/catalog/place-card";
+import { ButtonLink, PendingMarker } from "@/components/design";
 import { Link } from "@/lib/i18n/navigation";
 import { localizedAlternates } from "@/lib/seo";
-import { interestLabels } from "@/server/catalog/labels";
-import { listTemplates } from "@/server/catalog/queries";
+import { getHomeHero, listFeaturedPlaces, listTemplates } from "@/server/catalog/queries";
 import { listLatestTips } from "@/server/catalog/tips";
 
-// Home (mockup Home.html e HomeMobile.html). Sezioni del mockup non ancora in pagina,
-// perché mancano i dati o la funzione: shop (milestone 10),
-// viaggi di gruppo (milestone 8). "Crea il tuo viaggio" porta all'onboarding (M4);
-// la pillola "+100 punti a viaggio completato" è in sospeso e nascosta fino alla gamification (M9).
+// Home (passo 1.2 della roadmap; docs/design/mockups/README.md: i mockup Home sono superati).
+// Hero con la foto del luogo in evidenza di home (nessun testo sulla foto), carosello dei
+// luoghi con foto propria (solo da quattro), itinerari pronti e voce locale.
+// La pillola "+100 punti a viaggio completato" è in sospeso e nascosta fino alla gamification (M9).
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -22,49 +25,47 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { description: t("description"), alternates: localizedAlternates(locale, "") };
 }
 
-// Interessi di esempio nel passo 1 (mockup: Mare, Cibo e vino, Borghi), etichette dalla tabella interests.
-const STEP_INTERESTS = ["sea", "food_wine", "villages"];
+// Il carosello compare solo con almeno quattro luoghi con foto propria (contratto 1.2).
+const MIN_FEATURED_PLACES = 4;
 
 export default async function HomePage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [t, labels, templates, tips] = await Promise.all([
+  const [t, hero, featured, templates, tips] = await Promise.all([
     getTranslations("Home"),
-    interestLabels(locale),
+    getHomeHero(),
+    listFeaturedPlaces(),
     listTemplates(),
     listLatestTips(3),
   ]);
 
   return (
     <>
-      {/* Hero */}
+      {/* Hero: su mobile la foto è a tutta larghezza sopra il testo, su desktop a destra.
+          Senza nessuna foto resta un blocco calce-sunk senza testo. */}
       <section className="mx-auto grid w-full max-w-[1200px] gap-8 px-4 pt-8 pb-12 md:grid-cols-2 md:items-center md:gap-12 md:px-16 md:py-16">
-        {/* Su mobile la foto sta sopra il titolo, su desktop a destra con l'anteprima del giorno. */}
-        <div className="relative -mx-4 -mt-8 md:order-2 md:mx-0 md:mt-0">
-          <div className="relative aspect-[4/3] overflow-hidden bg-calce-sunk md:aspect-[4/5] md:rounded-xl">
-            <span className="is-display absolute bottom-4 left-4 text-heading-2 text-lava-muted">{t("heroPhoto")}</span>
+        {hero && (
+          <div className="-mx-4 -mt-8 md:order-2 md:mx-0 md:mt-0">
+            <figure className="flex flex-col gap-2">
+              <div className="relative aspect-[4/3] overflow-hidden bg-calce-sunk md:aspect-[4/5] md:rounded-xl">
+                {hero.cover && (
+                  <CoverPicture
+                    cover={hero.cover.media}
+                    ratio="4x5"
+                    sizes="(min-width: 768px) 50vw, 100vw"
+                    locale={locale}
+                    priority
+                  />
+                )}
+              </div>
+              {hero.cover && <CoverCaption cover={hero.cover.media} className="px-4 md:px-0" />}
+            </figure>
+            <Link href={`/luoghi/${hero.placeSlug}`} className="mt-2 block px-4 text-body-s font-semibold md:px-0">
+              {hero.placeName}
+            </Link>
           </div>
-          <PendingMarker id="home.points" />
-          <div className="absolute top-12 -left-12 hidden w-[320px] rounded-lg bg-calce-raised p-6 shadow-lift md:block">
-            <p className="text-label uppercase text-coccio-text">{t("heroDayLabel")}</p>
-            <p className="is-display mt-1 text-heading-2">{t("heroDayPlace")}</p>
-            <ol className="mt-3 flex flex-col gap-2 text-body">
-              {(
-                [
-                  ["9:30", "heroStop1"],
-                  ["12:00", "heroStop2"],
-                  ["18:00", "heroStop3"],
-                ] as const
-              ).map(([time, key]) => (
-                <li key={key} className="flex gap-3">
-                  <span className="w-12 shrink-0 text-body-s font-semibold text-lava-muted tabular-nums">{time}</span>
-                  <span>{t(key)}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </div>
+        )}
         <div className="flex flex-col gap-6 md:order-1">
           <p className="hidden text-label uppercase text-lava-muted md:block">{t("eyebrow")}</p>
           <h1 className="is-display text-display-xl">{t("title")}</h1>
@@ -77,39 +78,35 @@ export default async function HomePage({ params }: Props) {
               {t("readyItineraries")}
             </ButtonLink>
           </div>
+          <PendingMarker id="home.points" />
         </div>
       </section>
 
-      {/* Tre passi (solo desktop, come nel mockup) */}
-      <section aria-labelledby="tre-passi" className="hidden border-y border-divider bg-calce-raised md:block">
-        <div className="mx-auto max-w-[1200px] px-16 py-16">
-          <h2 id="tre-passi" className="is-display text-heading-1">
-            {t("stepsTitle")}
+      {/* Dove andare in Sicilia: luoghi in evidenza con foto propria, nell'ordine dell'admin. */}
+      {featured.length >= MIN_FEATURED_PLACES && (
+        <section aria-labelledby="dove-andare" className="mx-auto w-full max-w-[1200px] px-4 py-12 md:px-16 md:py-16">
+          <p className="text-label uppercase text-lava-muted">{t("placesEyebrow")}</p>
+          <h2 id="dove-andare" className="is-display mt-2 text-heading-1">
+            {t("placesTitle")}
           </h2>
-          <ol className="mt-8 grid grid-cols-3 gap-6">
-            {([1, 2, 3] as const).map((n) => (
-              <li key={n} className="flex flex-col gap-3">
-                <span className="is-display text-stat">{n}</span>
-                <h3 className="text-heading-3">{t(`step${n}Title`)}</h3>
-                <p className="text-body text-lava-muted">{t(`step${n}Text`)}</p>
-                {n === 1 && (
-                  <ul className="flex flex-wrap gap-2" aria-hidden="true">
-                    {STEP_INTERESTS.filter((key) => labels.has(key)).map((key) => {
-                      const domain = interestDomain(key);
-                      return (
-                        <li key={key} className={domain ? `is-tag is-tag--${domain}` : "is-tag"}>
-                          <span className="is-tag__dot" />
-                          {labels.get(key)}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
+          <div className="mt-8">
+            <FeaturedPlaces label={t("placesTitle")} prevLabel={t("placesPrev")} nextLabel={t("placesNext")}>
+              {featured.map((place) => (
+                <li key={place.id} className="w-[78%] shrink-0 snap-start md:w-[28%]">
+                  <PlaceCard
+                    slug={place.slug}
+                    name={place.name}
+                    areaName={locale === "en" ? (place.areaNameEn ?? place.areaNameIt) : place.areaNameIt}
+                    taglineIt={locale === "it" ? place.taglineIt : null}
+                    cover={place.cover}
+                    locale={locale}
+                  />
+                </li>
+              ))}
+            </FeaturedPlaces>
+          </div>
+        </section>
+      )}
 
       {/* Itinerari pronti: dal catalogo, nessuna card se non ce ne sono */}
       {templates.length > 0 && (
@@ -129,7 +126,7 @@ export default async function HomePage({ params }: Props) {
             {templates.slice(0, 3).map((it) => (
               // Su mobile le card scorrono in orizzontale (mockup HomeMobile).
               <li key={it.id} className="w-[78%] shrink-0 snap-start sm:w-auto">
-                <ItineraryCard itinerary={it} />
+                <ItineraryCard itinerary={it} showAreas />
               </li>
             ))}
           </ul>

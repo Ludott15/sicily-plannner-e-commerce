@@ -19,6 +19,9 @@ export type PlaceFormValues = {
   taglineIt: string | null;
   isActive: boolean;
   needsReview: boolean;
+  isFeatured: boolean;
+  featuredOrder: number | null;
+  isHomeHero: boolean;
 };
 
 export type AreaOption = { id: string; name: string };
@@ -80,6 +83,18 @@ export function PlaceForm({
         <Field label={t("fieldTagline")} hint={t("fieldTaglineHint")} htmlFor="taglineIt">
           <TextInput id="taglineIt" name="taglineIt" maxLength={90} defaultValue={values.taglineIt ?? ""} />
         </Field>
+        <Field label={t("fieldFeaturedOrder")} hint={t("fieldFeaturedOrderHint")} htmlFor="featuredOrder">
+          <TextInput
+            id="featuredOrder"
+            name="featuredOrder"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={99}
+            step={1}
+            defaultValue={values.featuredOrder ?? ""}
+          />
+        </Field>
       </div>
       <Field label={t("fieldDescription")} htmlFor="description">
         <TextArea id="description" name="description" defaultValue={values.description ?? ""} />
@@ -87,6 +102,12 @@ export function PlaceForm({
       <div className="flex flex-col">
         <Checkbox label={t("fieldPublished")} name="isActive" defaultChecked={values.isActive} />
         <Checkbox label={t("fieldNeedsReview")} name="needsReview" defaultChecked={values.needsReview} />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Checkbox label={t("fieldFeatured")} name="isFeatured" defaultChecked={values.isFeatured} />
+        <p className="pl-8 text-caption text-lava-muted">{t("fieldFeaturedHint")}</p>
+        <Checkbox label={t("fieldHomeHero")} name="isHomeHero" defaultChecked={values.isHomeHero} />
+        <p className="pl-8 text-caption text-lava-muted">{t("fieldHomeHeroHint")}</p>
       </div>
       <div>
         <Button type="submit" variant="primary" disabled={pending}>

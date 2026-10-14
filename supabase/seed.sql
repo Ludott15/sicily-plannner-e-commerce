@@ -40,7 +40,10 @@ insert into public.places (slug, name, province, lat, lng, description) values
   ('demo-polizzi', 'Polizzi Generosa', 'PA', 37.8122, 14.0028, '[DEMO] Borgo in cima alle Madonie.'),
   ('demo-enna', 'Enna', 'EN', 37.5670, 14.2795, '[DEMO] Città più alta della Sicilia.'),
   ('demo-caltagirone', 'Caltagirone', 'CT', 37.2373, 14.5122, '[DEMO] Città della ceramica.'),
-  ('demo-aidone', 'Aidone', 'EN', 37.4150, 14.4460, '[DEMO] Museo e scavi di Morgantina.');
+  ('demo-aidone', 'Aidone', 'EN', 37.4150, 14.4460, '[DEMO] Museo e scavi di Morgantina.'),
+  ('demo-valle-dei-templi', 'Valle dei Templi', 'AG', 37.2900, 13.5850, '[DEMO] Area archeologica dei templi dorici presso Agrigento.'),
+  ('demo-etna', 'Etna', 'CT', 37.7510, 14.9934, '[DEMO] Vulcano attivo, crateri sommitali e colate laviche.'),
+  ('demo-riserva-dello-zingaro', 'Riserva dello Zingaro', 'TP', 38.1100, 12.7900, '[DEMO] Riserva naturale con sentieri costieri e calette.');
 
 -- Aree di viaggio dei luoghi demo (le aree vengono dalla migrazione, non dal seed). Tutte le
 -- aree hanno almeno 6 attività; Costa nord e Madonie e Interno ne hanno abbastanza per un
@@ -49,15 +52,36 @@ update public.places p set area_id = a.id
 from (values
   ('demo-palermo', 'palermo'), ('demo-monreale', 'palermo'), ('demo-mondello', 'palermo'),
   ('demo-cefalu', 'costa-nord-madonie'), ('demo-castelbuono', 'costa-nord-madonie'), ('demo-piano-battaglia', 'costa-nord-madonie'), ('demo-polizzi', 'costa-nord-madonie'),
-  ('demo-trapani', 'ovest'), ('demo-erice', 'ovest'), ('demo-san-vito', 'ovest'), ('demo-segesta', 'ovest'),
-  ('demo-agrigento', 'agrigentino'), ('demo-scala-dei-turchi', 'agrigentino'), ('demo-sciacca', 'agrigentino'), ('demo-eraclea-minoa', 'agrigentino'),
+  ('demo-trapani', 'ovest'), ('demo-erice', 'ovest'), ('demo-san-vito', 'ovest'), ('demo-segesta', 'ovest'), ('demo-riserva-dello-zingaro', 'ovest'),
+  ('demo-agrigento', 'agrigentino'), ('demo-scala-dei-turchi', 'agrigentino'), ('demo-sciacca', 'agrigentino'), ('demo-eraclea-minoa', 'agrigentino'), ('demo-valle-dei-templi', 'agrigentino'),
   ('demo-piazza-armerina', 'interno'), ('demo-enna', 'interno'), ('demo-caltagirone', 'interno'), ('demo-aidone', 'interno'),
-  ('demo-catania', 'etna-costa-ionica'), ('demo-etna-sud', 'etna-costa-ionica'), ('demo-bronte', 'etna-costa-ionica'), ('demo-taormina', 'etna-costa-ionica'),
+  ('demo-catania', 'etna-costa-ionica'), ('demo-etna-sud', 'etna-costa-ionica'), ('demo-etna', 'etna-costa-ionica'), ('demo-bronte', 'etna-costa-ionica'), ('demo-taormina', 'etna-costa-ionica'),
   ('demo-ortigia', 'siracusano'), ('demo-pantalica', 'siracusano'), ('demo-fontane-bianche', 'siracusano'), ('demo-marzamemi', 'siracusano'),
   ('demo-noto', 'barocco-ibleo'), ('demo-ragusa-ibla', 'barocco-ibleo'), ('demo-modica', 'barocco-ibleo'), ('demo-scicli', 'barocco-ibleo'), ('demo-marina-ragusa', 'barocco-ibleo')
 ) as v(place_slug, area_slug)
 join public.areas a on a.slug = v.area_slug
 where p.slug = v.place_slug;
+
+-- Carosello e hero della home: dieci luoghi in evidenza, in quest'ordine. Un solo hero
+-- (indice unico places_single_home_hero). Le foto demo le carica npm run media:demo.
+update public.places p set
+  is_featured = true,
+  featured_order = v.featured_order,
+  tagline_it = v.tagline_it,
+  is_home_hero = v.is_home_hero
+from (values
+  ('demo-ortigia', 1, '[DEMO] Il centro antico di Siracusa, su un''isola sul mare.', true),
+  ('demo-valle-dei-templi', 2, '[DEMO] Templi dorici tra mandorli e ulivi, vicino ad Agrigento.', false),
+  ('demo-etna', 3, '[DEMO] Il vulcano attivo più alto d''Europa, con crateri e colate.', false),
+  ('demo-scala-dei-turchi', 4, '[DEMO] Scogliera di marna bianca che scende nel mare.', false),
+  ('demo-taormina', 5, '[DEMO] Teatro antico affacciato sul mare e sull''Etna.', false),
+  ('demo-cefalu', 6, '[DEMO] Borgo sul mare con la cattedrale normanna.', false),
+  ('demo-noto', 7, '[DEMO] Capitale del barocco, pietra dorata e scalinate.', false),
+  ('demo-riserva-dello-zingaro', 8, '[DEMO] Sentieri costieri tra calette di acqua trasparente.', false),
+  ('demo-erice', 9, '[DEMO] Borgo medievale in cima al monte, sopra il mare.', false),
+  ('demo-modica', 10, '[DEMO] Città barocca su due colline, tra cioccolato e vicoli.', false)
+) as v(slug, featured_order, tagline_it, is_home_hero)
+where p.slug = v.slug;
 
 -- Attività: create inattive, poi taggate, poi attivate (regola activity_without_tags).
 -- on_site_price_eur è il prezzo pagato in loco (ingresso, biglietto), un metadato: null per tour ed

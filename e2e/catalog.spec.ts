@@ -98,7 +98,7 @@ test("scheda attività su mobile: la barra ha l'offerta principale e non copre i
   }).toPass();
 });
 
-test("liste e schede: niente Salva e Aggiungi finché non esistono; la card dell'hero è un esempio", async ({ page }) => {
+test("liste e schede: niente Salva e Aggiungi finché non esistono; l'azione della scheda porta al viaggio", async ({ page }) => {
   for (const path of ["/it/attivita", "/it/luoghi/demo-trapani", "/it/attivita/demo-zingaro", "/it/itinerari/demo-sicilia-orientale"]) {
     await page.goto(path);
     await expect(page.getByRole("button", { name: /^Salva/ }), path).toHaveCount(0);
@@ -110,8 +110,25 @@ test("liste e schede: niente Salva e Aggiungi finché non esistono; la card dell
   await expect(page.getByRole("link", { name: "Aggiungi al viaggio" }).first()).toHaveAttribute("href", "/it/viaggi/aggiungi?attivita=demo-zingaro");
 
   await page.goto("/it");
-  await expect(page.getByText("Esempio · Giorno 1")).toBeVisible();
+  await expect(page.getByText("Esempio · Giorno 1")).toHaveCount(0);
   await expect(page.getByText("Per te", { exact: true })).toHaveCount(0);
+});
+
+test("home: hero con la foto del luogo in evidenza e carosello con almeno quattro luoghi, tutta la card un link", async ({ page }) => {
+  await page.goto("/it");
+
+  const hero = page.locator("section").filter({ has: page.getByRole("heading", { level: 1 }) }).first();
+  await expect(hero.locator("img")).toBeVisible();
+
+  await expect(page.getByRole("heading", { name: "Dove andare in Sicilia" })).toBeVisible();
+  const list = page.getByRole("list", { name: "Dove andare in Sicilia" });
+  const items = list.locator(":scope > li");
+  const count = await items.count();
+  expect(count).toBeGreaterThanOrEqual(4);
+  await expect(list.locator('a[href^="/it/luoghi/"]')).toHaveCount(count);
+  for (const item of await items.all()) {
+    await expect(item.locator("a")).toHaveCount(1);
+  }
 });
 
 test("elenco attività: filtri per interesse e provincia nell'URL, lista renderizzata dal server", async ({ page, request }) => {
