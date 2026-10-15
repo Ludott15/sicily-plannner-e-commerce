@@ -1300,5 +1300,123 @@
     "pickAirport": "Scegli l'aeroporto di ritiro per cercare.",
     "needDates": "Scegli la data di ritiro e quella di riconsegna: la riconsegna dopo il ritiro.",
     "comingSoonText": "Il confronto dei noleggi arriva a breve."
+  },
+  "AdminAffiliates": {
+    "nav": "Affiliati",
+    "title": "Affiliati",
+    "subtitle": "Click, conversioni e commissioni dei partner nel periodo scelto.",
+    "period": {
+      "label": "Periodo",
+      "days7": "Ultimi 7 giorni",
+      "days30": "Ultimi 30 giorni",
+      "days90": "Ultimi 90 giorni",
+      "custom": "Intervallo personalizzato",
+      "from": "Dal",
+      "to": "Al",
+      "apply": "Applica",
+      "range": "Dal {from} al {to}",
+      "customHint": "Massimo 366 giorni, estremi inclusi."
+    },
+    "totals": {
+      "clicks": "Click",
+      "conversions": "Conversioni",
+      "approved": "Commissioni approvate e pagate",
+      "pending": "Commissioni in attesa",
+      "rate": "Tasso di conversione",
+      "noClicks": "Nessun click nel periodo"
+    },
+    "sections": {
+      "context": "Per contesto",
+      "partner": "Per partner",
+      "activity": "Attività (prime {limit} per commissione)",
+      "unlinked": "Conversioni senza click",
+      "unlinkedHelp": "Il subid non corrisponde a nessun click registrato. Controlla il report del partner."
+    },
+    "contexts": {
+      "page": "Pagina",
+      "itinerary": "Itinerario",
+      "chat": "Chat",
+      "flights": "Voli"
+    },
+    "columns": {
+      "key": "Voce",
+      "clicks": "Click",
+      "conversions": "Conversioni",
+      "commission": "Commissione",
+      "rate": "Tasso",
+      "subid": "Subid",
+      "lastReported": "Ultimo report",
+      "partner": "Partner"
+    },
+    "empty": "Nessun dato nel periodo.",
+    "export": "Esporta CSV",
+    "import": {
+      "title": "Importa conversioni",
+      "help": "Carica il report CSV del partner. Ogni riga è una conversione: partner, subid, id del report (facoltativo), importo, commissione, stato e data. Un file ripetuto aggiorna le stesse conversioni.",
+      "template": "Scarica il modello",
+      "choose": "Scegli file CSV",
+      "preview": "Anteprima",
+      "confirm": "Conferma importazione",
+      "imported": "Importate: {created} nuove, {updated} aggiornate, {skipped} scartate, {withoutClick} senza click.",
+      "previewTotals": "Nuove: {create}. Aggiornate: {update}. Scartate: {error}. Senza click: {withoutClick}.",
+      "truncated": "Mostrate le prime {limit} righe.",
+      "rowStatus": {
+        "create": "Nuova",
+        "update": "Aggiornata",
+        "error": "Scartata"
+      },
+      "withoutClick": "Senza click",
+      "errors": {
+        "file_missing": "Scegli un file CSV.",
+        "file_too_large": "Il file supera 1 MB.",
+        "file_not_csv": "Il file deve avere estensione .csv.",
+        "file_empty": "Il file è vuoto o non contiene righe.",
+        "csv_invalid": "Il CSV non è leggibile: controlla le virgolette.",
+        "header_invalid": "Intestazione non valida. Colonne mancanti o sconosciute: {columns}.",
+        "too_many_rows": "Il file supera le 5000 righe.",
+        "failed": "Importazione non riuscita. Riprova."
+      },
+      "issues": {
+        "partner_invalid": "Partner non riconosciuto",
+        "subid_invalid": "Subid non valido",
+        "external_id_invalid": "Id del report troppo lungo",
+        "amount_invalid": "Importo non valido",
+        "commission_invalid": "Commissione non valida",
+        "status_invalid": "Stato non riconosciuto",
+        "reported_at_invalid": "Data non valida (usa AAAA-MM-GG)",
+        "duplicate_external_id": "Riga ripetuta nel file"
+      },
+      "back": "Torna agli affiliati",
+      "toDashboard": "Vai agli affiliati",
+      "file": "File CSV",
+      "fileHint": "Massimo 1 MB e 5000 righe. Separatore punto e virgola o virgola, come nel modello.",
+      "commitRows": "{count, plural, one {Importa # riga} other {Importa # righe}}",
+      "pending": "Elaborazione in corso...",
+      "previewTitle": "Riepilogo",
+      "sectionErrors": "Righe scartate",
+      "sectionCreate": "Nuove conversioni",
+      "sectionUpdate": "Conversioni aggiornate",
+      "noRows": "Il file non contiene righe.",
+      "noValid": "Nessuna riga valida da importare.",
+      "totals": {
+        "create": "Nuove",
+        "update": "Aggiornate",
+        "error": "Scartate",
+        "withoutClick": "Senza click",
+        "possibleDuplicate": "Possibili duplicati"
+      },
+      "cols": {
+        "line": "Riga",
+        "partner": "Partner",
+        "subid": "Subid",
+        "externalId": "Id report",
+        "details": "Dettagli"
+      },
+      "columnLabel": "Colonna {column}",
+      "valueLabel": "Valore: {value}",
+      "possibleDuplicate": "Possibile duplicato: questo subid ha già una conversione. Se il partner ha corretto l'importo, aggiungi la colonna external_id."
+    },
+    "importLink": "Importa report",
+    "exportTooManyRows": "Il periodo supera {limit} conversioni: scegli un intervallo più corto."
   }
 }

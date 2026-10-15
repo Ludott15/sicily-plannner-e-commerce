@@ -1300,5 +1300,123 @@
     "pickAirport": "Choose the pick-up airport to search.",
     "needDates": "Choose the pick-up and drop-off dates: drop-off after pick-up.",
     "comingSoonText": "Car rental comparison is coming soon."
+  },
+  "AdminAffiliates": {
+    "nav": "Affiliates",
+    "title": "Affiliates",
+    "subtitle": "Clicks, conversions and partner commissions for the chosen period.",
+    "period": {
+      "label": "Period",
+      "days7": "Last 7 days",
+      "days30": "Last 30 days",
+      "days90": "Last 90 days",
+      "custom": "Custom range",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "range": "From {from} to {to}",
+      "customHint": "Up to 366 days, both ends included."
+    },
+    "totals": {
+      "clicks": "Clicks",
+      "conversions": "Conversions",
+      "approved": "Approved and paid commissions",
+      "pending": "Pending commissions",
+      "rate": "Conversion rate",
+      "noClicks": "No clicks in this period"
+    },
+    "sections": {
+      "context": "By context",
+      "partner": "By partner",
+      "activity": "Activities (top {limit} by commission)",
+      "unlinked": "Conversions without a click",
+      "unlinkedHelp": "The subid does not match any recorded click. Check the partner report."
+    },
+    "contexts": {
+      "page": "Page",
+      "itinerary": "Itinerary",
+      "chat": "Chat",
+      "flights": "Flights"
+    },
+    "columns": {
+      "key": "Item",
+      "clicks": "Clicks",
+      "conversions": "Conversions",
+      "commission": "Commission",
+      "rate": "Rate",
+      "subid": "Subid",
+      "lastReported": "Last report",
+      "partner": "Partner"
+    },
+    "empty": "No data in this period.",
+    "export": "Export CSV",
+    "import": {
+      "title": "Import conversions",
+      "help": "Upload the partner's CSV report. Each row is one conversion: partner, subid, report id (optional), amount, commission, status and date. Uploading the same file again updates the same conversions.",
+      "template": "Download the template",
+      "choose": "Choose CSV file",
+      "preview": "Preview",
+      "confirm": "Confirm import",
+      "imported": "Imported: {created} new, {updated} updated, {skipped} skipped, {withoutClick} without a click.",
+      "previewTotals": "New: {create}. Updated: {update}. Skipped: {error}. Without a click: {withoutClick}.",
+      "truncated": "Showing the first {limit} rows.",
+      "rowStatus": {
+        "create": "New",
+        "update": "Updated",
+        "error": "Skipped"
+      },
+      "withoutClick": "No click",
+      "errors": {
+        "file_missing": "Choose a CSV file.",
+        "file_too_large": "The file is over 1 MB.",
+        "file_not_csv": "The file must have a .csv extension.",
+        "file_empty": "The file is empty or has no rows.",
+        "csv_invalid": "The CSV cannot be read: check the quotes.",
+        "header_invalid": "Invalid header. Missing or unknown columns: {columns}.",
+        "too_many_rows": "The file has more than 5000 rows.",
+        "failed": "Import failed. Try again."
+      },
+      "issues": {
+        "partner_invalid": "Unknown partner",
+        "subid_invalid": "Invalid subid",
+        "external_id_invalid": "Report id too long",
+        "amount_invalid": "Invalid amount",
+        "commission_invalid": "Invalid commission",
+        "status_invalid": "Unknown status",
+        "reported_at_invalid": "Invalid date (use YYYY-MM-DD)",
+        "duplicate_external_id": "Row repeated in the file"
+      },
+      "back": "Back to affiliates",
+      "toDashboard": "Go to affiliates",
+      "file": "CSV file",
+      "fileHint": "Up to 1 MB and 5000 rows. Semicolon or comma separator, as in the template.",
+      "commitRows": "{count, plural, one {Import # row} other {Import # rows}}",
+      "pending": "Working...",
+      "previewTitle": "Summary",
+      "sectionErrors": "Skipped rows",
+      "sectionCreate": "New conversions",
+      "sectionUpdate": "Updated conversions",
+      "noRows": "The file has no rows.",
+      "noValid": "No valid rows to import.",
+      "totals": {
+        "create": "New",
+        "update": "Updated",
+        "error": "Skipped",
+        "withoutClick": "Without click",
+        "possibleDuplicate": "Possible duplicates"
+      },
+      "cols": {
+        "line": "Line",
+        "partner": "Partner",
+        "subid": "Subid",
+        "externalId": "Report id",
+        "details": "Details"
+      },
+      "columnLabel": "Column {column}",
+      "valueLabel": "Value: {value}",
+      "possibleDuplicate": "Possible duplicate: this subid already has a conversion. If the partner corrected the amount, add the external_id column."
+    },
+    "importLink": "Import report",
+    "exportTooManyRows": "The period has more than {limit} conversions: choose a shorter range."
   }
 }
