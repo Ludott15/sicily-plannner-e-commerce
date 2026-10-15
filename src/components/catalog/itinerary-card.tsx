@@ -6,11 +6,15 @@ import { CoverPicture } from "./cover-picture";
 // Card di un itinerario pronto (mockup Home, "Itinerari pronti"): foto 4:5, giorni e
 // mezzo in etichetta, titolo, luoghi toccati. Stessi stili della ActivityCard (is-card),
 // perché il design system non ha una card dedicata agli itinerari.
-export function ItineraryCard({ itinerary }: { itinerary: TemplateSummary }) {
+// Con showAreas (home) la riga sotto il titolo elenca le aree di viaggio invece dei luoghi:
+// se l'itinerario non ha aree, resta l'elenco dei luoghi.
+export function ItineraryCard({ itinerary, showAreas = false }: { itinerary: TemplateSummary; showAreas?: boolean }) {
   const t = useTranslations("Catalog");
   const locale = useLocale();
   const days = t("days", { count: itinerary.days });
   const firstPlace = itinerary.placeNames[0] ?? itinerary.title;
+  const areaNames = locale === "en" ? itinerary.areaNamesEn : itinerary.areaNamesIt;
+  const metaNames = showAreas && areaNames.length > 0 ? areaNames : itinerary.placeNames;
 
   return (
     <article className="is-card">
@@ -40,7 +44,7 @@ export function ItineraryCard({ itinerary }: { itinerary: TemplateSummary }) {
             {itinerary.title}
           </Link>
         </h3>
-        {itinerary.placeNames.length > 0 && <p className="is-card__meta">{itinerary.placeNames.join(", ")}</p>}
+        {metaNames.length > 0 && <p className="is-card__meta">{metaNames.join(", ")}</p>}
       </div>
     </article>
   );

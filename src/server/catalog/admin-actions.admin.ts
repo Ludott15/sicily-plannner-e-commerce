@@ -66,6 +66,8 @@ function dbErrorCode(error: unknown): AdminErrorCode {
   if (message === "activity_without_tags") return "activity_without_tags";
   if (message === "activity_place_inactive") return "activity_place_inactive";
   if (message === "place_has_active_activities") return "place_has_active_activities";
+  // Due luoghi con l'hero nella stessa transazione: il vincolo non si può violare senza concorrenza.
+  if (code === "23505" && constraint === "places_single_home_hero") return "failed";
   if (code === "23505") return constraint?.includes("partner_product") ? "partner_product_taken" : "slug_taken";
   if (code === "23514" && constraint?.includes("day_titles")) return "day_titles_exceed_days";
   return "failed";
@@ -181,6 +183,14 @@ export async function saveActivity(_prev: AdminFormState, formData: FormData): P
 // Luoghi
 // ---------------------------------------------------------------------------
 
+// Ordine nel carosello (1..99): vuoto = nessun ordine, in fondo.
+const optionalFeaturedOrder = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v) => (v ? Number(v) : null))
+  .pipe(z.number().int().min(1).max(99).nullable());
+
 const placeSchema = z.object({
   id: z.uuid().optional().or(z.literal("").transform(() => undefined)),
   locale: localeSchema,
@@ -197,6 +207,11 @@ const placeSchema = z.object({
   // Un luogo disattivato esce dalle pagine pubbliche; con attività attive il database lo impedisce.
   isActive: checkbox,
   needsReview: checkbox,
+  // Carosello della home: vuoto = in fondo, a parità di ordine vale il nome.
+  isFeatured: checkbox,
+  featuredOrder: optionalFeaturedOrder,
+  // is_home_hero non si modifica più dall'admin (l'hero è casuale tra i luoghi in evidenza): il
+  // campo non è nello schema, quindi il salvataggio lo lascia com'è.
 });
 
 export async function savePlace(_prev: AdminFormState, formData: FormData): Promise<AdminFormState> {
@@ -207,13 +222,14 @@ export async function savePlace(_prev: AdminFormState, formData: FormData): Prom
 
   let savedId: string;
   try {
-    if (id) {
-      await dbAdmin.update(places).set(values).where(eq(places.id, id));
-      savedId = id;
-    } else {
-      const [row] = await dbAdmin.insert(places).values(values).returning({ id: places.id });
-      savedId = row!.id;
-    }
+    savedId = await dbAdmin.transaction(async (tx) => {
+      if (id) {
+        await tx.update(places).set(values).where(eq(places.id, id));
+        return id;
+      }
+      const [row] = await tx.insert(places).values(values).returning({ id: places.id });
+      return row!.id;
+    });
   } catch (error) {
     return { status: "error", code: dbErrorCode(error) };
   }

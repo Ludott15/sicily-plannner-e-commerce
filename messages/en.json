@@ -31,19 +31,6 @@
     "eyebrow": "Travel planner and produce from the island",
     "createTrip": "Plan your trip",
     "readyItineraries": "Ready-made itineraries",
-    "heroPhoto": "Ortigia in the morning",
-    "heroDayLabel": "Example · Day 1",
-    "heroDayPlace": "Noto",
-    "heroStop1": "Baroque Noto",
-    "heroStop2": "Vendicari nature reserve",
-    "heroStop3": "Sunset in Marzamemi",
-    "stepsTitle": "Three steps, then off you go",
-    "step1Title": "Tell us what you love",
-    "step1Text": "Sea, food, history, pace, budget, whether you have a car. You can change everything at any time.",
-    "step2Title": "Get your itinerary",
-    "step2Text": "Day by day, with times, transfers and the reason for each stop. Edit it yourself or ask the assistant.",
-    "step3Title": "Book, go, bring it home",
-    "step3Text": "You book activities with our partners. What you tasted on the trip comes home, shipped by the producers.",
     "readyEyebrow": "Ready-made itineraries",
     "readyTitle": "Start here, then change what you like",
     "seeAll": "See all",
@@ -51,7 +38,11 @@
     "localTitle": "Signed tips, with the date they were checked",
     "localText": "The details you only get by talking to people who live here. Every tip has a signature and the date it was last checked.",
     "founder": "Ludovico, founder",
-    "aboutLink": "About us"
+    "aboutLink": "About us",
+    "placesEyebrow": "Featured places",
+    "placesTitle": "Where to go in Sicily",
+    "placesPrev": "Previous places",
+    "placesNext": "Next places"
   },
   "Login": {
     "title": "Sign in",
@@ -663,7 +654,11 @@
     "fieldNotes": "Notes",
     "internalOnlyHint": "Internal only: never shown on public pages.",
     "placeStateUnpublished": "Not published",
-    "placeStateReview": "To review"
+    "placeStateReview": "To review",
+    "fieldFeatured": "Featured on the home page",
+    "fieldFeaturedHint": "Appears in the carousel and can be picked for the large photo at the top",
+    "fieldFeaturedOrder": "Order on the home page",
+    "fieldFeaturedOrderHint": "A number from 1 to 99: the carousel shows lower numbers first. Without a number, the place goes last."
   },
   "Og": {
     "activity": "Activity · {province}",

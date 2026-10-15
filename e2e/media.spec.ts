@@ -124,9 +124,10 @@ test("admin: copertura delle immagini per area e tipo", async ({ page, request }
   await withDb((sql) => sql`update profiles set role = 'admin' where id = (select id from auth.users where email = ${email})`);
   await page.goto("/it/admin/copertura");
   // Seed e immagini demo (npm run media:demo): Bronte è senza foto propria e mostra
-  // l'illustrazione dell'area; le attività dei luoghi con foto usano il ripiego.
+  // l'illustrazione dell'area; gli altri 4 luoghi (Catania, Etna versante sud, Etna, Taormina)
+  // hanno la foto; le attività dei luoghi con foto usano il ripiego.
   const etna = page.locator('tr[data-image-area="etna-costa-ionica"]');
-  await expect(etna.locator('td[data-entity="place"]')).toHaveText("3 foto · 0 ripiego · 1 illustr. · 0 nessuna");
+  await expect(etna.locator('td[data-entity="place"]')).toHaveText("4 foto · 0 ripiego · 1 illustr. · 0 nessuna");
   await expect(etna.locator('td[data-entity="activity"]')).toContainText("1 foto");
   await expect(page.getByTestId("expiring-authorizations").or(page.getByText("Nessuna autorizzazione in scadenza."))).toBeVisible();
 });

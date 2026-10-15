@@ -31,19 +31,6 @@
     "eyebrow": "Planner di viaggio e prodotti dell'isola",
     "createTrip": "Crea il tuo viaggio",
     "readyItineraries": "Itinerari pronti",
-    "heroPhoto": "Ortigia al mattino",
-    "heroDayLabel": "Esempio · Giorno 1",
-    "heroDayPlace": "Noto",
-    "heroStop1": "Barocco di Noto",
-    "heroStop2": "Riserva di Vendicari",
-    "heroStop3": "Tramonto a Marzamemi",
-    "stepsTitle": "Tre passi, poi parti",
-    "step1Title": "Dicci cosa ami",
-    "step1Text": "Mare, cibo, storia, ritmo, budget, se hai l'auto. Puoi cambiare tutto in qualsiasi momento.",
-    "step2Title": "Ricevi il tuo itinerario",
-    "step2Text": "Giorno per giorno, con orari, spostamenti e il motivo di ogni tappa. Modificalo a mano o chiedi all'assistente.",
-    "step3Title": "Prenota, vivi, porta a casa",
-    "step3Text": "Prenoti le attività dai nostri partner. Quello che hai assaggiato in viaggio arriva a casa, spedito dai produttori.",
     "readyEyebrow": "Itinerari pronti",
     "readyTitle": "Parti da qui, poi cambia quello che vuoi",
     "seeAll": "Vedi tutti",
@@ -51,7 +38,11 @@
     "localTitle": "Consigli firmati, con la data di verifica",
     "localText": "I dettagli che trovi solo parlando con chi abita qui. Ogni consiglio ha una firma e la data dell'ultima verifica.",
     "founder": "Ludovico, fondatore",
-    "aboutLink": "Chi siamo"
+    "aboutLink": "Chi siamo",
+    "placesEyebrow": "Luoghi in evidenza",
+    "placesTitle": "Dove andare in Sicilia",
+    "placesPrev": "Luoghi precedenti",
+    "placesNext": "Luoghi successivi"
   },
   "Login": {
     "title": "Accedi",
@@ -663,7 +654,11 @@
     "fieldNotes": "Note",
     "internalOnlyHint": "Solo interno: non compare mai nelle pagine pubbliche.",
     "placeStateUnpublished": "Non pubblicato",
-    "placeStateReview": "Da verificare"
+    "placeStateReview": "Da verificare",
+    "fieldFeatured": "In evidenza in home",
+    "fieldFeaturedHint": "Compare nel carosello e può essere scelto per la foto grande in alto",
+    "fieldFeaturedOrder": "Ordine in home",
+    "fieldFeaturedOrderHint": "Numero da 1 a 99: il carosello mostra prima i numeri più bassi. Senza numero, il luogo va in fondo."
   },
   "Og": {
     "activity": "Attività · {province}",
