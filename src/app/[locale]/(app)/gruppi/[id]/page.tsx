@@ -14,6 +14,7 @@ import { RenameGroupForm } from "@/components/groups/rename-group-form";
 import { SectionSkeleton } from "@/components/groups/section-skeleton";
 import { requireUser } from "@/server/auth";
 import { getGroup } from "@/server/groups/queries";
+import { GroupLeaderboard } from "@/components/groups/group-leaderboard";
 
 // Pagina del gruppo (4.1). Solo i membri la aprono: getGroup legge con dbAsUser, quindi per chi
 // non è (più) membro il gruppo non esiste (404). Il nome si cambia e gli inviti si gestiscono
@@ -29,7 +30,11 @@ export default async function GroupPage({ params }: Props) {
   setRequestLocale(locale);
   if (!z.uuid().safeParse(id).success) notFound();
   const user = await requireUser();
-  const [group, t] = await Promise.all([getGroup(user, id), getTranslations("Groups")]);
+  const [group, t, tLeaderboard] = await Promise.all([
+    getGroup(user, id),
+    getTranslations("Groups"),
+    getTranslations("Leaderboard"),
+  ]);
   if (!group) notFound();
 
   const openTrip = group.itineraryId
@@ -95,6 +100,10 @@ export default async function GroupPage({ params }: Props) {
           })}
         </ul>
       </section>
+
+      <Suspense fallback={<SectionSkeleton label={tLeaderboard("groupLoading")} />}>
+        <GroupLeaderboard user={user} groupId={group.id} memberCount={group.members.length} />
+      </Suspense>
 
       <Suspense fallback={<SectionSkeleton label={t("interestsLoading")} />}>
         <CommonInterests user={user} groupId={group.id} locale={locale} />

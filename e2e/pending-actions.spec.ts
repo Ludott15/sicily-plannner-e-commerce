@@ -19,6 +19,8 @@ const PAGES = [
   // Verticali del passo 3.1: "in arrivo" finché manca l'ID del partner (vertical.lodging, vertical.car).
   "/it/dove-dormire",
   "/it/noleggio-auto",
+  // Classifica (passo 5.3): pubblica, con il regolamento in sospeso (points.rules).
+  "/it/classifica",
 ];
 
 // Pagine personali: servono una sessione e risposte salvate. /punti (passo 5.1) per l'ospite mostra
