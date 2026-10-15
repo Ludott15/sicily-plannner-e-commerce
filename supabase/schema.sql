@@ -1340,7 +1340,14 @@ CREATE TABLE IF NOT EXISTS "public"."affiliate_conversions" (
     "commission_eur" numeric(10,2),
     "status" "text" NOT NULL,
     "reported_at" timestamp with time zone NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "external_id" "text" NOT NULL,
+    "currency" character(3) DEFAULT 'EUR'::"bpchar" NOT NULL,
+    "source" "text" NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "affiliate_conversions_external_id_length" CHECK ((("char_length"("external_id") >= 1) AND ("char_length"("external_id") <= 120))),
+    CONSTRAINT "affiliate_conversions_source_valid" CHECK (("source" = ANY (ARRAY['csv'::"text", 'api'::"text"]))),
+    CONSTRAINT "affiliate_conversions_status_valid" CHECK (("status" = ANY (ARRAY['pending'::"text", 'approved'::"text", 'cancelled'::"text", 'paid'::"text"])))
 );
 
 
@@ -2206,6 +2213,11 @@ ALTER TABLE ONLY "public"."affiliate_clicks"
 
 ALTER TABLE ONLY "public"."affiliate_clicks"
     ADD CONSTRAINT "affiliate_clicks_subid_unique" UNIQUE ("subid");
+
+
+
+ALTER TABLE ONLY "public"."affiliate_conversions"
+    ADD CONSTRAINT "affiliate_conversions_partner_external_id_key" UNIQUE ("partner", "external_id");
 
 
 
