@@ -1,11 +1,15 @@
 import "server-only";
 import { sql } from "drizzle-orm";
+import { groupProfileFrom } from "@/lib/group-profile";
 import { nearbyAlternatives, type AlternativeCandidate } from "@/lib/group-alternatives";
 import { shouldSuggestAlternatives } from "@/lib/group-votes";
 import { dbAsUser, type DbUser, type UserTx } from "@/server/db/user";
+import { score, type CatalogActivity } from "@/server/personalization/engine";
+import { groupPreferencesTx } from "./aggregate";
 
 // Letture di un viaggio di gruppo (passo 4.2) con dbAsUser: la RLS decide chi vede cosa (solo i
-// membri vedono voti, proposte e registro). Nessuna preferenza dei membri viene letta qui (passo 4.3).
+// membri vedono voti, proposte e registro). Le preferenze entrano solo come aggregato del gruppo
+// (passo 4.3), e solo per ordinare le alternative: nessun dato per membro.
 
 export type VoteTally = { up: number; down: number; mine: 1 | -1 | null };
 
@@ -73,39 +77,98 @@ function toMine(value: number | undefined): 1 | -1 | null {
   return value === 1 ? 1 : value === -1 ? -1 : null;
 }
 
-// Catalogo delle attività attive, con area e voto, per le alternative (una query sola).
-async function catalogTx(tx: UserTx): Promise<AlternativeCandidate[]> {
-  const rows = await tx.execute<{
-    id: string;
-    title: string;
-    place_name: string;
-    area: string;
-    lat: number;
-    lng: number;
-    rating: number | null;
-  }>(sql`
-    select a.id, a.title, pl.name as place_name, ar.slug as area, pl.lat, pl.lng, a.rating::float8 as rating
+type CatalogRow = {
+  id: string;
+  slug: string;
+  title: string;
+  place_name: string;
+  area: string;
+  lat: number;
+  lng: number;
+  duration_min: number;
+  on_site_price_eur: number | null;
+  season_months: number[];
+  requires_car: boolean;
+  accessible: boolean;
+  diet_friendly: string[];
+  rating: number | null;
+};
+
+type CatalogTagRow = { activity_id: string; interest_key: string; strength: number };
+
+// Catalogo delle attività attive, con area, voto e interessi: serve alle alternative e al
+// punteggio per il profilo del gruppo (due query sole).
+async function catalogTx(tx: UserTx): Promise<CatalogActivity[]> {
+  const rows = await tx.execute<CatalogRow>(sql`
+    select a.id, a.slug, a.title, pl.name as place_name, ar.slug as area, pl.lat, pl.lng,
+      a.duration_min, a.on_site_price_eur::float8 as on_site_price_eur, a.season_months::int[] as season_months,
+      a.requires_car, a.accessible, a.diet_friendly, a.rating::float8 as rating
     from public.activities a
     join public.places pl on pl.id = a.place_id
     join public.areas ar on ar.id = pl.area_id
     where a.is_active`);
+  const tags = await tx.execute<CatalogTagRow>(sql`
+    select ai.activity_id, ai.interest_key, ai.strength
+    from public.activity_interests ai
+    join public.activities a on a.id = ai.activity_id
+    where a.is_active`);
+  const tagsByActivity = new Map<string, { key: string; strength: number }[]>();
+  for (const tag of tags) {
+    const list = tagsByActivity.get(tag.activity_id) ?? [];
+    list.push({ key: tag.interest_key, strength: Number(tag.strength) });
+    tagsByActivity.set(tag.activity_id, list);
+  }
   return rows.map((r) => ({
-    activityId: r.id,
+    id: r.id,
+    slug: r.slug,
     title: r.title,
     placeName: r.place_name,
     area: r.area,
     lat: Number(r.lat),
     lng: Number(r.lng),
+    durationMin: Number(r.duration_min),
+    onSitePriceEur: r.on_site_price_eur === null ? null : Number(r.on_site_price_eur),
+    seasonMonths: r.season_months.map(Number),
+    requiresCar: r.requires_car,
+    accessible: r.accessible,
+    dietFriendly: r.diet_friendly,
     rating: r.rating === null ? null : Number(r.rating),
+    tags: tagsByActivity.get(r.id) ?? [],
   }));
+}
+
+// Punteggio di ogni attività per il profilo del gruppo (passo 4.3). Undefined se nessun membro ha
+// completato i gusti: le alternative restano ordinate per voto del catalogo.
+async function groupScoresTx(
+  tx: UserTx,
+  groupId: string,
+  itineraryId: string,
+  catalog: readonly CatalogActivity[],
+): Promise<ReadonlyMap<string, number> | undefined> {
+  const prefs = await groupPreferencesTx(tx, groupId);
+  if (prefs.withPreferences === 0) return undefined;
+  const [trip] = await tx.execute<{ days: number; season_months: number[] }>(sql`
+    select days, season_months::int[] as season_months from public.itineraries where id = ${itineraryId}::uuid`);
+  const profile = groupProfileFrom(prefs, Number(trip?.days ?? 3), trip?.season_months ?? []);
+  return new Map(catalog.map((activity) => [activity.id, score(activity, profile)]));
 }
 
 function alternativesFor(
   stops: readonly StopRow[],
   votes: Record<string, VoteTally>,
   members: number,
-  catalog: readonly AlternativeCandidate[],
+  catalog: readonly CatalogActivity[],
+  scores: ReadonlyMap<string, number> | undefined,
 ): Record<string, TripGroupAlternative[]> {
+  const candidates: AlternativeCandidate[] = catalog.map((a) => ({
+    activityId: a.id,
+    title: a.title,
+    placeName: a.placeName,
+    area: a.area,
+    lat: a.lat,
+    lng: a.lng,
+    rating: a.rating,
+  }));
   const inTrip = new Set(stops.flatMap((s) => (s.activity_id ? [s.activity_id] : [])));
   const result: Record<string, TripGroupAlternative[]> = {};
   for (const stop of stops) {
@@ -114,8 +177,9 @@ function alternativesFor(
     if (!shouldSuggestAlternatives(tally.down, members)) continue;
     result[stop.id] = nearbyAlternatives(
       { activityId: stop.activity_id, area: stop.area, lat: stop.lat, lng: stop.lng },
-      catalog,
+      candidates,
       inTrip,
+      scores,
     );
   }
   return result;
@@ -165,7 +229,12 @@ export async function getTripGroupState(user: DbUser, itineraryId: string, group
       const tally = votes[s.id];
       return tally !== undefined && shouldSuggestAlternatives(tally.down, members);
     });
-    const alternatives = needsCatalog ? alternativesFor(stops, votes, members, await catalogTx(tx)) : {};
+    let alternatives: Record<string, TripGroupAlternative[]> = {};
+    if (needsCatalog) {
+      const catalog = await catalogTx(tx);
+      const scores = await groupScoresTx(tx, groupId, itineraryId, catalog);
+      alternatives = alternativesFor(stops, votes, members, catalog, scores);
+    }
 
     // group_member_profiles: nome dei compagni, filtrato dalla vista sull'appartenenza al gruppo.
     const proposalRows = await tx.execute<ProposalRow>(sql`

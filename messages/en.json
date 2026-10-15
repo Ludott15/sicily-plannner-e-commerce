@@ -1561,7 +1561,21 @@
       "dayRemoved": "{name} removed day {day}.",
       "proposalAccepted": "{name} accepted the proposal for {title}: it is on day {day}.",
       "generic": "{name} changed the trip."
-    }
+    },
+    "interestsHeading": "Shared interests",
+    "interestsLoading": "Reading the group's interests…",
+    "interestsFailed": "We could not read the group's interests. Reload the page.",
+    "commonHigh": "Strongly shared",
+    "commonMedium": "Shared",
+    "commonPrivate": "Shared interests appear once at least 3 people in the group have shared their tastes, so nobody reveals their own.",
+    "commonEmpty": "When members share their tastes, what you have in common appears here.",
+    "commonNone": "For now no interest stands out as shared.",
+    "proposalsIntro": "Built on the group's tastes as a whole: nobody sees the others' tastes.",
+    "proposalsLoading": "Preparing the group's trips…",
+    "proposalsFailed": "We could not prepare the group's trips. Reload the page.",
+    "logisticNote": "With fewer than 3 people we only show practical reasons, so nobody's tastes are revealed.",
+    "tripsHeading": "Three trips for the group",
+    "tripsEmpty": "With this trip's days no area has enough activities. Change the days of the trip."
   },
   "GroupInvite": {
     "metaTitle": "Group invite",

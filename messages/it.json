@@ -1561,7 +1561,21 @@
       "dayRemoved": "{name} ha tolto il giorno {day}.",
       "proposalAccepted": "{name} ha accettato la proposta per {title}: è al giorno {day}.",
       "generic": "{name} ha cambiato il viaggio."
-    }
+    },
+    "interestsHeading": "Interessi comuni",
+    "interestsLoading": "Stiamo leggendo gli interessi del gruppo…",
+    "interestsFailed": "Non siamo riusciti a leggere gli interessi del gruppo. Ricarica la pagina.",
+    "commonHigh": "Molto in comune",
+    "commonMedium": "In comune",
+    "commonPrivate": "Gli interessi comuni compaiono quando almeno 3 persone del gruppo hanno indicato i loro gusti, così nessuno svela i propri.",
+    "commonEmpty": "Quando i membri indicano i loro gusti, qui compare quello che vi accomuna.",
+    "commonNone": "Per ora non emerge un interesse che vi accomuna.",
+    "proposalsIntro": "Costruiti sui gusti del gruppo nel suo insieme: nessuno vede quelli degli altri.",
+    "proposalsLoading": "Stiamo preparando i viaggi del gruppo…",
+    "proposalsFailed": "Non siamo riusciti a preparare i viaggi del gruppo. Ricarica la pagina.",
+    "logisticNote": "Con meno di 3 persone mostriamo solo motivi pratici, per non svelare i gusti di nessuno.",
+    "tripsHeading": "Ecco tre viaggi per il gruppo",
+    "tripsEmpty": "Con i giorni di questo viaggio nessuna zona ha abbastanza attività. Cambia i giorni del viaggio."
   },
   "GroupInvite": {
     "metaTitle": "Invito al gruppo",
