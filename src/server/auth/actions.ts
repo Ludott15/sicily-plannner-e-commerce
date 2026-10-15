@@ -21,6 +21,8 @@ const localeSchema = z.enum(routing.locales);
 const emailSchema = z.email().max(254);
 const codeSchema = z.string().regex(/^\d{6}$/);
 const captchaSchema = z.string().min(1).max(4096);
+// Destinazione dopo l'accesso (per es. /it/invito/<token>): validata con safeNextPath, mai usata grezza.
+const nextSchema = z.string().max(2048).optional();
 
 // Gli input arrivano dal client come stringhe: li valida Zod.
 
@@ -53,16 +55,31 @@ function mapAuthError(error: AuthError): AuthErrorCode {
   }
 }
 
-function callbackUrl(locale: string) {
+// Destinazione dopo l'accesso: il percorso ricevuto se è interno, altrimenti il profilo.
+function destinationAfterAuth(locale: string, next: string | undefined): string {
+  return safeNextPath(next, `/${locale}/profilo`);
+}
+
+function callbackUrl(locale: string, next?: string) {
   const url = new URL("/api/auth/callback", publicEnv.NEXT_PUBLIC_SITE_URL);
-  url.searchParams.set("next", `/${locale}/profilo`);
+  url.searchParams.set("next", destinationAfterAuth(locale, next));
   return url.toString();
 }
 
-const sendCodeSchema = z.object({ email: emailSchema, locale: localeSchema, captchaToken: captchaSchema });
+const sendCodeSchema = z.object({
+  email: emailSchema,
+  locale: localeSchema,
+  captchaToken: captchaSchema,
+  next: nextSchema,
+});
 
 // Invia il codice (e il link alternativo). Crea l'account se l'email è nuova.
-export async function sendEmailCode(input: { email: string; locale: string; captchaToken: string }): Promise<SendCodeState> {
+export async function sendEmailCode(input: {
+  email: string;
+  locale: string;
+  captchaToken: string;
+  next?: string;
+}): Promise<SendCodeState> {
   const parsed = sendCodeSchema.safeParse(input);
   if (!parsed.success) {
     return { status: "error", code: parsed.error.issues.some((i) => i.path[0] === "email") ? "invalid_email" : "captcha_failed" };
@@ -72,7 +89,7 @@ export async function sendEmailCode(input: { email: string; locale: string; capt
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data.email,
     options: {
-      emailRedirectTo: callbackUrl(parsed.data.locale),
+      emailRedirectTo: callbackUrl(parsed.data.locale, parsed.data.next),
       captchaToken: parsed.data.captchaToken,
       shouldCreateUser: true,
     },
@@ -81,10 +98,15 @@ export async function sendEmailCode(input: { email: string; locale: string; capt
   return { status: "sent", email: parsed.data.email };
 }
 
-const verifyCodeSchema = z.object({ email: emailSchema, code: codeSchema, locale: localeSchema });
+const verifyCodeSchema = z.object({ email: emailSchema, code: codeSchema, locale: localeSchema, next: nextSchema });
 
-// Verifica il codice dell'accesso e porta al profilo.
-export async function verifyEmailCode(input: { email: string; code: string; locale: string }): Promise<VerifyCodeState> {
+// Verifica il codice dell'accesso e porta alla destinazione (next, altrimenti il profilo).
+export async function verifyEmailCode(input: {
+  email: string;
+  code: string;
+  locale: string;
+  next?: string;
+}): Promise<VerifyCodeState> {
   const parsed = verifyCodeSchema.safeParse(input);
   if (!parsed.success) return { status: "error", code: "invalid_code" };
 
@@ -93,10 +115,10 @@ export async function verifyEmailCode(input: { email: string; code: string; loca
   // Supabase risponde otp_expired sia al codice sbagliato sia a quello scaduto.
   if (error) return { status: "error", code: "invalid_code" };
 
-  redirect(`/${parsed.data.locale}/profilo`);
+  redirect(destinationAfterAuth(parsed.data.locale, parsed.data.next));
 }
 
-const guestSchema = z.object({ locale: localeSchema, captchaToken: captchaSchema, next: z.string().max(2048).optional() });
+const guestSchema = z.object({ locale: localeSchema, captchaToken: captchaSchema, next: nextSchema });
 
 // Sessione ospite: l'utente usa il sito senza account. Se c'è già una sessione, non ne crea un'altra.
 export async function startGuestSession(input: { locale: string; captchaToken: string; next?: string }): Promise<VerifyCodeState> {
@@ -113,11 +135,15 @@ export async function startGuestSession(input: { locale: string; captchaToken: s
   redirect(destination);
 }
 
-const guestEmailSchema = z.object({ email: emailSchema });
+const guestEmailSchema = z.object({ email: emailSchema, locale: localeSchema, next: nextSchema });
 
 // Da ospite ad account, passo 1: l'email riceve il codice. L'account non cambia finché il
-// codice non è verificato.
-export async function sendGuestEmailCode(input: { email: string }): Promise<SendCodeState> {
+// codice non è verificato. Il locale serve al link alternativo dell'email (emailRedirectTo).
+export async function sendGuestEmailCode(input: {
+  email: string;
+  locale: string;
+  next?: string;
+}): Promise<SendCodeState> {
   const parsed = guestEmailSchema.safeParse(input);
   if (!parsed.success) return { status: "error", code: "invalid_email" };
 
@@ -125,16 +151,24 @@ export async function sendGuestEmailCode(input: { email: string }): Promise<Send
   if (!user?.is_anonymous) return { status: "error", code: "not_guest" };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({ email: parsed.data.email });
+  const { error } = await supabase.auth.updateUser(
+    { email: parsed.data.email },
+    { emailRedirectTo: callbackUrl(parsed.data.locale, parsed.data.next) },
+  );
   if (error) return { status: "error", code: mapAuthError(error) };
   return { status: "sent", email: parsed.data.email };
 }
 
-const guestVerifySchema = z.object({ email: emailSchema, code: codeSchema, locale: localeSchema });
+const guestVerifySchema = z.object({ email: emailSchema, code: codeSchema, locale: localeSchema, next: nextSchema });
 
 // Da ospite ad account, passo 2: con il codice l'email è confermata e l'utente non è più
 // anonimo. Lo user id resta lo stesso, quindi itinerari e dati restano suoi.
-export async function verifyGuestEmailCode(input: { email: string; code: string; locale: string }): Promise<VerifyCodeState> {
+export async function verifyGuestEmailCode(input: {
+  email: string;
+  code: string;
+  locale: string;
+  next?: string;
+}): Promise<VerifyCodeState> {
   const parsed = guestVerifySchema.safeParse(input);
   if (!parsed.success) return { status: "error", code: "invalid_code" };
 
@@ -149,16 +183,19 @@ export async function verifyGuestEmailCode(input: { email: string; code: string;
   });
   if (error) return { status: "error", code: "invalid_code" };
 
-  redirect(`/${parsed.data.locale}/profilo`);
+  redirect(destinationAfterAuth(parsed.data.locale, parsed.data.next));
 }
 
 export async function signInWithGoogle(formData: FormData) {
   const locale = localeSchema.parse(formData.get("locale"));
+  // next (facoltativo) è validato da safeNextPath dentro callbackUrl.
+  const rawNext = formData.get("next");
+  const next = typeof rawNext === "string" ? rawNext : undefined;
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: callbackUrl(locale) },
+    options: { redirectTo: callbackUrl(locale, next) },
   });
   if (error || !data.url) redirect(`/${locale}/login?error=oauth`);
 

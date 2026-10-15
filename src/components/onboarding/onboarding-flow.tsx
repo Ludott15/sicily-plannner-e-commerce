@@ -59,16 +59,20 @@ function writeDraft(answers: OnboardingAnswers | null) {
   }
 }
 
+// nextPath (facoltativo, già validato con safeNextPath dalla pagina) è dove andare a onboarding
+// completato, per esempio l'invito a un gruppo; senza, la pagina dei tre viaggi.
 export function OnboardingFlow({
   locale,
   interests,
   initial,
   needsSession,
+  nextPath,
 }: {
   locale: string;
   interests: Interest[];
   initial: OnboardingAnswers;
   needsSession: boolean;
+  nextPath?: string;
 }) {
   const t = useTranslations("Onboarding");
   const router = useRouter();
@@ -96,13 +100,22 @@ export function OnboardingFlow({
       return next;
     });
 
-  const goTo = (index: number) => router.push({ pathname: "/viaggio/nuovo", query: { domanda: String(index + 1) } });
+  const goTo = (index: number) =>
+    router.push({
+      pathname: "/viaggio/nuovo",
+      query: { domanda: String(index + 1), ...(nextPath ? { next: nextPath } : {}) },
+    });
 
   function submit(final: OnboardingAnswers) {
     setError(null);
     startTransition(async () => {
       writeDraft(final);
-      const result = await submitOnboarding({ locale, ...final, captchaToken: captchaToken ?? undefined });
+      const result = await submitOnboarding({
+        locale,
+        ...final,
+        captchaToken: captchaToken ?? undefined,
+        next: nextPath,
+      });
       // In caso di successo l'azione porta ai tre viaggi, che tolgono la bozza (ClearDraft).
       if (result?.status === "error") {
         setError(result.code);

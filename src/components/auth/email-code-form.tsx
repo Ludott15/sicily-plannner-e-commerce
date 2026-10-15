@@ -19,8 +19,18 @@ import { Turnstile } from "./turnstile";
 // 2) codice → accesso, senza lasciare la pagina.
 // mode "login": accesso o nuovo account, con Turnstile sull'invio.
 // mode "guest": l'ospite aggiunge la sua email e diventa un account, stesso user id.
-// Le azioni partono da onSubmit con startTransition: i campi restano dopo un errore.
-export function EmailCodeForm({ mode, locale }: { mode: "login" | "guest"; locale: string }) {
+// next (facoltativo, validato lato server con safeNextPath) è dove andare dopo l'accesso, per
+// esempio la pagina dell'invito a un gruppo. Le azioni partono da onSubmit con startTransition:
+// i campi restano dopo un errore.
+export function EmailCodeForm({
+  mode,
+  locale,
+  next,
+}: {
+  mode: "login" | "guest";
+  locale: string;
+  next?: string;
+}) {
   const t = useTranslations("Login");
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
@@ -39,8 +49,8 @@ export function EmailCodeForm({ mode, locale }: { mode: "login" | "guest"; local
     startTransition(async () => {
       const result =
         mode === "login"
-          ? await sendEmailCode({ email, locale, captchaToken: captchaToken ?? "" })
-          : await sendGuestEmailCode({ email });
+          ? await sendEmailCode({ email, locale, captchaToken: captchaToken ?? "", next })
+          : await sendGuestEmailCode({ email, locale, next });
       if (needsCaptcha) {
         setCaptchaToken(null);
         setCaptchaKey((k) => k + 1);
@@ -67,8 +77,8 @@ export function EmailCodeForm({ mode, locale }: { mode: "login" | "guest"; local
     startTransition(async () => {
       const result =
         mode === "login"
-          ? await verifyEmailCode({ email, code, locale })
-          : await verifyGuestEmailCode({ email, code, locale });
+          ? await verifyEmailCode({ email, code, locale, next })
+          : await verifyGuestEmailCode({ email, code, locale, next });
       // In caso di successo l'azione reindirizza al profilo.
       if (result?.status === "error") setError(result.code);
     });
