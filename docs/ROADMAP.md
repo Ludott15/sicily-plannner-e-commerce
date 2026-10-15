@@ -23,6 +23,7 @@ Aggiornato da ogni PR. "In PR" = aperta e in attesa di merge; le PR dei passi su
 | 1.5 Viaggi su due aree | In PR: matrice dei tempi di guida in admin (28 coppie), composizione di due aree vicine sotto 150 minuti, giorni ripartiti secondo i punteggi, giorno di trasferimento più corto (proposte e viaggio salvato), motivo "Due zone vicine" | `roadmap/1.5-due-aree` |
 | 4.1 Gruppi e inviti | In PR: "Viaggia in gruppo" dal viaggio, pagina del gruppo (membri, rinomina, uscita, rimozione, proprietà), link d'invito (7 giorni, 10 usi, rigenerabile, revocabile) ed email (Resend, inattiva senza chiave), /invito/[token] con anteprima e OG, ritorno all'invito dopo accesso e gusti, massimo 30 membri | `roadmap/4.1-gruppi` |
 | 4.2 Voti, proposte e tempo reale | In PR: voti +1/-1 su ogni tappa del gruppo (StopVotes), alternative vicine quando i contrari sono almeno la metà, sostituzione solo dell'owner, proposte di aggiunta con accetta/rifiuta e notifica, campanella e /notifiche, registro "Modifiche recenti", tempo reale con broadcast privato ai soli membri | `roadmap/4.2-voti` |
+| 4.3 Scoring di gruppo | In PR: preferenze aggregate in SQL (media, minimo 2 con un 5, vincoli più restrittivi) con soglia di privacy a 3 persone, "Interessi comuni" e "Ecco tre viaggi per il gruppo" nella pagina del gruppo, motivi solo pratici sotto 3 membri, alternative ordinate con il profilo del gruppo | `roadmap/4.3-scoring-gruppo` |
 
 ---
 
