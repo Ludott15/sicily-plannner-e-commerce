@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  char,
   check,
   index,
   integer,
@@ -9,6 +10,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 import { activities, activityOffers } from "./catalog";
@@ -103,18 +105,38 @@ export const affiliateClicks = pgTable(
   ],
 );
 
-// Importate dai report dei partner; collegate ai click tramite subid.
+// Conversioni importate dai report dei partner (CSV dall'admin o API via cron); collegate ai click
+// tramite subid. Idempotenza: (partner, external_id) è univoco e il re-import aggiorna la riga.
+// external_id è l'id della conversione nel report del partner; se il report non lo ha, il server
+// calcola un hash stabile (src/lib/affiliate-conversions/external-id.ts). Le righe si leggono solo
+// dall'admin; scrittura solo con dbAdmin (nessun grant di scrittura al client).
 export const affiliateConversions = pgTable(
   "affiliate_conversions",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     partner: partner("partner").notNull(),
     subid: text("subid").notNull(),
+    externalId: text("external_id").notNull(),
     amountEur: numeric("amount_eur", { precision: 10, scale: 2 }),
     commissionEur: numeric("commission_eur", { precision: 10, scale: 2 }),
+    currency: char("currency", { length: 3 }).notNull().default("EUR"),
     status: text("status").notNull(),
+    source: text("source").notNull(),
     reportedAt: timestamp("reported_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("affiliate_conversions_subid_idx").on(t.subid)],
+  (t) => [
+    index("affiliate_conversions_subid_idx").on(t.subid),
+    unique("affiliate_conversions_partner_external_id_key").on(t.partner, t.externalId),
+    check(
+      "affiliate_conversions_status_valid",
+      sql`${t.status} in ('pending', 'approved', 'cancelled', 'paid')`,
+    ),
+    check("affiliate_conversions_source_valid", sql`${t.source} in ('csv', 'api')`),
+    check(
+      "affiliate_conversions_external_id_length",
+      sql`char_length(${t.externalId}) between 1 and 120`,
+    ),
+  ],
 );

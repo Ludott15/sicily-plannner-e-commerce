@@ -295,6 +295,13 @@
       "when": 1792072993646,
       "tag": "20261015140313_import_partner",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1792075391021,
+      "tag": "20261015144311_conversioni_affiliate",
+      "breakpoints": true
     }
   ]
 }

@@ -69,6 +69,15 @@ Regole complete in [IMMAGINI.md](IMMAGINI.md).
 | `ANTHROPIC_API_KEY` | chiave API Anthropic (facoltativa) | Senza, le attività nuove dell'import arrivano senza tag proposti. Con la chiave, la coda "Da verificare" mostra i tag proposti. |
 | `EMBEDDINGS_PROVIDER`, `VOYAGE_API_KEY` | `voyage` (default) e la chiave Voyage AI (facoltativa) | Senza chiave il cron delle 4:00 UTC (`embed-activities`) non fa nulla. Con la chiave risponde 200 con il numero di attività calcolate. |
 
+## 5. Conversioni dei partner (report)
+
+Le conversioni entrano in due modi: dal CSV caricato dall'admin (Affiliati → Importa, con anteprima) e dal cron `/api/cron/import-conversions` (05:00 UTC), che oggi non esegue alcun adattatore. Nessun partner è collegato via API: i report API vanno verificati con le condizioni di ogni programma prima di attivarli (accesso al report, frequenza consentita, dati personali nel report). Finché non ci sono adattatori attivi, il cron risponde 200 con zero righe e i dati si caricano dal CSV.
+
+| Voce | Valore | Verifica |
+| --- | --- | --- |
+| Report API di un partner | da attivare solo dopo la verifica delle condizioni del programma | A mano: la risposta del cron elenca il partner con `status: "ok"` solo dopo l'attivazione; prima risulta `skipped`. |
+| Import CSV | dal modello scaricabile in Affiliati → Importa; anteprima prima della conferma | A mano: un file di prova con un subid di un click reale porta la conversione in dashboard; il file ripetuto aggiorna le stesse righe. |
+
 ## Verifica automatica
 
 ```bash
