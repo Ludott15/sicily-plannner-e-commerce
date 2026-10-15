@@ -129,34 +129,33 @@ select throws_ok($$truncate public.points_ledger$$, 'P0001', 'points_ledger_immu
 -- CLASSIFICA STAGIONALE
 ----------------------------------------------------------------------------
 select tests.authenticate_as('carol');
-update public.profiles set leaderboard_opt_out = true where id = tests.uid('carol');
+select throws_ok(
+  format($$update public.profiles set leaderboard_opt_out = true where id = %L$$, tests.uid('carol')),
+  '42501', null, 'profiles: il client non scrive leaderboard_opt_out, passa da set_leaderboard_opt_out'
+);
+select lives_ok($$select public.set_leaderboard_opt_out(true)$$, 'classifica: carol sceglie di non comparire');
 select throws_ok(
   format($$update public.profiles set role = 'admin' where id = %L$$, tests.uid('carol')),
-  '42501', null, 'profiles: con il nuovo grant su leaderboard_opt_out il ruolo resta non modificabile'
+  '42501', null, 'profiles: il ruolo resta non modificabile dal client'
 );
 reset role;
 select public.refresh_leaderboard();
 
 select tests.authenticate_as('alice');
 select results_eq(
-  $$select display_name, total_points, rank, is_me from public.seasonal_leaderboard
-    where season = public.season_for(now()) and display_name in ('alice', 'bob', 'carol', 'dan')
+  $$select public_name, points, rank, is_me from public.seasonal_leaderboard_top(null)
+    where public_name in ('alice', 'bob', 'carol', 'dan')
     order by rank$$,
   $$values ('alice', 70, 1, true), ('dan', 40, 2, false), ('bob', 10, 3, false)$$,
   'classifica: totali senza redeem, is_me per la propria riga, esclusi gli utenti che hanno scelto di non comparire'
-);
-select results_eq(
-  $$select column_name::text collate "default" from information_schema.columns
-    where table_schema = 'public' and table_name = 'seasonal_leaderboard' order by ordinal_position$$,
-  $$values ('season'), ('rank'), ('display_name'), ('avatar_url'), ('total_points'), ('is_me')$$,
-  'classifica: la vista espone solo stagione, posizione, nome, avatar, totale e is_me'
 );
 select throws_ok($$select * from public.leaderboard_season_totals$$, '42501', null, 'classifica: la vista materializzata non è leggibile dal client');
 select throws_ok($$select public.refresh_leaderboard()$$, '42501', null, 'classifica: il client non forza il refresh');
 
 reset role;
 select tests.as_anon();
-select throws_ok($$select * from public.seasonal_leaderboard$$, '42501', null, 'anon: non legge la classifica');
+select isnt_empty($$select 1 from public.seasonal_leaderboard_top(null)$$, 'anon: legge la classifica pubblica');
+select throws_ok($$select * from public.leaderboard_season_totals$$, '42501', null, 'anon: la vista materializzata non è leggibile');
 
 ----------------------------------------------------------------------------
 -- CLASSIFICA DI GRUPPO
@@ -171,15 +170,15 @@ insert into public.group_members (group_id, user_id) values (current_setting('te
 
 select tests.authenticate_as('bob');
 select results_eq(
-  format($$select display_name, total_points, is_me from public.group_leaderboard(%L)$$, current_setting('tests.gid')),
+  format($$select public_name, points, is_me from public.group_leaderboard(%L)$$, current_setting('tests.gid')),
   $$values ('alice', 70, false), ('bob', 10, true)$$,
   'classifica di gruppo: il membro vede i punti del viaggio dei membri'
 );
 reset role;
 select tests.authenticate_as('dan');
-select is_empty(
+select throws_ok(
   format($$select 1 from public.group_leaderboard(%L)$$, current_setting('tests.gid')),
-  'classifica di gruppo: un non membro non riceve righe'
+  'P0001', 'not_group_member', 'classifica di gruppo: un non membro non riceve i dati del gruppo'
 );
 
 ----------------------------------------------------------------------------

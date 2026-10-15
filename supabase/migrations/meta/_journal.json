@@ -344,6 +344,13 @@
       "when": 1792088008979,
       "tag": "20261015181328_badge",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1792089624373,
+      "tag": "20261015184024_classifiche",
+      "breakpoints": true
     }
   ]
 }
