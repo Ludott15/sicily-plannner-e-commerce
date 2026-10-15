@@ -37,17 +37,19 @@ export type StopItemProps = {
   onStep: (direction: -1 | 1) => void;
   onMoveToDay: (dayIndex: number) => void;
   onRemove: () => void;
+  /** Voti del gruppo sulla tappa (solo nei viaggi di gruppo), sotto la scheda. */
+  votes?: ReactNode;
 };
 
 // Una tappa nella lista del giorno: la scheda (ItineraryStop) con orario e meta, poi i controlli
 // (trascina, su, giù, sposta al giorno, togli) e la nota con la fascia oraria.
-export function StopItem({ stop, dayIndex, dayCount, index, count, pending, onStep, onMoveToDay, onRemove }: StopItemProps) {
+export function StopItem({ stop, dayIndex, dayCount, index, count, pending, onStep, onMoveToDay, onRemove, votes }: StopItemProps) {
   const t = useTranslations("Trips");
   const { attributes, listeners, setNodeRef } = useSortable({ id: stop.id });
   const slotLabel = stop.timeSlot ? t(`timeSlot.${stop.timeSlot}`) : undefined;
 
   return (
-    <ItineraryStop time={slotLabel} title={stop.title} href={stop.href ?? undefined} meta={stop.meta}>
+    <ItineraryStop time={slotLabel} title={stop.title} href={stop.href ?? undefined} meta={stop.meta} votes={votes}>
       <div ref={setNodeRef} className="is-trip-tools mt-2 flex flex-wrap items-center gap-1" aria-busy={pending}>
         <button
           type="button"

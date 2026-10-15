@@ -2,6 +2,7 @@
 
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { shouldSuggestAlternatives } from "@/lib/group-votes";
 
 // VoteButton (docs/design/components/VoteButton/README.md)
 // Pollice su o giù con il numero di voti: icona e numero sempre insieme, il colore
@@ -38,11 +39,8 @@ export function VoteButton({
   );
 }
 
-// Regola della nota: voti contrari almeno pari alla metà dei membri attuali del gruppo
-// (i voti di chi è uscito non contano). Condivisa con lo scoring di gruppo.
-export function shouldSuggestAlternatives(against: number, members: number): boolean {
-  return members > 0 && against * 2 >= members;
-}
+// La regola della nota vive in src/lib/group-votes.ts (condivisa con lo scoring di gruppo).
+export { shouldSuggestAlternatives };
 
 // Voti di una tappa nei viaggi di gruppo, con la nota sulle alternative.
 export function StopVotes({

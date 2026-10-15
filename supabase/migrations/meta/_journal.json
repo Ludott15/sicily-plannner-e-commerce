@@ -316,6 +316,13 @@
       "when": 1792078631848,
       "tag": "20261015153711_gruppi_inviti",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1792080945335,
+      "tag": "20261015161545_voti_proposte",
+      "breakpoints": true
     }
   ]
 }

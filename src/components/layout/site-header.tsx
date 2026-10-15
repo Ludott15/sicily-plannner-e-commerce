@@ -1,8 +1,10 @@
 import { getLocale, getTranslations } from "next-intl/server";
+import { Bell } from "lucide-react";
 import { Button, ButtonLink } from "@/components/design";
 import { Link } from "@/lib/i18n/navigation";
 import { getUser } from "@/server/auth";
 import { signOut } from "@/server/auth/actions";
+import { unreadNotificationsCount } from "@/server/notifications/queries";
 
 // Intestazione (mockup Home e Attività): marchio "Isula" in Fraunces 600 lava, navigazione,
 // "Accedi" secondario. Il bottone principale della vista sta nella pagina, non qui.
@@ -12,6 +14,9 @@ import { signOut } from "@/server/auth/actions";
 // perderebbe i suoi viaggi, quindi l'uscita sta nel profilo, con l'avviso.
 export async function SiteHeader() {
   const [user, locale, t] = await Promise.all([getUser(), getLocale(), getTranslations("Nav")]);
+  // Campanella (4.2): solo per chi ha un account; un ospite non riceve notifiche di gruppo.
+  const registered = user !== null && !user.is_anonymous;
+  const unread = user && registered ? await unreadNotificationsCount(user) : 0;
 
   return (
     <header className="border-b border-divider bg-calce">
@@ -34,6 +39,25 @@ export async function SiteHeader() {
           </nav>
         </div>
         <div className="flex items-center gap-2">
+          {user && registered && (
+            <ButtonLink
+              href="/notifiche"
+              variant="ghost"
+              size="sm"
+              className="relative"
+              aria-label={unread > 0 ? t("notificationsCount", { count: unread }) : t("notifications")}
+            >
+              <Bell size={20} strokeWidth={1.5} aria-hidden="true" />
+              {unread > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute -top-1 -right-1 inline-flex min-w-5 items-center justify-center rounded-pill bg-coccio px-1 text-caption font-semibold text-on-coccio"
+                >
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              )}
+            </ButtonLink>
+          )}
           {user && (
             <ButtonLink href="/preferenze" variant="ghost" size="sm">
               {t("preferences")}
