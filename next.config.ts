@@ -10,6 +10,13 @@ const nextConfig: NextConfig = {
     deviceSizes: [480, 800, 1200, 1600],
     imageSizes: [],
   },
+  experimental: {
+    serverActions: {
+      // Il CSV di importazione pesa fino a MAX_IMPORT_BYTES (2 MB) più i byte del multipart:
+      // il limite predefinito delle server action è 1 MB.
+      bodySizeLimit: "3mb",
+    },
+  },
 };
 
 export default withNextIntl(nextConfig);

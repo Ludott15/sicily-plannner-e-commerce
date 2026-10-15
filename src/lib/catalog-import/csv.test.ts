@@ -1,6 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { CsvParseError, parseCsv } from "./csv";
 import { catalogImportTemplate, CATALOG_IMPORT_COLUMNS } from "./columns";
+import { checkHeader, normalizeRow, type InterestOption } from "./rows";
+
+// Vocabolario degli interessi del seed (supabase/migrations/20260927201718_seed_interests.sql).
+const SEED_INTERESTS: InterestOption[] = [
+  { key: "sea", labelIt: "Mare" },
+  { key: "food_wine", labelIt: "Cibo e vino" },
+  { key: "history_archaeology", labelIt: "Storia e archeologia" },
+  { key: "nature_hiking", labelIt: "Natura ed escursioni" },
+  { key: "villages", labelIt: "Borghi" },
+  { key: "art", labelIt: "Arte" },
+  { key: "nightlife", labelIt: "Vita notturna" },
+  { key: "local_experiences", labelIt: "Esperienze locali" },
+  { key: "relax", labelIt: "Relax" },
+];
 
 describe("parseCsv", () => {
   it("legge intestazione e righe con virgolette e \"\" come virgoletta escapata", () => {
@@ -59,9 +73,50 @@ describe("parseCsv", () => {
 });
 
 describe("catalogImportTemplate", () => {
-  it("contiene solo l'intestazione con CRLF finale", () => {
+  it("intestazione in prima riga e a capo CRLF finale, senza altre righe oltre agli esempi", () => {
     const template = catalogImportTemplate();
-    expect(template).toBe(`${CATALOG_IMPORT_COLUMNS.join(",")}\r\n`);
-    expect(parseCsv(template).rows).toEqual([]);
+    expect(template.startsWith(`${CATALOG_IMPORT_COLUMNS.join(",")}\r\n`)).toBe(true);
+    expect(template.endsWith("\r\n")).toBe(true);
+    expect(template.split("\r\n")).toHaveLength(4); // intestazione, due esempi, coda vuota dopo il CRLF finale
+  });
+});
+
+describe("catalogImportTemplate con due righe di esempio", () => {
+  it("ri-parsato dà esattamente due righe valide, dichiarate demo", () => {
+    const doc = parseCsv(catalogImportTemplate());
+    expect(doc.delimiter).toBe(",");
+    expect(doc.rows).toHaveLength(2);
+
+    const header = checkHeader(doc.header);
+    expect(header.ok).toBe(true);
+    if (!header.ok) return;
+
+    const results = doc.rows.map((row) => normalizeRow(row.line, row.cells, header.index, SEED_INTERESTS));
+    results.forEach((result) => {
+      expect(result.ok).toBe(true);
+    });
+
+    const [first, second] = results;
+    if (!first?.ok || !second?.ok) return;
+
+    expect(first.row.slug).toBe("demo-esempio-passeggiata");
+    expect(first.row.slug.startsWith("demo-esempio-")).toBe(true);
+    expect(first.row.title.startsWith("[DEMO] ")).toBe(true);
+    expect(first.row.place.slug.startsWith("demo-")).toBe(true);
+    expect(first.row.onSitePriceEur).toBe("12.50");
+    expect(first.row.seasonMonths).toEqual([4, 5, 6, 7, 8, 9, 10]);
+    expect(first.row.dietFriendly).toEqual(["vegetarian", "gluten_free"]);
+    expect(first.row.tags).toEqual([
+      { key: "sea", strength: 3 },
+      { key: "history_archaeology", strength: 2 },
+    ]);
+
+    expect(second.row.slug).toBe("demo-esempio-degustazione");
+    expect(second.row.title.startsWith("[DEMO] ")).toBe(true);
+    expect(second.row.place.slug.startsWith("demo-")).toBe(true);
+    expect(second.row.tags).toEqual([
+      { key: "food_wine", strength: 3 },
+      { key: "local_experiences", strength: 2 },
+    ]);
   });
 });

@@ -574,7 +574,7 @@
     "importBack": "Back to activities",
     "importDownloadTemplate": "Download the template",
     "importFile": "CSV file",
-    "importFileHint": "Up to 1 MB and 1000 rows. Separator: comma or semicolon.",
+    "importFileHint": "Up to 2 MB and 2000 rows. Separator: comma or semicolon.",
     "importPreview": "Preview",
     "importCommit": "Import {count, plural, one {one row} other {# rows}}",
     "importPending": "Reading the file…",
@@ -599,11 +599,11 @@
     "importReviewLink": "Go to activities to review",
     "importErrors": {
       "file_missing": "Choose a CSV file.",
-      "file_too_large": "The file is larger than 1 MB.",
+      "file_too_large": "The file is larger than 2 MB.",
       "file_not_csv": "The file must have a .csv extension.",
       "file_empty": "The file is empty.",
       "header_invalid": "The headers are not valid: download the template and use its columns.",
-      "too_many_rows": "The file has more than 1000 rows.",
+      "too_many_rows": "The file has more than 2000 rows.",
       "failed": "Import failed. Try again."
     },
     "importIssues": {
@@ -629,7 +629,8 @@
       "place_inactive_for_active": "The activity is active: it cannot move to an unpublished place.",
       "image_not_found": "Image not found: the cover stays unchanged.",
       "image_ambiguous": "More than one image has this name: the cover stays unchanged.",
-      "place_data_ignored": "The place already exists: its data in this row is ignored."
+      "place_data_ignored": "The place already exists: its data in this row is ignored.",
+      "coordinates_outside_sicily": "Coordinates outside Sicily: check latitude and longitude (minor islands included)."
     },
     "reviewLink": "To review",
     "reviewTitle": "To review",

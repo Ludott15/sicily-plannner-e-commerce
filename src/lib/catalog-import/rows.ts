@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { PROVINCES } from "@/lib/provinces";
-import { CATALOG_IMPORT_COLUMNS, REQUIRED_IMPORT_COLUMNS, type CatalogImportColumn } from "./columns";
+import { CATALOG_IMPORT_COLUMNS, REQUIRED_IMPORT_COLUMNS, SICILY_BOUNDS, type CatalogImportColumn } from "./columns";
 import type { ImportIssue, ImportIssueCode } from "./types";
 
 // Validazione pura di una riga del CSV (nessun accesso al database).
@@ -184,6 +184,10 @@ export function normalizeRow(
     null,
   );
 
+  // Coordinate valide ma fuori dalla Sicilia: errore della riga (un numero non valido resta coordinates_invalid).
+  if (lat !== null && !withinRange(lat, SICILY_BOUNDS.lat)) errors.push(makeIssue("coordinates_outside_sicily", "place_lat", latRaw));
+  if (lng !== null && !withinRange(lng, SICILY_BOUNDS.lng)) errors.push(makeIssue("coordinates_outside_sicily", "place_lng", lngRaw));
+
   const taglineRaw = cell("place_tagline_it");
   const taglineIt = take(
     optional(taglineRaw, () => check(taglineSchema, taglineRaw, "place_tagline_it", "tagline_too_long")),
@@ -278,6 +282,10 @@ function check<T>(schema: z.ZodType<T>, raw: string, column: CatalogImportColumn
   const parsed = schema.safeParse(raw);
   if (parsed.success) return { ok: true, value: parsed.data };
   return { ok: false, issues: [makeIssue(code, column, raw)] };
+}
+
+function withinRange(value: number, range: { readonly min: number; readonly max: number }): boolean {
+  return value >= range.min && value <= range.max;
 }
 
 // Il valore se valido; altrimenti accumula gli errori e restituisce il ripiego.

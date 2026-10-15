@@ -170,15 +170,41 @@ describe("normalizeRow", () => {
   });
 
   it("decimali con virgola o punto; prezzo negativo non valido", () => {
-    const comma = run({ on_site_price_eur: "3,5", place_lat: "-36,9", place_lng: "14,2" });
+    const comma = run({ on_site_price_eur: "3,5", place_lat: "37,5", place_lng: "14,2" });
     expect(comma.ok && comma.row.onSitePriceEur).toBe("3.50");
-    expect(comma.ok && [comma.row.place.lat, comma.row.place.lng]).toEqual([-36.9, 14.2]);
+    expect(comma.ok && [comma.row.place.lat, comma.row.place.lng]).toEqual([37.5, 14.2]);
     expect(codesOf({ on_site_price_eur: "-1" })).toEqual(["price_invalid"]);
   });
 
   it("coordinate fuori range", () => {
     expect(codesOf({ place_lat: "95", place_slug: "ortigia" })).toEqual(["coordinates_invalid"]);
     expect(codesOf({ place_lng: "-181" })).toEqual(["coordinates_invalid"]);
+  });
+
+  it("coordinate dentro la Sicilia, isole minori e limiti del riquadro compresi", () => {
+    expect(codesOf({ place_lat: "37,0647", place_lng: "15,2934" })).toEqual([]);
+    expect(codesOf({ place_lat: "35.5", place_lng: "12.6" })).toEqual([]); // Lampedusa
+    expect(codesOf({ place_lat: "35.9", place_lng: "14.4" })).toEqual([]); // limiti del riquadro: Malta
+    expect(codesOf({ place_lat: "35.4", place_lng: "11.9" })).toEqual([]);
+    expect(codesOf({ place_lat: "38.9", place_lng: "15.7" })).toEqual([]);
+  });
+
+  it("coordinate valide fuori dalla Sicilia sono un errore di riga con la colonna e il valore", () => {
+    expect(codesOf({ place_lat: "40.8", place_lng: "14.2" })).toEqual(["coordinates_outside_sicily"]);
+    expect(codesOf({ place_lat: "35.3", place_lng: "14.5" })).toEqual(["coordinates_outside_sicily"]);
+    expect(codesOf({ place_lat: "37.5", place_lng: "11.8" })).toEqual(["coordinates_outside_sicily"]);
+    expect(codesOf({ place_lat: "37.5", place_lng: "15.8" })).toEqual(["coordinates_outside_sicily"]);
+    expect(codesOf({ place_lat: "39", place_lng: "15" })).toEqual(["coordinates_outside_sicily"]);
+    expect(codesOf({ place_lat: "37.5" })).toEqual([]);
+    expect(codesOf({ place_lng: "16" })).toEqual(["coordinates_outside_sicily"]);
+
+    const result = run({ place_lat: "35.3", place_lng: "14.5" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors).toEqual([{ code: "coordinates_outside_sicily", column: "place_lat", value: "35.3" }]);
+  });
+
+  it("coordinate non numeriche restano coordinates_invalid, non fuori Sicilia", () => {
+    expect(codesOf({ place_lat: "nord", place_lng: "14.2" })).toEqual(["coordinates_invalid"]);
   });
 
   it("provincia non valida", () => {
