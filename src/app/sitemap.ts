@@ -4,6 +4,7 @@ import { POPULAR_ROUTES } from "@/lib/flights/routes";
 import { routing } from "@/lib/i18n/routing";
 import { isPending } from "@/lib/pending-actions";
 import { listPublicSlugs } from "@/server/catalog/queries";
+import { verticalAvailability } from "@/server/affiliates/verticals";
 import { mapLimited, MAX_CONCURRENT_REQUESTS, routeHasPrices } from "@/server/flights/search";
 
 // Letta dal database a ogni richiesta: contiene solo contenuti pubblici (dbPublic).
@@ -18,13 +19,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ok: await routeHasPrices(route),
   }));
   const flightPaths = priced.filter((r) => r.ok).map((r) => `/voli/${r.slug}`);
+  // Alloggi e noleggi entrano solo quando il partner è pronto (ID configurato): altrimenti sono "in arrivo" e noindex.
+  const [lodgingReady, carReady] = await Promise.all([
+    verticalAvailability("lodging").then((s) => s === "ready"),
+    verticalAvailability("car").then((s) => s === "ready"),
+  ]);
 
   const paths = [
     "",
     "/attivita",
     "/itinerari",
     "/voli",
-    "/link-affiliati",
+    "/affiliazioni",
+    ...(lodgingReady ? ["/dove-dormire"] : []),
+    ...(carReady ? ["/noleggio-auto"] : []),
     "/crediti-foto",
     // Pagine con testi ancora in sospeso: fuori dalla sitemap (e noindex) finché non sono scritte.
     ...(isPending("about.editorial", "about.founder") ? [] : ["/chi-siamo"]),

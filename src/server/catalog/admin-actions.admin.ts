@@ -598,7 +598,7 @@ export async function reorderTemplateItems(formData: FormData): Promise<AdminFor
 // Offerte dei partner di un'attività (activity_offers)
 // ---------------------------------------------------------------------------
 
-const OFFER_PARTNERS = ["getyourguide", "viator", "travelpayouts", "car_rental"] as const;
+const OFFER_PARTNERS = ["getyourguide", "viator", "civitatis", "travelpayouts", "car_rental"] as const;
 
 const offerSchema = z.object({
   id: z.uuid().optional().or(z.literal("").transform(() => undefined)),
@@ -620,13 +620,14 @@ const offerSchema = z.object({
 export async function saveOffer(_prev: AdminFormState, formData: FormData): Promise<AdminFormState> {
   const parsed = offerSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error", code: "invalid" };
-  await requireAdmin();
+  const { user } = await requireAdmin();
   const { id, activityId, locale, priceFromEur, rating, ...fields } = parsed.data;
   const price = priceFromEur === null ? null : priceFromEur.toFixed(2);
 
   try {
     await dbAdmin.transaction(async (tx) => {
       const values = { ...fields, activityId, priceFromEur: price, rating: rating === null ? null : rating.toFixed(1) };
+      let offerId: string;
       if (id) {
         const [row] = await tx
           .select({ price: activityOffers.priceFromEur })
@@ -637,9 +638,27 @@ export async function saveOffer(_prev: AdminFormState, formData: FormData): Prom
           .update(activityOffers)
           .set({ ...values, ...(row.price !== price && { priceUpdatedAt: price === null ? null : new Date() }) })
           .where(eq(activityOffers.id, id));
+        offerId = id;
       } else {
-        await tx.insert(activityOffers).values({ ...values, priceUpdatedAt: price === null ? null : new Date() });
+        const [row] = await tx
+          .insert(activityOffers)
+          .values({ ...values, priceUpdatedAt: price === null ? null : new Date() })
+          .returning({ id: activityOffers.id });
+        offerId = row!.id;
       }
+      await tx.insert(adminAuditLog).values({
+        actorId: user.id,
+        action: "offer.save",
+        entity: "activity_offers",
+        entityId: offerId,
+        diff: {
+          activity_id: activityId,
+          partner: fields.partner,
+          is_active: fields.isActive,
+          price_eur: price,
+          created: id === undefined,
+        },
+      });
     });
   } catch (error) {
     return { status: "error", code: dbErrorCode(error) };
@@ -652,10 +671,24 @@ const deleteOfferSchema = z.object({ id: z.uuid(), activityId: z.uuid(), locale:
 export async function deleteOffer(_prev: AdminFormState, formData: FormData): Promise<AdminFormState> {
   const parsed = deleteOfferSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error", code: "invalid" };
-  await requireAdmin();
+  const { user } = await requireAdmin();
   const { id, activityId, locale } = parsed.data;
-  await dbAdmin
-    .delete(activityOffers)
-    .where(and(eq(activityOffers.id, id), eq(activityOffers.activityId, activityId)));
+  await dbAdmin.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ partner: activityOffers.partner })
+      .from(activityOffers)
+      .where(and(eq(activityOffers.id, id), eq(activityOffers.activityId, activityId)));
+    if (!row) return;
+    await tx
+      .delete(activityOffers)
+      .where(and(eq(activityOffers.id, id), eq(activityOffers.activityId, activityId)));
+    await tx.insert(adminAuditLog).values({
+      actorId: user.id,
+      action: "offer.delete",
+      entity: "activity_offers",
+      entityId: id,
+      diff: { activity_id: activityId, partner: row.partner },
+    });
+  });
   redirect(`/${locale}/admin/attivita/${activityId}?offerta=eliminata#offerte`);
 }

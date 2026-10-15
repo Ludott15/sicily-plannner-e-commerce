@@ -45,6 +45,7 @@ Restano manuali solo i segreti (passo 2 e sezione 2) e l'SMTP di produzione, se 
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | site key del widget Turnstile del dominio | Se manca, la build di produzione si ferma (`src/lib/env.ts`). A mano: il widget non mostra l'avviso "testing only". |
 | `WIKIMEDIA_CONTACT` | email di contatto per Wikimedia (es. l'email della redazione) | Serve a Foto da Commons: senza, Wikimedia limita le richieste (429). La pagina admin avvisa se manca. |
 | `CRON_SECRET` | stringa casuale lunga (es. `openssl rand -hex 32`) | `GET https://<dominio>/api/cron/cleanup-guests` senza header risponde 401. Nei log di Vercel il cron delle 3:00 UTC risponde 200 con `{"deleted": n}`. |
+| `RATE_LIMIT_SECRET` o `AFFILIATE_LINK_SECRET` | stringa casuale lunga (es. `openssl rand -hex 32`); basta una delle due | Senza entrambe il limite sui click (`/api/go`) è spento. A mano: dopo 60 click in un minuto dallo stesso IP la pagina mostra l'avviso "Troppi click in poco tempo". |
 
 Il widget Turnstile si crea su Cloudflare (Turnstile → Add widget) con il dominio di produzione. Da lì vengono la site key (Vercel) e la chiave segreta (`SUPABASE_AUTH_CAPTCHA_SECRET` per `config push`).
 
@@ -57,6 +58,13 @@ Il bucket `media` e le sue policy arrivano con le migrazioni (`supabase db push`
 - le immagini di beni culturali hanno un'autorizzazione non scaduta.
 
 Regole complete in [IMMAGINI.md](IMMAGINI.md).
+
+## 4. Partner affiliati
+
+| Voce | Valore | Verifica |
+| --- | --- | --- |
+| RATE_LIMIT_SECRET o AFFILIATE_LINK_SECRET | impostate in produzione (senza, il limite sui click è spento) | Vedi la tabella della sezione 2. |
+| Template e parametri dei partner | in Admin → Partner confermati con i termini di ogni programma (template, host, parametro del subid, variabile dell'ID) | A mano: per ogni partner attivo, il template e il parametro del subid corrispondono ai termini del programma. Il click di prova porta al partner con il subid. |
 
 ## Verifica automatica
 

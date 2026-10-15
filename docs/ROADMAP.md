@@ -17,6 +17,7 @@ Aggiornato da ogni PR. "In PR" = aperta e in attesa di merge; le PR dei passi su
 | 1.3 Itinerari pronti | In PR: editor admin con trascinamento, controlli di pubblicazione, pagina finale con riepilogo, notti e stampa, filtri in URL | `roadmap/1.3-itinerari-pronti` |
 | 1.4 Builder, seconda fetta | In PR: trascinamento tra giorni, giorni, note, duplica ed elimina, export .ics, stampa, link pubblico revocabile | `roadmap/1.4-builder` |
 | 2.1 Ricerca voli | In PR: barra voli (home, /voli, viaggio, proposte), Travelpayouts con cache di Next 6 h, /api/go/flight firmato, pagine SEO solo con prezzi, LMP e PNL tra gli arrivi | `roadmap/2.1-voli` |
+| 3.1 Affiliati su tutte le verticali | In PR: partner come configurazione (tabella + env), /dove-dormire, /noleggio-auto, chip della checklist, /api/go/v firmato, allowlist degli host, rate limit, /affiliazioni, admin partner | `roadmap/3.1-affiliati` |
 
 ---
 

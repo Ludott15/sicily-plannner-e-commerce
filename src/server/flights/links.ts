@@ -1,13 +1,14 @@
 import "server-only";
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { isIsoDate } from "@/lib/flights/search-params";
+import { canonicalFields, signFields, verifyFields } from "@/server/affiliates/signed-links";
 
 // Link firmati verso /api/go/flight (passo 2.1). Il server firma i parametri del viaggio con
 // HMAC-SHA256 (chiave FLIGHT_LINK_SECRET) sulla stringa canonica
 //   o|d|dep|ret|pax|c|i|exp
 // e la route ricalcola la firma prima di costruire l'URL del fornitore: un link alterato o
 // scaduto non esce. Il parametro l (lingua) non è firmato: cambia solo la lingua di Aviasales.
+// La firma generale è in src/server/affiliates/signed-links.ts; il formato dei link voli non cambia.
 // Mai firma con chiave vuota.
 
 export const FLIGHT_CONTEXTS = ["page", "itinerary", "chat", "flights"] as const;
@@ -32,9 +33,8 @@ export type FlightLinkCheck = "ok" | "missing_secret" | "invalid_signature" | "e
 const IATA = /^[A-Z]{3}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-// Stringa canonica della firma. Ogni campo è validato, così il separatore "|" non può comparire
-// in un valore e due link diversi non producono la stessa stringa.
-export function canonicalFlightLink(link: FlightLink): string {
+// Campi della firma. Ogni campo è validato, così il separatore "|" non può comparire in un valore.
+function flightFields(link: FlightLink): string[] {
   if (!IATA.test(link.origin)) throw new Error("flight_link: origin");
   if (!IATA.test(link.destination)) throw new Error("flight_link: destination");
   if (!isIsoDate(link.departure)) throw new Error("flight_link: departure");
@@ -54,12 +54,16 @@ export function canonicalFlightLink(link: FlightLink): string {
     link.context,
     link.itineraryId ?? "",
     String(link.expiresAt),
-  ].join("|");
+  ];
+}
+
+export function canonicalFlightLink(link: FlightLink): string {
+  return canonicalFields(flightFields(link));
 }
 
 export function signFlightLink(link: FlightLink, secret: string | undefined): string {
   if (!secret) throw new Error("FLIGHT_LINK_SECRET mancante: impossibile firmare");
-  return createHmac("sha256", secret).update(canonicalFlightLink(link)).digest("base64url");
+  return signFields(flightFields(link), secret);
 }
 
 // Controlla firma e scadenza. La firma si verifica per prima; il confronto è a tempo costante.
@@ -70,16 +74,13 @@ export function verifyFlightLink(
   nowSeconds: number = Math.floor(Date.now() / 1000),
 ): FlightLinkCheck {
   if (!secret) return "missing_secret";
-  let expected: Buffer;
+  let fields: string[];
   try {
-    expected = createHmac("sha256", secret).update(canonicalFlightLink(link)).digest();
+    fields = flightFields(link);
   } catch {
     return "invalid_signature";
   }
-  const received = Buffer.from(signature, "base64url");
-  if (received.length !== expected.length || !timingSafeEqual(received, expected)) return "invalid_signature";
-  if (link.expiresAt <= nowSeconds) return "expired";
-  return "ok";
+  return verifyFields(fields, signature, secret, link.expiresAt, nowSeconds);
 }
 
 const linkQuerySchema = z.object({

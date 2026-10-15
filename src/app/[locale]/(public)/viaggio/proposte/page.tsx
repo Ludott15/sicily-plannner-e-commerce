@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { ButtonLink, ItineraryStop, PendingButton, Route } from "@/components/design";
+import { ButtonLink, ItineraryStop, Route } from "@/components/design";
 import { FlightSearch } from "@/components/flights/flight-search";
 import { ClearOnboardingDraft } from "@/components/onboarding/onboarding-flow";
 import { isSicilyAirport } from "@/lib/flights/airports";
@@ -157,12 +157,12 @@ export default async function ProposalsPage({ params }: Props) {
                 </ul>
               </div>
               {proposal.needsCar && (
-                // Auto a noleggio: il link al partner arriva con la M6.
+                // Auto a noleggio: la pagina dei noleggi dice se il partner è pronto ("in arrivo" fino alla M6-partner).
                 <div className="flex flex-col items-start gap-2 rounded-lg border border-card-edge bg-calce-raised p-4">
                   <p className="text-body-s">{saved.car === "rental" ? t("needsRentalCar") : t("needsCar")}</p>
-                  <PendingButton id="proposal.car-rental" variant="secondary" size="sm">
+                  <ButtonLink href="/noleggio-auto" variant="secondary" size="sm">
                     {t("rentCar")}
-                  </PendingButton>
+                  </ButtonLink>
                 </div>
               )}
               {proposal.days.map((day, d) => (

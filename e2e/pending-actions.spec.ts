@@ -16,6 +16,9 @@ const PAGES = [
   "/it/cookie",
   "/it/condizioni-di-vendita",
   "/it/viaggio/nuovo",
+  // Verticali del passo 3.1: "in arrivo" finché manca l'ID del partner (vertical.lodging, vertical.car).
+  "/it/dove-dormire",
+  "/it/noleggio-auto",
 ];
 
 // Pagine personali: servono una sessione e risposte salvate. Ospite con auto a noleggio e cibo e

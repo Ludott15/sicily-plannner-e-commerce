@@ -42,6 +42,7 @@ export default async function FlightsPage({ params, searchParams }: Props) {
   const query = parseFlightSearchParams(raw);
   const avviso = typeof raw.avviso === "string" ? raw.avviso : null;
   const t = await getTranslations("Flights");
+  const tVert = await getTranslations("Verticals");
 
   const user = await getUser();
   const saved = user ? await getSavedPreferences(user) : null;
@@ -75,6 +76,12 @@ export default async function FlightsPage({ params, searchParams }: Props) {
       {avviso === "non-disponibile" && (
         <p role="alert" className="rounded-lg border border-card-edge bg-calce-raised p-4 text-body">
           {t("linkUnavailable")}
+        </p>
+      )}
+
+      {avviso === "troppi-click" && (
+        <p role="alert" className="rounded-lg border border-card-edge bg-calce-raised p-4 text-body">
+          {tVert("rateLimited")}
         </p>
       )}
 

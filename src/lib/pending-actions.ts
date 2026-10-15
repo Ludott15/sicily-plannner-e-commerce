@@ -6,6 +6,8 @@
 // Ogni milestone che implementa un'azione la toglie da qui: il test e2e
 // (e2e/pending-actions.spec.ts) confronta questo elenco con quello che trova nelle pagine.
 // Prima del lancio l'elenco deve essere vuoto (controllo attivo con PRE_LAUNCH=1).
+// "vertical.*": alloggi e noleggi restano "in arrivo" finché il partner non ha il proprio ID
+// nell'ambiente (M6-partner, passo 3.1).
 
 export const PENDING_ACTIONS = {
   "home.points": "M9",
@@ -14,8 +16,8 @@ export const PENDING_ACTIONS = {
   "about.founder": "testi",
   "onboarding.privacy": "testi",
   "preferences.consent": "testi",
-  "proposal.car-rental": "M6",
-  "booking.partner-link": "M6",
+  "vertical.lodging": "M6-partner",
+  "vertical.car": "M6-partner",
   "legal.privacy": "legale",
   "legal.cookie": "legale",
   "legal.terms": "legale",

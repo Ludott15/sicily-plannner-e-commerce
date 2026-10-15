@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import { useTranslations } from "next-intl";
+import type { PendingId } from "@/lib/pending-actions";
 import { ButtonAnchor } from "./button";
 import { PendingButton } from "./pending-button";
 
@@ -11,9 +12,10 @@ import { PendingButton } from "./pending-button";
 // in lava-muted e perde il bottone verso il partner. Conteggio sempre nella forma
 // "3 da prenotare · 1 fatto" (bookingCount), identico in intestazione, bottone e lista.
 // Riga di trasparenza sugli affiliati sotto la lista.
-// Finché il link al partner non esiste (M6) il bottone è un'azione in sospeso; una voce senza
-// partner noto (alloggio, auto, voli fino alla M6) non mostra la riga del partner.
-// Una voce con searchAction (es. voli: la ricerca di /voli) mostra il link interno al posto del partner.
+// Una voce con searchAction (ricerca voli, alloggi, noleggi: link interno o firmato) mostra il
+// link al posto del partner. Una voce con pending (partner non ancora pronto, "in arrivo") mostra
+// il bottone in sospeso. Una voce con note mostra una riga di spiegazione sotto il nome (es. cosa
+// manca per la ricerca), senza bottone.
 
 export type BookingItem = {
   id: string;
@@ -21,8 +23,12 @@ export type BookingItem = {
   partner: string | null;
   href: string | null;
   done: boolean;
-  // Azione verso una pagina del sito (es. la ricerca voli): al posto del bottone del partner.
+  // Azione verso una pagina del sito o un link firmato: al posto del bottone del partner.
   searchAction?: { href: string; label: string } | null;
+  // Azione in sospeso (partner non ancora configurato): bottone disabilitato con l'etichetta.
+  pending?: { id: PendingId; label: string } | null;
+  // Spiegazione sotto il nome, per le voci senza azione.
+  note?: string | null;
 };
 
 export function bookingCounts(items: Pick<BookingItem, "done">[]) {
@@ -71,21 +77,26 @@ export function BookingList({
           <div>
             <div className="is-booking__name">{item.name}</div>
             {item.partner && <div className="is-booking__partner">{item.partner}</div>}
+            {!item.partner && item.note && <div className="is-booking__partner">{item.note}</div>}
           </div>
           {item.done ? (
             <span />
           ) : item.searchAction ? (
-            <ButtonAnchor variant="secondary" size="sm" href={item.searchAction.href}>
+            <ButtonAnchor variant="secondary" size="sm" href={item.searchAction.href}
+              rel={item.searchAction.href.startsWith("/api/go/") ? "sponsored noopener" : undefined}
+            >
               {item.searchAction.label}
             </ButtonAnchor>
           ) : item.href && item.partner ? (
             <ButtonAnchor variant="secondary" size="sm" href={item.href} rel="sponsored noopener">
               {t("onPartner", { partner: item.partner })}
             </ButtonAnchor>
-          ) : (
-            <PendingButton id="booking.partner-link" variant="secondary" size="sm">
-              {item.partner ? t("onPartner", { partner: item.partner }) : t("book")}
+          ) : item.pending ? (
+            <PendingButton id={item.pending.id} variant="secondary" size="sm">
+              {item.pending.label}
             </PendingButton>
+          ) : (
+            <span />
           )}
         </div>
       ))}

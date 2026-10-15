@@ -52,7 +52,7 @@ type Props = {
 };
 
 export async function FlightResults({ locale, search, outcome }: Props) {
-  const [t, format] = await Promise.all([getTranslations("Flights"), getFormatter()]);
+  const [t, tAff, format] = await Promise.all([getTranslations("Flights"), getTranslations("Affiliates"), getFormatter()]);
   const partner = partnerName("travelpayouts") ?? "Aviasales";
   const lang = locale === "en" ? "en" : "it";
 
@@ -79,7 +79,7 @@ export async function FlightResults({ locale, search, outcome }: Props) {
             <ButtonAnchor variant="secondary" href={href} rel="sponsored nofollow noopener">
               {t("searchOnPartner", { partner })}
             </ButtonAnchor>
-            <p className="text-caption text-lava-muted">{t("affiliateDisclose")}</p>
+            <p className="text-caption text-lava-muted">{tAff("disclosure", { partner: partnerName("travelpayouts") ?? "Aviasales" })}</p>
           </div>
         ) : (
           <p className="text-body-s text-lava-muted">{t("linkUnconfigured")}</p>
@@ -149,7 +149,7 @@ export async function FlightResults({ locale, search, outcome }: Props) {
         );
       })}
       <div className="flex flex-col gap-1">
-        <p className="text-caption text-lava-muted">{t("affiliateDisclose")}</p>
+        <p className="text-caption text-lava-muted">{tAff("disclosure", { partner: partnerName("travelpayouts") ?? "Aviasales" })}</p>
         <p className="text-caption text-lava-muted">{t("priceDisclaimer")}</p>
       </div>
     </section>
