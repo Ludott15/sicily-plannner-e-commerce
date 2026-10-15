@@ -14,7 +14,6 @@
     "main": "Main",
     "footer": "Footer",
     "travel": "Travel",
-    "saveAccount": "Save your account",
     "about": "About us",
     "affiliateLinks": "Affiliate links",
     "legal": "Legal information",
@@ -24,7 +23,17 @@
     "preferences": "Preferences",
     "photoCredits": "Photo credits",
     "notifications": "Notifications",
-    "notificationsCount": "Notifications, {count} unread"
+    "notificationsCount": "Notifications, {count} unread",
+    "explore": "Explore",
+    "trips": "My trips",
+    "groups": "Groups",
+    "points": "Points",
+    "leaderboard": "Leaderboard",
+    "flights": "Flights",
+    "lodging": "Where to stay",
+    "car": "Car rental",
+    "createAccount": "Create your account",
+    "personalMenu": "Personal menu"
   },
   "Home": {
     "title": "Sicily as locals know it, made for you.",
@@ -91,7 +100,9 @@
     "email": "Email",
     "displayName": "Name",
     "role": "Role",
-    "memberSince": "Member since"
+    "memberSince": "Member since",
+    "accountHeading": "Account",
+    "hubHeading": "Your sections"
   },
   "Catalog": {
     "activitiesTitle": "Things to do in Sicily",
@@ -224,8 +235,6 @@
     "dayLong": "Day {n} · {name}",
     "tabNav": "Main",
     "tabTrips": "Trips",
-    "tabActivities": "Activities",
-    "tabShop": "Shop",
     "tabProfile": "Profile",
     "pointsAria": "{points} points",
     "scaleValue": "{n} out of 5, {word}",
@@ -242,7 +251,9 @@
       "A lot",
       "Very much"
     ],
-    "book": "Book"
+    "book": "Book",
+    "tabExplore": "Explore",
+    "tabGroups": "Groups"
   },
   "Admin": {
     "title": "Catalogue admin",
@@ -1575,7 +1586,14 @@
     "proposalsFailed": "We could not prepare the group's trips. Reload the page.",
     "logisticNote": "With fewer than 3 people we only show practical reasons, so nobody's tastes are revealed.",
     "tripsHeading": "Three trips for the group",
-    "tripsEmpty": "With this trip's days no area has enough activities. Change the days of the trip."
+    "tripsEmpty": "With this trip's days no area has enough activities. Change the days of the trip.",
+    "listTitle": "Your groups",
+    "listIntro": "The groups you belong to, with the trip they share.",
+    "listEmpty": "You are not in any group yet.",
+    "listEmptyAction": "Create a group from one of your trips",
+    "memberCount": "{count, plural, one {# member} other {# members}}",
+    "tripLine": "Trip: {title}",
+    "listNoTrip": "No trip linked"
   },
   "GroupInvite": {
     "metaTitle": "Group invite",

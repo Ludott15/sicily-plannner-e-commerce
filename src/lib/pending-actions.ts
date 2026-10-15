@@ -10,7 +10,6 @@
 // nell'ambiente (M6-partner, passo 3.1).
 
 export const PENDING_ACTIONS = {
-  "tabbar.shop": "M10",
   "points.rules": "legale",
   "about.editorial": "testi",
   "about.founder": "testi",

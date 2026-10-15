@@ -66,10 +66,9 @@ test("le azioni in sospeso nelle pagine sono esattamente quelle dell'elenco", as
 });
 
 test("un'azione in sospeso non fa nulla", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/it/attivita");
+  await page.goto("/it/privacy");
   const url = page.url();
-  await page.locator('[data-pending-id="tabbar.shop"]').first().click({ force: true });
+  await page.locator('[data-pending-id="legal.privacy"]').first().click({ force: true });
   await expect(page).toHaveURL(url);
 });
 

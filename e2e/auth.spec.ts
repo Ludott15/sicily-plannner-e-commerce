@@ -23,7 +23,8 @@ test("accesso con codice, profilo protetto e logout", async ({ page, request }) 
   const email = await signUpWithCode(page, request);
   await expect(page.getByText(email)).toBeVisible();
 
-  await page.getByRole("button", { name: "Esci" }).click();
+  await page.getByRole("button", { name: "Menu personale" }).click();
+  await page.getByRole("menuitem", { name: "Esci" }).click();
   await expect(page).toHaveURL(/\/it$/);
   await expect(page.getByRole("link", { name: "Accedi" })).toBeVisible();
 

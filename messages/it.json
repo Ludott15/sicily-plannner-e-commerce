@@ -14,7 +14,6 @@
     "main": "Principale",
     "footer": "Piè di pagina",
     "travel": "Viaggia",
-    "saveAccount": "Salva l'account",
     "about": "Chi siamo",
     "affiliateLinks": "Link affiliati",
     "legal": "Informazioni legali",
@@ -24,7 +23,17 @@
     "preferences": "Preferenze",
     "photoCredits": "Crediti delle foto",
     "notifications": "Notifiche",
-    "notificationsCount": "Notifiche, {count} non lette"
+    "notificationsCount": "Notifiche, {count} non lette",
+    "explore": "Esplora",
+    "trips": "I miei viaggi",
+    "groups": "Gruppi",
+    "points": "Punti",
+    "leaderboard": "Classifica",
+    "flights": "Voli",
+    "lodging": "Dove dormire",
+    "car": "Noleggio auto",
+    "createAccount": "Crea l'account",
+    "personalMenu": "Menu personale"
   },
   "Home": {
     "title": "La Sicilia di chi ci vive, su misura per te.",
@@ -91,7 +100,9 @@
     "email": "Email",
     "displayName": "Nome",
     "role": "Ruolo",
-    "memberSince": "Iscritto dal"
+    "memberSince": "Iscritto dal",
+    "accountHeading": "Account",
+    "hubHeading": "Le tue sezioni"
   },
   "Catalog": {
     "activitiesTitle": "Attività in Sicilia",
@@ -224,8 +235,6 @@
     "dayLong": "Giorno {n} · {name}",
     "tabNav": "Principale",
     "tabTrips": "Viaggi",
-    "tabActivities": "Attività",
-    "tabShop": "Shop",
     "tabProfile": "Profilo",
     "pointsAria": "{points} punti",
     "scaleValue": "{n} su 5, {word}",
@@ -242,7 +251,9 @@
       "Molto",
       "Moltissimo"
     ],
-    "book": "Prenota"
+    "book": "Prenota",
+    "tabExplore": "Esplora",
+    "tabGroups": "Gruppi"
   },
   "Admin": {
     "title": "Admin del catalogo",
@@ -1575,7 +1586,14 @@
     "proposalsFailed": "Non siamo riusciti a preparare i viaggi del gruppo. Ricarica la pagina.",
     "logisticNote": "Con meno di 3 persone mostriamo solo motivi pratici, per non svelare i gusti di nessuno.",
     "tripsHeading": "Ecco tre viaggi per il gruppo",
-    "tripsEmpty": "Con i giorni di questo viaggio nessuna zona ha abbastanza attività. Cambia i giorni del viaggio."
+    "tripsEmpty": "Con i giorni di questo viaggio nessuna zona ha abbastanza attività. Cambia i giorni del viaggio.",
+    "listTitle": "I tuoi gruppi",
+    "listIntro": "I gruppi di cui fai parte, con il viaggio che condividono.",
+    "listEmpty": "Non fai ancora parte di nessun gruppo.",
+    "listEmptyAction": "Crea un gruppo da uno dei tuoi viaggi",
+    "memberCount": "{count, plural, one {# membro} other {# membri}}",
+    "tripLine": "Viaggio: {title}",
+    "listNoTrip": "Nessun viaggio collegato"
   },
   "GroupInvite": {
     "metaTitle": "Invito al gruppo",
