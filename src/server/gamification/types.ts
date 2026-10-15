@@ -42,11 +42,12 @@ export type PointMovement = {
   createdAt: string;
 };
 
-// Badge del catalogo non ancora ottenuti. progress resta null finché i criteri non arrivano (passo 5.2).
+// Badge non ancora ottenuti con il progresso verso la soglia (passo 5.2). current è fermo a target.
 export type NextBadge = {
   key: string;
   name: string;
-  progress: string | null;
+  current: number;
+  target: number;
 };
 
 export type MyPoints = {
