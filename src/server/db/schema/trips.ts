@@ -225,6 +225,9 @@ export const groupMembers = pgTable(
       .notNull()
       .references(() => profiles.id, { onDelete: "cascade" }),
     role: groupRole("role").notNull().default("member"),
+    // Chi ha usato l'invito che ha portato dentro il membro (scritto da accept_invite). Null se
+    // l'invito è stato eliminato con il suo autore.
+    invitedBy: uuid("invited_by").references(() => profiles.id, { onDelete: "set null" }),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

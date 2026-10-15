@@ -5,6 +5,7 @@ import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
 import { TripForm } from "@/components/onboarding/trip-form";
 import { getUser } from "@/server/auth";
 import { listInterests } from "@/server/catalog/queries";
+import { safeNextPath } from "@/server/auth/redirect";
 import { EMPTY_ANSWERS, getSavedPreferences } from "@/server/personalization/data";
 
 // "Crea il tuo viaggio" (M4 parte 5). Senza gusti completati (profiles.onboarding_completed_at):
@@ -12,7 +13,8 @@ import { EMPTY_ANSWERS, getSavedPreferences } from "@/server/personalization/dat
 // schermata "Il tuo prossimo viaggio" con giorni, periodo, compagnia, aeroporto, budget e
 // auto, precompilati con gli ultimi valori usati, e sopra il riepilogo dei gusti con il link
 // alle Preferenze. Pagina personale: non indicizzata.
-type Props = { params: Promise<{ locale: string }> };
+// next: dove portare a onboarding completato (per esempio un invito a un gruppo). Solo percorsi interni.
+type Props = { params: Promise<{ locale: string }>; searchParams: Promise<{ next?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
@@ -20,9 +22,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: t("metaTitle"), robots: { index: false, follow: false } };
 }
 
-export default async function NewTripPage({ params }: Props) {
+export default async function NewTripPage({ params, searchParams }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const { next } = await searchParams;
+  const nextPath = safeNextPath(next, "") || undefined;
 
   const [user, rows] = await Promise.all([getUser(), listInterests()]);
   const saved = user ? await getSavedPreferences(user) : null;
@@ -33,7 +37,15 @@ export default async function NewTripPage({ params }: Props) {
   }));
 
   if (!saved?.completed) {
-    return <OnboardingFlow locale={locale} interests={interests} initial={EMPTY_ANSWERS} needsSession={!user} />;
+    return (
+      <OnboardingFlow
+        locale={locale}
+        interests={interests}
+        initial={EMPTY_ANSWERS}
+        needsSession={!user}
+        nextPath={nextPath}
+      />
+    );
   }
 
   const [t, tDesign] = await Promise.all([getTranslations("Onboarding"), getTranslations("Design")]);

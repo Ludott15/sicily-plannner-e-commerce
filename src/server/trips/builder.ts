@@ -1,10 +1,10 @@
 import "server-only";
-import { createHash, randomBytes } from "node:crypto";
 import { and, asc, eq, gt, isNull, sql } from "drizzle-orm";
 import { MAX_TRIP_DAYS, planRemoveDay, setAt } from "@/lib/trip-days";
 import type { TimeSlot } from "@/lib/itinerary-checks";
 import { itineraries, itineraryItems, itineraryNights, itineraryShareLinks } from "@/server/db/schema";
 import type { DbUser, UserTx } from "@/server/db/user";
+import { newShareToken, shareTokenHash } from "@/server/crypto/tokens";
 
 // Scritture del builder (M5, 1.4). Ogni funzione riceve la transazione di dbAsUser: la RLS
 // decide chi può modificare (can_edit_itinerary). Regola di queste funzioni: la prima scrittura
@@ -262,16 +262,6 @@ export async function saveStopNoteTx(
 export async function deleteTripTx(tx: UserTx, tripId: string): Promise<BuilderResult> {
   const deleted = await tx.delete(itineraries).where(eq(itineraries.id, tripId)).returning({ id: itineraries.id });
   return deleted.length > 0 ? DONE : fail("not_found");
-}
-
-// Token del link pubblico: 32 byte casuali in base64url (43 caratteri). Si conserva solo l'hash.
-export function newShareToken(): string {
-  return randomBytes(32).toString("base64url");
-}
-
-// Hash SHA-256 in hex del token, come lo calcola public.shared_itinerary (su UTF-8).
-export function shareTokenHash(token: string): string {
-  return createHash("sha256").update(token, "utf8").digest("hex");
 }
 
 // Crea un nuovo link attivo e revoca quello precedente (Rigenera). Ritorna il token in chiaro:

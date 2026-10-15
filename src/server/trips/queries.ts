@@ -28,6 +28,8 @@ import { verticalSearchHref, type VerticalSearchInput } from "@/server/affiliate
 // itinerari e quelli dei gruppi di cui si è membri (can_access_itinerary).
 // Il link pubblico si legge solo con public.shared_itinerary (dbPublic): mai la tabella dei link.
 
+// I viaggi propri e quelli dei gruppi di cui si è membri: la RLS (can_access_itinerary) decide,
+// qui si esclude solo il template. groupId dice se il viaggio è di gruppo; ownerId chi lo possiede.
 export async function listMyTrips(user: DbUser) {
   const rows = await dbAsUser(user, (tx) =>
     tx
@@ -37,10 +39,12 @@ export async function listMyTrips(user: DbUser) {
         days: itineraries.days,
         startDate: itineraries.startDate,
         travelers: itineraries.travelers,
+        ownerId: itineraries.ownerId,
+        groupId: itineraries.groupId,
         stops: sql<number>`(select count(*)::int from ${itineraryItems} ii where ii.itinerary_id = ${itineraries.id})`,
       })
       .from(itineraries)
-      .where(and(eq(itineraries.ownerId, user.id), eq(itineraries.isTemplate, false)))
+      .where(eq(itineraries.isTemplate, false))
       .orderBy(desc(itineraries.createdAt)),
   );
   return partitionTrips(rows, romeToday(new Date()));
@@ -68,6 +72,7 @@ export async function getTrip(user: DbUser, id: string) {
       .select({
         id: itineraries.id,
         ownerId: itineraries.ownerId,
+        groupId: itineraries.groupId,
         title: itineraries.title,
         days: itineraries.days,
         dayTitles: itineraries.dayTitles,

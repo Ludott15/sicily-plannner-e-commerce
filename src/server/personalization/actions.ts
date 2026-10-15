@@ -6,6 +6,7 @@ import { z } from "zod";
 import { SICILY_AIRPORT_CODES } from "@/lib/flights/airports";
 import { routing } from "@/lib/i18n/routing";
 import { getUser, requireUser } from "@/server/auth";
+import { safeNextPath } from "@/server/auth/redirect";
 import { createClient } from "@/server/supabase/server";
 import { clearSensitivePreferences, getSavedPreferences, saveAnswers, saveExtraPreferences, saveTastes, saveTrip } from "./data";
 
@@ -39,6 +40,8 @@ const onboardingSchema = z.object({
   ...answersShape,
   // Solo per chi non ha ancora una sessione: serve a crearne una da ospite.
   captchaToken: z.string().min(1).max(4096).optional(),
+  // Destinazione dopo l'onboarding (per es. il ritorno a un invito): validata con safeNextPath.
+  next: z.string().max(2048).optional(),
 });
 
 // La lingua arriva come stringa dal client: la valida Zod.
@@ -48,7 +51,7 @@ export type ActionError = { status: "error"; code: "invalid" | "captcha_failed" 
 export async function submitOnboarding(input: OnboardingInput): Promise<ActionError> {
   const parsed = onboardingSchema.safeParse(input);
   if (!parsed.success) return { status: "error", code: "invalid" };
-  const { locale, captchaToken, ...answers } = parsed.data;
+  const { locale, captchaToken, next, ...answers } = parsed.data;
 
   let user = await getUser();
   if (!user) {
@@ -64,7 +67,7 @@ export async function submitOnboarding(input: OnboardingInput): Promise<ActionEr
   } catch {
     return { status: "error", code: "failed" };
   }
-  redirect(`/${locale}/viaggio/proposte`);
+  redirect(safeNextPath(next, `/${locale}/viaggio/proposte`));
 }
 
 const tripSchema = z.object({ locale: z.enum(routing.locales), ...tripShape });
