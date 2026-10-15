@@ -20,6 +20,7 @@ Aggiornato da ogni PR. "In PR" = aperta e in attesa di merge; le PR dei passi su
 | 3.1 Affiliati su tutte le verticali | In PR: partner come configurazione (tabella + env), /dove-dormire, /noleggio-auto, chip della checklist, /api/go/v firmato, allowlist degli host, rate limit, /affiliazioni, admin partner | `roadmap/3.1-affiliati` |
 | 3.2 Import automatico dei partner | In PR: adattatori Viator e GetYourGuide (inattivi senza chiave), collegamento per distanza e somiglianza del nome, attività nuove inattive da verificare, offerte disattivate dopo 3 import mancati, log e avviso in admin, tag proposti dal modello, embedding Voyage | `roadmap/3.2-import-partner` |
 | 3.3 Conversioni e commissioni | In PR: import CSV dei report con anteprima e possibili duplicati, cron import-conversions (nessun adattatore attivo), dashboard /admin/affiliati per periodo, contesto, partner e attività, conversioni senza click, esportazione CSV | `roadmap/3.3-conversioni` |
+| 1.5 Viaggi su due aree | In PR: matrice dei tempi di guida in admin (28 coppie), composizione di due aree vicine sotto 150 minuti, giorni ripartiti secondo i punteggi, giorno di trasferimento più corto (proposte e viaggio salvato), motivo "Due zone vicine" | `roadmap/1.5-due-aree` |
 
 ---
 

@@ -1030,14 +1030,17 @@
       "highlyRated": "Tappe molto apprezzate: {rating} su 5 di media",
       "noCar": "Nessuna tappa richiede l'auto",
       "variant": "Pochi viaggi in più zone per i giorni scelti: questa variante dà più spazio a {interest}",
-      "stops": "{stops, plural, one {# tappa} other {# tappe}} in {days, plural, one {# giorno} other {# giorni}} senza cambiare zona"
+      "stops": "{stops, plural, one {# tappa} other {# tappe}} in {days, plural, one {# giorno} other {# giorni}} senza cambiare zona",
+      "twoAreas": "Due zone vicine: {duration} di strada tra le due"
     },
     "changeTrip": "Cambia il viaggio",
     "editTastes": "Modifica i tuoi gusti",
     "shortened": "Una sola zona copre al massimo {days, plural, one {# giorno} other {# giorni}}: ecco i tre migliori viaggi di {days, plural, one {# giorno} other {# giorni}}. I viaggi su più zone arrivano presto.",
     "saveTrip": "Salva questo viaggio",
     "flightsBarTitle": "Arrivi in Sicilia",
-    "flightsBarText": "Cerca i voli verso la Sicilia: l'arrivo parte da quello scelto nel tuo profilo."
+    "flightsBarText": "Cerca i voli verso la Sicilia: l'arrivo parte da quello scelto nel tuo profilo.",
+    "pairName": "{first} e {second}",
+    "transferDay": "Giorno di trasferimento: {duration} di strada, meno tappe"
   },
   "Preferences": {
     "title": "Preferenze",
@@ -1110,7 +1113,8 @@
     "copyPrefix": "Copia di ",
     "warnings": {
       "dayTooLong": "Giorno {day}: {minutes} minuti di attività, il ritmo ne prevede {limit}.",
-      "areaChange": "Giorno {day}: due tappe di seguito sono in zone diverse."
+      "areaChange": "Giorno {day}: due tappe di seguito sono in zone diverse.",
+      "transferDay": "Giorno {day}: {duration} di strada tra le due zone, il tempo per le tappe è più corto."
     },
     "calendar": {
       "dayTitle": "Giorno {day} · {title}",
@@ -1198,7 +1202,8 @@
     "compareCars": "Confronta noleggi",
     "lodgingMissing": "Per cercare un alloggio servono la zona della prima notte e le date del viaggio.",
     "carMissing": "Per confrontare i noleggi servono l'aeroporto di arrivo e le date del viaggio.",
-    "openActivity": "Apri l'attività"
+    "openActivity": "Apri l'attività",
+    "proposalTripTitlePair": "{first} e {second} in {days, plural, one {# giorno} other {# giorni}}"
   },
   "Media": {
     "photoCredit": "Foto:",
@@ -1418,5 +1423,17 @@
     },
     "importLink": "Importa report",
     "exportTooManyRows": "Il periodo supera {limit} conversioni: scegli un intervallo più corto."
+  },
+  "AdminDriveTimes": {
+    "nav": "Tempi di guida",
+    "title": "Tempi di guida tra le aree",
+    "intro": "Minuti di strada tra due aree. Una coppia senza tempo non si compone nei viaggi su due zone.",
+    "filled": "Coppie compilate: {count} di {total}",
+    "hint": "Un numero intero da 1 a 600. Lascia vuoto per togliere la coppia.",
+    "pairColumn": "Coppia di aree",
+    "minutesColumn": "Minuti di guida",
+    "minutesFor": "Minuti tra {a} e {b}",
+    "save": "Salva",
+    "saved": "Tempi di guida salvati."
   }
 }

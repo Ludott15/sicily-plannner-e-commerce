@@ -4,11 +4,11 @@ import { ButtonLink, ItineraryStop, Route } from "@/components/design";
 import { FlightSearch } from "@/components/flights/flight-search";
 import { ClearOnboardingDraft } from "@/components/onboarding/onboarding-flow";
 import { isSicilyAirport } from "@/lib/flights/airports";
-import { formatDuration } from "@/lib/format";
+import { formatDriveTime, formatDuration } from "@/lib/format";
 import { redirect } from "@/lib/i18n/navigation";
 import { getUser } from "@/server/auth";
 import { interestLabels } from "@/server/catalog/labels";
-import { areaNames, engineCatalog, getSavedPreferences, toProfile } from "@/server/personalization/data";
+import { areaNames, driveTimesBySlug, engineCatalog, getSavedPreferences, toProfile } from "@/server/personalization/data";
 import { proposeTrips, type AreaReason, type Reason } from "@/server/personalization/engine";
 
 // "Ecco tre viaggi pensati per te" (schemi.md): tre proposte costruite dal catalogo dal
@@ -33,18 +33,23 @@ export default async function ProposalsPage({ params }: Props) {
   const saved = user ? await getSavedPreferences(user) : null;
   if (!saved?.completed) return redirect({ href: "/viaggio/nuovo", locale });
 
-  const [t, tOnboarding, labels, catalog, areas] = await Promise.all([
+  const [t, tOnboarding, labels, catalog, areas, driveTimes] = await Promise.all([
     getTranslations("Proposals"),
     getTranslations("Onboarding"),
     interestLabels(locale),
     engineCatalog(),
     areaNames(locale),
+    driveTimesBySlug(),
   ]);
   const profile = toProfile(saved);
   // Se nessuna area copre i giorni scelti: i viaggi sul massimo di giorni coperto, e lo diciamo.
-  const { proposals, days: coveredDays, shortened } = proposeTrips(catalog, profile);
+  const { proposals, days: coveredDays, shortened } = proposeTrips(catalog, profile, driveTimes);
   const personal = Object.values(saved.weights).some((w) => w > 0);
   const label = (key: string) => labels.get(key) ?? key;
+  const nameOf = (slug: string): string => areas.get(slug) ?? slug;
+  // Viaggio su due aree: "Palermo e Ovest"; su una sola area, il nome dell'area.
+  const areaTitle = (slugs: [string] | [string, string]): string =>
+    slugs.length === 2 ? t("pairName", { first: nameOf(slugs[0]), second: nameOf(slugs[1]) }) : nameOf(slugs[0]);
   const reasonText = (r: Reason): string => {
     switch (r.code) {
       case "combines":
@@ -75,6 +80,8 @@ export default async function ProposalsPage({ params }: Props) {
         return [t("areaReasons.stops", { stops: r.stops, days: r.days })];
       case "noCar":
         return [t("areaReasons.noCar")];
+      case "twoAreas":
+        return [t("areaReasons.twoAreas", { duration: formatDriveTime(r.driveMinutes) })];
     }
   };
 
@@ -136,12 +143,12 @@ export default async function ProposalsPage({ params }: Props) {
           {proposals.map((proposal, i) => (
             <li key={`${proposal.area}:${proposal.variant ?? ""}`} className="flex flex-col gap-4" data-area={proposal.area}>
               <h2 className="is-display text-heading-1">
-                {t("proposalTitle", { n: i + 1, area: areas.get(proposal.area) ?? proposal.area })}
+                {t("proposalTitle", { n: i + 1, area: areaTitle(proposal.areas) })}
               </h2>
               <p className="text-body-s text-lava-muted">{t("proposalMeta", { days: proposal.days.length })}</p>
               <div>
                 <ButtonLink
-                  href={`/viaggio/salva?area=${proposal.area}${proposal.variant ? `&variante=${proposal.variant}` : ""}`}
+                  href={`/viaggio/salva?area=${encodeURIComponent(proposal.area)}${proposal.variant ? `&variante=${proposal.variant}` : ""}`}
                   variant="primary"
                   size="sm"
                 >
@@ -170,6 +177,11 @@ export default async function ProposalsPage({ params }: Props) {
                   <h3 className="text-body font-semibold">
                     {t("day", { n: d + 1, places: [...new Set(day.activities.map((a) => a.placeName))].join(", ") })}
                   </h3>
+                  {proposal.transfer?.dayIndex === d && (
+                    <p className="text-body-s text-lava-muted">
+                      {t("transferDay", { duration: formatDriveTime(proposal.transfer.minutes) })}
+                    </p>
+                  )}
                   <Route>
                     {day.activities.map((a) => (
                       <ItineraryStop

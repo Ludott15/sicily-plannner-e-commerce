@@ -14,7 +14,7 @@ import { moveInDay } from "@/lib/trips";
 import { getUser, requireUser } from "@/server/auth";
 import { itineraries, itineraryItems } from "@/server/db/schema";
 import { dbAsUser, type DbUser, type UserTx } from "@/server/db/user";
-import { areaNames, engineCatalog, getSavedPreferences, toProfile } from "@/server/personalization/data";
+import { areaNames, driveTimesBySlug, engineCatalog, getSavedPreferences, toProfile } from "@/server/personalization/data";
 import { proposeTrips } from "@/server/personalization/engine";
 import { createClient } from "@/server/supabase/server";
 import {
@@ -51,7 +51,8 @@ export type ShareLinkState = TripActionError | { status: "created"; url: string 
 
 const localeSchema = z.enum(routing.locales);
 const slug = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(120);
-const areaSlug = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(60);
+// Un'area (slug) o la coppia di due aree vicine (pairKey: due slug uniti da "+").
+const areaKey = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*(\+[a-z0-9]+(-[a-z0-9]+)*)?$/).max(241);
 const uuid = z.uuid();
 
 // I campi dei FormData arrivano come stringhe: un campo mancante vale "".
@@ -68,7 +69,7 @@ const startSchema = z.object({
   source: z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("template"), slug }),
     // Una delle proposte di "Ecco tre viaggi": il server la ricalcola, non si fida del client.
-    z.object({ kind: z.literal("proposal"), area: areaSlug, variant: z.string().regex(/^[a-z_]{1,40}$/).nullable() }),
+    z.object({ kind: z.literal("proposal"), area: areaKey, variant: z.string().regex(/^[a-z_]{1,40}$/).nullable() }),
   ]),
   startDate: z.iso.date().nullable(),
   travelers: z.number().int().min(1).max(30).nullable(),
@@ -197,8 +198,13 @@ export async function startTrip(input: StartTripInput): Promise<TripActionError>
       id = created;
     } else {
       if (!saved?.completed) return { status: "error", code: "not_found" };
-      const [catalog, names, t] = await Promise.all([engineCatalog(), areaNames(locale), getTranslations({ locale, namespace: "Trips" })]);
-      const { proposals } = proposeTrips(catalog, toProfile(saved));
+      const [catalog, names, t, driveTimes] = await Promise.all([
+        engineCatalog(),
+        areaNames(locale),
+        getTranslations({ locale, namespace: "Trips" }),
+        driveTimesBySlug(),
+      ]);
+      const { proposals } = proposeTrips(catalog, toProfile(saved), driveTimes);
       const proposal = proposals.find((p) => p.area === source.area && p.variant === source.variant);
       if (!proposal) return { status: "error", code: "not_found" };
       const items: NewItem[] = proposal.days.flatMap((day, d) =>
@@ -213,7 +219,12 @@ export async function startTrip(input: StartTripInput): Promise<TripActionError>
           notes: null,
         })),
       );
-      const title = t("proposalTripTitle", { area: names.get(proposal.area) ?? proposal.area, days: proposal.days.length });
+      const nameOf = (slug: string) => names.get(slug) ?? slug;
+      const [firstArea, secondArea] = proposal.areas;
+      const title =
+        secondArea === undefined
+          ? t("proposalTripTitle", { area: nameOf(firstArea), days: proposal.days.length })
+          : t("proposalTripTitlePair", { first: nameOf(firstArea), second: nameOf(secondArea), days: proposal.days.length });
       id = await dbAsUser(user, (tx) =>
         insertTrip(
           tx,
