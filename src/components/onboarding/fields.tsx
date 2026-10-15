@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { InterestChip, PreferenceScale, type Domain } from "@/components/design";
+import { SICILY_AIRPORT_CODES } from "@/lib/flights/airports";
 import { NEUTRAL } from "@/lib/onboarding";
 import { cn } from "@/lib/utils";
 import type { OnboardingAnswers } from "@/server/personalization/data";
@@ -16,7 +17,6 @@ export const DAYS = [1, 2, 3, 4, 5, 6, 7, 10, 14];
 const BUDGETS: (number | null)[] = [30, 60, 100, 150, null];
 const PACES = ["relaxed", "balanced", "intense"] as const;
 const PARTIES = ["solo", "couple", "family", "friends"] as const;
-const AIRPORTS = ["CTA", "PMO", "TPS", "CIY"] as const;
 const CARS = ["own", "rental", "none"] as const;
 
 export function DaysField({ answers, set }: FieldProps) {
@@ -127,7 +127,7 @@ export function AirportField({ answers, set }: FieldProps) {
       legend={t("airportTitle")}
       hideLegend
       options={[
-        ...AIRPORTS.map((a) => ({ value: a, label: t(`airport.${a}`) })),
+        ...SICILY_AIRPORT_CODES.map((a) => ({ value: a, label: t(`airport.${a}`) })),
         { value: "unknown", label: t("airport.unknown") },
       ]}
       value={answers.airport ?? "unknown"}

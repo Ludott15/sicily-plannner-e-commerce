@@ -98,8 +98,8 @@ test("builder: riordino, rimozione con evento, checklist con il conteggio", asyn
     (sql) => sql`select status::text, updated_by from public.itinerary_bookings where itinerary_id = ${tripId} and kind = 'lodging'`,
   );
   expect(booking).toMatchObject({ status: "booked", updated_by: guestId });
-  // I link ai partner arrivano con la M6.
-  await expect(page.locator('[data-pending-id="booking.partner-link"]').first()).toHaveAttribute("aria-disabled", "true");
+  // Voli (passo 2.1): il chip porta alla ricerca interna con il viaggio; alloggi e noleggi arrivano con la M6.
+  await expect(list.getByRole("link", { name: "Cerca voli" })).toHaveAttribute("href", new RegExp(`/it/voli\\?.*viaggio=${tripId}`));
 });
 
 test("Aggiungi al viaggio: giorno compatibile per zona, avviso se il viaggio è lontano, evento registrato", async ({ page }) => {

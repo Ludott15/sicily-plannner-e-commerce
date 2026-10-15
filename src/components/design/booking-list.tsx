@@ -13,6 +13,7 @@ import { PendingButton } from "./pending-button";
 // Riga di trasparenza sugli affiliati sotto la lista.
 // Finché il link al partner non esiste (M6) il bottone è un'azione in sospeso; una voce senza
 // partner noto (alloggio, auto, voli fino alla M6) non mostra la riga del partner.
+// Una voce con searchAction (es. voli: la ricerca di /voli) mostra il link interno al posto del partner.
 
 export type BookingItem = {
   id: string;
@@ -20,6 +21,8 @@ export type BookingItem = {
   partner: string | null;
   href: string | null;
   done: boolean;
+  // Azione verso una pagina del sito (es. la ricerca voli): al posto del bottone del partner.
+  searchAction?: { href: string; label: string } | null;
 };
 
 export function bookingCounts(items: Pick<BookingItem, "done">[]) {
@@ -71,6 +74,10 @@ export function BookingList({
           </div>
           {item.done ? (
             <span />
+          ) : item.searchAction ? (
+            <ButtonAnchor variant="secondary" size="sm" href={item.searchAction.href}>
+              {item.searchAction.label}
+            </ButtonAnchor>
           ) : item.href && item.partner ? (
             <ButtonAnchor variant="secondary" size="sm" href={item.href} rel="sponsored noopener">
               {t("onPartner", { partner: item.partner })}

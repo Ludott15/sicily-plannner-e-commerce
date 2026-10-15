@@ -42,7 +42,10 @@
     "placesEyebrow": "Featured places",
     "placesTitle": "Where to go in Sicily",
     "placesPrev": "Previous places",
-    "placesNext": "Next places"
+    "placesNext": "Next places",
+    "flightsEyebrow": "Flights",
+    "flightsTitle": "Find a flight to Sicily",
+    "flightsText": "Indicative prices from the partners, with the date they were updated. The partner confirms the final price."
   },
   "Login": {
     "title": "Sign in",
@@ -894,7 +897,9 @@
       "PMO": "Palermo",
       "TPS": "Trapani",
       "CIY": "Comiso",
-      "unknown": "I don't know yet"
+      "unknown": "I don't know yet",
+      "LMP": "Lampedusa",
+      "PNL": "Pantelleria"
     },
     "budgetTitle": "Budget and getting around",
     "budgetHint": "The budget is for one day of activities, per person. Without a car we only suggest activities you can reach without a car.",
@@ -962,7 +967,9 @@
     "changeTrip": "Change the trip",
     "editTastes": "Edit your tastes",
     "shortened": "A single area covers at most {days, plural, one {# day} other {# days}}: here are the three best {days, plural, one {#-day} other {#-day}} trips. Trips across several areas are coming soon.",
-    "saveTrip": "Save this trip"
+    "saveTrip": "Save this trip",
+    "flightsBarTitle": "Arrivals in Sicily",
+    "flightsBarText": "Search flights to Sicily: the arrival starts from the one chosen in your profile."
   },
   "Preferences": {
     "title": "Preferences",
@@ -1117,7 +1124,8 @@
     "sharedReadOnly": "Read-only: the trip belongs to the person who created it.",
     "sharedEmptyDay": "No stops on this day.",
     "inviteTitle": "Want a trip of your own?",
-    "inviteBody": "Build your own itinerary in Sicily in a few minutes."
+    "inviteBody": "Build your own itinerary in Sicily in a few minutes.",
+    "flightSearchAction": "Search flights"
   },
   "Media": {
     "photoCredit": "Photo:",
@@ -1132,5 +1140,58 @@
     "license": "Licence",
     "source": "Source",
     "illustrations": "{count, plural, one {One illustration} other {# illustrations}} by the Isula editorial team."
+  },
+  "Flights": {
+    "title": "Flights to Sicily",
+    "description": "Indicative fares to Catania, Palermo, Trapani, Comiso, Lampedusa and Pantelleria, with the date they were updated.",
+    "eyebrow": "Flights",
+    "intro": "Compare indicative fares to Sicily. The partner confirms the final price when you book.",
+    "formTitle": "Search a flight to Sicily",
+    "tripType": "Trip type",
+    "oneWay": "One way",
+    "roundTrip": "Return",
+    "origin": "From",
+    "originPlaceholder": "City or airport",
+    "originHint": "Type a city, a name or a code, for example Milan or MXP.",
+    "originListLabel": "Departure airports",
+    "originNoResults": "No airport found. Try the city or the IATA code.",
+    "originSicily": "You are already in Sicily: pick a departure airport outside the island.",
+    "originRequired": "Pick a departure airport from the list.",
+    "destination": "Arrival in Sicily",
+    "departure": "Departure",
+    "returnDate": "Return",
+    "dateRequired": "Pick the departure date.",
+    "returnBeforeDeparture": "Pick a return date after the departure.",
+    "passengers": "Passengers",
+    "passengersOption": "{count, plural, one {# passenger} other {# passengers}}",
+    "swap": "Swap",
+    "swapDisabled": "Swapping is not available: the arrival is always an airport in Sicily.",
+    "submit": "Search flights",
+    "searching": "Searching flights…",
+    "fromTrip": "Dates and passengers taken from your trip.",
+    "priceNote": "Indicative prices from the partners, with the date they were updated.",
+    "resultsTitle": "Prices for {airport}",
+    "resultsHeading": "Prices found",
+    "priceFrom": "from {price}",
+    "airline": "Airline {airline}",
+    "direct": "Direct",
+    "stops": "{count, plural, one {# stop} other {# stops}}",
+    "priceUpdated": "Indicative price, updated on {when}",
+    "seeFlight": "See the flight",
+    "searchOnPartner": "Search on {partner}",
+    "noFlights": "No flight found for this date.",
+    "unconfigured": "Flight prices are not available yet. You can search directly on the partner's site.",
+    "unavailable": "We cannot read prices right now. Try again shortly or search directly on the partner's site.",
+    "linkUnconfigured": "Flight links are not active at the moment.",
+    "affiliateDisclose": "Affiliate link: if you book, Aviasales pays us a commission, and it costs you no more.",
+    "priceDisclaimer": "Prices are indicative: the partner shows the final price before payment.",
+    "calendarTitle": "Prices day by day, {month}",
+    "calendarEmpty": "There are no prices to show for this month.",
+    "noOrigin": "Pick the departure airport to see prices.",
+    "noDeparture": "Pick the departure date to see prices.",
+    "linkUnavailable": "We could not open the flight. Try again shortly.",
+    "routeTitle": "Flights from {origin} to {destination}",
+    "routeDescription": "Indicative fares from {origin} to {destination}, with the date they were updated.",
+    "routeIntro": "Pick a departure date: the calendar shows the lowest price for each day of the month."
   }
 }

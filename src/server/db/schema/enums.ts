@@ -22,6 +22,7 @@ export const eventType = pgEnum("event_type", [
   "vote_up",
   "vote_down",
   "review",
+  "flight_search",
 ]);
 export const itineraryStatus = pgEnum("itinerary_status", [
   "draft",

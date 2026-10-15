@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { SICILY_AIRPORT_CODES } from "@/lib/flights/airports";
 import { routing } from "@/lib/i18n/routing";
 import { getUser, requireUser } from "@/server/auth";
 import { createClient } from "@/server/supabase/server";
@@ -15,8 +16,6 @@ import { clearSensitivePreferences, getSavedPreferences, saveAnswers, saveExtraP
 const DIETS = ["vegetarian", "vegan", "gluten_free", "lactose_free"] as const;
 const interestKey = z.string().regex(/^[a-z_]{1,40}$/);
 
-// Gusti (valgono per tutti i viaggi) e viaggio (di questa volta): docs/spec.md, M4 parte 5.
-// null = domanda saltata (valori neutri in src/lib/onboarding.ts).
 const tasteShape = {
   interests: z.array(interestKey).max(30),
   weights: z.record(interestKey, z.number().int().min(0).max(5)),
@@ -26,12 +25,15 @@ const tripShape = {
   days: z.number().int().min(1).max(14).nullable(),
   months: z.array(z.number().int().min(1).max(12)).max(12),
   party: z.enum(["solo", "couple", "family", "friends"]).nullable(),
-  airport: z.enum(["CTA", "PMO", "TPS", "CIY"]).nullable(),
+  // Aeroporti siciliani di arrivo: elenco unico in src/lib/flights/airports.ts.
+  airport: z.enum(SICILY_AIRPORT_CODES).nullable(),
   budgetPerDayEur: z.number().int().min(0).max(2000).nullable(),
   car: z.enum(["own", "rental", "none"]).nullable(),
 };
 const answersShape = { ...tasteShape, ...tripShape };
 
+// Gusti (valgono per tutti i viaggi) e viaggio (di questa volta): docs/spec.md, M4 parte 5.
+// null = domanda saltata (valori neutri in src/lib/onboarding.ts).
 const onboardingSchema = z.object({
   locale: z.enum(routing.locales),
   ...answersShape,

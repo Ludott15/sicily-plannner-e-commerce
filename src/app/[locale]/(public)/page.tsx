@@ -7,6 +7,7 @@ import { FeaturedPlaces } from "@/components/catalog/featured-places";
 import { ItineraryCard } from "@/components/catalog/itinerary-card";
 import { PlaceCard } from "@/components/catalog/place-card";
 import { ButtonLink, PendingMarker } from "@/components/design";
+import { FlightSearch } from "@/components/flights/flight-search";
 import { Link } from "@/lib/i18n/navigation";
 import type { CoverMedia } from "@/lib/media";
 import { localizedAlternates } from "@/lib/seo";
@@ -93,6 +94,23 @@ export default async function HomePage({ params }: Props) {
             </ButtonLink>
           </div>
           <PendingMarker id="home.points" />
+        </div>
+      </section>
+
+      {/* Voli verso la Sicilia (passo 2.1): modulo compatto sotto l'hero, la ricerca completa è in /voli. */}
+      <section aria-labelledby="voli-home" className="mx-auto w-full max-w-[1200px] px-4 pb-12 md:px-16 md:pb-16">
+        <div className="grid gap-6 md:grid-cols-[1fr_1.4fr] md:items-start md:gap-12">
+          <div className="flex flex-col gap-3">
+            <p className="text-label uppercase text-lava-muted">{t("flightsEyebrow")}</p>
+            <h2 id="voli-home" className="is-display text-heading-1">
+              {t("flightsTitle")}
+            </h2>
+            <p className="text-body text-pretty text-lava-muted">{t("flightsText")}</p>
+          </div>
+          <FlightSearch
+            variant="compact"
+            initial={{ origin: null, destination: null, departure: null, returnDate: null, passengers: 1, itineraryId: null }}
+          />
         </div>
       </section>
 

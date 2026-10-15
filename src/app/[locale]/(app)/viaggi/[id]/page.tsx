@@ -4,6 +4,7 @@ import { getFormatter, getTranslations, setRequestLocale } from "next-intl/serve
 import { z } from "zod";
 import { TripBuilder, type BuilderBooking, type BuilderDay } from "@/components/trips/trip-builder";
 import { formatDuration } from "@/lib/format";
+import { flightSearchPath, MAX_PASSENGERS } from "@/lib/flights/search-params";
 import { bookingEntries } from "@/lib/trips";
 import { partnerName, type Partner } from "@/server/affiliates/links";
 import { requireUser } from "@/server/auth";
@@ -41,6 +42,14 @@ export default async function TripPage({ params, searchParams }: Props) {
     };
   });
 
+  // Voli (passo 2.1): la ricerca parte con date e persone del viaggio; l'arrivo è quello del profilo.
+  const travelers = trip.travelers !== null && trip.travelers >= 1 && trip.travelers <= MAX_PASSENGERS ? trip.travelers : 1;
+  const flightSearchHref = flightSearchPath(locale, {
+    departure: trip.startDate,
+    passengers: travelers,
+    itineraryId: trip.id,
+  });
+
   const bookings: BuilderBooking[] = bookingEntries(
     trip.stops,
     trip.offers.map((o) => ({ activityId: o.activityId, partner: o.partner })),
@@ -54,6 +63,7 @@ export default async function TripPage({ params, searchParams }: Props) {
     // I link ai partner arrivano con la M6: fino ad allora l'azione è in sospeso.
     href: null,
     done: e.done,
+    searchAction: e.kind === "flight" ? { href: flightSearchHref, label: t("flightSearchAction") } : null,
   }));
 
   const meta = [

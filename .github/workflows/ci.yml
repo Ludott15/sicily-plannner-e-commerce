@@ -56,6 +56,8 @@ jobs:
             echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
             echo "SUPABASE_SECRET_KEY=$SECRET_KEY"
             echo "DATABASE_URL=$DB_URL"
+            # Chiave di sola prova per firmare i link verso i partner negli e2e (non è un segreto).
+            echo "FLIGHT_LINK_SECRET=ci-only-test-key-not-a-secret"
           } > .env.local
           echo "MAILPIT_URL=$MAILPIT_URL" >> "$GITHUB_ENV"
 
