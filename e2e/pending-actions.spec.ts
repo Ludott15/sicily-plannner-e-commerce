@@ -21,10 +21,11 @@ const PAGES = [
   "/it/noleggio-auto",
 ];
 
-// Pagine personali: servono una sessione e risposte salvate. Ospite con auto a noleggio e cibo e
+// Pagine personali: servono una sessione e risposte salvate. /punti (passo 5.1) per l'ospite mostra
+// l'invito a creare l'account e il regolamento in sospeso. Ospite con auto a noleggio e cibo e
 // vino al massimo, così i tre viaggi hanno tappe in auto (l'Etna nel seed) e l'avviso del noleggio.
 // Cinque giorni: nel seed demo almeno due aree li coprono (Costa nord e Madonie, Interno).
-const SESSION_PAGES = ["/it/viaggio/proposte", "/it/preferenze"];
+const SESSION_PAGES = ["/it/viaggio/proposte", "/it/preferenze", "/it/punti"];
 
 async function collectFrom(page: Page, paths: string[], found: Map<string, string>) {
   for (const path of paths) {

@@ -57,6 +57,8 @@ export default async function TripPage({ params, searchParams }: Props) {
         meta: [s.placeName, s.durationMin ? formatDuration(s.durationMin) : null].filter(Boolean).join(" · "),
         timeSlot: s.timeSlot,
         notes: s.notes,
+        // "Sono qui" (passo 5.1): solo tappe con un luogo, mai per gli ospiti.
+        checkIn: s.placeId !== null && !user.is_anonymous ? { checkedInToday: s.checkedInToday } : null,
       })),
     };
   });

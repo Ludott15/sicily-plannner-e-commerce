@@ -6,12 +6,14 @@ import { CoverPicture } from "@/components/catalog/cover-picture";
 import { FeaturedPlaces } from "@/components/catalog/featured-places";
 import { ItineraryCard } from "@/components/catalog/itinerary-card";
 import { PlaceCard } from "@/components/catalog/place-card";
-import { ButtonLink, PendingMarker } from "@/components/design";
+import { ButtonLink, PointsPill } from "@/components/design";
 import { FlightSearch } from "@/components/flights/flight-search";
 import { Link } from "@/lib/i18n/navigation";
 import type { CoverMedia } from "@/lib/media";
 import { localizedAlternates } from "@/lib/seo";
 import { shuffle } from "@/lib/shuffle";
+import { getUser } from "@/server/auth";
+import { getHomePoints } from "@/server/gamification/queries";
 import { getHomeHero, listFeaturedPlaces, listTemplates } from "@/server/catalog/queries";
 import { listLatestTips } from "@/server/catalog/tips";
 
@@ -21,7 +23,7 @@ import { listLatestTips } from "@/server/catalog/tips";
 // propria in ordine casuale, itinerari pronti e voce locale.
 // La pagina è dinamica per scelta: connection() rimanda il rendering alla richiesta, così il
 // mescolamento avviene sul server e i client component non usano Math.random.
-// La pillola "+100 punti a viaggio completato" è in sospeso e nascosta fino alla gamification (M9).
+// Chi ha l'account vede il saldo dei punti (passo 5.1), che porta a /punti.
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -41,12 +43,15 @@ export default async function HomePage({ params }: Props) {
   setRequestLocale(locale);
   await connection();
 
-  const [t, homeHero, featured, templates, tips] = await Promise.all([
+  const user = await getUser();
+  const [t, tPoints, homeHero, featured, templates, tips, points] = await Promise.all([
     getTranslations("Home"),
+    getTranslations("Points"),
     getHomeHero(),
     listFeaturedPlaces(),
     listTemplates(),
     listLatestTips(3),
+    user ? getHomePoints(user) : Promise.resolve(null),
   ]);
 
   // Hero: un luogo in evidenza a caso. Senza luoghi in evidenza, il luogo di getHomeHero().
@@ -93,7 +98,11 @@ export default async function HomePage({ params }: Props) {
               {t("readyItineraries")}
             </ButtonLink>
           </div>
-          <PendingMarker id="home.points" />
+          {points !== null && (
+            <Link href="/punti" aria-label={tPoints("homeLink")} className="self-start rounded-pill">
+              <PointsPill points={points} />
+            </Link>
+          )}
         </div>
       </section>
 

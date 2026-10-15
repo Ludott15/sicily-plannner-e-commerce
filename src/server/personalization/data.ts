@@ -141,12 +141,14 @@ async function writeTrip(tx: UserTx, user: DbUser, trip: TripAnswers) {
 }
 
 // Fine del percorso completo: gusti e viaggio, e i gusti risultano completati
-// (profiles.onboarding_completed_at).
+// (profiles.onboarding_completed_at). Nella stessa transazione si accreditano i punti del
+// profilo completato e quelli dell'invito (claim_onboarding_points, idempotente).
 export async function saveAnswers(user: DbUser, answers: OnboardingAnswers): Promise<void> {
   await dbAsUser(user, async (tx) => {
     await writeTastes(tx, user, answers);
     await writeTrip(tx, user, answers);
     await tx.update(profiles).set({ onboardingCompletedAt: new Date() }).where(eq(profiles.id, user.id));
+    await tx.execute(sql`select public.claim_onboarding_points()`);
   });
 }
 

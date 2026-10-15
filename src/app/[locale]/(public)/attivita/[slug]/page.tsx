@@ -7,6 +7,7 @@ import { CatalogActivityCard } from "@/components/catalog/catalog-activity-card"
 import { CatalogLocalTip } from "@/components/catalog/catalog-local-tip";
 import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
+import { ReviewsSection, type ReviewViewer } from "@/components/reviews/reviews-section";
 import {
   AffiliateOffer,
   affiliateHref,
@@ -19,15 +20,18 @@ import { publicEnv } from "@/lib/env";
 import { formatDuration, formatEur, formatSeason } from "@/lib/format";
 import { provinceName } from "@/lib/provinces";
 import { localizedAlternates, truncate } from "@/lib/seo";
+import { getUser } from "@/server/auth";
 import { interestLabels } from "@/server/catalog/labels";
 import { partnerName, type Partner } from "@/server/affiliates/links";
 import { getActivity, listActivityOffers, listNearbyActivities } from "@/server/catalog/queries";
 import { getActivityTip } from "@/server/catalog/tips";
+import { getActivityReviews } from "@/server/gamification/queries";
 
 // Scheda attività (mockup Attivita.html e AttivitaMobile.html).
 // Non ancora in pagina, perché mancano dati o funzioni: galleria (una sola foto o il
 // segnaposto), "Perché è per te" (M4), "Da sapere",
-// recensioni (M9), prodotti della zona (M10), "+10 punti con il check-in" (M9).
+// prodotti della zona (M10). Le recensioni (passo 5.1) sono in fondo alla pagina, con il modulo
+// per chi è idoneo; "+10 punti con il check-in" è nella pagina del viaggio.
 // "Aggiungi al viaggio" porta a /viaggi/aggiungi (scelta del viaggio e del giorno, M5).
 // Offerte: prodotti dei partner (activity_offers), dalla più economica; la prima è anche
 // nella barra mobile. Il prezzo dell'attività è quello pagato in loco (ingresso, biglietto),
@@ -59,14 +63,17 @@ export default async function ActivityPage({ params, searchParams }: Props) {
   const activity = await getActivity(slug);
   if (!activity) notFound();
 
-  const [t, labels, nearby, offerRows, tip, { avviso }] = await Promise.all([
+  const user = await getUser();
+  const [t, labels, nearby, offerRows, tip, { avviso }, reviewState] = await Promise.all([
     getTranslations("Catalog"),
     interestLabels(locale),
     listNearbyActivities(activity.id, activity.placeId, activity.placeProvince),
     listActivityOffers(activity.id),
     getActivityTip(activity.id, activity.placeId),
     searchParams,
+    getActivityReviews(activity.id, user),
   ]);
+  const viewer: ReviewViewer = !user ? "visitor" : user.is_anonymous ? "guest" : "user";
 
   const dayMonth = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" });
   // Solo offerte di partner che si possono nominare (riga di trasparenza obbligatoria).
@@ -211,6 +218,16 @@ export default async function ActivityPage({ params, searchParams }: Props) {
               {offerList}
             </div>
           </aside>
+        </div>
+
+        <div className="mt-16">
+          <ReviewsSection
+            activityId={activity.id}
+            reviews={reviewState.reviews}
+            mine={reviewState.mine ? { rating: reviewState.mine.rating, body: reviewState.mine.body ?? "" } : null}
+            eligible={reviewState.eligible}
+            viewer={viewer}
+          />
         </div>
 
         {nearby.length > 0 && (
