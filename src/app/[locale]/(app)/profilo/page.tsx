@@ -1,9 +1,11 @@
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { EmailCodeForm } from "@/components/auth/email-code-form";
 import { Button } from "@/components/design";
+import { LeaderboardSettings } from "@/components/leaderboard/leaderboard-settings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProfile, requireUser } from "@/server/auth";
 import { signOut } from "@/server/auth/actions";
+import { getLeaderboardSettings } from "@/server/gamification/leaderboard";
 
 // Profilo. Un ospite (sessione anonima) vede come salvare il suo account con l'email e il
 // codice: lo user id resta lo stesso, quindi i viaggi creati da ospite restano suoi.
@@ -39,10 +41,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
     );
   }
 
-  const [profile, t, format] = await Promise.all([
+  const [profile, t, format, leaderboard, tLeaderboard] = await Promise.all([
     getProfile(user),
     getTranslations("Profile"),
     getFormatter(),
+    getLeaderboardSettings(user),
+    getTranslations("LeaderboardSettings"),
   ]);
 
   const rows = [
@@ -53,7 +57,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   ] as const;
 
   return (
-    <section className="mx-auto w-full max-w-xl px-4 py-12">
+    <section className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-12">
       <Card>
         <CardHeader>
           <CardTitle>
@@ -69,6 +73,22 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
               </div>
             ))}
           </dl>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2>{tLeaderboard("title")}</h2>
+          </CardTitle>
+          <CardDescription>{tLeaderboard("intro")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LeaderboardSettings
+            optOut={leaderboard.optOut}
+            displayName={leaderboard.displayName}
+            publicName={leaderboard.publicName}
+          />
         </CardContent>
       </Card>
     </section>

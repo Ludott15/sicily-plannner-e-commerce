@@ -649,6 +649,53 @@ $$;
 ALTER FUNCTION "public"."claim_onboarding_points"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."close_season"("p_season" "text") RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $_$
+declare
+  v_inserted integer;
+begin
+  if p_season !~ '^[0-9]{4}-(estate|inverno)$' then
+    raise exception 'invalid_season' using errcode = 'P0001';
+  end if;
+
+  if exists (select 1 from public.season_awards where season = p_season) then
+    return 0;
+  end if;
+
+  insert into public.season_awards (season, rank, user_id, points)
+  with totals as (
+    select l.user_id, sum(l.delta)::int as points
+    from public.points_ledger l
+    where l.season = p_season
+      and l.reason not in ('redeem', 'redeem_refund')
+    group by l.user_id
+    having sum(l.delta) > 0
+  ),
+  eligible as (
+    select
+      t.user_id,
+      t.points,
+      row_number() over (order by t.points desc, t.user_id) as pos
+    from totals t
+    join public.profiles p on p.id = t.user_id
+    where not p.leaderboard_opt_out
+  )
+  select p_season, e.pos::smallint, e.user_id, e.points
+  from eligible e
+  where e.pos <= 10
+  on conflict (season, rank) do nothing;
+
+  get diagnostics v_inserted = row_count;
+  return v_inserted;
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."close_season"("p_season" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -879,29 +926,71 @@ $$;
 ALTER FUNCTION "public"."group_has_other_members"("gid" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."group_leaderboard"("gid" "uuid") RETURNS TABLE("display_name" "text", "avatar_url" "text", "total_points" integer, "is_me" boolean)
-    LANGUAGE "sql" STABLE SECURITY DEFINER
+CREATE OR REPLACE FUNCTION "public"."group_leaderboard"("gid" "uuid") RETURNS TABLE("rank" integer, "public_name" "text", "points" integer, "is_me" boolean, "period_from" "date", "period_to" "date")
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
     AS $$
-  select
-    p.display_name,
-    p.avatar_url,
-    coalesce(sum(l.delta) filter (
-      where l.reason not in ('redeem', 'redeem_refund')
-        and i.start_date is not null
-        and (l.created_at at time zone 'Europe/Rome')::date >= i.start_date
-        and (l.created_at at time zone 'Europe/Rome')::date < i.start_date + i.days
-    ), 0)::int as total_points,
-    gm.user_id = auth.uid() as is_me
-  from public.group_members gm
-  join public.groups g on g.id = gm.group_id
-  join public.profiles p on p.id = gm.user_id
+#variable_conflict use_column
+declare
+  v_created timestamptz;
+  v_start date;
+  v_days integer;
+  v_from date;
+  v_to date;
+begin
+  if not public.is_group_member(gid) then
+    raise exception 'not_group_member' using errcode = 'P0001';
+  end if;
+
+  select g.created_at, i.start_date, i.days
+    into v_created, v_start, v_days
+  from public.groups g
   left join public.itineraries i on i.id = g.itinerary_id
-  left join public.points_ledger l on l.user_id = gm.user_id
-  where gm.group_id = gid
-    and public.is_group_member(gid)
-  group by gm.user_id, p.display_name, p.avatar_url
-  order by total_points desc;
+  where g.id = gid;
+
+  if v_start is not null then
+    v_from := v_start;
+    v_to := v_start + v_days - 1;
+  else
+    v_from := (v_created at time zone 'Europe/Rome')::date;
+    v_to := (now() at time zone 'Europe/Rome')::date;
+  end if;
+
+  return query
+  with totals as (
+    select
+      gm.user_id,
+      coalesce(sum(l.delta) filter (
+        where l.reason not in ('redeem', 'redeem_refund')
+          and (
+            (v_start is not null and (l.created_at at time zone 'Europe/Rome')::date between v_from and v_to)
+            or (v_start is null and l.created_at >= v_created)
+          )
+      ), 0)::int as total
+    from public.group_members gm
+    left join public.points_ledger l on l.user_id = gm.user_id
+    where gm.group_id = gid
+    group by gm.user_id
+  ),
+  ranked as (
+    select t.user_id, t.total, rank() over (order by t.total desc)::int as pos
+    from totals t
+  )
+  select
+    r.pos,
+    public.public_name_for(
+      p.display_name,
+      coalesce(u.raw_user_meta_data ->> 'full_name', u.raw_user_meta_data ->> 'name')
+    ),
+    r.total,
+    r.user_id = (select auth.uid()),
+    v_from,
+    v_to
+  from ranked r
+  join public.profiles p on p.id = r.user_id
+  join auth.users u on u.id = r.user_id
+  order by r.pos, r.user_id;
+end;
 $$;
 
 
@@ -1559,6 +1648,68 @@ $$;
 ALTER FUNCTION "public"."my_badge_progress"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."my_leaderboard_settings"() RETURNS TABLE("opt_out" boolean, "display_name" "text", "public_name" "text")
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select
+    p.leaderboard_opt_out,
+    p.display_name,
+    public.public_name_for(
+      p.display_name,
+      coalesce(u.raw_user_meta_data ->> 'full_name', u.raw_user_meta_data ->> 'name')
+    )
+  from public.profiles p
+  join auth.users u on u.id = p.id
+  where p.id = (select auth.uid());
+$$;
+
+
+ALTER FUNCTION "public"."my_leaderboard_settings"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."my_seasonal_rank"("p_season" "text" DEFAULT NULL::"text") RETURNS TABLE("rank" integer, "points" integer)
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $_$
+#variable_conflict use_column
+declare
+  v_user uuid := (select auth.uid());
+  v_season text := coalesce(p_season, public.season_for(now()));
+  v_points integer;
+begin
+  if v_user is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  if coalesce((select (auth.jwt() ->> 'is_anonymous')::boolean), false) then
+    raise exception 'guest_not_allowed' using errcode = 'P0001';
+  end if;
+  if p_season is not null and p_season !~ '^[0-9]{4}-(estate|inverno)$' then
+    raise exception 'invalid_season' using errcode = 'P0001';
+  end if;
+
+  select t.total_points into v_points
+  from public.leaderboard_season_totals t
+  where t.season = v_season and t.user_id = v_user;
+
+  if v_points is null or v_points <= 0 then
+    return;
+  end if;
+
+  return query
+  select (1 + count(*))::int, v_points
+  from public.leaderboard_season_totals t
+  join public.profiles p on p.id = t.user_id
+  where t.season = v_season
+    and not p.leaderboard_opt_out
+    and t.total_points > v_points;
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."my_seasonal_rank"("p_season" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."point_delta"("p_reason" "public"."point_reason") RETURNS integer
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -1608,6 +1759,37 @@ $$;
 
 
 ALTER FUNCTION "public"."prevent_mutation"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."public_name_for"("p_display_name" "text", "p_fallback_name" "text") RETURNS "text"
+    LANGUAGE "plpgsql" IMMUTABLE
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_name text := nullif(btrim(p_display_name), '');
+  v_words text[];
+  v_last text;
+begin
+  if v_name is not null then
+    return v_name;
+  end if;
+
+  v_words := regexp_split_to_array(btrim(coalesce(p_fallback_name, '')), '\s+');
+  if coalesce(v_words[1], '') = '' then
+    return 'Viaggiatore';
+  end if;
+
+  if array_length(v_words, 1) = 1 then
+    return upper(left(v_words[1], 1)) || '.';
+  end if;
+
+  v_last := v_words[array_length(v_words, 1)];
+  return upper(left(v_words[1], 1)) || '. ' || upper(left(v_last, 1)) || '.';
+end;
+$$;
+
+
+ALTER FUNCTION "public"."public_name_for"("p_display_name" "text", "p_fallback_name" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_context" "text", "p_anon_id" "text" DEFAULT NULL::"text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "text"
@@ -2097,6 +2279,100 @@ $$;
 
 
 ALTER FUNCTION "public"."season_for"("ts" timestamp with time zone) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."seasonal_leaderboard_top"("p_season" "text" DEFAULT NULL::"text", "p_limit" integer DEFAULT 50) RETURNS TABLE("rank" integer, "public_name" "text", "points" integer, "is_me" boolean)
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $_$
+#variable_conflict use_column
+begin
+  if p_season is not null and p_season !~ '^[0-9]{4}-(estate|inverno)$' then
+    raise exception 'invalid_season' using errcode = 'P0001';
+  end if;
+
+  return query
+  with ranked as (
+    select
+      t.user_id,
+      t.total_points,
+      rank() over (order by t.total_points desc)::int as pos
+    from public.leaderboard_season_totals t
+    join public.profiles p on p.id = t.user_id
+    where t.season = coalesce(p_season, public.season_for(now()))
+      and not p.leaderboard_opt_out
+      and t.total_points > 0
+  )
+  select
+    r.pos,
+    public.public_name_for(
+      p.display_name,
+      coalesce(u.raw_user_meta_data ->> 'full_name', u.raw_user_meta_data ->> 'name')
+    ),
+    r.total_points,
+    coalesce(r.user_id = (select auth.uid()), false)
+  from ranked r
+  join public.profiles p on p.id = r.user_id
+  join auth.users u on u.id = r.user_id
+  order by r.pos, r.user_id
+  limit least(greatest(coalesce(p_limit, 50), 1), 50);
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."seasonal_leaderboard_top"("p_season" "text", "p_limit" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."set_leaderboard_opt_out"("p_opt_out" boolean) RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if (select auth.uid()) is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  if coalesce((select (auth.jwt() ->> 'is_anonymous')::boolean), false) then
+    raise exception 'guest_not_allowed' using errcode = 'P0001';
+  end if;
+  if p_opt_out is null then
+    raise exception 'invalid_value' using errcode = 'P0001';
+  end if;
+
+  update public.profiles
+  set leaderboard_opt_out = p_opt_out
+  where id = (select auth.uid());
+end;
+$$;
+
+
+ALTER FUNCTION "public"."set_leaderboard_opt_out"("p_opt_out" boolean) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."set_public_name"("p_name" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_name text := nullif(btrim(p_name), '');
+begin
+  if (select auth.uid()) is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  if coalesce((select (auth.jwt() ->> 'is_anonymous')::boolean), false) then
+    raise exception 'guest_not_allowed' using errcode = 'P0001';
+  end if;
+  if char_length(coalesce(v_name, '')) > 40 then
+    raise exception 'invalid_name' using errcode = 'P0001';
+  end if;
+
+  update public.profiles
+  set display_name = v_name
+  where id = (select auth.uid());
+end;
+$$;
+
+
+ALTER FUNCTION "public"."set_public_name"("p_name" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."shared_itinerary"("p_token" "text") RETURNS "jsonb"
@@ -3236,19 +3512,21 @@ CREATE TABLE IF NOT EXISTS "public"."review_reports" (
 ALTER TABLE "public"."review_reports" OWNER TO "postgres";
 
 
-CREATE OR REPLACE VIEW "public"."seasonal_leaderboard" WITH ("security_barrier"='true') AS
- SELECT "t"."season",
-    ("rank"() OVER (PARTITION BY "t"."season" ORDER BY "t"."total_points" DESC))::integer AS "rank",
-    "p"."display_name",
-    "p"."avatar_url",
-    "t"."total_points",
-    ("t"."user_id" = "auth"."uid"()) AS "is_me"
-   FROM ("public"."leaderboard_season_totals" "t"
-     JOIN "public"."profiles" "p" ON (("p"."id" = "t"."user_id")))
-  WHERE ((NOT "p"."leaderboard_opt_out") AND ("t"."total_points" > 0));
+CREATE TABLE IF NOT EXISTS "public"."season_awards" (
+    "season" "text" NOT NULL,
+    "rank" smallint NOT NULL,
+    "user_id" "uuid",
+    "points" integer NOT NULL,
+    "prize_status" "text" DEFAULT 'pending'::"text" NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "season_awards_points_positive" CHECK (("points" > 0)),
+    CONSTRAINT "season_awards_prize_status_valid" CHECK (("prize_status" = ANY (ARRAY['pending'::"text", 'assigned'::"text", 'shipped'::"text"]))),
+    CONSTRAINT "season_awards_rank_range" CHECK ((("rank" >= 1) AND ("rank" <= 10))),
+    CONSTRAINT "season_awards_season_format" CHECK (("season" ~ '^[0-9]{4}-(estate|inverno)$'::"text"))
+);
 
 
-ALTER VIEW "public"."seasonal_leaderboard" OWNER TO "postgres";
+ALTER TABLE "public"."season_awards" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."user_badges" (
@@ -3660,6 +3938,11 @@ ALTER TABLE ONLY "public"."reviews"
 
 ALTER TABLE ONLY "public"."reviews"
     ADD CONSTRAINT "reviews_user_activity_unique" UNIQUE ("user_id", "activity_id");
+
+
+
+ALTER TABLE ONLY "public"."season_awards"
+    ADD CONSTRAINT "season_awards_season_rank_pk" PRIMARY KEY ("season", "rank");
 
 
 
@@ -4365,6 +4648,11 @@ ALTER TABLE ONLY "public"."reviews"
 
 
 
+ALTER TABLE ONLY "public"."season_awards"
+    ADD CONSTRAINT "season_awards_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
 ALTER TABLE ONLY "public"."user_badges"
     ADD CONSTRAINT "user_badges_badge_key_badges_key_fk" FOREIGN KEY ("badge_key") REFERENCES "public"."badges"("key") ON UPDATE CASCADE ON DELETE RESTRICT;
 
@@ -5048,6 +5336,13 @@ CREATE POLICY "reviews_select_own" ON "public"."reviews" FOR SELECT TO "authenti
 
 
 
+ALTER TABLE "public"."season_awards" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "season_awards_select_admin" ON "public"."season_awards" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
 ALTER TABLE "public"."user_badges" ENABLE ROW LEVEL SECURITY;
 
 
@@ -5177,6 +5472,11 @@ GRANT ALL ON FUNCTION "public"."claim_onboarding_points"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."close_season"("p_season" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."close_season"("p_season" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "authenticated";
@@ -5208,9 +5508,8 @@ GRANT ALL ON FUNCTION "public"."group_has_other_members"("gid" "uuid") TO "servi
 
 
 REVOKE ALL ON FUNCTION "public"."group_leaderboard"("gid" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."group_leaderboard"("gid" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."group_leaderboard"("gid" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."group_leaderboard"("gid" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "public"."group_leaderboard"("gid" "uuid") TO "authenticated";
 
 
 
@@ -5363,6 +5662,18 @@ GRANT ALL ON FUNCTION "public"."my_badge_progress"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."my_leaderboard_settings"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."my_leaderboard_settings"() TO "service_role";
+GRANT ALL ON FUNCTION "public"."my_leaderboard_settings"() TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."my_seasonal_rank"("p_season" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."my_seasonal_rank"("p_season" "text") TO "service_role";
+GRANT ALL ON FUNCTION "public"."my_seasonal_rank"("p_season" "text") TO "authenticated";
+
+
+
 REVOKE ALL ON FUNCTION "public"."point_delta"("p_reason" "public"."point_reason") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."point_delta"("p_reason" "public"."point_reason") TO "service_role";
 
@@ -5376,6 +5687,12 @@ GRANT ALL ON FUNCTION "public"."points_ledger_award_badges"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "anon";
 GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."public_name_for"("p_display_name" "text", "p_fallback_name" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."public_name_for"("p_display_name" "text", "p_fallback_name" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."public_name_for"("p_display_name" "text", "p_fallback_name" "text") TO "service_role";
 
 
 
@@ -5438,6 +5755,25 @@ GRANT ALL ON FUNCTION "public"."review_eligible"("p_activity_id" "uuid") TO "ser
 GRANT ALL ON FUNCTION "public"."season_for"("ts" timestamp with time zone) TO "anon";
 GRANT ALL ON FUNCTION "public"."season_for"("ts" timestamp with time zone) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."season_for"("ts" timestamp with time zone) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."seasonal_leaderboard_top"("p_season" "text", "p_limit" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."seasonal_leaderboard_top"("p_season" "text", "p_limit" integer) TO "service_role";
+GRANT ALL ON FUNCTION "public"."seasonal_leaderboard_top"("p_season" "text", "p_limit" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."seasonal_leaderboard_top"("p_season" "text", "p_limit" integer) TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."set_leaderboard_opt_out"("p_opt_out" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."set_leaderboard_opt_out"("p_opt_out" boolean) TO "service_role";
+GRANT ALL ON FUNCTION "public"."set_leaderboard_opt_out"("p_opt_out" boolean) TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."set_public_name"("p_name" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."set_public_name"("p_name" "text") TO "service_role";
+GRANT ALL ON FUNCTION "public"."set_public_name"("p_name" "text") TO "authenticated";
 
 
 
@@ -5761,10 +6097,6 @@ GRANT UPDATE("party") ON TABLE "public"."profiles" TO "authenticated";
 
 
 GRANT UPDATE("onboarding_completed_at") ON TABLE "public"."profiles" TO "authenticated";
-
-
-
-GRANT UPDATE("leaderboard_opt_out") ON TABLE "public"."profiles" TO "authenticated";
 
 
 
@@ -6308,8 +6640,8 @@ GRANT SELECT ON TABLE "public"."review_reports" TO "authenticated";
 
 
 
-GRANT ALL ON TABLE "public"."seasonal_leaderboard" TO "service_role";
-GRANT SELECT ON TABLE "public"."seasonal_leaderboard" TO "authenticated";
+GRANT ALL ON TABLE "public"."season_awards" TO "service_role";
+GRANT SELECT ON TABLE "public"."season_awards" TO "authenticated";
 
 
 

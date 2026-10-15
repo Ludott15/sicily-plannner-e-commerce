@@ -27,7 +27,7 @@ export default async function PointsPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
   const user = await requireUser();
-  const t = await getTranslations("Points");
+  const [t, tLeaderboard] = await Promise.all([getTranslations("Points"), getTranslations("Leaderboard")]);
 
   if (user.is_anonymous) {
     return (
@@ -41,6 +41,11 @@ export default async function PointsPage({ params }: Props) {
           <p className="text-body text-lava-muted">{t("guestText")}</p>
           <ButtonLink href="/profilo" variant="primary">
             {t("guestCta")}
+          </ButtonLink>
+        </div>
+        <div>
+          <ButtonLink href="/classifica" variant="secondary">
+            {tLeaderboard("pointsLink")}
           </ButtonLink>
         </div>
         <div>
@@ -144,6 +149,12 @@ export default async function PointsPage({ params }: Props) {
           </ul>
         )}
       </section>
+
+      <div>
+        <ButtonLink href="/classifica" variant="secondary">
+          {tLeaderboard("pointsLink")}
+        </ButtonLink>
+      </div>
 
       <div>
         <PendingButton id="points.rules" variant="secondary">

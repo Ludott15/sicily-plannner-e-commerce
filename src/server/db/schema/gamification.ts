@@ -150,3 +150,27 @@ export const reviewReports = pgTable(
     check("review_reports_reason_valid", sql`${t.reason} in ('spam', 'offensive', 'off_topic', 'other')`),
   ],
 );
+
+// Premi della classifica stagionale (passo 5.3): i primi dieci di una stagione chiusa, scritti una
+// volta sola da close_season (SQL custom). Letti solo dall'admin; prize_status segue il premio.
+// user_id diventa null se l'account si elimina: il posto e i punti restano.
+export const seasonAwards = pgTable(
+  "season_awards",
+  {
+    season: text("season").notNull(),
+    rank: smallint("rank").notNull(),
+    userId: uuid("user_id").references(() => profiles.id, { onDelete: "set null" }),
+    points: integer("points").notNull(),
+    prizeStatus: text("prize_status").notNull().default("pending"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.season, t.rank] }),
+    check("season_awards_season_format", sql`${t.season} ~ '^[0-9]{4}-(estate|inverno)$'`),
+    check("season_awards_rank_range", sql`${t.rank} between 1 and 10`),
+    check("season_awards_points_positive", sql`${t.points} > 0`),
+    check("season_awards_prize_status_valid", sql`${t.prizeStatus} in ('pending', 'assigned', 'shipped')`),
+  ],
+);
+
+export type SeasonAward = typeof seasonAwards.$inferSelect;
