@@ -14,7 +14,8 @@ import { config } from "dotenv";
 import postgres from "postgres";
 import { fileURLToPath } from "node:url";
 
-const TEST_SLUG = ["int-%", "e2e-%"];
+// "imp-<partner>-int-…": attività create dall'import dei partner nei test (slug derivato dal prodotto).
+const TEST_SLUG = ["int-%", "e2e-%", "imp-%-int-%", "imp-%-e2e-%"];
 const TEST_EMAIL = ["int-%@example.com", "e2e-%@example.com"];
 
 export async function cleanTestData(sql) {

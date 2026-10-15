@@ -1199,8 +1199,10 @@ CREATE TABLE IF NOT EXISTS "public"."activities" (
     "cover_media_id" "uuid",
     "title_en" "text",
     "needs_review" boolean DEFAULT false NOT NULL,
+    "embedded_hash" "text",
     CONSTRAINT "activities_diet_friendly_valid" CHECK (("diet_friendly" <@ '{vegetarian,vegan,gluten_free,lactose_free}'::"text"[])),
     CONSTRAINT "activities_duration_positive" CHECK (("duration_min" > 0)),
+    CONSTRAINT "activities_embedded_hash_format" CHECK ((("embedded_hash" IS NULL) OR ("embedded_hash" ~ '^[0-9a-f]{64}$'::"text"))),
     CONSTRAINT "activities_on_site_price_non_negative" CHECK (("on_site_price_eur" >= (0)::numeric)),
     CONSTRAINT "activities_rating_range" CHECK ((("rating" >= (0)::numeric) AND ("rating" <= (5)::numeric))),
     CONSTRAINT "activities_season_months_valid" CHECK (("season_months" <@ '{1,2,3,4,5,6,7,8,9,10,11,12}'::smallint[]))
@@ -1237,8 +1239,11 @@ CREATE TABLE IF NOT EXISTS "public"."activity_offers" (
     "price_updated_at" timestamp with time zone,
     "is_active" boolean DEFAULT true NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "missed_imports" smallint DEFAULT 0 NOT NULL,
+    "last_seen_at" timestamp with time zone,
     CONSTRAINT "activity_offers_affiliate_url_https" CHECK (("affiliate_url" ~ '^https://'::"text")),
     CONSTRAINT "activity_offers_currency_format" CHECK (("currency" ~ '^[A-Z]{3}$'::"text")),
+    CONSTRAINT "activity_offers_missed_imports_range" CHECK ((("missed_imports" >= 0) AND ("missed_imports" <= 10))),
     CONSTRAINT "activity_offers_partner_not_internal" CHECK (("partner" <> 'internal'::"public"."partner")),
     CONSTRAINT "activity_offers_price_non_negative" CHECK (("price_from_eur" >= (0)::numeric)),
     CONSTRAINT "activity_offers_rating_range" CHECK ((("rating" >= (0)::numeric) AND ("rating" <= (5)::numeric))),
@@ -1262,6 +1267,20 @@ CREATE TABLE IF NOT EXISTS "public"."activity_sources" (
 
 
 ALTER TABLE "public"."activity_sources" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."activity_tag_proposals" (
+    "activity_id" "uuid" NOT NULL,
+    "interest_key" "text" NOT NULL,
+    "strength" smallint NOT NULL,
+    "model" "text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "activity_tag_proposals_model_length" CHECK (("char_length"("model") <= 100)),
+    CONSTRAINT "activity_tag_proposals_strength_range" CHECK ((("strength" >= 1) AND ("strength" <= 3)))
+);
+
+
+ALTER TABLE "public"."activity_tag_proposals" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."admin_audit_log" (
@@ -1857,6 +1876,28 @@ CREATE TABLE IF NOT EXISTS "public"."orders" (
 ALTER TABLE "public"."orders" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."partner_import_runs" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "partner" "public"."partner" NOT NULL,
+    "started_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "finished_at" timestamp with time zone,
+    "status" "text" NOT NULL,
+    "created_count" integer DEFAULT 0 NOT NULL,
+    "updated_count" integer DEFAULT 0 NOT NULL,
+    "deactivated_count" integer DEFAULT 0 NOT NULL,
+    "skipped_count" integer DEFAULT 0 NOT NULL,
+    "error" "text",
+    CONSTRAINT "partner_import_runs_counts_non_negative" CHECK ((("created_count" >= 0) AND ("updated_count" >= 0) AND ("deactivated_count" >= 0) AND ("skipped_count" >= 0))),
+    CONSTRAINT "partner_import_runs_error_length" CHECK (("char_length"("error") <= 2000)),
+    CONSTRAINT "partner_import_runs_finished_after_start" CHECK ((("finished_at" IS NULL) OR ("finished_at" >= "started_at"))),
+    CONSTRAINT "partner_import_runs_partner_not_internal" CHECK (("partner" <> 'internal'::"public"."partner")),
+    CONSTRAINT "partner_import_runs_status_valid" CHECK (("status" = ANY (ARRAY['ok'::"text", 'failed'::"text"])))
+);
+
+
+ALTER TABLE "public"."partner_import_runs" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."places" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "slug" "text" NOT NULL,
@@ -2148,6 +2189,11 @@ ALTER TABLE ONLY "public"."activity_sources"
 
 
 
+ALTER TABLE ONLY "public"."activity_tag_proposals"
+    ADD CONSTRAINT "activity_tag_proposals_activity_id_interest_key_pk" PRIMARY KEY ("activity_id", "interest_key");
+
+
+
 ALTER TABLE ONLY "public"."admin_audit_log"
     ADD CONSTRAINT "admin_audit_log_pkey" PRIMARY KEY ("id");
 
@@ -2328,6 +2374,11 @@ ALTER TABLE ONLY "public"."orders"
 
 
 
+ALTER TABLE ONLY "public"."partner_import_runs"
+    ADD CONSTRAINT "partner_import_runs_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."places"
     ADD CONSTRAINT "places_pkey" PRIMARY KEY ("id");
 
@@ -2429,6 +2480,10 @@ CREATE INDEX "activity_interests_interest_key_idx" ON "public"."activity_interes
 
 
 CREATE INDEX "activity_offers_activity_id_idx" ON "public"."activity_offers" USING "btree" ("activity_id");
+
+
+
+CREATE INDEX "activity_tag_proposals_interest_key_idx" ON "public"."activity_tag_proposals" USING "btree" ("interest_key");
 
 
 
@@ -2537,6 +2592,10 @@ CREATE INDEX "orders_status_idx" ON "public"."orders" USING "btree" ("status");
 
 
 CREATE INDEX "orders_user_id_idx" ON "public"."orders" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "partner_import_runs_partner_started_at_idx" ON "public"."partner_import_runs" USING "btree" ("partner", "started_at");
 
 
 
@@ -2659,6 +2718,16 @@ ALTER TABLE ONLY "public"."activity_offers"
 
 ALTER TABLE ONLY "public"."activity_sources"
     ADD CONSTRAINT "activity_sources_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."activity_tag_proposals"
+    ADD CONSTRAINT "activity_tag_proposals_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."activity_tag_proposals"
+    ADD CONSTRAINT "activity_tag_proposals_interest_key_interests_key_fk" FOREIGN KEY ("interest_key") REFERENCES "public"."interests"("key") ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
@@ -3073,6 +3142,13 @@ CREATE POLICY "activity_sources_update_admin" ON "public"."activity_sources" FOR
 
 
 
+ALTER TABLE "public"."activity_tag_proposals" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "activity_tag_proposals_select_admin" ON "public"."activity_tag_proposals" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
 ALTER TABLE "public"."admin_audit_log" ENABLE ROW LEVEL SECURITY;
 
 
@@ -3436,6 +3512,13 @@ ALTER TABLE "public"."orders" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "orders_select_own" ON "public"."orders" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+ALTER TABLE "public"."partner_import_runs" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "partner_import_runs_select_admin" ON "public"."partner_import_runs" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
 
 
 
@@ -3949,6 +4032,11 @@ GRANT SELECT("updated_at"),UPDATE("updated_at") ON TABLE "public"."activity_sour
 
 
 GRANT SELECT("created_at") ON TABLE "public"."activity_sources" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."activity_tag_proposals" TO "service_role";
+GRANT SELECT ON TABLE "public"."activity_tag_proposals" TO "authenticated";
 
 
 
@@ -4534,6 +4622,11 @@ GRANT SELECT("created_at") ON TABLE "public"."order_shipments" TO "authenticated
 
 GRANT ALL ON TABLE "public"."orders" TO "service_role";
 GRANT SELECT ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."partner_import_runs" TO "service_role";
+GRANT SELECT ON TABLE "public"."partner_import_runs" TO "authenticated";
 
 
 

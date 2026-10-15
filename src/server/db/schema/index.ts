@@ -1,6 +1,7 @@
 export * from "./enums";
 export * from "./profiles";
 export * from "./catalog";
+export * from "./partners-import";
 export * from "./personalization";
 export * from "./trips";
 export * from "./gamification";
