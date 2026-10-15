@@ -55,6 +55,21 @@ describe("nearbyAlternatives", () => {
     expect(result.map((r) => r.activityId)).toEqual(["a", "b"]);
   });
 
+  it("con i punteggi del gruppo ordina per punteggio, poi distanza, poi id", () => {
+    const catalog = [
+      candidate({ activityId: "high-rated", rating: 5, lat: 38.12, lng: 13.36 }),
+      candidate({ activityId: "fits-group", rating: 3, lat: 38.12, lng: 13.36 }),
+      candidate({ activityId: "fits-group-near", rating: 3, lat: 38.1158, lng: 13.3616 }),
+    ];
+    const scores = new Map([
+      ["high-rated", 0.4],
+      ["fits-group", 0.9],
+      ["fits-group-near", 0.9],
+    ]);
+    const result = nearbyAlternatives(stop, catalog, new Set(), scores);
+    expect(result.map((r) => r.activityId)).toEqual(["fits-group-near", "fits-group"]);
+  });
+
   it("torna vuoto se non c'è nulla di vicino", () => {
     expect(nearbyAlternatives(stop, [], new Set())).toEqual([]);
   });

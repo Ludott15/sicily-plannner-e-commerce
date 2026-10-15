@@ -1,0 +1,90 @@
+import type { PointReason, ReportReason } from "./config";
+
+// Tipi condivisi tra server e componenti client (solo tipi: nessun codice server).
+
+export type CheckInErrorCode =
+  | "invalid"
+  | "guest_not_allowed"
+  | "not_allowed"
+  | "no_place"
+  | "too_far"
+  | "daily_limit"
+  | "already_checked_in"
+  | "failed";
+
+export type CheckInResult =
+  | { status: "ok"; points: number; itineraryCompleted: boolean }
+  | { status: "error"; code: CheckInErrorCode };
+
+export type ReviewErrorCode =
+  | "invalid"
+  | "guest_not_allowed"
+  | "invalid_rating"
+  | "invalid_text"
+  | "activity_not_available"
+  | "not_eligible"
+  | "failed";
+
+export type ReviewFormState =
+  | { status: "idle" }
+  | { status: "saved"; rewarded: boolean }
+  | { status: "error"; code: ReviewErrorCode };
+
+export type ReportReviewState =
+  | { status: "idle" }
+  | { status: "reported" }
+  | { status: "error"; code: "invalid" | "guest_not_allowed" | "cannot_report_own" | "failed" };
+
+export type PointMovement = {
+  id: string;
+  reason: string;
+  delta: number;
+  createdAt: string;
+};
+
+// Badge del catalogo non ancora ottenuti. progress resta null finché i criteri non arrivano (passo 5.2).
+export type NextBadge = {
+  key: string;
+  name: string;
+  progress: string | null;
+};
+
+export type MyPoints = {
+  balance: number;
+  movements: PointMovement[];
+  rules: Record<string, number>;
+  nextBadges: NextBadge[];
+};
+
+export type PublicReview = {
+  id: string;
+  rating: number;
+  body: string | null;
+  createdAt: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  rewarded: boolean;
+};
+
+export type ActivityReviews = {
+  reviews: PublicReview[];
+  mine: { rating: number; body: string | null } | null;
+  eligible: boolean;
+};
+
+export type AdminReportedReview = {
+  id: string;
+  body: string | null;
+  rating: number;
+  activityTitle: string;
+  displayName: string | null;
+  rewarded: boolean;
+  hidden: boolean;
+  reportCount: number;
+  reasons: string[];
+};
+
+export type { PointReason, ReportReason };
+
+// Codici d'errore della segnalazione di una recensione.
+export type ReportErrorCode = Extract<ReportReviewState, { status: "error" }>["code"];

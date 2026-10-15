@@ -323,6 +323,20 @@
       "when": 1792080945335,
       "tag": "20261015161545_voti_proposte",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1792084833520,
+      "tag": "20261015172033_preferenze_gruppo",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1792086383497,
+      "tag": "20261015174623_punti_recensioni",
+      "breakpoints": true
     }
   ]
 }
