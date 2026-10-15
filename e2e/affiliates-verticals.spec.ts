@@ -37,7 +37,8 @@ test("dove-dormire e noleggio-auto senza ID dei partner: stato in arrivo, nessun
 
 test("dove-dormire con avviso di link non disponibile mostra il messaggio", async ({ page }) => {
   await page.goto("/it/dove-dormire?avviso=non-disponibile");
-  await expect(page.getByRole("alert")).toHaveText("Questo collegamento non è disponibile al momento. Riprova più tardi.");
+  // Next ha il suo annunciatore delle rotte con role="alert": si filtra sul messaggio.
+  await expect(page.getByRole("alert").filter({ hasText: "Questo collegamento non è disponibile" })).toBeVisible();
 });
 
 test("pagine admin dei partner: un utente che non è admin riceve 404", async ({ page, request }) => {
