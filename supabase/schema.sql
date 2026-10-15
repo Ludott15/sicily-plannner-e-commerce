@@ -2310,7 +2310,7 @@ begin
       coalesce(u.raw_user_meta_data ->> 'full_name', u.raw_user_meta_data ->> 'name')
     ),
     r.total_points,
-    r.user_id = (select auth.uid())
+    coalesce(r.user_id = (select auth.uid()), false)
   from ranked r
   join public.profiles p on p.id = r.user_id
   join auth.users u on u.id = r.user_id
