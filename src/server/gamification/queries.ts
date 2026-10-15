@@ -1,8 +1,9 @@
 import "server-only";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
-import { badges, pointRules, pointsLedger, reviews, userBadges } from "@/server/db/schema";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { pointRules, pointsLedger, reviews } from "@/server/db/schema";
 import { dbPublic } from "@/server/db/public";
 import { dbAsUser, type DbUser, type UserTx } from "@/server/db/user";
+import { selectNextBadges } from "./badges";
 import type { ActivityReviews, MyPoints, PublicReview } from "./types";
 
 export type { PublicReview } from "./types";
@@ -18,10 +19,10 @@ function toIso(value: Date | string): string {
   return new Date(value).toISOString();
 }
 
-// Saldo (somma di tutti i movimenti, anche i riscatti), ultimi movimenti, regole e badge del
-// catalogo non ancora ottenuti. Il nome dei badge segue la lingua della pagina.
+// Saldo (somma di tutti i movimenti, anche i riscatti), ultimi movimenti, regole e progresso
+// verso i badge non ancora ottenuti. Il nome dei badge segue la lingua della pagina.
 export async function getMyPoints(user: DbUser, locale: string = "it"): Promise<MyPoints> {
-  return dbAsUser(user, async (tx) => {
+  return dbAsUser(user, async (tx: UserTx) => {
     const [total] = await tx
       .select({ balance: sql<number>`coalesce(sum(${pointsLedger.delta}), 0)::int` })
       .from(pointsLedger);
@@ -36,12 +37,7 @@ export async function getMyPoints(user: DbUser, locale: string = "it"): Promise<
       .orderBy(desc(pointsLedger.createdAt), desc(pointsLedger.id))
       .limit(MOVEMENTS_LIMIT);
     const rules = await tx.select({ reason: pointRules.reason, delta: pointRules.delta }).from(pointRules);
-    const notEarned = await tx
-      .select({ key: badges.key, nameIt: badges.nameIt, nameEn: badges.nameEn })
-      .from(badges)
-      .leftJoin(userBadges, and(eq(userBadges.badgeKey, badges.key), eq(userBadges.userId, user.id)))
-      .where(isNull(userBadges.badgeKey))
-      .orderBy(asc(badges.key));
+    const nextBadges = await selectNextBadges(tx, locale);
     return {
       balance: total?.balance ?? 0,
       movements: movements.map((m) => ({
@@ -51,11 +47,7 @@ export async function getMyPoints(user: DbUser, locale: string = "it"): Promise<
         createdAt: toIso(m.createdAt),
       })),
       rules: Object.fromEntries(rules.map((r) => [r.reason, r.delta])),
-      nextBadges: notEarned.map((b) => ({
-        key: b.key,
-        name: locale === "en" ? b.nameEn : b.nameIt,
-        progress: null,
-      })),
+      nextBadges,
     };
   });
 }

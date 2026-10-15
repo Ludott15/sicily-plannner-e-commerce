@@ -223,6 +223,7 @@ declare
   v_uid uuid := auth.uid();
   v_invite public.group_invites;
   v_members integer;
+  v_owner uuid;
 begin
   if v_uid is null then
     raise exception 'not_authenticated' using errcode = '42501';
@@ -275,6 +276,9 @@ begin
   ) then
     perform public.award_points(v_invite.invited_by, public.point_delta('invite_accepted'), 'invite_accepted', 'invite', v_uid);
   end if;
+
+  select g.owner_id into v_owner from public.groups g where g.id = v_invite.group_id;
+  perform public.evaluate_badges(v_owner);
 
   return v_invite.group_id;
 end;
@@ -342,6 +346,136 @@ $$;
 
 
 ALTER FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."badge_criteria_valid"("p_criteria" "jsonb") RETURNS boolean
+    LANGUAGE "plpgsql" IMMUTABLE
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $_$
+declare
+  v_ok boolean;
+begin
+  if jsonb_typeof(p_criteria) is distinct from 'object' then
+    return false;
+  end if;
+  if jsonb_typeof(p_criteria->'min') is distinct from 'number' then
+    return false;
+  end if;
+  if (p_criteria->>'min') !~ '^[1-9][0-9]{0,5}$' then
+    return false;
+  end if;
+
+  case p_criteria->>'type'
+    when 'itineraries_completed', 'points_total' then
+      v_ok := (p_criteria - 'type' - 'min') = '{}'::jsonb;
+    when 'provinces_checked_in' then
+      v_ok := (p_criteria - 'type' - 'min') = '{}'::jsonb
+        and (p_criteria->>'min')::integer between 1 and 9;
+    when 'group_size' then
+      v_ok := (p_criteria - 'type' - 'min') = '{}'::jsonb
+        and (p_criteria->>'min')::integer between 2 and 30;
+    when 'check_ins_in_province' then
+      v_ok := (p_criteria - 'type' - 'min' - 'province') = '{}'::jsonb
+        and coalesce(p_criteria->>'province' in ('AG', 'CL', 'CT', 'EN', 'ME', 'PA', 'RG', 'SR', 'TP'), false);
+    when 'interest_activities_completed' then
+      v_ok := (p_criteria - 'type' - 'min' - 'interest') = '{}'::jsonb
+        and coalesce(p_criteria->>'interest' ~ '^[a-z][a-z_]*$', false)
+        and char_length(p_criteria->>'interest') <= 40;
+    else
+      v_ok := false;
+  end case;
+
+  return v_ok;
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."badge_criteria_valid"("p_criteria" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."badge_criterion_value"("p_user" "uuid", "p_criteria" "jsonb") RETURNS integer
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_value integer;
+begin
+  case p_criteria->>'type'
+    when 'itineraries_completed' then
+      select count(*)::integer into v_value
+      from public.points_ledger l
+      where l.user_id = p_user and l.reason = 'itinerary_completed';
+    when 'check_ins_in_province' then
+      -- Luoghi distinti: lo stesso luogo in giorni diversi non conta due volte.
+      select count(distinct c.place_id)::integer into v_value
+      from public.check_ins c
+      join public.places p on p.id = c.place_id
+      where c.user_id = p_user and p.province = p_criteria->>'province';
+    when 'provinces_checked_in' then
+      select count(distinct p.province)::integer into v_value
+      from public.check_ins c
+      join public.places p on p.id = c.place_id
+      where c.user_id = p_user;
+    when 'interest_activities_completed' then
+      select count(distinct a.id)::integer into v_value
+      from public.itineraries i
+      join public.itinerary_items ii on ii.itinerary_id = i.id
+      join public.activities a on a.id = ii.activity_id
+      join public.activity_interests ai
+        on ai.activity_id = a.id and ai.interest_key = p_criteria->>'interest'
+      join public.check_ins c
+        on c.user_id = p_user
+        and c.itinerary_id = i.id
+        and c.place_id = coalesce(ii.place_id, a.place_id)
+      where i.owner_id = p_user and not i.is_template;
+    when 'group_size' then
+      select coalesce(max(s.members), 0)::integer into v_value
+      from public.groups g
+      cross join lateral (
+        select count(*)::integer as members
+        from public.group_members gm
+        where gm.group_id = g.id
+      ) s
+      where g.owner_id = p_user;
+    when 'points_total' then
+      select coalesce(sum(l.delta), 0)::integer into v_value
+      from public.points_ledger l
+      where l.user_id = p_user
+        and l.delta > 0
+        and l.reason not in ('redeem', 'redeem_refund');
+    else
+      raise exception 'badge_criteria_unknown' using errcode = 'P0001';
+  end case;
+
+  return coalesce(v_value, 0);
+end;
+$$;
+
+
+ALTER FUNCTION "public"."badge_criterion_value"("p_user" "uuid", "p_criteria" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."badge_progress"("p_user" "uuid") RETURNS TABLE("badge_key" "text", "current_value" integer, "target_value" integer)
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  return query
+  select
+    b.key,
+    least(public.badge_criterion_value(p_user, b.criteria), (b.criteria->>'min')::integer),
+    (b.criteria->>'min')::integer
+  from public.badges b
+  where not exists (
+    select 1 from public.user_badges ub
+    where ub.user_id = p_user and ub.badge_key = b.key
+  )
+  order by b.key;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."badge_progress"("p_user" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."can_access_itinerary"("iid" "uuid") RETURNS boolean
@@ -680,6 +814,53 @@ $$;
 
 
 ALTER FUNCTION "public"."delete_inactive_guests"("p_days" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."evaluate_badges"("p_user" "uuid") RETURNS SETOF "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_badge record;
+  v_rows integer;
+begin
+  if p_user is null then
+    return;
+  end if;
+
+  for v_badge in
+    select b.key, b.name_it, b.name_en, b.criteria
+    from public.badges b
+    where not exists (
+      select 1 from public.user_badges ub
+      where ub.user_id = p_user and ub.badge_key = b.key
+    )
+    order by b.key
+  loop
+    if public.badge_criterion_value(p_user, v_badge.criteria) >= (v_badge.criteria->>'min')::integer then
+      insert into public.user_badges (user_id, badge_key)
+      values (p_user, v_badge.key)
+      on conflict (user_id, badge_key) do nothing;
+      get diagnostics v_rows = row_count;
+
+      if v_rows = 1 then
+        insert into public.notifications (user_id, kind, payload)
+        values (
+          p_user,
+          'badge_earned',
+          jsonb_build_object('badgeKey', v_badge.key, 'nameIt', v_badge.name_it, 'nameEn', v_badge.name_en)
+        );
+        return next v_badge.key;
+      end if;
+    end if;
+  end loop;
+
+  return;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."evaluate_badges"("p_user" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."group_has_other_members"("gid" "uuid") RETURNS boolean
@@ -1362,6 +1543,22 @@ $$;
 ALTER FUNCTION "public"."media_touch_updated_at"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."my_badge_progress"() RETURNS TABLE("badge_key" "text", "current_value" integer, "target_value" integer)
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if auth.uid() is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  return query select * from public.badge_progress(auth.uid());
+end;
+$$;
+
+
+ALTER FUNCTION "public"."my_badge_progress"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."point_delta"("p_reason" "public"."point_reason") RETURNS integer
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -1379,6 +1576,22 @@ $$;
 
 
 ALTER FUNCTION "public"."point_delta"("p_reason" "public"."point_reason") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."points_ledger_award_badges"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if new.delta > 0 then
+    perform public.evaluate_badges(new.user_id);
+  end if;
+  return null;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."points_ledger_award_badges"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."prevent_mutation"() RETURNS "trigger"
@@ -2273,7 +2486,9 @@ CREATE TABLE IF NOT EXISTS "public"."badges" (
     "name_en" "text" NOT NULL,
     "description" "text",
     "criteria" "jsonb" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "badges_criteria_valid" CHECK ("public"."badge_criteria_valid"("criteria")),
+    CONSTRAINT "badges_key_format" CHECK ((("key" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::"text") AND (("char_length"("key") >= 3) AND ("char_length"("key") <= 40))))
 );
 
 
@@ -2755,7 +2970,7 @@ CREATE TABLE IF NOT EXISTS "public"."notifications" (
     "payload" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
     "read_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "notifications_kind_valid" CHECK (("kind" = ANY (ARRAY['proposal_accepted'::"text", 'proposal_rejected'::"text"])))
+    CONSTRAINT "notifications_kind_valid" CHECK (("kind" = ANY (ARRAY['proposal_accepted'::"text", 'proposal_rejected'::"text", 'badge_earned'::"text"])))
 );
 
 
@@ -3737,6 +3952,10 @@ CREATE OR REPLACE TRIGGER "media_touch_updated_at" BEFORE UPDATE ON "public"."me
 
 
 CREATE CONSTRAINT TRIGGER "place_has_active_activities" AFTER UPDATE OF "is_active" ON "public"."places" DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN ((NOT "new"."is_active")) EXECUTE FUNCTION "public"."check_place_has_active_activities"();
+
+
+
+CREATE OR REPLACE TRIGGER "points_ledger_award_badges" AFTER INSERT ON "public"."points_ledger" FOR EACH ROW EXECUTE FUNCTION "public"."points_ledger_award_badges"();
 
 
 
@@ -4900,6 +5119,22 @@ GRANT ALL ON FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" inte
 
 
 
+GRANT ALL ON FUNCTION "public"."badge_criteria_valid"("p_criteria" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."badge_criteria_valid"("p_criteria" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."badge_criteria_valid"("p_criteria" "jsonb") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."badge_criterion_value"("p_user" "uuid", "p_criteria" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."badge_criterion_value"("p_user" "uuid", "p_criteria" "jsonb") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."badge_progress"("p_user" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."badge_progress"("p_user" "uuid") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."can_access_itinerary"("iid" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."can_access_itinerary"("iid" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."can_access_itinerary"("iid" "uuid") TO "authenticated";
@@ -4957,6 +5192,11 @@ GRANT ALL ON FUNCTION "public"."decide_proposal"("p_proposal_id" "uuid", "p_acce
 
 REVOKE ALL ON FUNCTION "public"."delete_inactive_guests"("p_days" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."delete_inactive_guests"("p_days" integer) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."evaluate_badges"("p_user" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."evaluate_badges"("p_user" "uuid") TO "service_role";
 
 
 
@@ -5117,8 +5357,19 @@ GRANT ALL ON FUNCTION "public"."media_touch_updated_at"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."my_badge_progress"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."my_badge_progress"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."my_badge_progress"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."point_delta"("p_reason" "public"."point_reason") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."point_delta"("p_reason" "public"."point_reason") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."points_ledger_award_badges"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."points_ledger_award_badges"() TO "service_role";
 
 
 

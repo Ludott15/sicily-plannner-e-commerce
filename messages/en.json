@@ -1614,7 +1614,9 @@
     "proposalAccepted": "Your proposal for {title} was accepted: it is on day {day}.",
     "proposalRejected": "Your proposal for {title} was not accepted.",
     "unknown": "You have a new notification.",
-    "openTrip": "Open the trip"
+    "openTrip": "Open the trip",
+    "badgeEarned": "You earned the badge {name}.",
+    "untitledBadge": "a badge"
   },
   "CheckIn": {
     "button": "I'm here",
@@ -1736,5 +1738,54 @@
       "off_topic": "off topic",
       "other": "other"
     }
+  },
+  "Badges": {
+    "earnedTitle": "Your badges",
+    "earnedEmpty": "No badges yet: the first one comes with your first completed trip.",
+    "newLabel": "New",
+    "progress": "{current} of {target}",
+    "criteria": {
+      "itineraries_completed": "Complete {min, plural, one {# trip} other {# trips}}",
+      "check_ins_in_province": "At least {min, plural, one {# check-in} other {# check-ins}} in the province of {province}",
+      "provinces_checked_in": "Check in at {min, plural, one {# province} other {# provinces}}",
+      "interest_activities_completed": "Complete {min, plural, one {# activity} other {# activities}} linked to {interest}",
+      "group_size": "Create a group with at least {min} people",
+      "points_total": "Reach {min} points in total"
+    }
+  },
+  "AdminBadges": {
+    "nav": "Badges",
+    "title": "Badges",
+    "intro": "A badge is awarded automatically when the user meets its criterion. Name and description can be changed at any time; the key stays as it is after creation.",
+    "listTitle": "Catalogue",
+    "empty": "No badges in the catalogue.",
+    "holders": "{count, plural, one {# user has this badge} other {# users have this badge}}",
+    "newTitle": "New badge",
+    "fieldKey": "Key (internal address)",
+    "fieldKeyHint": "Lowercase letters, numbers and hyphens: first-trip. It cannot be changed after creation.",
+    "fieldNameIt": "Name in Italian",
+    "fieldNameEn": "Name in English",
+    "fieldNameHint": "On the stamp, at most 16 characters per line.",
+    "fieldDescription": "Description",
+    "fieldCriteriaType": "Criterion",
+    "fieldMin": "Minimum amount",
+    "fieldProvince": "Province",
+    "fieldInterest": "Interest",
+    "fieldInterestNone": "No interests available.",
+    "criterionTypes": {
+      "itineraries_completed": "Completed trips",
+      "check_ins_in_province": "Check-ins in a province",
+      "provinces_checked_in": "Provinces visited",
+      "interest_activities_completed": "Activities of an interest",
+      "group_size": "Group size",
+      "points_total": "Total points"
+    },
+    "save": "Save",
+    "create": "Create badge",
+    "saving": "Saving…",
+    "saved": "Badge saved.",
+    "errorInvalid": "Check the fields: some values are not valid.",
+    "errorKeyTaken": "A badge with this key already exists.",
+    "errorFailed": "Saving failed. Try again."
   }
 }

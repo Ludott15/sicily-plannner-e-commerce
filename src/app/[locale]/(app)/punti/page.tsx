@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { EarnedBadges } from "@/components/badges/earned-badges";
 import { ButtonLink, PendingButton, PointsPill, Stamp } from "@/components/design";
 import { requireUser } from "@/server/auth";
+import { getMyBadges } from "@/server/gamification/badges";
 import { getMyPoints } from "@/server/gamification/queries";
 
-// I miei punti (passo 5.1). Saldo, movimenti, regole di guadagno, prossimi badge e il regolamento
+// I miei punti (passo 5.1). Saldo, movimenti, regole di guadagno, badge (passo 5.2) e il regolamento
 // (testo legale in sospeso). L'ospite vede come creare l'account: i punti sono degli account.
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -50,7 +52,12 @@ export default async function PointsPage({ params }: Props) {
     );
   }
 
-  const [data, format] = await Promise.all([getMyPoints(user), getFormatter()]);
+  const [data, badges, format, tBadges] = await Promise.all([
+    getMyPoints(user, locale),
+    getMyBadges(user, locale),
+    getFormatter(),
+    getTranslations("Badges"),
+  ]);
   const grouping = { useGrouping: "always" } as const;
 
   return (
@@ -109,6 +116,13 @@ export default async function PointsPage({ params }: Props) {
         )}
       </section>
 
+      <section aria-labelledby="i-tuoi-badge" className="flex flex-col gap-4">
+        <h2 id="i-tuoi-badge" className="is-display text-heading-2">
+          {tBadges("earnedTitle")}
+        </h2>
+        <EarnedBadges items={badges.earned} />
+      </section>
+
       <section aria-labelledby="prossimi-badge" className="flex flex-col gap-4">
         <h2 id="prossimi-badge" className="is-display text-heading-2">
           {t("badgesTitle")}
@@ -119,7 +133,12 @@ export default async function PointsPage({ params }: Props) {
           <ul className="flex flex-wrap gap-6">
             {data.nextBadges.map((badge) => (
               <li key={badge.key}>
-                <Stamp badgeKey={badge.key} name={badge.name} locked progress={badge.progress ?? undefined} />
+                <Stamp
+                  badgeKey={badge.key}
+                  name={badge.name}
+                  locked
+                  progress={tBadges("progress", { current: badge.current, target: badge.target })}
+                />
               </li>
             ))}
           </ul>

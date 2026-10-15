@@ -188,7 +188,7 @@ select is_empty(
 reset role;
 select tests.authenticate_as('admin');
 select lives_ok(
-  $$insert into public.badges (key, name_it, name_en, criteria) values ('test_primo_viaggio', 'Primo viaggio', 'First trip', '{"itineraries_completed": 1}')$$,
+  $$insert into public.badges (key, name_it, name_en, criteria) values ('test-primo-viaggio', 'Primo viaggio', 'First trip', '{"type": "itineraries_completed", "min": 1}')$$,
   'admin: crea un badge'
 );
 reset role;
@@ -198,13 +198,13 @@ select throws_ok(
   '42501', null, 'utente: non crea badge'
 );
 select throws_ok(
-  format($$insert into public.user_badges (user_id, badge_key) values (%L, 'test_primo_viaggio')$$, tests.uid('alice')),
+  format($$insert into public.user_badges (user_id, badge_key) values (%L, 'test-primo-viaggio')$$, tests.uid('alice')),
   '42501', null, 'proprietario: non si assegna badge'
 );
 reset role;
-insert into public.user_badges (user_id, badge_key) values (tests.uid('alice'), 'test_primo_viaggio');
+insert into public.user_badges (user_id, badge_key) values (tests.uid('alice'), 'test-primo-viaggio');
 select tests.authenticate_as('alice');
-select results_eq($$select badge_key from public.user_badges$$, $$values ('test_primo_viaggio')$$, 'proprietario: vede i propri badge');
+select results_eq($$select badge_key from public.user_badges$$, $$values ('test-primo-viaggio')$$, 'proprietario: vede i propri badge');
 reset role;
 select tests.authenticate_as('bob');
 select is_empty($$select 1 from public.user_badges$$, 'altro utente: non vede i badge di alice');
@@ -213,7 +213,7 @@ select tests.authenticate_as('admin');
 select is_empty($$select 1 from public.user_badges$$, 'admin: non vede i badge degli altri dal client');
 reset role;
 select tests.as_anon();
-select isnt_empty($$select 1 from public.badges where key = 'test_primo_viaggio'$$, 'anon: legge il catalogo dei badge');
+select isnt_empty($$select 1 from public.badges where key = 'test-primo-viaggio'$$, 'anon: legge il catalogo dei badge');
 select throws_ok($$select * from public.user_badges$$, '42501', null, 'anon: non legge user_badges');
 reset role;
 select throws_ok(
