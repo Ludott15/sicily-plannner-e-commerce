@@ -80,9 +80,15 @@ test("check-in vicino al luogo: +10 punti; lontano: messaggio di distanza", asyn
   await page.getByRole("button", { name: "Consenti e verifica" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Check-in fatto" })).toContainText("Check-in fatto: +10 punti.");
 
+  // La prima tappa è segnata e la pagina ha finito di aggiornarsi (router.refresh): solo allora
+  // il primo "Sono qui" rimasto è quello della seconda tappa.
+  await expect(page.getByText("Check-in fatto oggi")).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.waitForLoadState("networkidle");
+
   // Seconda tappa, con la posizione in mezzo all'oceano: il server risponde too_far.
   await context.setGeolocation({ latitude: 0, longitude: 0 });
-  await page.getByRole("button", { name: "Sono qui" }).first().click();
+  await page.getByRole("button", { name: "Sono qui", exact: true }).first().click();
   await page.getByRole("button", { name: "Consenti e verifica" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "troppo lontano" })).toContainText("Sei troppo lontano dal luogo.");
 });
