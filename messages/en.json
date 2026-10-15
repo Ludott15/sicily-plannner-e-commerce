@@ -1030,14 +1030,17 @@
       "highlyRated": "Highly rated stops: {rating} out of 5 on average",
       "noCar": "No stop needs a car",
       "variant": "Few multi-area trips for the days you chose: this variant gives more room to {interest}",
-      "stops": "{stops, plural, one {# stop} other {# stops}} in {days, plural, one {# day} other {# days}} without changing area"
+      "stops": "{stops, plural, one {# stop} other {# stops}} in {days, plural, one {# day} other {# days}} without changing area",
+      "twoAreas": "Two neighbouring areas: {duration} drive between them"
     },
     "changeTrip": "Change the trip",
     "editTastes": "Edit your tastes",
     "shortened": "A single area covers at most {days, plural, one {# day} other {# days}}: here are the three best {days, plural, one {#-day} other {#-day}} trips. Trips across several areas are coming soon.",
     "saveTrip": "Save this trip",
     "flightsBarTitle": "Arrivals in Sicily",
-    "flightsBarText": "Search flights to Sicily: the arrival starts from the one chosen in your profile."
+    "flightsBarText": "Search flights to Sicily: the arrival starts from the one chosen in your profile.",
+    "pairName": "{first} and {second}",
+    "transferDay": "Transfer day: {duration} on the road, fewer stops"
   },
   "Preferences": {
     "title": "Preferences",
@@ -1110,7 +1113,8 @@
     "copyPrefix": "Copy of ",
     "warnings": {
       "dayTooLong": "Day {day}: {minutes} minutes of activities, the pace allows {limit}.",
-      "areaChange": "Day {day}: two consecutive stops are in different areas."
+      "areaChange": "Day {day}: two consecutive stops are in different areas.",
+      "transferDay": "Day {day}: {duration} on the road between the two areas, less time left for stops."
     },
     "calendar": {
       "dayTitle": "Day {day} · {title}",
@@ -1198,7 +1202,8 @@
     "compareCars": "Compare car rentals",
     "lodgingMissing": "To search for a stay we need the area of the first night and the trip dates.",
     "carMissing": "To compare car rentals we need the arrival airport and the trip dates.",
-    "openActivity": "Open the activity"
+    "openActivity": "Open the activity",
+    "proposalTripTitlePair": "{first} and {second} in {days, plural, one {# day} other {# days}}"
   },
   "Media": {
     "photoCredit": "Photo:",
@@ -1418,5 +1423,17 @@
     },
     "importLink": "Import report",
     "exportTooManyRows": "The period has more than {limit} conversions: choose a shorter range."
+  },
+  "AdminDriveTimes": {
+    "nav": "Travel times",
+    "title": "Travel times between areas",
+    "intro": "Driving minutes between two areas. A pair without a time is not combined in trips across two areas.",
+    "filled": "Pairs filled in: {count} of {total}",
+    "hint": "A whole number from 1 to 600. Leave empty to remove the pair.",
+    "pairColumn": "Pair of areas",
+    "minutesColumn": "Driving minutes",
+    "minutesFor": "Minutes between {a} and {b}",
+    "save": "Save",
+    "saved": "Travel times saved."
   }
 }

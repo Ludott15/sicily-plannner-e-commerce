@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { z } from "zod";
 import { StartTripForm } from "@/components/trips/start-trip-form";
+import { parsePairKey } from "@/lib/drive-pairs";
 import { getUser } from "@/server/auth";
 import { getTemplate } from "@/server/catalog/queries";
 import { areaNames } from "@/server/personalization/data";
@@ -16,6 +17,8 @@ type Props = {
 };
 
 const slug = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(120);
+// Area di una proposta: uno slug, o la chiave di una coppia di aree ("ovest+palermo").
+const areaKey = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*(\+[a-z0-9]+(-[a-z0-9]+)*)?$/).max(241);
 const interest = z.string().regex(/^[a-z_]{1,40}$/);
 
 export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
@@ -28,7 +31,7 @@ export default async function SaveTripPage({ params, searchParams }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
   const { da, area, variante } = await searchParams;
-  const [t, user] = await Promise.all([getTranslations("Trips"), getUser()]);
+  const [t, tProposals, user] = await Promise.all([getTranslations("Trips"), getTranslations("Proposals"), getUser()]);
 
   let source: { kind: "template"; slug: string } | { kind: "proposal"; area: string; variant: string | null };
   let name: string;
@@ -37,13 +40,18 @@ export default async function SaveTripPage({ params, searchParams }: Props) {
     if (!template) notFound();
     source = { kind: "template", slug: da };
     name = template.title;
-  } else if (area && slug.safeParse(area).success && (!variante || interest.safeParse(variante).success)) {
+  } else if (area && areaKey.safeParse(area).success && (!variante || interest.safeParse(variante).success)) {
     // Le proposte esistono solo per chi ha risposto alle domande: serve già una sessione.
     if (!user) notFound();
     const names = await areaNames(locale);
-    if (!names.has(area)) notFound();
+    const parts = parsePairKey(area) ?? [area];
+    if (!parts.every((part) => names.has(part))) notFound();
     source = { kind: "proposal", area, variant: variante ?? null };
-    name = names.get(area)!;
+    const [first, second] = parts;
+    name =
+      second === undefined
+        ? names.get(area)!
+        : tProposals("pairName", { first: names.get(first ?? "")!, second: names.get(second) ?? "" });
   } else {
     notFound();
   }

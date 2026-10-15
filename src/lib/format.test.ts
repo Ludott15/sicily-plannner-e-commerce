@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDuration, formatEur, formatSeason } from "./format";
+import { formatDriveTime, formatDuration, formatEur, formatSeason } from "./format";
 
 describe("formatDuration", () => {
   it.each([
@@ -8,6 +8,17 @@ describe("formatDuration", () => {
     [150, "2 h 30 min"],
   ])("%i minuti → %s", (min, expected) => {
     expect(formatDuration(min)).toBe(expected);
+  });
+});
+
+describe("formatDriveTime", () => {
+  it.each([
+    [100, "1 h 40"],
+    [60, "1 h"],
+    [45, "45 min"],
+    [125, "2 h 05"],
+  ])("%i minuti di guida → %s", (min, expected) => {
+    expect(formatDriveTime(min)).toBe(expected);
   });
 });
 

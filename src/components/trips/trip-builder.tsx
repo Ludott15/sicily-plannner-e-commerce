@@ -22,6 +22,7 @@ import type { TimeSlot, Pace } from "@/lib/itinerary-checks";
 import { useRouter } from "@/lib/i18n/navigation";
 import { MAX_TRIP_DAYS } from "@/lib/trip-days";
 import { dayFromZoneId, dayZoneId, dropOn, locate, placements, stepInDay, type DayOrder } from "@/lib/trip-order";
+import { formatDriveTime } from "@/lib/format";
 import type { TripWarning } from "@/lib/trip-warnings";
 import {
   addDay,
@@ -241,9 +242,17 @@ export function TripBuilder({
   const addAlert = addForm.submitted && addForm.state.status === "error" ? t(`errors.${addForm.state.code}`) : null;
   const removeAlert = removeForm.submitted && removeForm.state.status === "error" ? t(`errors.${removeForm.state.code}`) : null;
 
+  // Il giorno di trasferimento porta l'indice in "day" (come gli altri avvisi in "dayIndex").
+  function warningDayIndex(warning: TripWarning): number {
+    return warning.code === "transfer_day" ? warning.day : warning.dayIndex;
+  }
+
   function warningText(warning: TripWarning): string {
     if (warning.code === "day_too_long") {
       return t("warnings.dayTooLong", { day: warning.dayIndex + 1, minutes: warning.minutes, limit: warning.limit });
+    }
+    if (warning.code === "transfer_day") {
+      return t("warnings.transferDay", { day: warning.day + 1, duration: formatDriveTime(warning.minutes) });
     }
     return t("warnings.areaChange", { day: warning.dayIndex + 1 });
   }
@@ -280,7 +289,7 @@ export function TripBuilder({
                   const stop = stopById.get(id);
                   return stop ? [stop] : [];
                 });
-                const dayWarnings = warnings.filter((warning) => warning.dayIndex === d);
+                const dayWarnings = warnings.filter((warning) => warningDayIndex(warning) === d);
                 return (
                   <section key={d} data-day-panel aria-labelledby={`day-title-${d}`} className="flex flex-col gap-4">
                     <h2 id={`day-title-${d}`} className="text-heading-3">

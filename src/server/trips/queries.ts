@@ -20,7 +20,7 @@ import {
 } from "@/server/db/schema";
 import { dbAsUser, type DbUser } from "@/server/db/user";
 import { dbPublic } from "@/server/db/public";
-import { getSavedPreferences } from "@/server/personalization/data";
+import { driveTimesBySlug, getSavedPreferences } from "@/server/personalization/data";
 import { DAILY_HOURS } from "@/server/personalization/config";
 import { verticalSearchHref, type VerticalSearchInput } from "@/server/affiliates/verticals";
 
@@ -135,6 +135,8 @@ export async function getTrip(user: DbUser, id: string) {
     days: data.trip.days,
     stops: data.stops.map((s) => ({ dayIndex: s.dayIndex, position: s.position, durationMin: s.durationMin, areaSlug: s.areaSlug })),
     limitMin: dayMinutesLimit(pace, DAILY_HOURS),
+    // Matrice dei tempi di guida: il giorno di trasferimento tra due aree ha meno minuti.
+    driveTimes: await driveTimesBySlug(),
   });
 
   return { ...data.trip, pace, stops: data.stops, offers: data.offers, bookings: data.bookings, activeShareLink: data.activeShareLink, warnings };
