@@ -17,6 +17,7 @@ import {
 } from "./config";
 import type { DriveTimes } from "@/lib/drive-pairs";
 import { firstAreaDays, pairCandidates, visitOrder, type PairCandidate } from "./pairs";
+import { distanceKm } from "@/lib/geo";
 
 // Motore di personalizzazione (docs/spec.md, "Motore di personalizzazione"): codice puro e
 // deterministico. Stessi profilo e catalogo, stesso risultato, in qualunque ordine arrivino
@@ -210,13 +211,7 @@ function finalReasons(own: Reason[], extra: Reason[]): Reason[] {
 const byScore = (x: { score: number; id: string }, y: { score: number; id: string }) => y.score - x.score || x.id.localeCompare(y.id);
 
 // Distanza in linea d'aria in km (formula dell'emisenoverso).
-export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
-  const rad = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * rad;
-  const dLng = (b.lng - a.lng) * rad;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
-  return 2 * 6371 * Math.asin(Math.sqrt(h));
-}
+export { distanceKm };
 
 // Limite di tappe per interesse principale nello stesso giorno. Con un solo interesse forte
 // (peso 4 o più, tutti gli altri 2 o meno) quell'interesse arriva a 3: chi vuole solo il mare

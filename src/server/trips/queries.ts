@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { isSicilyAirport } from "@/lib/flights/airports";
 import { dayMinutesLimit, TIME_SLOTS, type Pace, type TimeSlot } from "@/lib/itinerary-checks";
@@ -151,9 +151,17 @@ export async function getTrip(user: DbUser, id: string) {
 export async function tripsForPicker(user: DbUser) {
   return dbAsUser(user, async (tx) => {
     const trips = await tx
-      .select({ id: itineraries.id, title: itineraries.title, days: itineraries.days })
+      .select({ id: itineraries.id, title: itineraries.title, days: itineraries.days, groupId: itineraries.groupId })
       .from(itineraries)
-      .where(and(eq(itineraries.ownerId, user.id), eq(itineraries.isTemplate, false)))
+      .where(
+        and(
+          eq(itineraries.isTemplate, false),
+          or(
+            eq(itineraries.ownerId, user.id),
+            sql`(${itineraries.groupId} is not null and public.is_group_member(${itineraries.groupId}))`,
+          ),
+        ),
+      )
       .orderBy(desc(itineraries.createdAt));
     if (trips.length === 0) return [];
     const rows = await tx

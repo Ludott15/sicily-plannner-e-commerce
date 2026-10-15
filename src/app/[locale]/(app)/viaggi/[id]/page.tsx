@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { z } from "zod";
 import { TripGroupPanel } from "@/components/groups/trip-group-panel";
+import { TripGroupSections } from "@/components/groups/trip-group-sections";
 import { TripBuilder, type BuilderBooking, type BuilderDay } from "@/components/trips/trip-builder";
 import { formatDuration } from "@/lib/format";
 import { flightSearchPath, MAX_PASSENGERS } from "@/lib/flights/search-params";
@@ -11,6 +12,7 @@ import { partnerName, type Partner } from "@/server/affiliates/links";
 import { getPartnerConfig, VERTICAL_PARTNER } from "@/server/affiliates/partners";
 import { requireUser } from "@/server/auth";
 import { getGroup } from "@/server/groups/queries";
+import { getTripGroupState } from "@/server/groups/trip-group";
 import { getTrip, getTripVerticalChips, type VerticalChip } from "@/server/trips/queries";
 
 // Pagina del viaggio (M5, 1.4). Solo il proprietario o i membri del gruppo la aprono: getTrip
@@ -39,6 +41,8 @@ export default async function TripPage({ params, searchParams }: Props) {
   if (!trip) notFound();
   // Gruppo del viaggio (4.1): il nome serve al link. Il viaggio è di chi lo apre, o di un membro.
   const group = trip.groupId ? await getGroup(user, trip.groupId) : null;
+  // Stato del gruppo (4.2): voti, alternative, proposte e modifiche di questo viaggio.
+  const groupState = group ? await getTripGroupState(user, id, group.id) : null;
 
   const days: BuilderDay[] = Array.from({ length: trip.days }, (_, d) => {
     const stops = trip.stops.filter((s) => s.dayIndex === d);
@@ -154,6 +158,13 @@ export default async function TripPage({ params, searchParams }: Props) {
         isOwner={trip.ownerId === user.id}
         isGuest={Boolean(user.is_anonymous)}
       />
+      {groupState && (
+        <TripGroupSections
+          proposals={groupState.proposals}
+          changes={groupState.changes}
+          isGroupOwner={groupState.isGroupOwner}
+        />
+      )}
       <TripBuilder
         locale={locale}
         tripId={trip.id}
@@ -166,6 +177,7 @@ export default async function TripPage({ params, searchParams }: Props) {
         initialDay={(Number(giorno) || 1) - 1}
         bookings={bookings}
         sharedSince={sharedSince}
+        group={groupState}
       />
     </section>
   );

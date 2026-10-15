@@ -79,6 +79,14 @@ Le conversioni entrano in due modi: dal CSV caricato dall'admin (Affiliati → I
 | Report API di un partner | da attivare solo dopo la verifica delle condizioni del programma | A mano: la risposta del cron elenca il partner con `status: "ok"` solo dopo l'attivazione; prima risulta `skipped`. |
 | Import CSV | dal modello scaricabile in Affiliati → Importa; anteprima prima della conferma | A mano: un file di prova con un subid di un click reale porta la conversione in dashboard; il file ripetuto aggiorna le stesse righe. |
 
+## 6. Tempo reale dei viaggi di gruppo
+
+I viaggi di gruppo si aggiornano con un canale broadcast privato `itinerary:<id>`: lo alimentano i trigger del database (`itinerary_realtime_notify`), e lo autorizza la policy `itinerary_topic_members_receive` su `realtime.messages`, che arriva con le migrazioni. Nessuna tabella del viaggio è nella publication `supabase_realtime`.
+
+| Voce | Valore | Verifica |
+| --- | --- | --- |
+| Realtime, canali privati | Dashboard → Realtime → Settings: lasciare i canali privati consentiti (impostazione predefinita) | A mano, con due account nello stesso gruppo: il voto di uno compare all'altro entro 2 secondi senza ricaricare. Un terzo account, fuori dal gruppo, non riceve nulla (DevTools → WS: la sottoscrizione a `itinerary:<id>` è rifiutata). |
+
 ## Verifica automatica
 
 ```bash

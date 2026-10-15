@@ -511,6 +511,100 @@ $$;
 ALTER FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."decide_proposal"("p_proposal_id" "uuid", "p_accept" boolean) RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_proposal public.itinerary_proposals;
+  v_group uuid;
+  v_days smallint;
+  v_owner uuid;
+  v_title text;
+  v_position smallint;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  if coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false) then
+    raise exception 'guest_not_allowed' using errcode = 'P0001';
+  end if;
+
+  select * into v_proposal
+  from public.itinerary_proposals
+  where id = p_proposal_id
+  for update;
+  if not found then
+    raise exception 'proposal_not_pending' using errcode = 'P0001';
+  end if;
+
+  select i.group_id, i.days, g.owner_id into v_group, v_days, v_owner
+  from public.itineraries i
+  left join public.groups g on g.id = i.group_id
+  where i.id = v_proposal.itinerary_id;
+  if v_group is null or v_owner is distinct from v_uid then
+    raise exception 'not_group_owner' using errcode = 'P0001';
+  end if;
+
+  if v_proposal.status <> 'pending' then
+    raise exception 'proposal_not_pending' using errcode = 'P0001';
+  end if;
+
+  select a.title into v_title from public.activities a where a.id = v_proposal.activity_id;
+
+  if p_accept then
+    -- L'attività può essere stata disattivata dopo la proposta: solo attività attive entrano nel viaggio.
+    if not exists (select 1 from public.activities a where a.id = v_proposal.activity_id and a.is_active) then
+      raise exception 'activity_not_available' using errcode = 'P0001';
+    end if;
+    if v_proposal.day_index >= v_days then
+      raise exception 'day_out_of_range' using errcode = 'P0001';
+    end if;
+
+    select coalesce(max(ii.position) + 1, 0)::smallint into v_position
+    from public.itinerary_items ii
+    where ii.itinerary_id = v_proposal.itinerary_id and ii.day_index = v_proposal.day_index;
+
+    insert into public.itinerary_items (itinerary_id, day_index, position, activity_id, place_id)
+    select v_proposal.itinerary_id, v_proposal.day_index, v_position, a.id, a.place_id
+    from public.activities a
+    where a.id = v_proposal.activity_id;
+
+    insert into public.itinerary_changes (itinerary_id, actor_id, kind, payload)
+    values (
+      v_proposal.itinerary_id,
+      v_uid,
+      'proposal_accepted',
+      jsonb_build_object('title', v_title, 'day', v_proposal.day_index + 1)
+    );
+  end if;
+
+  update public.itinerary_proposals
+  set status = case when p_accept then 'accepted' else 'rejected' end,
+      decided_by = v_uid,
+      decided_at = now()
+  where id = v_proposal.id;
+
+  if v_proposal.proposed_by is not null then
+    insert into public.notifications (user_id, kind, payload)
+    values (
+      v_proposal.proposed_by,
+      case when p_accept then 'proposal_accepted' else 'proposal_rejected' end,
+      jsonb_build_object(
+        'title', v_title,
+        'day', v_proposal.day_index + 1,
+        'itineraryId', v_proposal.itinerary_id
+      )
+    );
+  end if;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."decide_proposal"("p_proposal_id" "uuid", "p_accept" boolean) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."delete_inactive_guests"("p_days" integer DEFAULT 30) RETURNS integer
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -796,6 +890,47 @@ $$;
 ALTER FUNCTION "public"."is_group_owner"("gid" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."is_itinerary_group_member"("iid" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select exists (
+    select 1
+    from public.itineraries i
+    where i.id = iid
+      and i.group_id is not null
+      and public.is_group_member(i.group_id)
+  );
+$$;
+
+
+ALTER FUNCTION "public"."is_itinerary_group_member"("iid" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."item_votes_fill_itinerary"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_itinerary uuid;
+begin
+  select ii.itinerary_id into v_itinerary
+  from public.itinerary_items ii
+  where ii.id = new.itinerary_item_id;
+
+  if v_itinerary is null then
+    raise exception 'item_not_found' using errcode = 'P0001';
+  end if;
+
+  new.itinerary_id := v_itinerary;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."item_votes_fill_itinerary"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."itinerary_bookings_stamp"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'pg_temp'
@@ -809,6 +944,83 @@ $$;
 
 
 ALTER FUNCTION "public"."itinerary_bookings_stamp"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."itinerary_changes_guard"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if tg_op = 'DELETE' and pg_trigger_depth() > 1 then
+    return old;
+  end if;
+  if tg_op = 'UPDATE' and pg_trigger_depth() > 1 and new.actor_id is null
+    and old.actor_id is not null
+    and new.id = old.id and new.itinerary_id = old.itinerary_id and new.kind = old.kind
+    and new.payload = old.payload and new.created_at = old.created_at then
+    return new;
+  end if;
+  raise exception 'itinerary_changes_immutable' using errcode = 'P0001';
+end;
+$$;
+
+
+ALTER FUNCTION "public"."itinerary_changes_guard"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."itinerary_items_guard_activity"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_group uuid;
+begin
+  select i.group_id into v_group
+  from public.itineraries i
+  where i.id = new.itinerary_id;
+
+  if v_group is not null and not public.is_group_owner(v_group) then
+    raise exception 'not_group_owner' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."itinerary_items_guard_activity"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."itinerary_realtime_notify"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_itinerary uuid;
+begin
+  if tg_op = 'DELETE' then
+    v_itinerary := old.itinerary_id;
+  else
+    v_itinerary := new.itinerary_id;
+  end if;
+  -- Solo i viaggi di gruppo hanno un topic sottoscrivibile: gli altri non generano messaggi.
+  if not exists (
+    select 1 from public.itineraries i
+    where i.id = v_itinerary and i.group_id is not null
+  ) then
+    return null;
+  end if;
+  perform realtime.send(
+    jsonb_build_object('table', tg_table_name, 'op', tg_op),
+    'changed',
+    'itinerary:' || v_itinerary::text,
+    true
+  );
+  return null;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."itinerary_realtime_notify"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."leave_group"("p_group_id" "uuid") RETURNS "void"
@@ -1212,6 +1424,73 @@ $$;
 
 
 ALTER FUNCTION "public"."remove_group_member"("p_group_id" "uuid", "p_user_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."replace_group_stop"("p_item_id" "uuid", "p_activity_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_itinerary uuid;
+  v_day smallint;
+  v_group uuid;
+  v_owner uuid;
+  v_before text;
+  v_after text;
+  v_place uuid;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  if coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false) then
+    raise exception 'guest_not_allowed' using errcode = 'P0001';
+  end if;
+
+  select ii.itinerary_id, ii.day_index, i.group_id, g.owner_id,
+    coalesce(a.title, ii.custom_title, pl.name)
+  into v_itinerary, v_day, v_group, v_owner, v_before
+  from public.itinerary_items ii
+  join public.itineraries i on i.id = ii.itinerary_id
+  left join public.groups g on g.id = i.group_id
+  left join public.activities a on a.id = ii.activity_id
+  left join public.places pl on pl.id = coalesce(ii.place_id, a.place_id)
+  where ii.id = p_item_id
+  for update of ii;
+  if not found then
+    raise exception 'item_not_found' using errcode = 'P0001';
+  end if;
+  if v_group is null or v_owner is distinct from v_uid then
+    raise exception 'not_group_owner' using errcode = 'P0001';
+  end if;
+
+  select a.title, a.place_id into v_after, v_place
+  from public.activities a
+  where a.id = p_activity_id and a.is_active;
+  if not found then
+    raise exception 'activity_not_available' using errcode = 'P0001';
+  end if;
+
+  update public.itinerary_items
+  set activity_id = p_activity_id,
+      place_id = v_place,
+      custom_title = null
+  where id = p_item_id;
+
+  delete from public.item_votes where itinerary_item_id = p_item_id;
+
+  insert into public.itinerary_changes (itinerary_id, actor_id, kind, payload)
+  values (
+    v_itinerary,
+    v_uid,
+    'stop_replaced',
+    jsonb_build_object('before', v_before, 'after', v_after, 'day', v_day + 1)
+  );
+end;
+$$;
+
+
+ALTER FUNCTION "public"."replace_group_stop"("p_item_id" "uuid", "p_activity_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."season_for"("ts" timestamp with time zone) RETURNS "text"
@@ -1730,6 +2009,7 @@ CREATE TABLE IF NOT EXISTS "public"."item_votes" (
     "user_id" "uuid" NOT NULL,
     "value" smallint NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "itinerary_id" "uuid" NOT NULL,
     CONSTRAINT "item_votes_value_valid" CHECK (("value" = ANY (ARRAY['-1'::integer, 1])))
 );
 
@@ -1831,6 +2111,32 @@ CREATE TABLE IF NOT EXISTS "public"."itinerary_bookings" (
 ALTER TABLE "public"."itinerary_bookings" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."itinerary_changes" (
+    "id" bigint NOT NULL,
+    "itinerary_id" "uuid" NOT NULL,
+    "actor_id" "uuid",
+    "kind" "text" NOT NULL,
+    "payload" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "itinerary_changes_kind_valid" CHECK (("kind" = ANY (ARRAY['stop_added'::"text", 'stop_removed'::"text", 'stop_moved'::"text", 'stop_replaced'::"text", 'day_added'::"text", 'day_removed'::"text", 'proposal_accepted'::"text"]))),
+    CONSTRAINT "itinerary_changes_payload_small" CHECK ((("jsonb_typeof"("payload") = 'object'::"text") AND ("pg_column_size"("payload") <= 1024)))
+);
+
+
+ALTER TABLE "public"."itinerary_changes" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."itinerary_changes" ALTER COLUMN "id" ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME "public"."itinerary_changes_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."itinerary_nights" (
     "itinerary_id" "uuid" NOT NULL,
     "night_index" smallint NOT NULL,
@@ -1843,6 +2149,24 @@ CREATE TABLE IF NOT EXISTS "public"."itinerary_nights" (
 
 
 ALTER TABLE "public"."itinerary_nights" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."itinerary_proposals" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "itinerary_id" "uuid" NOT NULL,
+    "proposed_by" "uuid",
+    "activity_id" "uuid" NOT NULL,
+    "day_index" smallint NOT NULL,
+    "status" "text" DEFAULT 'pending'::"text" NOT NULL,
+    "decided_by" "uuid",
+    "decided_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "itinerary_proposals_day_index_non_negative" CHECK (("day_index" >= 0)),
+    CONSTRAINT "itinerary_proposals_status_valid" CHECK (("status" = ANY (ARRAY['pending'::"text", 'accepted'::"text", 'rejected'::"text"])))
+);
+
+
+ALTER TABLE "public"."itinerary_proposals" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."itinerary_share_links" (
@@ -1993,6 +2317,20 @@ END) STORED,
 
 
 ALTER TABLE "public"."media" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."notifications" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "kind" "text" NOT NULL,
+    "payload" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
+    "read_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "notifications_kind_valid" CHECK (("kind" = ANY (ARRAY['proposal_accepted'::"text", 'proposal_rejected'::"text"])))
+);
+
+
+ALTER TABLE "public"."notifications" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."order_items" (
@@ -2491,6 +2829,11 @@ ALTER TABLE ONLY "public"."itinerary_bookings"
 
 
 
+ALTER TABLE ONLY "public"."itinerary_changes"
+    ADD CONSTRAINT "itinerary_changes_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."itinerary_items"
     ADD CONSTRAINT "itinerary_items_pkey" PRIMARY KEY ("id");
 
@@ -2498,6 +2841,11 @@ ALTER TABLE ONLY "public"."itinerary_items"
 
 ALTER TABLE ONLY "public"."itinerary_nights"
     ADD CONSTRAINT "itinerary_nights_itinerary_id_night_index_pk" PRIMARY KEY ("itinerary_id", "night_index");
+
+
+
+ALTER TABLE ONLY "public"."itinerary_proposals"
+    ADD CONSTRAINT "itinerary_proposals_pkey" PRIMARY KEY ("id");
 
 
 
@@ -2528,6 +2876,11 @@ ALTER TABLE ONLY "public"."media"
 
 ALTER TABLE ONLY "public"."media"
     ADD CONSTRAINT "media_storage_path_unique" UNIQUE ("storage_path");
+
+
+
+ALTER TABLE ONLY "public"."notifications"
+    ADD CONSTRAINT "notifications_pkey" PRIMARY KEY ("id");
 
 
 
@@ -2709,6 +3062,10 @@ CREATE INDEX "groups_owner_id_idx" ON "public"."groups" USING "btree" ("owner_id
 
 
 
+CREATE INDEX "item_votes_itinerary_id_idx" ON "public"."item_votes" USING "btree" ("itinerary_id");
+
+
+
 CREATE INDEX "item_votes_user_id_idx" ON "public"."item_votes" USING "btree" ("user_id");
 
 
@@ -2725,6 +3082,10 @@ CREATE INDEX "itineraries_owner_id_idx" ON "public"."itineraries" USING "btree" 
 
 
 
+CREATE INDEX "itinerary_changes_itinerary_id_idx" ON "public"."itinerary_changes" USING "btree" ("itinerary_id", "id");
+
+
+
 CREATE INDEX "itinerary_items_itinerary_day_position_idx" ON "public"."itinerary_items" USING "btree" ("itinerary_id", "day_index", "position");
 
 
@@ -2734,6 +3095,18 @@ CREATE INDEX "itinerary_nights_area_id_idx" ON "public"."itinerary_nights" USING
 
 
 CREATE INDEX "itinerary_nights_place_id_idx" ON "public"."itinerary_nights" USING "btree" ("place_id");
+
+
+
+CREATE INDEX "itinerary_proposals_activity_id_idx" ON "public"."itinerary_proposals" USING "btree" ("activity_id");
+
+
+
+CREATE INDEX "itinerary_proposals_itinerary_status_idx" ON "public"."itinerary_proposals" USING "btree" ("itinerary_id", "status");
+
+
+
+CREATE INDEX "itinerary_proposals_proposed_by_idx" ON "public"."itinerary_proposals" USING "btree" ("proposed_by");
 
 
 
@@ -2762,6 +3135,10 @@ CREATE INDEX "local_tips_verified_at_idx" ON "public"."local_tips" USING "btree"
 
 
 CREATE INDEX "media_authorization_id_idx" ON "public"."media" USING "btree" ("authorization_id");
+
+
+
+CREATE INDEX "notifications_user_read_idx" ON "public"."notifications" USING "btree" ("user_id", "read_at");
 
 
 
@@ -2837,7 +3214,39 @@ CREATE OR REPLACE TRIGGER "groups_add_owner_member" AFTER INSERT ON "public"."gr
 
 
 
+CREATE OR REPLACE TRIGGER "item_votes_fill_itinerary" BEFORE INSERT ON "public"."item_votes" FOR EACH ROW EXECUTE FUNCTION "public"."item_votes_fill_itinerary"();
+
+
+
+CREATE OR REPLACE TRIGGER "item_votes_realtime" AFTER INSERT OR DELETE OR UPDATE ON "public"."item_votes" FOR EACH ROW EXECUTE FUNCTION "public"."itinerary_realtime_notify"();
+
+
+
 CREATE OR REPLACE TRIGGER "itinerary_bookings_stamp" BEFORE INSERT OR UPDATE ON "public"."itinerary_bookings" FOR EACH ROW EXECUTE FUNCTION "public"."itinerary_bookings_stamp"();
+
+
+
+CREATE OR REPLACE TRIGGER "itinerary_changes_immutable" BEFORE DELETE OR UPDATE ON "public"."itinerary_changes" FOR EACH ROW EXECUTE FUNCTION "public"."itinerary_changes_guard"();
+
+
+
+CREATE OR REPLACE TRIGGER "itinerary_changes_no_truncate" BEFORE TRUNCATE ON "public"."itinerary_changes" FOR EACH STATEMENT EXECUTE FUNCTION "public"."prevent_mutation"();
+
+
+
+CREATE OR REPLACE TRIGGER "itinerary_changes_realtime" AFTER INSERT ON "public"."itinerary_changes" FOR EACH ROW EXECUTE FUNCTION "public"."itinerary_realtime_notify"();
+
+
+
+CREATE OR REPLACE TRIGGER "itinerary_items_guard_activity" BEFORE UPDATE OF "activity_id" ON "public"."itinerary_items" FOR EACH ROW WHEN (("old"."activity_id" IS DISTINCT FROM "new"."activity_id")) EXECUTE FUNCTION "public"."itinerary_items_guard_activity"();
+
+
+
+CREATE OR REPLACE TRIGGER "itinerary_items_realtime" AFTER INSERT OR DELETE OR UPDATE ON "public"."itinerary_items" FOR EACH ROW EXECUTE FUNCTION "public"."itinerary_realtime_notify"();
+
+
+
+CREATE OR REPLACE TRIGGER "itinerary_proposals_realtime" AFTER INSERT OR UPDATE ON "public"."itinerary_proposals" FOR EACH ROW EXECUTE FUNCTION "public"."itinerary_realtime_notify"();
 
 
 
@@ -3019,6 +3428,11 @@ ALTER TABLE ONLY "public"."groups"
 
 
 ALTER TABLE ONLY "public"."item_votes"
+    ADD CONSTRAINT "item_votes_itinerary_id_itineraries_id_fk" FOREIGN KEY ("itinerary_id") REFERENCES "public"."itineraries"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."item_votes"
     ADD CONSTRAINT "item_votes_itinerary_item_id_itinerary_items_id_fk" FOREIGN KEY ("itinerary_item_id") REFERENCES "public"."itinerary_items"("id") ON DELETE CASCADE;
 
 
@@ -3063,6 +3477,16 @@ ALTER TABLE ONLY "public"."itinerary_bookings"
 
 
 
+ALTER TABLE ONLY "public"."itinerary_changes"
+    ADD CONSTRAINT "itinerary_changes_actor_id_profiles_id_fk" FOREIGN KEY ("actor_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_changes"
+    ADD CONSTRAINT "itinerary_changes_itinerary_id_itineraries_id_fk" FOREIGN KEY ("itinerary_id") REFERENCES "public"."itineraries"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."itinerary_items"
     ADD CONSTRAINT "itinerary_items_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE RESTRICT;
 
@@ -3090,6 +3514,26 @@ ALTER TABLE ONLY "public"."itinerary_nights"
 
 ALTER TABLE ONLY "public"."itinerary_nights"
     ADD CONSTRAINT "itinerary_nights_place_id_places_id_fk" FOREIGN KEY ("place_id") REFERENCES "public"."places"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_proposals"
+    ADD CONSTRAINT "itinerary_proposals_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE RESTRICT;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_proposals"
+    ADD CONSTRAINT "itinerary_proposals_decided_by_profiles_id_fk" FOREIGN KEY ("decided_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_proposals"
+    ADD CONSTRAINT "itinerary_proposals_itinerary_id_itineraries_id_fk" FOREIGN KEY ("itinerary_id") REFERENCES "public"."itineraries"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_proposals"
+    ADD CONSTRAINT "itinerary_proposals_proposed_by_profiles_id_fk" FOREIGN KEY ("proposed_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
 
@@ -3130,6 +3574,11 @@ ALTER TABLE ONLY "public"."media"
 
 ALTER TABLE ONLY "public"."media"
     ADD CONSTRAINT "media_created_by_profiles_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."notifications"
+    ADD CONSTRAINT "notifications_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -3592,6 +4041,17 @@ CREATE POLICY "itinerary_bookings_update" ON "public"."itinerary_bookings" FOR U
 
 
 
+ALTER TABLE "public"."itinerary_changes" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "itinerary_changes_insert_editor" ON "public"."itinerary_changes" FOR INSERT TO "authenticated" WITH CHECK ((("actor_id" = ( SELECT "auth"."uid"() AS "uid")) AND (NOT COALESCE(( SELECT (("auth"."jwt"() ->> 'is_anonymous'::"text"))::boolean AS "bool"), false)) AND "public"."can_edit_itinerary"("itinerary_id")));
+
+
+
+CREATE POLICY "itinerary_changes_select_members" ON "public"."itinerary_changes" FOR SELECT TO "authenticated" USING ("public"."is_itinerary_group_member"("itinerary_id"));
+
+
+
 ALTER TABLE "public"."itinerary_items" ENABLE ROW LEVEL SECURITY;
 
 
@@ -3627,6 +4087,19 @@ CREATE POLICY "itinerary_nights_select" ON "public"."itinerary_nights" FOR SELEC
 
 
 CREATE POLICY "itinerary_nights_update" ON "public"."itinerary_nights" FOR UPDATE TO "authenticated" USING ("public"."can_edit_itinerary"("itinerary_id")) WITH CHECK ("public"."can_edit_itinerary"("itinerary_id"));
+
+
+
+ALTER TABLE "public"."itinerary_proposals" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "itinerary_proposals_insert_member" ON "public"."itinerary_proposals" FOR INSERT TO "authenticated" WITH CHECK ((("proposed_by" = ( SELECT "auth"."uid"() AS "uid")) AND (NOT COALESCE(( SELECT (("auth"."jwt"() ->> 'is_anonymous'::"text"))::boolean AS "bool"), false)) AND "public"."is_itinerary_group_member"("itinerary_id") AND (EXISTS ( SELECT 1
+   FROM "public"."activities" "a"
+  WHERE (("a"."id" = "itinerary_proposals"."activity_id") AND "a"."is_active")))));
+
+
+
+CREATE POLICY "itinerary_proposals_select_members" ON "public"."itinerary_proposals" FOR SELECT TO "authenticated" USING ("public"."is_itinerary_group_member"("itinerary_id"));
 
 
 
@@ -3691,6 +4164,17 @@ CREATE POLICY "media_select_admin" ON "public"."media" FOR SELECT TO "authentica
 
 
 CREATE POLICY "media_select_public" ON "public"."media" FOR SELECT TO "authenticated", "anon" USING ("public"."media_is_public"("id"));
+
+
+
+ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "notifications_select_own" ON "public"."notifications" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+CREATE POLICY "notifications_update_own" ON "public"."notifications" FOR UPDATE TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -3964,6 +4448,12 @@ GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" 
 
 
 
+REVOKE ALL ON FUNCTION "public"."decide_proposal"("p_proposal_id" "uuid", "p_accept" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."decide_proposal"("p_proposal_id" "uuid", "p_accept" boolean) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."decide_proposal"("p_proposal_id" "uuid", "p_accept" boolean) TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."delete_inactive_guests"("p_days" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."delete_inactive_guests"("p_days" integer) TO "service_role";
 
@@ -4042,9 +4532,36 @@ GRANT ALL ON FUNCTION "public"."is_group_owner"("gid" "uuid") TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."is_itinerary_group_member"("iid" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."is_itinerary_group_member"("iid" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."is_itinerary_group_member"("iid" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."item_votes_fill_itinerary"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."item_votes_fill_itinerary"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."itinerary_bookings_stamp"() TO "anon";
 GRANT ALL ON FUNCTION "public"."itinerary_bookings_stamp"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."itinerary_bookings_stamp"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."itinerary_changes_guard"() TO "anon";
+GRANT ALL ON FUNCTION "public"."itinerary_changes_guard"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."itinerary_changes_guard"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."itinerary_items_guard_activity"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."itinerary_items_guard_activity"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."itinerary_realtime_notify"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."itinerary_realtime_notify"() TO "service_role";
 
 
 
@@ -4128,6 +4645,12 @@ GRANT ALL ON FUNCTION "public"."refresh_leaderboard"() TO "service_role";
 REVOKE ALL ON FUNCTION "public"."remove_group_member"("p_group_id" "uuid", "p_user_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."remove_group_member"("p_group_id" "uuid", "p_user_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."remove_group_member"("p_group_id" "uuid", "p_user_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."replace_group_stop"("p_item_id" "uuid", "p_activity_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."replace_group_stop"("p_item_id" "uuid", "p_activity_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."replace_group_stop"("p_item_id" "uuid", "p_activity_id" "uuid") TO "service_role";
 
 
 
@@ -4649,6 +5172,33 @@ GRANT INSERT("status"),UPDATE("status") ON TABLE "public"."itinerary_bookings" T
 
 
 
+GRANT ALL ON TABLE "public"."itinerary_changes" TO "service_role";
+GRANT SELECT ON TABLE "public"."itinerary_changes" TO "authenticated";
+
+
+
+GRANT INSERT("itinerary_id") ON TABLE "public"."itinerary_changes" TO "authenticated";
+
+
+
+GRANT INSERT("actor_id") ON TABLE "public"."itinerary_changes" TO "authenticated";
+
+
+
+GRANT INSERT("kind") ON TABLE "public"."itinerary_changes" TO "authenticated";
+
+
+
+GRANT INSERT("payload") ON TABLE "public"."itinerary_changes" TO "authenticated";
+
+
+
+GRANT ALL ON SEQUENCE "public"."itinerary_changes_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."itinerary_changes_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."itinerary_changes_id_seq" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."itinerary_nights" TO "service_role";
 GRANT SELECT ON TABLE "public"."itinerary_nights" TO "anon";
 GRANT SELECT,DELETE ON TABLE "public"."itinerary_nights" TO "authenticated";
@@ -4668,6 +5218,27 @@ GRANT INSERT("area_id"),UPDATE("area_id") ON TABLE "public"."itinerary_nights" T
 
 
 GRANT INSERT("place_id"),UPDATE("place_id") ON TABLE "public"."itinerary_nights" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."itinerary_proposals" TO "service_role";
+GRANT SELECT ON TABLE "public"."itinerary_proposals" TO "authenticated";
+
+
+
+GRANT INSERT("itinerary_id") ON TABLE "public"."itinerary_proposals" TO "authenticated";
+
+
+
+GRANT INSERT("proposed_by") ON TABLE "public"."itinerary_proposals" TO "authenticated";
+
+
+
+GRANT INSERT("activity_id") ON TABLE "public"."itinerary_proposals" TO "authenticated";
+
+
+
+GRANT INSERT("day_index") ON TABLE "public"."itinerary_proposals" TO "authenticated";
 
 
 
@@ -4819,6 +5390,15 @@ GRANT SELECT("blur_data_url") ON TABLE "public"."media" TO "authenticated";
 
 GRANT SELECT("variants_version") ON TABLE "public"."media" TO "anon";
 GRANT SELECT("variants_version") ON TABLE "public"."media" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."notifications" TO "service_role";
+GRANT SELECT ON TABLE "public"."notifications" TO "authenticated";
+
+
+
+GRANT UPDATE("read_at") ON TABLE "public"."notifications" TO "authenticated";
 
 
 

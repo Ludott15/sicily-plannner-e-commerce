@@ -34,6 +34,9 @@ import {
   type TripActionError,
   type TripFormState,
 } from "@/server/trips/actions";
+import { GroupStopVotes, type StopVoteCounts } from "@/components/groups/stop-votes";
+import { useItineraryRealtime } from "@/components/groups/use-itinerary-realtime";
+import type { TripGroupState } from "@/server/groups/trip-group";
 import { ConfirmDialog } from "./confirm-dialog";
 import { DayDropZone, StopItem } from "./sortable-days";
 import { TripActions } from "./trip-actions";
@@ -74,9 +77,13 @@ export type TripBuilderProps = {
   initialDay: number;
   bookings: BuilderBooking[];
   sharedSince: string | null;
+  /** Stato del gruppo (4.2) se il viaggio è di gruppo: voti, alternative, proposte, modifiche. */
+  group: TripGroupState | null;
 };
 
 const OK: TripFormState = { status: "ok" };
+const NO_VOTES: StopVoteCounts = { up: 0, down: 0, mine: null };
+const NO_ALTERNATIVES: TripGroupState["alternatives"][string] = [];
 
 type Outcome = { status: "ok" } | TripActionError;
 
@@ -92,6 +99,7 @@ export function TripBuilder({
   initialDay,
   bookings,
   sharedSince,
+  group,
 }: TripBuilderProps) {
   const t = useTranslations("Trips");
   const router = useRouter();
@@ -261,6 +269,7 @@ export function TripBuilder({
 
   return (
     <div className="flex flex-col gap-8" aria-busy={pending}>
+      {group && <GroupRealtime itineraryId={tripId} />}
       <TripActions locale={locale} tripId={tripId} startDate={startDate} />
 
       <div className="grid gap-10 lg:grid-cols-[1fr_360px]">
@@ -314,6 +323,17 @@ export function TripBuilder({
                             onStep={(direction) => step(stop.id, direction)}
                             onMoveToDay={(target) => moveToDay(stop.id, target)}
                             onRemove={() => removeStopFromTrip(stop.id)}
+                            votes={
+                              group ? (
+                                <GroupStopVotes
+                                  itemId={stop.id}
+                                  votes={group.votes[stop.id] ?? NO_VOTES}
+                                  members={group.members}
+                                  alternatives={group.alternatives[stop.id] ?? NO_ALTERNATIVES}
+                                  isGroupOwner={group.isGroupOwner}
+                                />
+                              ) : undefined
+                            }
                           />
                         ))}
                       </Route>
@@ -409,4 +429,10 @@ export function TripBuilder({
       </div>
     </div>
   );
+}
+
+// Tempo reale dei viaggi di gruppo: una modifica di un membro ricarica la pagina (use-itinerary-realtime).
+function GroupRealtime({ itineraryId }: { itineraryId: string }) {
+  const subscribed = useItineraryRealtime(itineraryId);
+  return <span hidden data-realtime={subscribed ? "subscribed" : "connecting"} />;
 }

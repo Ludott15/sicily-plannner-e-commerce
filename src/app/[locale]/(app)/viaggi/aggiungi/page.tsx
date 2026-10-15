@@ -5,6 +5,7 @@ import { ButtonLink } from "@/components/design";
 import { AddToTripForm } from "@/components/trips/add-to-trip-form";
 import { Link } from "@/lib/i18n/navigation";
 import { requireUser } from "@/server/auth";
+import { getGroup } from "@/server/groups/queries";
 import { getActivity } from "@/server/catalog/queries";
 import { areaNames } from "@/server/personalization/data";
 import { placeArea, tripsForPicker } from "@/server/trips/queries";
@@ -23,12 +24,20 @@ export default async function AddToTripPage({ params, searchParams }: Props) {
   const user = await requireUser();
   const activity = await getActivity(attivita);
   if (!activity) notFound();
-  const [t, trips, area, names] = await Promise.all([
+  const [t, pickerTrips, area, names] = await Promise.all([
     getTranslations("Trips"),
     tripsForPicker(user),
     placeArea(user, activity.placeId),
     areaNames(locale),
   ]);
+  // Viaggi di gruppo (4.2): chi non è il proprietario del gruppo propone la tappa invece di aggiungerla.
+  const trips = await Promise.all(
+    pickerTrips.map(async (trip) => {
+      if (!trip.groupId) return trip;
+      const group = await getGroup(user, trip.groupId);
+      return { ...trip, isGroupOwner: group?.isOwner ?? false };
+    }),
+  );
 
   return (
     <section className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-10">

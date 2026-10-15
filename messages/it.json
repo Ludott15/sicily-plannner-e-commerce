@@ -22,7 +22,9 @@
     "cookie": "Cookie",
     "terms": "Condizioni di vendita",
     "preferences": "Preferenze",
-    "photoCredits": "Crediti delle foto"
+    "photoCredits": "Crediti delle foto",
+    "notifications": "Notifiche",
+    "notificationsCount": "Notifiche, {count} non lette"
   },
   "Home": {
     "title": "La Sicilia di chi ci vive, su misura per te.",
@@ -1516,6 +1518,49 @@
       "cannot_remove_owner": "Non si può rimuovere chi ha creato il gruppo.",
       "rate_limited": "Hai inviato troppi inviti oggi. Riprova domani.",
       "email_unavailable": "L'invio di email non è disponibile in questo momento. Puoi copiare il link e mandarlo tu."
+    },
+    "someone": "Qualcuno",
+    "someStop": "una tappa",
+    "voteErrors": {
+      "invalid": "Controlla il voto e riprova.",
+      "guest_not_allowed": "Per votare serve un account. Crealo con la tua email.",
+      "not_allowed": "Non puoi votare su questo viaggio.",
+      "failed": "Non siamo riusciti a registrare il voto. Riprova."
+    },
+    "alternativesLabel": "Alternative vicine",
+    "alternativeMeta": "{place}, a {km} km",
+    "replaceAction": "Sostituisci con {title}",
+    "proposalsHeading": "Proposte",
+    "proposalsEmpty": "Nessuna proposta in attesa.",
+    "proposalMine": "Giorno {day}. In attesa del proprietario del gruppo.",
+    "proposalMeta": "Giorno {day} · proposta da {name}",
+    "accept": "Accetta",
+    "reject": "Rifiuta",
+    "proposeAction": "Proponi al gruppo",
+    "proposeNote": "Questo viaggio è di un gruppo: la tua scelta diventa una proposta, che il proprietario del gruppo accetta o rifiuta.",
+    "proposalSent": "Proposta inviata.",
+    "proposalOpenTrip": "Apri il viaggio",
+    "proposalErrors": {
+      "invalid": "Controlla i dati e riprova.",
+      "failed": "Non siamo riusciti a completare l'operazione. Riprova.",
+      "guest_not_allowed": "Per questa operazione serve un account. Crealo con la tua email.",
+      "not_group_owner": "Solo chi ha creato il gruppo può farlo.",
+      "not_group_member": "Non fai più parte di questo gruppo.",
+      "proposal_not_pending": "Questa proposta è già stata decisa.",
+      "day_out_of_range": "Il giorno scelto non esiste in questo viaggio.",
+      "activity_not_available": "Questa attività non è più disponibile."
+    },
+    "changesHeading": "Modifiche recenti",
+    "changesEmpty": "Nessuna modifica ancora.",
+    "changes": {
+      "stopAdded": "{name} ha aggiunto {title} al giorno {day}.",
+      "stopRemoved": "{name} ha tolto {title}.",
+      "stopMoved": "{name} ha spostato {title} al giorno {day}.",
+      "stopReplaced": "{name} ha sostituito {before} con {after}.",
+      "dayAdded": "{name} ha aggiunto il giorno {day}.",
+      "dayRemoved": "{name} ha tolto il giorno {day}.",
+      "proposalAccepted": "{name} ha accettato la proposta per {title}: è al giorno {day}.",
+      "generic": "{name} ha cambiato il viaggio."
     }
   },
   "GroupInvite": {
@@ -1545,5 +1590,16 @@
     },
     "ogEyebrow": "Ti hanno invitato a: {days, plural, one {# giorno} other {# giorni}}",
     "ogEyebrowPlain": "Ti hanno invitato a un viaggio"
+  },
+  "Notifications": {
+    "title": "Notifiche",
+    "empty": "Nessuna notifica. Qui arrivano le risposte alle proposte che fai nei gruppi.",
+    "emptyAction": "Vai ai tuoi viaggi",
+    "new": "Nuova",
+    "untitledStop": "una tappa",
+    "proposalAccepted": "La tua proposta per {title} è stata accettata: è al giorno {day}.",
+    "proposalRejected": "La tua proposta per {title} non è stata accettata.",
+    "unknown": "Hai una nuova notifica.",
+    "openTrip": "Apri il viaggio"
   }
 }
