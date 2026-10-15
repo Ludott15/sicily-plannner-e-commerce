@@ -1614,7 +1614,9 @@
     "proposalAccepted": "La tua proposta per {title} è stata accettata: è al giorno {day}.",
     "proposalRejected": "La tua proposta per {title} non è stata accettata.",
     "unknown": "Hai una nuova notifica.",
-    "openTrip": "Apri il viaggio"
+    "openTrip": "Apri il viaggio",
+    "badgeEarned": "Hai ottenuto il badge {name}.",
+    "untitledBadge": "un badge"
   },
   "CheckIn": {
     "button": "Sono qui",
@@ -1736,5 +1738,54 @@
       "off_topic": "fuori tema",
       "other": "altro"
     }
+  },
+  "Badges": {
+    "earnedTitle": "I tuoi badge",
+    "earnedEmpty": "Nessun badge ancora: il primo arriva con il primo viaggio completato.",
+    "newLabel": "Nuovo",
+    "progress": "{current} su {target}",
+    "criteria": {
+      "itineraries_completed": "Completa {min, plural, one {# viaggio} other {# viaggi}}",
+      "check_ins_in_province": "Almeno {min, plural, one {# check-in} other {# check-in}} in provincia di {province}",
+      "provinces_checked_in": "Check-in in {min, plural, one {# provincia} other {# province}}",
+      "interest_activities_completed": "Completa {min, plural, one {# attività} other {# attività}} legate a {interest}",
+      "group_size": "Crea un gruppo con almeno {min} persone",
+      "points_total": "Raggiungi {min} punti in totale"
+    }
+  },
+  "AdminBadges": {
+    "nav": "Badge",
+    "title": "Badge",
+    "intro": "Il badge si assegna da solo quando l'utente raggiunge il criterio. Nome e descrizione si cambiano in ogni momento; la chiave resta com'è dopo la creazione.",
+    "listTitle": "Catalogo",
+    "empty": "Nessun badge nel catalogo.",
+    "holders": "{count, plural, one {# utente ha questo badge} other {# utenti hanno questo badge}}",
+    "newTitle": "Nuovo badge",
+    "fieldKey": "Chiave (indirizzo interno)",
+    "fieldKeyHint": "Minuscole, numeri e trattini: primo-viaggio. Non si cambia dopo la creazione.",
+    "fieldNameIt": "Nome in italiano",
+    "fieldNameEn": "Nome in inglese",
+    "fieldNameHint": "Sul timbro al massimo 16 caratteri per riga.",
+    "fieldDescription": "Descrizione",
+    "fieldCriteriaType": "Criterio",
+    "fieldMin": "Quantità minima",
+    "fieldProvince": "Provincia",
+    "fieldInterest": "Interesse",
+    "fieldInterestNone": "Nessun interesse disponibile.",
+    "criterionTypes": {
+      "itineraries_completed": "Viaggi completati",
+      "check_ins_in_province": "Check-in in una provincia",
+      "provinces_checked_in": "Province visitate",
+      "interest_activities_completed": "Attività di un interesse",
+      "group_size": "Dimensione del gruppo",
+      "points_total": "Punti totali"
+    },
+    "save": "Salva",
+    "create": "Crea badge",
+    "saving": "Salvataggio in corso…",
+    "saved": "Badge salvato.",
+    "errorInvalid": "Controlla i campi: qualche valore non è valido.",
+    "errorKeyTaken": "Esiste già un badge con questa chiave.",
+    "errorFailed": "Salvataggio non riuscito. Riprova."
   }
 }

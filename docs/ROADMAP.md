@@ -25,6 +25,7 @@ Aggiornato da ogni PR. "In PR" = aperta e in attesa di merge; le PR dei passi su
 | 4.2 Voti, proposte e tempo reale | In PR: voti +1/-1 su ogni tappa del gruppo (StopVotes), alternative vicine quando i contrari sono almeno la metà, sostituzione solo dell'owner, proposte di aggiunta con accetta/rifiuta e notifica, campanella e /notifiche, registro "Modifiche recenti", tempo reale con broadcast privato ai soli membri | `roadmap/4.2-voti` |
 | 4.3 Scoring di gruppo | In PR: preferenze aggregate in SQL (media, minimo 2 con un 5, vincoli più restrittivi) con soglia di privacy a 3 persone, "Interessi comuni" e "Ecco tre viaggi per il gruppo" nella pagina del gruppo, motivi solo pratici sotto 3 membri, alternative ordinate con il profilo del gruppo | `roadmap/4.3-scoring-gruppo` |
 | 5.1 Punti, check-in e recensioni | In PR: regole dei punti in point_rules, check-in "Sono qui" con consenso e verifica entro 300 m (posizione non salvata), itinerario completato con 3 luoghi, recensioni con premio da 80 caratteri, segnalazioni e moderazione admin, punti per profilo e inviti, pagina /punti, punti in home | `roadmap/5.1-punti` |
+| 5.2 Badge | In PR: criteri tipizzati in badges.criteria, valutazione nel database a ogni accredito e all'ingresso in un gruppo, 5 badge della spec, notifica badge_earned, "I tuoi badge" e progresso in /punti, admin /admin/badge con creazione e modifica | `roadmap/5.2-badge` |
 
 ---
 

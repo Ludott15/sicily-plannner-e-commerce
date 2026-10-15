@@ -3,9 +3,9 @@ import { desc, isNull, sql } from "drizzle-orm";
 import { notifications } from "@/server/db/schema";
 import { dbAsUser, type DbUser } from "@/server/db/user";
 
-// Notifiche dell'utente (passo 4.2). Con dbAsUser la RLS limita alle proprie righe.
+// Notifiche dell'utente (passo 4.2, badge dal passo 5.2). Con dbAsUser la RLS limita alle proprie righe.
 
-export type NotificationKind = "proposal_accepted" | "proposal_rejected";
+export type NotificationKind = "proposal_accepted" | "proposal_rejected" | "badge_earned";
 
 export type NotificationView = {
   id: string;
@@ -27,8 +27,16 @@ export async function unreadNotificationsCount(user: DbUser): Promise<number> {
   });
 }
 
-function kindOf(value: string): NotificationKind {
-  return value === "proposal_rejected" ? "proposal_rejected" : "proposal_accepted";
+// Valori sconosciuti: null, la riga viene scartata (non si trasforma in un'altra notifica).
+function kindOf(value: string): NotificationKind | null {
+  switch (value) {
+    case "proposal_accepted":
+    case "proposal_rejected":
+    case "badge_earned":
+      return value;
+    default:
+      return null;
+  }
 }
 
 export async function listNotifications(user: DbUser): Promise<NotificationView[]> {
@@ -44,12 +52,18 @@ export async function listNotifications(user: DbUser): Promise<NotificationView[
       .from(notifications)
       .orderBy(desc(notifications.createdAt), desc(notifications.id))
       .limit(LIST_LIMIT);
-    return rows.map((r) => ({
-      id: r.id,
-      kind: kindOf(r.kind),
-      payload: r.payload,
-      readAt: r.readAt ? r.readAt.toISOString() : null,
-      createdAt: r.createdAt.toISOString(),
-    }));
+    const views: NotificationView[] = [];
+    for (const r of rows) {
+      const kind = kindOf(r.kind);
+      if (kind === null) continue;
+      views.push({
+        id: r.id,
+        kind,
+        payload: r.payload,
+        readAt: r.readAt ? r.readAt.toISOString() : null,
+        createdAt: r.createdAt.toISOString(),
+      });
+    }
+    return views;
   });
 }

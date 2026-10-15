@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { ButtonLink } from "@/components/design";
 import { dayOf, textOf } from "@/components/groups/payload";
 import { Link } from "@/lib/i18n/navigation";
 import { markNotificationsRead } from "@/server/notifications/actions";
 import type { NotificationView } from "@/server/notifications/queries";
 
-// Elenco delle notifiche (4.2). Le non lette si evidenziano; all'apertura della pagina sono tutte
+// Elenco delle notifiche (4.2, 5.2). Le non lette si evidenziano; all'apertura della pagina sono tutte
 // segnate come lette, una sola volta. Il testo viene dal tipo e dal payload, mai da una frase
 // salvata nel database.
 
@@ -60,10 +60,16 @@ export function NotificationsList({ items }: { items: NotificationView[] }) {
 
 function NotificationText({ kind, payload }: { kind: string; payload: Record<string, unknown> }) {
   const t = useTranslations("Notifications");
+  const locale = useLocale();
   const title = textOf(payload, "title", t("untitledStop"));
   const day = dayOf(payload, "day");
 
   if (kind === "proposal_accepted") return <p className="text-body">{t("proposalAccepted", { title, day })}</p>;
   if (kind === "proposal_rejected") return <p className="text-body">{t("proposalRejected", { title })}</p>;
+  if (kind === "badge_earned") {
+    // Il payload porta entrambi i nomi: si sceglie quello della lingua della pagina, con ripiego sull'italiano.
+    const name = textOf(payload, locale === "en" ? "nameEn" : "nameIt", textOf(payload, "nameIt", t("untitledBadge")));
+    return <p className="text-body">{t("badgeEarned", { name })}</p>;
+  }
   return <p className="text-body">{t("unknown")}</p>;
 }
