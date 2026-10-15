@@ -803,7 +803,49 @@
     "partnerHostsHint": "Host esatti, separati da virgola: il link va solo lì.",
     "partnerSubid": "Parametro del subid",
     "partnerSaved": "Partner salvato.",
-    "partnerEnvNone": "Nessuna"
+    "partnerEnvNone": "Nessuna",
+    "importPartner": "Import partner",
+    "importPartnerTitle": "Import partner",
+    "importPartnerIntro": "Le offerte dei partner entrano nel catalogo ogni notte. Qui vedi se la chiave API è impostata e l'esito delle ultime esecuzioni, e puoi avviare un import adesso.",
+    "importPartnerName": {
+      "viator": "Viator",
+      "getyourguide": "GetYourGuide"
+    },
+    "importPartnerConfigured": "Chiave API impostata: l'import gira ogni notte.",
+    "importPartnerKeyMissing": "Manca la chiave API nell'ambiente",
+    "importPartnerNoRuns": "Nessuna esecuzione registrata.",
+    "importPartnerRuns": "Ultime esecuzioni",
+    "importPartnerColStarted": "Avviata il",
+    "importPartnerColStatus": "Esito",
+    "importPartnerColCreated": "Nuove",
+    "importPartnerColUpdated": "Aggiornate",
+    "importPartnerColDeactivated": "Disattivate",
+    "importPartnerColSkipped": "Scartate",
+    "importPartnerStatusOk": "Completata",
+    "importPartnerStatusFailed": "Non riuscita",
+    "importPartnerAlert": "Le ultime due esecuzioni sono fallite. Controlla la chiave API e avvia un import a mano.",
+    "importNowRun": "Esegui ora",
+    "importNowPending": "Import in corso...",
+    "importNowDone": "Import completato: {created} nuove, {updated} aggiornate, {deactivated} disattivate, {skipped} scartate. Attività nuove: {newActivities}, tag proposti: {tagsProposed}.",
+    "importNowErrors": {
+      "unconfigured": "Partner non configurato: manca la chiave API.",
+      "invalid_input": "Partner non valido.",
+      "failed": "Import non riuscito. Riprova più tardi."
+    },
+    "importNowErrorCode": "(codice: {code})",
+    "importAlertTitle": "Import partner da controllare",
+    "importAlertBody": "Due esecuzioni di fila non riuscite per: {partners}.",
+    "importAlertLink": "Apri Import partner",
+    "proposedTagsTitle": "Tag proposti",
+    "proposedTagsLabel": "Tag proposti dall'import",
+    "confirmTags": "Conferma tag",
+    "confirmTagsPending": "Conferma in corso...",
+    "confirmTagsDone": "Tag confermati: {tags}.",
+    "tagsErrors": {
+      "no_proposals": "Nessuna proposta da confermare.",
+      "invalid_input": "Attività non valida.",
+      "failed": "Operazione non riuscita. Riprova."
+    }
   },
   "Og": {
     "activity": "Attività · {province}",

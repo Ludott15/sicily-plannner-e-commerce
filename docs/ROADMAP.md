@@ -18,6 +18,7 @@ Aggiornato da ogni PR. "In PR" = aperta e in attesa di merge; le PR dei passi su
 | 1.4 Builder, seconda fetta | In PR: trascinamento tra giorni, giorni, note, duplica ed elimina, export .ics, stampa, link pubblico revocabile | `roadmap/1.4-builder` |
 | 2.1 Ricerca voli | In PR: barra voli (home, /voli, viaggio, proposte), Travelpayouts con cache di Next 6 h, /api/go/flight firmato, pagine SEO solo con prezzi, LMP e PNL tra gli arrivi | `roadmap/2.1-voli` |
 | 3.1 Affiliati su tutte le verticali | In PR: partner come configurazione (tabella + env), /dove-dormire, /noleggio-auto, chip della checklist, /api/go/v firmato, allowlist degli host, rate limit, /affiliazioni, admin partner | `roadmap/3.1-affiliati` |
+| 3.2 Import automatico dei partner | In PR: adattatori Viator e GetYourGuide (inattivi senza chiave), collegamento per distanza e somiglianza del nome, attività nuove inattive da verificare, offerte disattivate dopo 3 import mancati, log e avviso in admin, tag proposti dal modello, embedding Voyage | `roadmap/3.2-import-partner` |
 
 ---
 

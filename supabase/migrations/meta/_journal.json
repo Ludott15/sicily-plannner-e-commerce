@@ -288,6 +288,13 @@
       "when": 1791999699824,
       "tag": "20261014174139_affiliati_funzioni",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792072993646,
+      "tag": "20261015140313_import_partner",
+      "breakpoints": true
     }
   ]
 }

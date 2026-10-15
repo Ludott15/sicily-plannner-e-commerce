@@ -65,6 +65,9 @@ Regole complete in [IMMAGINI.md](IMMAGINI.md).
 | --- | --- | --- |
 | RATE_LIMIT_SECRET o AFFILIATE_LINK_SECRET | impostate in produzione (senza, il limite sui click è spento) | Vedi la tabella della sezione 2. |
 | Template e parametri dei partner | in Admin → Partner confermati con i termini di ogni programma (template, host, parametro del subid, variabile dell'ID) | A mano: per ogni partner attivo, il template e il parametro del subid corrispondono ai termini del programma. Il click di prova porta al partner con il subid. |
+| `VIATOR_API_KEY`, `GETYOURGUIDE_API_KEY` | chiavi Partner API (facoltative: senza, l'import di quel partner non gira) | Prima di impostarle, confrontare endpoint, header e campi di `src/server/partners-import/adapters/*.ts` con la documentazione del partner (scritti senza accesso alle API). Dopo il cron delle 2:30 UTC, Admin → Import partner mostra una riga "ok" per partner. |
+| `ANTHROPIC_API_KEY` | chiave API Anthropic (facoltativa) | Senza, le attività nuove dell'import arrivano senza tag proposti. Con la chiave, la coda "Da verificare" mostra i tag proposti. |
+| `EMBEDDINGS_PROVIDER`, `VOYAGE_API_KEY` | `voyage` (default) e la chiave Voyage AI (facoltativa) | Senza chiave il cron delle 4:00 UTC (`embed-activities`) non fa nulla. Con la chiave risponde 200 con il numero di attività calcolate. |
 
 ## Verifica automatica
 

@@ -1,0 +1,31 @@
+{
+  "totalCount": 3,
+  "products": [
+    {
+      "productCode": "5731P1",
+      "title": "Escursione sull'Etna al tramonto",
+      "description": "Salita in jeep sul vulcano con guida naturalistica.",
+      "productUrl": "https://www.viator.com/tours/Sicily/Etna-sunset/d1234-5731P1",
+      "location": { "name": "Catania", "latitude": 37.7510, "longitude": 14.9934 },
+      "pricing": { "currency": "EUR", "summary": { "fromPrice": 89.5 } },
+      "reviews": { "combinedAverageRating": 4.8, "totalReviews": 1243 },
+      "flags": ["FREE_CANCELLATION", "SKIP_THE_LINE"],
+      "campo_sconosciuto": true
+    },
+    {
+      "productCode": "9999X2",
+      "title": "Degustazione di vini a Marsala",
+      "description": null,
+      "productUrl": "http://www.viator.com/insicuro",
+      "location": { "name": "Marsala", "latitude": 37.80, "longitude": 12.43 },
+      "pricing": { "currency": "EUR", "summary": { "fromPrice": 40 } },
+      "reviews": { "combinedAverageRating": 4.2, "totalReviews": 80 },
+      "flags": []
+    },
+    {
+      "productCode": "7000Z3",
+      "title": "   ",
+      "productUrl": "https://www.viator.com/tours/Sicily/x/d1-7000Z3"
+    }
+  ]
+}

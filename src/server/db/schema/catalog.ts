@@ -109,6 +109,9 @@ export const activities = pgTable(
       .default(sql`'{1,2,3,4,5,6,7,8,9,10,11,12}'`),
     rating: numeric("rating", { precision: 2, scale: 1 }),
     embedding: vector("embedding", { dimensions: 1024 }),
+    // Hash sha256 di titolo, descrizione e luogo all'ultimo embedding: se cambia, il cron embed-activities
+    // ricalcola il vettore. Leggibile come le altre colonne di activities: è l'impronta di contenuti pubblici.
+    embeddedHash: text("embedded_hash"),
     // Diete per cui l'attività va bene (vegetariana, vegana, senza glutine, senza lattosio): per
     // le attività di cibo e vino è un vincolo rigido per chi ha indicato una dieta.
     dietFriendly: text("diet_friendly").array().notNull().default(sql`'{}'`),
@@ -132,6 +135,10 @@ export const activities = pgTable(
     check(
       "activities_season_months_valid",
       sql`${t.seasonMonths} <@ '{1,2,3,4,5,6,7,8,9,10,11,12}'::smallint[]`,
+    ),
+    check(
+      "activities_embedded_hash_format",
+      sql`${t.embeddedHash} is null or ${t.embeddedHash} ~ '^[0-9a-f]{64}$'`,
     ),
   ],
 );
@@ -176,6 +183,10 @@ export const activityOffers = pgTable(
     freeCancellation: boolean("free_cancellation"),
     priceUpdatedAt: timestamp("price_updated_at", { withTimezone: true }),
     isActive: boolean("is_active").notNull().default(true),
+    // Import del catalogo: offerte non viste nell'ultimo import riuscito del partner (a 3 si spengono).
+    // Interne: nessun grant di lettura ad anon e authenticated (vedi offers_url_private).
+    missedImports: smallint("missed_imports").notNull().default(0),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -187,6 +198,7 @@ export const activityOffers = pgTable(
     check("activity_offers_currency_format", sql`${t.currency} ~ '^[A-Z]{3}$'`),
     check("activity_offers_rating_range", sql`${t.rating} between 0 and 5`),
     check("activity_offers_reviews_count_non_negative", sql`${t.reviewsCount} >= 0`),
+    check("activity_offers_missed_imports_range", sql`${t.missedImports} between 0 and 10`),
   ],
 );
 

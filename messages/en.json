@@ -803,7 +803,49 @@
     "partnerHostsHint": "Exact hosts, separated by commas: the link goes only there.",
     "partnerSubid": "Subid parameter",
     "partnerSaved": "Partner saved.",
-    "partnerEnvNone": "None"
+    "partnerEnvNone": "None",
+    "importPartner": "Partner import",
+    "importPartnerTitle": "Partner import",
+    "importPartnerIntro": "Partner offers enter the catalogue every night. Here you can see whether the API key is set and the outcome of the latest runs, and start an import now.",
+    "importPartnerName": {
+      "viator": "Viator",
+      "getyourguide": "GetYourGuide"
+    },
+    "importPartnerConfigured": "API key set: the import runs every night.",
+    "importPartnerKeyMissing": "API key missing from the environment",
+    "importPartnerNoRuns": "No runs recorded.",
+    "importPartnerRuns": "Latest runs",
+    "importPartnerColStarted": "Started on",
+    "importPartnerColStatus": "Outcome",
+    "importPartnerColCreated": "New",
+    "importPartnerColUpdated": "Updated",
+    "importPartnerColDeactivated": "Deactivated",
+    "importPartnerColSkipped": "Skipped",
+    "importPartnerStatusOk": "Completed",
+    "importPartnerStatusFailed": "Failed",
+    "importPartnerAlert": "The last two runs failed. Check the API key and start an import by hand.",
+    "importNowRun": "Run now",
+    "importNowPending": "Importing...",
+    "importNowDone": "Import completed: {created} new, {updated} updated, {deactivated} deactivated, {skipped} skipped. New activities: {newActivities}, tags proposed: {tagsProposed}.",
+    "importNowErrors": {
+      "unconfigured": "Partner not configured: the API key is missing.",
+      "invalid_input": "Invalid partner.",
+      "failed": "Import failed. Try again later."
+    },
+    "importNowErrorCode": "(code: {code})",
+    "importAlertTitle": "Partner import needs a check",
+    "importAlertBody": "Two runs in a row failed for: {partners}.",
+    "importAlertLink": "Open Partner import",
+    "proposedTagsTitle": "Proposed tags",
+    "proposedTagsLabel": "Tags proposed by the import",
+    "confirmTags": "Confirm tags",
+    "confirmTagsPending": "Confirming...",
+    "confirmTagsDone": "Tags confirmed: {tags}.",
+    "tagsErrors": {
+      "no_proposals": "No proposals to confirm.",
+      "invalid_input": "Invalid activity.",
+      "failed": "Operation failed. Try again."
+    }
   },
   "Og": {
     "activity": "Activity · {province}",
