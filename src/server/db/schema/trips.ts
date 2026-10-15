@@ -12,6 +12,7 @@ import {
   timestamp,
   uuid,
   unique,
+  uniqueIndex,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { activities, areas, places } from "./catalog";
@@ -52,6 +53,8 @@ export const itineraries = pgTable(
     // Titolo editoriale di ogni giorno ("Noto e costa"), per indice. Un giorno senza titolo
     // mostra i luoghi delle sue tappe. Chi copia un itinerario pronto eredita i titoli.
     dayTitles: text("day_titles").array().notNull().default(sql`'{}'`),
+    // Nota personale di ogni giorno, per indice (come i titoli). Massimo 500 caratteri ciascuna.
+    dayNotes: text("day_notes").array().notNull().default(sql`'{}'`),
     // Campi editoriali degli itinerari pronti (1.3). Il sottotitolo è una riga sotto il titolo,
     // la descrizione il testo di presentazione.
     subtitle: text("subtitle"),
@@ -77,6 +80,8 @@ export const itineraries = pgTable(
     check("itineraries_title_length", sql`char_length(btrim(${t.title})) between 1 and 200`),
     check("itineraries_template_iff_editorial", sql`(${t.ownerId} is null) = ${t.isTemplate}`),
     check("itineraries_day_titles_within_days", sql`cardinality(${t.dayTitles}) <= ${t.days}`),
+    check("itineraries_day_notes_within_days", sql`cardinality(${t.dayNotes}) <= ${t.days}`),
+    check("itineraries_day_notes_length", sql`public.text_array_max_length(${t.dayNotes}) <= 500`),
     check("itineraries_travelers_range", sql`${t.travelers} between 1 and 30`),
     check("itineraries_subtitle_length", sql`char_length(${t.subtitle}) <= 140`),
     check("itineraries_description_length", sql`char_length(${t.description}) <= 2000`),
@@ -86,6 +91,30 @@ export const itineraries = pgTable(
     ),
     check("itineraries_day_intros_within_days", sql`cardinality(${t.dayIntros}) <= ${t.days}`),
     check("itineraries_day_intros_length", sql`public.text_array_max_length(${t.dayIntros}) <= 280`),
+  ],
+);
+
+// Link pubblico in sola lettura (1.4). Il token in chiaro esiste solo al momento della creazione:
+// qui c'è l'hash SHA-256 (hex). Un solo link attivo per itinerario (indice parziale).
+// Il link revocato resta in tabella con revoked_at valorizzato.
+export const itineraryShareLinks = pgTable(
+  "itinerary_share_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    itineraryId: uuid("itinerary_id")
+      .notNull()
+      .references(() => itineraries.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    createdBy: uuid("created_by").references(() => profiles.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("itinerary_share_links_one_active_idx")
+      .on(t.itineraryId)
+      .where(sql`${t.revokedAt} is null`),
+    index("itinerary_share_links_created_by_idx").on(t.createdBy),
+    check("itinerary_share_links_token_hash_format", sql`${t.tokenHash} ~ '^[0-9a-f]{64}$'`),
   ],
 );
 
@@ -154,8 +183,6 @@ export const itineraryNights = pgTable(
       .notNull()
       .references(() => itineraries.id, { onDelete: "cascade" }),
     nightIndex: smallint("night_index").notNull(),
-    // Cancellando l'area o il luogo, la notte che lo indicava sparisce (il check area_or_place
-    // non ammette una notte senza né area né luogo, quindi "set null" farebbe fallire la cancellazione).
     areaId: uuid("area_id").references(() => areas.id, { onDelete: "cascade" }),
     placeId: uuid("place_id").references(() => places.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

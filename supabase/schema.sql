@@ -908,6 +908,58 @@ $$;
 ALTER FUNCTION "public"."season_for"("ts" timestamp with time zone) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."shared_itinerary"("p_token" "text") RETURNS "jsonb"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select jsonb_build_object(
+    'title', i.title,
+    'days', i.days,
+    'start_date', i.start_date,
+    'travelers', i.travelers,
+    'day_titles', to_jsonb(i.day_titles),
+    'day_notes', to_jsonb(i.day_notes),
+    'stops', coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'day_index', s.day_index,
+          'position', s.position,
+          'time_slot', s.time_slot,
+          'notes', s.notes,
+          'title', s.title,
+          'activity_slug', s.activity_slug,
+          'place_name', s.place_name
+        )
+        order by s.day_index, s.position
+      )
+      from (
+        select
+          ii.day_index,
+          ii.position,
+          ii.time_slot,
+          ii.notes,
+          coalesce(a.title, p.name, ii.custom_title) as title,
+          a.slug as activity_slug,
+          p.name as place_name
+        from public.itinerary_items ii
+        left join public.activities a on a.id = ii.activity_id
+        left join public.places p on p.id = coalesce(ii.place_id, a.place_id)
+        where ii.itinerary_id = i.id
+          and (ii.activity_id is null or a.is_active)
+          and (coalesce(ii.place_id, a.place_id) is null or p.is_active)
+      ) s
+    ), '[]'::jsonb)
+  )
+  from public.itinerary_share_links l
+  join public.itineraries i on i.id = l.itinerary_id
+  where l.token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex')
+    and l.revoked_at is null;
+$$;
+
+
+ALTER FUNCTION "public"."shared_itinerary"("p_token" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."text_array_max_length"("p_values" "text"[]) RETURNS integer
     LANGUAGE "sql" IMMUTABLE PARALLEL SAFE
     SET "search_path" TO 'public', 'pg_temp'
@@ -1321,8 +1373,11 @@ CREATE TABLE IF NOT EXISTS "public"."itineraries" (
     "suitable_for" "public"."travel_party"[] DEFAULT '{}'::"public"."travel_party"[] NOT NULL,
     "pace" "public"."trip_pace",
     "day_intros" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "day_notes" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
     CONSTRAINT "itineraries_day_intros_length" CHECK (("public"."text_array_max_length"("day_intros") <= 280)),
     CONSTRAINT "itineraries_day_intros_within_days" CHECK (("cardinality"("day_intros") <= "days")),
+    CONSTRAINT "itineraries_day_notes_length" CHECK (("public"."text_array_max_length"("day_notes") <= 500)),
+    CONSTRAINT "itineraries_day_notes_within_days" CHECK (("cardinality"("day_notes") <= "days")),
     CONSTRAINT "itineraries_day_titles_within_days" CHECK (("cardinality"("day_titles") <= "days")),
     CONSTRAINT "itineraries_days_range" CHECK ((("days" >= 1) AND ("days" <= 60))),
     CONSTRAINT "itineraries_description_length" CHECK (("char_length"("description") <= 2000)),
@@ -1403,6 +1458,20 @@ CREATE TABLE IF NOT EXISTS "public"."itinerary_nights" (
 
 
 ALTER TABLE "public"."itinerary_nights" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."itinerary_share_links" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "itinerary_id" "uuid" NOT NULL,
+    "token_hash" "text" NOT NULL,
+    "created_by" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "revoked_at" timestamp with time zone,
+    CONSTRAINT "itinerary_share_links_token_hash_format" CHECK (("token_hash" ~ '^[0-9a-f]{64}$'::"text"))
+);
+
+
+ALTER TABLE "public"."itinerary_share_links" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."points_ledger" (
@@ -1995,6 +2064,16 @@ ALTER TABLE ONLY "public"."itinerary_nights"
 
 
 
+ALTER TABLE ONLY "public"."itinerary_share_links"
+    ADD CONSTRAINT "itinerary_share_links_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."itinerary_share_links"
+    ADD CONSTRAINT "itinerary_share_links_token_hash_unique" UNIQUE ("token_hash");
+
+
+
 ALTER TABLE ONLY "public"."local_tip_authors"
     ADD CONSTRAINT "local_tip_authors_pkey" PRIMARY KEY ("id");
 
@@ -2204,6 +2283,14 @@ CREATE INDEX "itinerary_nights_area_id_idx" ON "public"."itinerary_nights" USING
 
 
 CREATE INDEX "itinerary_nights_place_id_idx" ON "public"."itinerary_nights" USING "btree" ("place_id");
+
+
+
+CREATE INDEX "itinerary_share_links_created_by_idx" ON "public"."itinerary_share_links" USING "btree" ("created_by");
+
+
+
+CREATE UNIQUE INDEX "itinerary_share_links_one_active_idx" ON "public"."itinerary_share_links" USING "btree" ("itinerary_id") WHERE ("revoked_at" IS NULL);
 
 
 
@@ -2523,6 +2610,16 @@ ALTER TABLE ONLY "public"."itinerary_nights"
 
 ALTER TABLE ONLY "public"."itinerary_nights"
     ADD CONSTRAINT "itinerary_nights_place_id_places_id_fk" FOREIGN KEY ("place_id") REFERENCES "public"."places"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_share_links"
+    ADD CONSTRAINT "itinerary_share_links_created_by_profiles_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."itinerary_share_links"
+    ADD CONSTRAINT "itinerary_share_links_itinerary_id_itineraries_id_fk" FOREIGN KEY ("itinerary_id") REFERENCES "public"."itineraries"("id") ON DELETE CASCADE;
 
 
 
@@ -3024,6 +3121,21 @@ CREATE POLICY "itinerary_nights_update" ON "public"."itinerary_nights" FOR UPDAT
 
 
 
+ALTER TABLE "public"."itinerary_share_links" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "itinerary_share_links_insert" ON "public"."itinerary_share_links" FOR INSERT TO "authenticated" WITH CHECK ((("created_by" = ( SELECT "auth"."uid"() AS "uid")) AND "public"."can_edit_itinerary"("itinerary_id")));
+
+
+
+CREATE POLICY "itinerary_share_links_revoke" ON "public"."itinerary_share_links" FOR UPDATE TO "authenticated" USING ((("revoked_at" IS NULL) AND "public"."can_edit_itinerary"("itinerary_id"))) WITH CHECK ((("revoked_at" IS NOT NULL) AND "public"."can_edit_itinerary"("itinerary_id")));
+
+
+
+CREATE POLICY "itinerary_share_links_select" ON "public"."itinerary_share_links" FOR SELECT TO "authenticated" USING ("public"."can_edit_itinerary"("itinerary_id"));
+
+
+
 ALTER TABLE "public"."local_tip_authors" ENABLE ROW LEVEL SECURITY;
 
 
@@ -3458,6 +3570,13 @@ GRANT ALL ON FUNCTION "public"."season_for"("ts" timestamp with time zone) TO "s
 
 
 
+REVOKE ALL ON FUNCTION "public"."shared_itinerary"("p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."shared_itinerary"("p_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."shared_itinerary"("p_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."shared_itinerary"("p_token" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."text_array_max_length"("p_values" "text"[]) TO "anon";
 GRANT ALL ON FUNCTION "public"."text_array_max_length"("p_values" "text"[]) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."text_array_max_length"("p_values" "text"[]) TO "service_role";
@@ -3832,6 +3951,10 @@ GRANT INSERT("day_intros"),UPDATE("day_intros") ON TABLE "public"."itineraries" 
 
 
 
+GRANT INSERT("day_notes"),UPDATE("day_notes") ON TABLE "public"."itineraries" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."itinerary_items" TO "service_role";
 GRANT SELECT ON TABLE "public"."itinerary_items" TO "anon";
 GRANT SELECT,DELETE ON TABLE "public"."itinerary_items" TO "authenticated";
@@ -3923,6 +4046,34 @@ GRANT INSERT("area_id"),UPDATE("area_id") ON TABLE "public"."itinerary_nights" T
 
 
 GRANT INSERT("place_id"),UPDATE("place_id") ON TABLE "public"."itinerary_nights" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."itinerary_share_links" TO "service_role";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."itinerary_share_links" TO "authenticated";
+
+
+
+GRANT SELECT("itinerary_id"),INSERT("itinerary_id") ON TABLE "public"."itinerary_share_links" TO "authenticated";
+
+
+
+GRANT INSERT("token_hash") ON TABLE "public"."itinerary_share_links" TO "authenticated";
+
+
+
+GRANT INSERT("created_by") ON TABLE "public"."itinerary_share_links" TO "authenticated";
+
+
+
+GRANT SELECT("created_at") ON TABLE "public"."itinerary_share_links" TO "authenticated";
+
+
+
+GRANT SELECT("revoked_at"),UPDATE("revoked_at") ON TABLE "public"."itinerary_share_links" TO "authenticated";
 
 
 
