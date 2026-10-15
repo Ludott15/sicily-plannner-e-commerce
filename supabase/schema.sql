@@ -1376,6 +1376,19 @@ CREATE TABLE IF NOT EXISTS "public"."affiliate_partners" (
 ALTER TABLE "public"."affiliate_partners" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."area_drive_times" (
+    "area_a_id" "uuid" NOT NULL,
+    "area_b_id" "uuid" NOT NULL,
+    "minutes" smallint NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "area_drive_times_minutes" CHECK ((("minutes" >= 1) AND ("minutes" <= 600))),
+    CONSTRAINT "area_drive_times_order" CHECK (("area_a_id" < "area_b_id"))
+);
+
+
+ALTER TABLE "public"."area_drive_times" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."areas" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "slug" "text" NOT NULL,
@@ -2231,6 +2244,11 @@ ALTER TABLE ONLY "public"."affiliate_partners"
 
 
 
+ALTER TABLE ONLY "public"."area_drive_times"
+    ADD CONSTRAINT "area_drive_times_area_a_id_area_b_id_pk" PRIMARY KEY ("area_a_id", "area_b_id");
+
+
+
 ALTER TABLE ONLY "public"."areas"
     ADD CONSTRAINT "areas_pkey" PRIMARY KEY ("id");
 
@@ -2768,6 +2786,16 @@ ALTER TABLE ONLY "public"."affiliate_clicks"
 
 
 
+ALTER TABLE ONLY "public"."area_drive_times"
+    ADD CONSTRAINT "area_drive_times_area_a_id_areas_id_fk" FOREIGN KEY ("area_a_id") REFERENCES "public"."areas"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."area_drive_times"
+    ADD CONSTRAINT "area_drive_times_area_b_id_areas_id_fk" FOREIGN KEY ("area_b_id") REFERENCES "public"."areas"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."areas"
     ADD CONSTRAINT "areas_cover_media_id_media_id_fk" FOREIGN KEY ("cover_media_id") REFERENCES "public"."media"("id") ON DELETE SET NULL;
 
@@ -3194,6 +3222,13 @@ CREATE POLICY "affiliate_partners_select_authenticated" ON "public"."affiliate_p
 
 
 CREATE POLICY "affiliate_partners_update_admin" ON "public"."affiliate_partners" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."area_drive_times" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "area_drive_times_select_all" ON "public"."area_drive_times" FOR SELECT TO "authenticated", "anon" USING (true);
 
 
 
@@ -4114,6 +4149,12 @@ GRANT SELECT("is_active"),UPDATE("is_active") ON TABLE "public"."affiliate_partn
 
 
 GRANT UPDATE("updated_at") ON TABLE "public"."affiliate_partners" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."area_drive_times" TO "service_role";
+GRANT SELECT ON TABLE "public"."area_drive_times" TO "anon";
+GRANT SELECT ON TABLE "public"."area_drive_times" TO "authenticated";
 
 
 

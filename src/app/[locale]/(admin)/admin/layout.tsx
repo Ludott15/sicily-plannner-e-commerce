@@ -11,6 +11,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   await requireAdmin();
   const t = await getTranslations("Admin");
   const tAffiliates = await getTranslations("AdminAffiliates");
+  const tDriveTimes = await getTranslations("AdminDriveTimes");
   // Banner sopra ogni pagina dell'area admin (anche la home, che reindirizza all'elenco attività):
   // avviso se un partner configurato ha due esecuzioni di fila fallite.
   const alertPartners = await adminImportAlertPartners();
@@ -45,6 +46,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </Link>
         <Link href="/admin/affiliati" className="text-body font-semibold text-lava">
           {tAffiliates("nav")}
+        </Link>
+        <Link href="/admin/tempi-di-guida" className="text-body font-semibold text-lava">
+          {tDriveTimes("nav")}
         </Link>
       </nav>
       {alertPartners.length > 0 && (

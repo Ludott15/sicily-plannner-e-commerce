@@ -60,3 +60,8 @@ export const AIRPORT_BONUS = { max: 0.02, rangeKm: 120, nearKm: 70 } as const;
 
 // Motivi d'area: voto medio delle tappe da cui vale la pena dirlo.
 export const AREA_TOP_RATING = 4.6;
+
+// Viaggi su due aree adiacenti (M4 parte 4). maxDriveMin: guida massima tra le due aree per
+// comporle. maxPairsInProposals: coppie al massimo tra le proposte. minTransferDayMin: minuti
+// minimi per le tappe nel giorno di trasferimento (il resto va alla guida).
+export const TWO_AREAS = { maxDriveMin: 150, maxPairsInProposals: 1, minTransferDayMin: 60 } as const;

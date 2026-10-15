@@ -11,3 +11,4 @@ export * from "./ai";
 export * from "./audit";
 export * from "./local-tips";
 export * from "./media";
+export * from "./drive-times";
