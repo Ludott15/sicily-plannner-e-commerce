@@ -85,10 +85,7 @@ values (tests.gid(), tests.token_hash('tok-exhausted'), tests.uid('owner'), 1, 1
 ----------------------------------------------------------------------------
 select tests.authenticate_as('member');
 select is(public.accept_invite('tok-valid'), tests.gid(), 'accept_invite: token valido, il membro entra');
-select throws_ok(
-  $$select public.accept_invite('tok-valid')$$,
-  'P0001', 'already_member', 'accept_invite: utente già membro'
-);
+select is(public.accept_invite('tok-valid'), tests.gid(), 'accept_invite: utente già membro, si torna al gruppo');
 
 reset role;
 select tests.authenticate_as('ex');

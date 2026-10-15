@@ -222,6 +222,7 @@ CREATE OR REPLACE FUNCTION "public"."accept_invite"("p_token" "text") RETURNS "u
 declare
   v_uid uuid := auth.uid();
   v_invite public.group_invites;
+  v_members integer;
 begin
   if v_uid is null then
     raise exception 'not_authenticated' using errcode = '42501';
@@ -238,6 +239,13 @@ begin
   if not found then
     raise exception 'invite_not_found' using errcode = 'P0001';
   end if;
+  -- Già membro: si torna al gruppo anche con un invito scaduto, revocato o esaurito (nessun uso contato).
+  if exists (
+    select 1 from public.group_members
+    where group_id = v_invite.group_id and user_id = v_uid
+  ) then
+    return v_invite.group_id;
+  end if;
   if v_invite.status = 'revoked' then
     raise exception 'invite_revoked' using errcode = 'P0001';
   end if;
@@ -247,15 +255,17 @@ begin
   if v_invite.uses >= v_invite.max_uses then
     raise exception 'invite_exhausted' using errcode = 'P0001';
   end if;
-  if exists (
-    select 1 from public.group_members
-    where group_id = v_invite.group_id and user_id = v_uid
-  ) then
-    raise exception 'already_member' using errcode = 'P0001';
+
+  perform 1 from public.groups where id = v_invite.group_id for update;
+  select count(*)::integer into v_members
+  from public.group_members
+  where group_id = v_invite.group_id;
+  if v_members >= 30 then
+    raise exception 'group_full' using errcode = 'P0001';
   end if;
 
-  insert into public.group_members (group_id, user_id, role)
-  values (v_invite.group_id, v_uid, 'member');
+  insert into public.group_members (group_id, user_id, role, invited_by)
+  values (v_invite.group_id, v_uid, 'member', v_invite.invited_by);
 
   update public.group_invites set uses = uses + 1 where id = v_invite.id;
 
@@ -659,6 +669,37 @@ $_$;
 ALTER FUNCTION "public"."hit_rate_limit"("p_bucket" "text", "p_limit" integer, "p_window_seconds" integer) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."invite_link_status"("p_token" "text") RETURNS "text"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_invite public.group_invites;
+begin
+  select * into v_invite
+  from public.group_invites
+  where token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex');
+
+  if not found then
+    return 'not_found';
+  end if;
+  if v_invite.status = 'revoked' then
+    return 'revoked';
+  end if;
+  if v_invite.status = 'expired' or v_invite.expires_at <= now() then
+    return 'expired';
+  end if;
+  if v_invite.uses >= v_invite.max_uses then
+    return 'exhausted';
+  end if;
+  return 'active';
+end;
+$$;
+
+
+ALTER FUNCTION "public"."invite_link_status"("p_token" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."invite_preview"("p_token" "text") RETURNS TABLE("group_id" "uuid", "group_name" "text", "owner_display_name" "text", "owner_avatar_url" "text", "itinerary_id" "uuid", "itinerary_title" "text", "itinerary_days" smallint, "expires_at" timestamp with time zone)
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -676,6 +717,41 @@ $$;
 
 
 ALTER FUNCTION "public"."invite_preview"("p_token" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."invite_preview_stops"("p_token" "text") RETURNS TABLE("place_name" "text")
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select picked.name
+  from (
+    select distinct on (stops.name)
+      stops.name as name,
+      stops.day_index as day_index,
+      stops.position as position
+    from (
+      select coalesce(a.title, ii.custom_title, pl.name) as name,
+        ii.day_index as day_index,
+        ii.position as position
+      from public.group_invites gi
+      join public.groups g on g.id = gi.group_id
+      join public.itinerary_items ii on ii.itinerary_id = g.itinerary_id
+      left join public.activities a on a.id = ii.activity_id
+      left join public.places pl on pl.id = coalesce(ii.place_id, a.place_id)
+      where gi.token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex')
+        and gi.status = 'active'
+        and gi.expires_at > now()
+        and gi.uses < gi.max_uses
+    ) as stops
+    where stops.name is not null
+    order by stops.name, stops.day_index, stops.position
+  ) as picked
+  order by picked.day_index, picked.position
+  limit 6;
+$$;
+
+
+ALTER FUNCTION "public"."invite_preview_stops"("p_token" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."is_admin"() RETURNS boolean
@@ -733,6 +809,42 @@ $$;
 
 
 ALTER FUNCTION "public"."itinerary_bookings_stamp"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."leave_group"("p_group_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_owner uuid;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  if coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false) then
+    raise exception 'guest_not_allowed' using errcode = 'P0001';
+  end if;
+
+  if not exists (
+    select 1 from public.group_members
+    where group_id = p_group_id and user_id = v_uid
+  ) then
+    raise exception 'not_group_member' using errcode = 'P0001';
+  end if;
+
+  select owner_id into v_owner from public.groups where id = p_group_id;
+  if v_owner = v_uid then
+    raise exception 'cannot_leave_as_owner' using errcode = 'P0001';
+  end if;
+
+  delete from public.group_members
+  where group_id = p_group_id and user_id = v_uid;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."leave_group"("p_group_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."local_tip_authors_person_relation"() RETURNS "trigger"
@@ -1061,6 +1173,45 @@ $$;
 
 
 ALTER FUNCTION "public"."refresh_leaderboard"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."remove_group_member"("p_group_id" "uuid", "p_user_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_owner uuid;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  if coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false) then
+    raise exception 'guest_not_allowed' using errcode = 'P0001';
+  end if;
+
+  select owner_id into v_owner from public.groups where id = p_group_id for update;
+  if v_owner is distinct from v_uid then
+    raise exception 'not_group_owner' using errcode = 'P0001';
+  end if;
+  if p_user_id = v_owner then
+    raise exception 'cannot_remove_owner' using errcode = 'P0001';
+  end if;
+
+  if not exists (
+    select 1 from public.group_members
+    where group_id = p_group_id and user_id = p_user_id
+  ) then
+    raise exception 'not_group_member' using errcode = 'P0001';
+  end if;
+
+  delete from public.group_members
+  where group_id = p_group_id and user_id = p_user_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."remove_group_member"("p_group_id" "uuid", "p_user_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."season_for"("ts" timestamp with time zone) RETURNS "text"
@@ -1489,7 +1640,8 @@ CREATE TABLE IF NOT EXISTS "public"."group_members" (
     "user_id" "uuid" NOT NULL,
     "role" "public"."group_role" DEFAULT 'member'::"public"."group_role" NOT NULL,
     "joined_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "invited_by" "uuid"
 );
 
 
@@ -2847,6 +2999,11 @@ ALTER TABLE ONLY "public"."group_members"
 
 
 ALTER TABLE ONLY "public"."group_members"
+    ADD CONSTRAINT "group_members_invited_by_profiles_id_fk" FOREIGN KEY ("invited_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."group_members"
     ADD CONSTRAINT "group_members_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
@@ -3741,7 +3898,6 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 REVOKE ALL ON FUNCTION "public"."accept_invite"("p_token" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."accept_invite"("p_token" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."accept_invite"("p_token" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."accept_invite"("p_token" "text") TO "service_role";
 
@@ -3844,10 +4000,24 @@ GRANT ALL ON FUNCTION "public"."hit_rate_limit"("p_bucket" "text", "p_limit" int
 
 
 
+REVOKE ALL ON FUNCTION "public"."invite_link_status"("p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."invite_link_status"("p_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."invite_link_status"("p_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."invite_link_status"("p_token" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."invite_preview"("p_token" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."invite_preview"("p_token" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."invite_preview"("p_token" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."invite_preview"("p_token" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."invite_preview_stops"("p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."invite_preview_stops"("p_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."invite_preview_stops"("p_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."invite_preview_stops"("p_token" "text") TO "service_role";
 
 
 
@@ -3875,6 +4045,12 @@ GRANT ALL ON FUNCTION "public"."is_group_owner"("gid" "uuid") TO "service_role";
 GRANT ALL ON FUNCTION "public"."itinerary_bookings_stamp"() TO "anon";
 GRANT ALL ON FUNCTION "public"."itinerary_bookings_stamp"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."itinerary_bookings_stamp"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."leave_group"("p_group_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."leave_group"("p_group_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."leave_group"("p_group_id" "uuid") TO "service_role";
 
 
 
@@ -3946,6 +4122,12 @@ GRANT ALL ON FUNCTION "public"."record_vertical_click"("p_partner" "public"."par
 
 REVOKE ALL ON FUNCTION "public"."refresh_leaderboard"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."refresh_leaderboard"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."remove_group_member"("p_group_id" "uuid", "p_user_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."remove_group_member"("p_group_id" "uuid", "p_user_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."remove_group_member"("p_group_id" "uuid", "p_user_id" "uuid") TO "service_role";
 
 
 
