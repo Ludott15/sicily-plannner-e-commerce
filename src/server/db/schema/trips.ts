@@ -1,9 +1,11 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   check,
   date,
   index,
+  jsonb,
   pgTable,
   primaryKey,
   smallint,
@@ -270,12 +272,16 @@ export const groupInvites = pgTable(
   ],
 );
 
+// Il voto è sulla tappa; itinerary_id (riempito da un trigger dalla tappa) serve al filtro realtime.
 export const itemVotes = pgTable(
   "item_votes",
   {
     itineraryItemId: uuid("itinerary_item_id")
       .notNull()
       .references(() => itineraryItems.id, { onDelete: "cascade" }),
+    itineraryId: uuid("itinerary_id")
+      .notNull()
+      .references(() => itineraries.id, { onDelete: "cascade" }),
     userId: uuid("user_id")
       .notNull()
       .references(() => profiles.id, { onDelete: "cascade" }),
@@ -285,6 +291,63 @@ export const itemVotes = pgTable(
   (t) => [
     primaryKey({ columns: [t.itineraryItemId, t.userId] }),
     index("item_votes_user_id_idx").on(t.userId),
+    index("item_votes_itinerary_id_idx").on(t.itineraryId),
     check("item_votes_value_valid", sql`${t.value} in (-1, 1)`),
+  ],
+);
+
+// Registro delle modifiche di un viaggio di gruppo (passo 4.2). Solo dati strutturati nel payload:
+// titoli e giorni (1-based), nessuna frase. Immutabile: nessun update né delete (vedi custom SQL).
+export const itineraryChanges = pgTable(
+  "itinerary_changes",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    itineraryId: uuid("itinerary_id")
+      .notNull()
+      .references(() => itineraries.id, { onDelete: "cascade" }),
+    actorId: uuid("actor_id").references(() => profiles.id, { onDelete: "set null" }),
+    kind: text("kind").notNull(),
+    payload: jsonb("payload").$type<Record<string, string | number | null>>().notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("itinerary_changes_itinerary_id_idx").on(t.itineraryId, t.id),
+    // Il registro lo scrivono i membri (insert con RLS): payload piccolo, solo un oggetto di dati.
+    check(
+      "itinerary_changes_payload_small",
+      sql`jsonb_typeof(${t.payload}) = 'object' and pg_column_size(${t.payload}) <= 1024`,
+    ),
+    check(
+      "itinerary_changes_kind_valid",
+      sql`${t.kind} in ('stop_added','stop_removed','stop_moved','stop_replaced','day_added','day_removed','proposal_accepted')`,
+    ),
+  ],
+);
+
+// Proposta di aggiunta di un'attività da un membro non proprietario. Solo il proprietario del gruppo
+// la decide (decide_proposal): nessun update diretto dal client.
+export const itineraryProposals = pgTable(
+  "itinerary_proposals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    itineraryId: uuid("itinerary_id")
+      .notNull()
+      .references(() => itineraries.id, { onDelete: "cascade" }),
+    proposedBy: uuid("proposed_by").references(() => profiles.id, { onDelete: "set null" }),
+    activityId: uuid("activity_id")
+      .notNull()
+      .references(() => activities.id, { onDelete: "restrict" }),
+    dayIndex: smallint("day_index").notNull(),
+    status: text("status").notNull().default("pending"),
+    decidedBy: uuid("decided_by").references(() => profiles.id, { onDelete: "set null" }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("itinerary_proposals_itinerary_status_idx").on(t.itineraryId, t.status),
+    index("itinerary_proposals_proposed_by_idx").on(t.proposedBy),
+    index("itinerary_proposals_activity_id_idx").on(t.activityId),
+    check("itinerary_proposals_day_index_non_negative", sql`${t.dayIndex} >= 0`),
+    check("itinerary_proposals_status_valid", sql`${t.status} in ('pending','accepted','rejected')`),
   ],
 );

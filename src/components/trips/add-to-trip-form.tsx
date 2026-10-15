@@ -3,12 +3,26 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/design";
+import { Link } from "@/lib/i18n/navigation";
 import { suggestDay } from "@/lib/trips";
-import { addToTrip, type TripActionError } from "@/server/trips/actions";
+import { proposeStop, type ProposalFormState } from "@/server/groups/proposals-actions";
+import { addToTrip } from "@/server/trips/actions";
 
 // "Aggiungi al viaggio" (M5): scelta del viaggio e del giorno. Il giorno proposto è quello
 // compatibile per area (suggestDay); se il viaggio è in un'altra zona, lo diciamo prima.
-export type PickerTrip = { id: string; title: string; days: number; dayAreas: string[][]; dayStops: number[] };
+// Viaggio di gruppo (4.2): se chi aggiunge non è il proprietario del gruppo (isGroupOwner false),
+// la scelta diventa una proposta al gruppo (proposeStop), che il proprietario accetta o rifiuta.
+// Senza gruppo, o se è il proprietario, la tappa si aggiunge subito (addToTrip).
+export type PickerTrip = {
+  id: string;
+  title: string;
+  days: number;
+  dayAreas: string[][];
+  dayStops: number[];
+  isGroupOwner?: boolean;
+};
+
+const IDLE: ProposalFormState = { status: "idle" };
 
 export function AddToTripForm({
   locale,
@@ -24,21 +38,31 @@ export function AddToTripForm({
   trips: PickerTrip[];
 }) {
   const t = useTranslations("Trips");
+  const tg = useTranslations("Groups");
   const [tripId, setTripId] = useState(trips[0]!.id);
   const trip = trips.find((x) => x.id === tripId)!;
   const suggestion = suggestDay(trip.dayAreas, trip.dayStops, activityArea);
   const [dayByTrip, setDayByTrip] = useState<Record<string, number>>({});
   const day = dayByTrip[tripId] ?? suggestion.day;
-  const [error, setError] = useState<TripActionError["code"] | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
   const [pending, startTransition] = useTransition();
   const tripAreas = [...new Set(trip.dayAreas.flat())].map((a) => areaNames[a] ?? a);
+  const proposing = trip.isGroupOwner === false;
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
-    setError(null);
+    setMessage(null);
+    setSent(false);
     startTransition(async () => {
+      if (proposing) {
+        const result: ProposalFormState = await proposeStop(IDLE, { itineraryId: tripId, activityId, dayIndex: day });
+        if (result.status === "error") setMessage(tg(`proposalErrors.${result.code}`));
+        if (result.status === "ok") setSent(true);
+        return;
+      }
       const result = await addToTrip({ locale, itineraryId: tripId, activityId, dayIndex: day });
-      if (result?.status === "error") setError(result.code);
+      if (result?.status === "error") setMessage(t(`errors.${result.code}`));
     });
   }
 
@@ -78,14 +102,27 @@ export function AddToTripForm({
           {t("farTrip", { areas: tripAreas.join(", "), area: activityArea ? (areaNames[activityArea] ?? activityArea) : "" })}
         </p>
       )}
-      {error && (
+      {proposing && (
+        <p role="note" className="rounded-lg border border-card-edge bg-calce-raised p-4 text-body-s">
+          {tg("proposeNote")}
+        </p>
+      )}
+      {message && (
         <p role="alert" className="text-body-s text-danger">
-          {t(`errors.${error}`)}
+          {message}
+        </p>
+      )}
+      {sent && (
+        <p role="status" className="text-body-s">
+          {tg("proposalSent")}{" "}
+          <Link href={`/viaggi/${tripId}`} className="font-semibold underline underline-offset-4">
+            {tg("proposalOpenTrip")}
+          </Link>
         </p>
       )}
       <div>
         <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
-          {t("addHere")}
+          {proposing ? tg("proposeAction") : t("addHere")}
         </Button>
       </div>
     </form>

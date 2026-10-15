@@ -22,7 +22,9 @@
     "cookie": "Cookies",
     "terms": "Terms of sale",
     "preferences": "Preferences",
-    "photoCredits": "Photo credits"
+    "photoCredits": "Photo credits",
+    "notifications": "Notifications",
+    "notificationsCount": "Notifications, {count} unread"
   },
   "Home": {
     "title": "Sicily as locals know it, made for you.",
@@ -1516,6 +1518,49 @@
       "cannot_remove_owner": "Whoever created the group cannot be removed.",
       "rate_limited": "You have sent too many invites today. Try again tomorrow.",
       "email_unavailable": "Sending emails is not available right now. You can copy the link and send it yourself."
+    },
+    "someone": "Someone",
+    "someStop": "a stop",
+    "voteErrors": {
+      "invalid": "Check your vote and try again.",
+      "guest_not_allowed": "Voting needs an account. Create one with your email.",
+      "not_allowed": "You cannot vote on this trip.",
+      "failed": "We could not record your vote. Try again."
+    },
+    "alternativesLabel": "Nearby alternatives",
+    "alternativeMeta": "{place}, {km} km away",
+    "replaceAction": "Replace with {title}",
+    "proposalsHeading": "Proposals",
+    "proposalsEmpty": "No proposals waiting.",
+    "proposalMine": "Day {day}. Waiting for the group owner.",
+    "proposalMeta": "Day {day} · proposed by {name}",
+    "accept": "Accept",
+    "reject": "Reject",
+    "proposeAction": "Propose to the group",
+    "proposeNote": "This trip belongs to a group: your choice becomes a proposal that the group owner accepts or rejects.",
+    "proposalSent": "Proposal sent.",
+    "proposalOpenTrip": "Open the trip",
+    "proposalErrors": {
+      "invalid": "Check the details and try again.",
+      "failed": "We could not complete the action. Try again.",
+      "guest_not_allowed": "This action needs an account. Create one with your email.",
+      "not_group_owner": "Only the person who created the group can do this.",
+      "not_group_member": "You are no longer a member of this group.",
+      "proposal_not_pending": "This proposal has already been decided.",
+      "day_out_of_range": "The chosen day does not exist in this trip.",
+      "activity_not_available": "This activity is no longer available."
+    },
+    "changesHeading": "Recent changes",
+    "changesEmpty": "No changes yet.",
+    "changes": {
+      "stopAdded": "{name} added {title} on day {day}.",
+      "stopRemoved": "{name} removed {title}.",
+      "stopMoved": "{name} moved {title} to day {day}.",
+      "stopReplaced": "{name} replaced {before} with {after}.",
+      "dayAdded": "{name} added day {day}.",
+      "dayRemoved": "{name} removed day {day}.",
+      "proposalAccepted": "{name} accepted the proposal for {title}: it is on day {day}.",
+      "generic": "{name} changed the trip."
     }
   },
   "GroupInvite": {
@@ -1545,5 +1590,16 @@
     },
     "ogEyebrow": "You have been invited to: {days, plural, one {# day} other {# days}}",
     "ogEyebrowPlain": "You have been invited to a trip"
+  },
+  "Notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet. Replies to the proposals you make in groups show up here.",
+    "emptyAction": "Go to your trips",
+    "new": "New",
+    "untitledStop": "a stop",
+    "proposalAccepted": "Your proposal for {title} was accepted: it is on day {day}.",
+    "proposalRejected": "Your proposal for {title} was not accepted.",
+    "unknown": "You have a new notification.",
+    "openTrip": "Open the trip"
   }
 }
