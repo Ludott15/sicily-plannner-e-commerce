@@ -38,6 +38,7 @@ import { GroupStopVotes, type StopVoteCounts } from "@/components/groups/stop-vo
 import { useItineraryRealtime } from "@/components/groups/use-itinerary-realtime";
 import type { TripGroupState } from "@/server/groups/trip-group";
 import { ConfirmDialog } from "./confirm-dialog";
+import { CheckInButton } from "./check-in-button";
 import { DayDropZone, StopItem } from "./sortable-days";
 import { TripActions } from "./trip-actions";
 import { DayNoteForm } from "./trip-notes";
@@ -59,6 +60,8 @@ export type BuilderStop = {
   meta: string;
   timeSlot: TimeSlot | null;
   notes: string | null;
+  /** Check-in della tappa: null se non c'è un luogo o chi guarda è ospite (passo 5.1). */
+  checkIn: { checkedInToday: boolean } | null;
 };
 
 export type BuilderDay = { name: string; note: string; stops: BuilderStop[] };
@@ -323,6 +326,9 @@ export function TripBuilder({
                             onStep={(direction) => step(stop.id, direction)}
                             onMoveToDay={(target) => moveToDay(stop.id, target)}
                             onRemove={() => removeStopFromTrip(stop.id)}
+                            checkIn={
+                              stop.checkIn ? <CheckInButton itemId={stop.id} checkedInToday={stop.checkIn.checkedInToday} /> : undefined
+                            }
                             votes={
                               group ? (
                                 <GroupStopVotes

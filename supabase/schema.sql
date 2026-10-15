@@ -269,6 +269,13 @@ begin
 
   update public.group_invites set uses = uses + 1 where id = v_invite.id;
 
+  if v_invite.invited_by <> v_uid and exists (
+    select 1 from public.profiles p
+    where p.id = v_uid and p.onboarding_completed_at is not null
+  ) then
+    perform public.award_points(v_invite.invited_by, public.point_delta('invite_accepted'), 'invite_accepted', 'invite', v_uid);
+  end if;
+
   return v_invite.group_id;
 end;
 $$;
@@ -469,6 +476,43 @@ $$;
 
 
 ALTER FUNCTION "public"."check_place_has_active_activities"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."claim_onboarding_points"() RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_inviter uuid;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  if not exists (
+    select 1 from public.profiles p
+    where p.id = v_uid and p.onboarding_completed_at is not null
+  ) then
+    return;
+  end if;
+  if exists (select 1 from auth.users u where u.id = v_uid and u.is_anonymous) then
+    return;
+  end if;
+
+  perform public.award_points(v_uid, public.point_delta('profile_completed'), 'profile_completed', 'profile', v_uid);
+
+  for v_inviter in
+    select distinct gm.invited_by
+    from public.group_members gm
+    where gm.user_id = v_uid and gm.invited_by is not null and gm.invited_by <> v_uid
+  loop
+    perform public.award_points(v_inviter, public.point_delta('invite_accepted'), 'invite_accepted', 'invite', v_uid);
+  end loop;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."claim_onboarding_points"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
@@ -1318,6 +1362,25 @@ $$;
 ALTER FUNCTION "public"."media_touch_updated_at"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."point_delta"("p_reason" "public"."point_reason") RETURNS integer
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_delta integer;
+begin
+  select pr.delta into v_delta from public.point_rules pr where pr.reason = p_reason;
+  if v_delta is null then
+    raise exception 'point_rule_missing' using errcode = 'P0001';
+  end if;
+  return v_delta;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."point_delta"("p_reason" "public"."point_reason") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."prevent_mutation"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'pg_temp'
@@ -1404,6 +1467,115 @@ $_$;
 
 
 ALTER FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."record_check_in"("p_itinerary_item_id" "uuid", "p_lat" double precision, "p_lng" double precision) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_today date := (now() at time zone 'Europe/Rome')::date;
+  v_itinerary_id uuid;
+  v_place_id uuid;
+  v_place_lat double precision;
+  v_place_lng double precision;
+  v_distance double precision;
+  v_count integer;
+  v_check_in_id uuid;
+  v_delta integer;
+  v_places integer;
+  v_completed boolean := false;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  if coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false) then
+    raise exception 'guest_not_allowed' using errcode = 'P0001';
+  end if;
+  if p_lat is null or p_lng is null
+    or p_lat not between -90 and 90
+    or p_lng not between -180 and 180 then
+    raise exception 'invalid_position' using errcode = 'P0001';
+  end if;
+
+  select ii.itinerary_id, coalesce(ii.place_id, a.place_id)
+    into v_itinerary_id, v_place_id
+  from public.itinerary_items ii
+  join public.itineraries i on i.id = ii.itinerary_id
+  left join public.activities a on a.id = ii.activity_id
+  where ii.id = p_itinerary_item_id
+    and not i.is_template;
+
+  if not found or not public.can_edit_itinerary(v_itinerary_id) then
+    raise exception 'not_allowed' using errcode = 'P0001';
+  end if;
+  if v_place_id is null then
+    raise exception 'no_place' using errcode = 'P0001';
+  end if;
+
+  select p.lat, p.lng into v_place_lat, v_place_lng
+  from public.places p
+  where p.id = v_place_id;
+
+  -- Distanza sulla sfera (haversine), raggio terrestre 6371 km: soglia 300 m.
+  v_distance := 2 * 6371000 * asin(sqrt(least(1,
+    power(sin(radians(p_lat - v_place_lat) / 2), 2)
+    + cos(radians(p_lat)) * cos(radians(v_place_lat)) * power(sin(radians(p_lng - v_place_lng) / 2), 2)
+  )));
+  if v_distance > 300 then
+    raise exception 'too_far' using errcode = 'P0001';
+  end if;
+
+  -- Serializza i check-in dello stesso utente nello stesso giorno (limite e duplicati).
+  perform pg_advisory_xact_lock(hashtextextended(v_uid::text || ':' || v_today::text, 0));
+
+  if exists (
+    select 1 from public.check_ins c
+    where c.user_id = v_uid and c.place_id = v_place_id and c.local_date = v_today
+  ) then
+    raise exception 'already_checked_in' using errcode = 'P0001';
+  end if;
+
+  select count(*)::integer into v_count
+  from public.check_ins c
+  where c.user_id = v_uid and c.local_date = v_today;
+  if v_count >= 5 then
+    raise exception 'daily_limit' using errcode = 'P0001';
+  end if;
+
+  insert into public.check_ins (user_id, place_id, itinerary_id, local_date)
+  values (v_uid, v_place_id, v_itinerary_id, v_today)
+  on conflict (user_id, place_id, local_date) do nothing
+  returning id into v_check_in_id;
+
+  if v_check_in_id is null then
+    raise exception 'already_checked_in' using errcode = 'P0001';
+  end if;
+
+  v_delta := public.point_delta('check_in');
+  perform public.award_points(v_uid, v_delta, 'check_in', 'check_in', v_check_in_id);
+
+  select count(distinct ci.place_id)::integer into v_places
+  from public.check_ins ci
+  where ci.user_id = v_uid and ci.itinerary_id = v_itinerary_id;
+
+  if v_places >= 3 then
+    v_completed := public.award_points(
+      v_uid, public.point_delta('itinerary_completed'), 'itinerary_completed', 'itinerary', v_itinerary_id
+    );
+  end if;
+
+  return jsonb_build_object(
+    'checkInId', v_check_in_id,
+    'points', v_delta,
+    'itineraryCompleted', v_completed
+  );
+end;
+$$;
+
+
+ALTER FUNCTION "public"."record_check_in"("p_itinerary_item_id" "uuid", "p_lat" double precision, "p_lng" double precision) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."record_flight_click"("p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text" DEFAULT NULL::"text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "text"
@@ -1633,6 +1805,70 @@ $$;
 ALTER FUNCTION "public"."replace_group_stop"("p_item_id" "uuid", "p_activity_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."report_review"("p_review_id" "uuid", "p_reason" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_owner uuid;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  if coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false) then
+    raise exception 'guest_not_allowed' using errcode = 'P0001';
+  end if;
+  if p_reason is null or p_reason not in ('spam', 'offensive', 'off_topic', 'other') then
+    raise exception 'invalid_reason' using errcode = 'P0001';
+  end if;
+
+  select r.user_id into v_owner from public.reviews r where r.id = p_review_id;
+  if not found then
+    raise exception 'review_not_found' using errcode = 'P0001';
+  end if;
+  if v_owner = v_uid then
+    raise exception 'cannot_report_own' using errcode = 'P0001';
+  end if;
+
+  insert into public.review_reports (review_id, reporter_id, reason)
+  values (p_review_id, v_uid, p_reason)
+  on conflict (review_id, reporter_id) do nothing;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."report_review"("p_review_id" "uuid", "p_reason" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."review_eligible"("p_activity_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select auth.uid() is not null
+    and not coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false)
+    and (
+      exists (
+        select 1
+        from public.itinerary_items ii
+        join public.itineraries i on i.id = ii.itinerary_id
+        where ii.activity_id = p_activity_id
+          and not i.is_template
+          and public.can_edit_itinerary(i.id)
+      )
+      or exists (
+        select 1
+        from public.affiliate_clicks c
+        where c.activity_id = p_activity_id
+          and c.user_id = auth.uid()
+      )
+    );
+$$;
+
+
+ALTER FUNCTION "public"."review_eligible"("p_activity_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."season_for"("ts" timestamp with time zone) RETURNS "text"
     LANGUAGE "sql" STABLE
     SET "search_path" TO 'public', 'pg_temp'
@@ -1700,6 +1936,63 @@ $$;
 
 
 ALTER FUNCTION "public"."shared_itinerary"("p_token" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."submit_review"("p_activity_id" "uuid", "p_rating" smallint, "p_text" "text") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_body text := nullif(btrim(p_text), '');
+  v_review_id uuid;
+  v_rewarded boolean;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  if coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false) then
+    raise exception 'guest_not_allowed' using errcode = 'P0001';
+  end if;
+  if p_rating is null or p_rating not between 1 and 5 then
+    raise exception 'invalid_rating' using errcode = 'P0001';
+  end if;
+  if char_length(coalesce(p_text, '')) > 4000 then
+    raise exception 'invalid_text' using errcode = 'P0001';
+  end if;
+  if not exists (
+    select 1 from public.activities a
+    where a.id = p_activity_id and a.is_active
+  ) then
+    raise exception 'activity_not_available' using errcode = 'P0001';
+  end if;
+  if not public.review_eligible(p_activity_id) then
+    raise exception 'not_eligible' using errcode = 'P0001';
+  end if;
+
+  insert into public.reviews (user_id, activity_id, rating, body, created_at, updated_at)
+  values (v_uid, p_activity_id, p_rating, v_body, now(), now())
+  on conflict (user_id, activity_id) do update set
+    rating = excluded.rating,
+    body = excluded.body,
+    updated_at = now()
+  returning id into v_review_id;
+
+  if char_length(coalesce(v_body, '')) >= 80 then
+    perform public.award_points(v_uid, public.point_delta('review'), 'review', 'review', p_activity_id);
+  end if;
+
+  v_rewarded := exists (
+    select 1 from public.points_ledger l
+    where l.user_id = v_uid and l.reason = 'review' and l.ref_id = p_activity_id
+  );
+
+  return jsonb_build_object('reviewId', v_review_id, 'rewarded', v_rewarded);
+end;
+$$;
+
+
+ALTER FUNCTION "public"."submit_review"("p_activity_id" "uuid", "p_rating" smallint, "p_text" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."text_array_max_length"("p_values" "text"[]) RETURNS integer
@@ -2021,12 +2314,8 @@ CREATE TABLE IF NOT EXISTS "public"."check_ins" (
     "user_id" "uuid" NOT NULL,
     "place_id" "uuid" NOT NULL,
     "itinerary_id" "uuid",
-    "lat" double precision NOT NULL,
-    "lng" double precision NOT NULL,
     "local_date" "date" DEFAULT (("now"() AT TIME ZONE 'Europe/Rome'::"text"))::"date" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "check_ins_lat_range" CHECK ((("lat" >= ('-90'::integer)::double precision) AND ("lat" <= (90)::double precision))),
-    CONSTRAINT "check_ins_lng_range" CHECK ((("lng" >= ('-180'::integer)::double precision) AND ("lng" <= (180)::double precision)))
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
@@ -2575,6 +2864,16 @@ CREATE TABLE IF NOT EXISTS "public"."places" (
 ALTER TABLE "public"."places" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."point_rules" (
+    "reason" "public"."point_reason" NOT NULL,
+    "delta" integer NOT NULL,
+    CONSTRAINT "point_rules_delta_positive" CHECK (("delta" > 0))
+);
+
+
+ALTER TABLE "public"."point_rules" OWNER TO "postgres";
+
+
 CREATE SEQUENCE IF NOT EXISTS "public"."points_ledger_id_seq"
     START WITH 1
     INCREMENT BY 1
@@ -2668,6 +2967,9 @@ CREATE TABLE IF NOT EXISTS "public"."reviews" (
     "rating" smallint NOT NULL,
     "body" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "hidden_at" timestamp with time zone,
+    "hidden_by" "uuid",
     CONSTRAINT "reviews_body_length" CHECK (("char_length"("body") <= 4000)),
     CONSTRAINT "reviews_rating_range" CHECK ((("rating" >= 1) AND ("rating" <= 5)))
 );
@@ -2683,10 +2985,14 @@ CREATE OR REPLACE VIEW "public"."public_reviews" WITH ("security_barrier"='true'
     "r"."body",
     "r"."created_at",
     "p"."display_name",
-    "p"."avatar_url"
+    "p"."avatar_url",
+    (EXISTS ( SELECT 1
+           FROM "public"."points_ledger" "l"
+          WHERE (("l"."user_id" = "r"."user_id") AND ("l"."reason" = 'review'::"public"."point_reason") AND ("l"."ref_id" = "r"."activity_id")))) AS "rewarded"
    FROM (("public"."reviews" "r"
      JOIN "public"."activities" "a" ON ((("a"."id" = "r"."activity_id") AND "a"."is_active")))
-     JOIN "public"."profiles" "p" ON (("p"."id" = "r"."user_id")));
+     JOIN "public"."profiles" "p" ON (("p"."id" = "r"."user_id")))
+  WHERE ("r"."hidden_at" IS NULL);
 
 
 ALTER VIEW "public"."public_reviews" OWNER TO "postgres";
@@ -2700,6 +3006,19 @@ CREATE TABLE IF NOT EXISTS "public"."rate_limit_hits" (
 
 
 ALTER TABLE "public"."rate_limit_hits" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."review_reports" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "review_id" "uuid" NOT NULL,
+    "reporter_id" "uuid" NOT NULL,
+    "reason" "text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "review_reports_reason_valid" CHECK (("reason" = ANY (ARRAY['spam'::"text", 'offensive'::"text", 'off_topic'::"text", 'other'::"text"])))
+);
+
+
+ALTER TABLE "public"."review_reports" OWNER TO "postgres";
 
 
 CREATE OR REPLACE VIEW "public"."seasonal_leaderboard" WITH ("security_barrier"='true') AS
@@ -3064,6 +3383,11 @@ ALTER TABLE ONLY "public"."places"
 
 
 
+ALTER TABLE ONLY "public"."point_rules"
+    ADD CONSTRAINT "point_rules_pkey" PRIMARY KEY ("reason");
+
+
+
 ALTER TABLE ONLY "public"."points_ledger"
     ADD CONSTRAINT "points_ledger_pkey" PRIMARY KEY ("id");
 
@@ -3101,6 +3425,16 @@ ALTER TABLE ONLY "public"."profiles"
 
 ALTER TABLE ONLY "public"."rate_limit_hits"
     ADD CONSTRAINT "rate_limit_hits_bucket_window_start_pk" PRIMARY KEY ("bucket", "window_start");
+
+
+
+ALTER TABLE ONLY "public"."review_reports"
+    ADD CONSTRAINT "review_reports_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."review_reports"
+    ADD CONSTRAINT "review_reports_review_reporter_unique" UNIQUE ("review_id", "reporter_id");
 
 
 
@@ -3787,8 +4121,23 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."review_reports"
+    ADD CONSTRAINT "review_reports_reporter_id_profiles_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."review_reports"
+    ADD CONSTRAINT "review_reports_review_id_reviews_id_fk" FOREIGN KEY ("review_id") REFERENCES "public"."reviews"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."reviews"
     ADD CONSTRAINT "reviews_activity_id_activities_id_fk" FOREIGN KEY ("activity_id") REFERENCES "public"."activities"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."reviews"
+    ADD CONSTRAINT "reviews_hidden_by_profiles_id_fk" FOREIGN KEY ("hidden_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
 
@@ -4373,6 +4722,13 @@ CREATE POLICY "places_update_admin" ON "public"."places" FOR UPDATE TO "authenti
 
 
 
+ALTER TABLE "public"."point_rules" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "point_rules_select_all" ON "public"."point_rules" FOR SELECT TO "authenticated", "anon" USING (true);
+
+
+
 ALTER TABLE "public"."points_ledger" ENABLE ROW LEVEL SECURITY;
 
 
@@ -4455,22 +4811,21 @@ CREATE POLICY "profiles_update_own" ON "public"."profiles" FOR UPDATE TO "authen
 ALTER TABLE "public"."rate_limit_hits" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."review_reports" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "review_reports_select_admin" ON "public"."review_reports" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
 ALTER TABLE "public"."reviews" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "reviews_delete_own" ON "public"."reviews" FOR DELETE TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
-
-
-
-CREATE POLICY "reviews_insert_own" ON "public"."reviews" FOR INSERT TO "authenticated" WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (NOT COALESCE(( SELECT (("auth"."jwt"() ->> 'is_anonymous'::"text"))::boolean AS "bool"), false))));
+CREATE POLICY "reviews_delete_own" ON "public"."reviews" FOR DELETE TO "authenticated" USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("hidden_at" IS NULL)));
 
 
 
 CREATE POLICY "reviews_select_own" ON "public"."reviews" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
-
-
-
-CREATE POLICY "reviews_update_own" ON "public"."reviews" FOR UPDATE TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (NOT COALESCE(( SELECT (("auth"."jwt"() ->> 'is_anonymous'::"text"))::boolean AS "bool"), false))));
 
 
 
@@ -4578,6 +4933,12 @@ GRANT ALL ON FUNCTION "public"."check_activity_place_active"() TO "service_role"
 
 REVOKE ALL ON FUNCTION "public"."check_place_has_active_activities"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."check_place_has_active_activities"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."claim_onboarding_points"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."claim_onboarding_points"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."claim_onboarding_points"() TO "service_role";
 
 
 
@@ -4756,6 +5117,11 @@ GRANT ALL ON FUNCTION "public"."media_touch_updated_at"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."point_delta"("p_reason" "public"."point_reason") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."point_delta"("p_reason" "public"."point_reason") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "anon";
 GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "service_role";
@@ -4766,6 +5132,12 @@ REVOKE ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p
 GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."record_affiliate_click"("p_offer_id" "uuid", "p_subid" "text", "p_context" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."record_check_in"("p_itinerary_item_id" "uuid", "p_lat" double precision, "p_lng" double precision) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."record_check_in"("p_itinerary_item_id" "uuid", "p_lat" double precision, "p_lng" double precision) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."record_check_in"("p_itinerary_item_id" "uuid", "p_lat" double precision, "p_lng" double precision) TO "service_role";
 
 
 
@@ -4800,6 +5172,18 @@ GRANT ALL ON FUNCTION "public"."replace_group_stop"("p_item_id" "uuid", "p_activ
 
 
 
+REVOKE ALL ON FUNCTION "public"."report_review"("p_review_id" "uuid", "p_reason" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."report_review"("p_review_id" "uuid", "p_reason" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."report_review"("p_review_id" "uuid", "p_reason" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."review_eligible"("p_activity_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."review_eligible"("p_activity_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."review_eligible"("p_activity_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."season_for"("ts" timestamp with time zone) TO "anon";
 GRANT ALL ON FUNCTION "public"."season_for"("ts" timestamp with time zone) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."season_for"("ts" timestamp with time zone) TO "service_role";
@@ -4810,6 +5194,12 @@ REVOKE ALL ON FUNCTION "public"."shared_itinerary"("p_token" "text") FROM PUBLIC
 GRANT ALL ON FUNCTION "public"."shared_itinerary"("p_token" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."shared_itinerary"("p_token" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."shared_itinerary"("p_token" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."submit_review"("p_activity_id" "uuid", "p_rating" smallint, "p_text" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."submit_review"("p_activity_id" "uuid", "p_rating" smallint, "p_text" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."submit_review"("p_activity_id" "uuid", "p_rating" smallint, "p_text" "text") TO "service_role";
 
 
 
@@ -5597,6 +5987,12 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."places" TO "authenticated";
 
 
 
+GRANT ALL ON TABLE "public"."point_rules" TO "service_role";
+GRANT SELECT ON TABLE "public"."point_rules" TO "anon";
+GRANT SELECT ON TABLE "public"."point_rules" TO "authenticated";
+
+
+
 GRANT ALL ON SEQUENCE "public"."points_ledger_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."points_ledger_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."points_ledger_id_seq" TO "service_role";
@@ -5646,22 +6042,6 @@ GRANT SELECT,DELETE ON TABLE "public"."reviews" TO "authenticated";
 
 
 
-GRANT INSERT("user_id") ON TABLE "public"."reviews" TO "authenticated";
-
-
-
-GRANT INSERT("activity_id") ON TABLE "public"."reviews" TO "authenticated";
-
-
-
-GRANT INSERT("rating"),UPDATE("rating") ON TABLE "public"."reviews" TO "authenticated";
-
-
-
-GRANT INSERT("body"),UPDATE("body") ON TABLE "public"."reviews" TO "authenticated";
-
-
-
 GRANT ALL ON TABLE "public"."public_reviews" TO "service_role";
 GRANT SELECT ON TABLE "public"."public_reviews" TO "anon";
 GRANT SELECT ON TABLE "public"."public_reviews" TO "authenticated";
@@ -5669,6 +6049,11 @@ GRANT SELECT ON TABLE "public"."public_reviews" TO "authenticated";
 
 
 GRANT ALL ON TABLE "public"."rate_limit_hits" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."review_reports" TO "service_role";
+GRANT SELECT ON TABLE "public"."review_reports" TO "authenticated";
 
 
 

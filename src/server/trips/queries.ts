@@ -10,6 +10,7 @@ import {
   activities,
   activityOffers,
   areas,
+  checkIns,
   itineraries,
   itineraryBookings,
   itineraryItems,
@@ -64,6 +65,12 @@ export type TripStop = {
   startTime: string | null;
   timeSlot: TimeSlot | null;
   notes: string | null;
+  // Luogo della tappa (della tappa o, senza, dell'attività): serve al check-in (passo 5.1).
+  placeId: string | null;
+  lat: number | null;
+  lng: number | null;
+  // L'utente ha già fatto il check-in su questo luogo oggi (ora italiana).
+  checkedInToday: boolean;
 };
 
 export async function getTrip(user: DbUser, id: string) {
@@ -86,7 +93,7 @@ export async function getTrip(user: DbUser, id: string) {
       .where(eq(itineraries.id, id));
     if (!trip || trip.isTemplate) return null;
 
-    const stops: TripStop[] = await tx
+    const stopRows = await tx
       .select({
         id: itineraryItems.id,
         dayIndex: itineraryItems.dayIndex,
@@ -95,6 +102,9 @@ export async function getTrip(user: DbUser, id: string) {
         activityId: itineraryItems.activityId,
         activitySlug: activities.slug,
         placeName: places.name,
+        placeId: places.id,
+        lat: places.lat,
+        lng: places.lng,
         areaSlug: areas.slug,
         durationMin: activities.durationMin,
         requiresCar: sql<boolean>`coalesce(${activities.requiresCar}, false)`,
@@ -108,6 +118,14 @@ export async function getTrip(user: DbUser, id: string) {
       .leftJoin(areas, eq(areas.id, places.areaId))
       .where(eq(itineraryItems.itineraryId, id))
       .orderBy(asc(itineraryItems.dayIndex), asc(itineraryItems.position));
+
+    // Check-in di oggi dell'utente (RLS: solo i propri): segna le tappe già visitate.
+    const todayCheckIns = await tx
+      .select({ placeId: checkIns.placeId })
+      .from(checkIns)
+      .where(and(eq(checkIns.userId, user.id), eq(checkIns.localDate, romeToday(new Date()))));
+    const checkedPlaces = new Set(todayCheckIns.map((c) => c.placeId));
+    const stops: TripStop[] = stopRows.map((s) => ({ ...s, checkedInToday: s.placeId !== null && checkedPlaces.has(s.placeId) }));
 
     // Attività con almeno un'offerta attiva: entrano nella checklist "Da prenotare", con il
     // partner dell'offerta più economica (il link arriva con la M6).

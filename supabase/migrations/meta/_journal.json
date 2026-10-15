@@ -330,6 +330,13 @@
       "when": 1792084833520,
       "tag": "20261015172033_preferenze_gruppo",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1792086383497,
+      "tag": "20261015174623_punti_recensioni",
+      "breakpoints": true
     }
   ]
 }
