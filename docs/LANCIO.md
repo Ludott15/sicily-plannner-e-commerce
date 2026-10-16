@@ -151,3 +151,21 @@ Il modello è quello di un intermediario (docs/spec.md, sezione E-commerce): il 
 - **Informazioni alimentari** (Reg. UE 1169/2011): prima di attivare un prodotto, verificare ingredienti e allergeni sull'etichetta del produttore. L'attivazione richiede la casella "Allergeni verificati" (regola nel server e nel database). Chi è operatore alimentare (fornitore e marchio) va verificato con il consulente.
 - **Marchi e produttori**: prima di pubblicare una storia o una foto di un produttore serve un accordo scritto con lui (uso del nome, della storia e delle immagini), come previsto dai rischi in docs/spec.md.
 - **Controlli di lancio**: nessun prodotto `[DEMO]` in produzione (il seed non si carica mai, `supabase db push` non esegue il seed); `npm run db:drift` e i test pgTAP `shop_rls` e `shop_catalog_rls` verdi in CI; import del catalogo reale solo dall'admin, con anteprima e nessun errore.
+## 10. Accessibilità (passo 11.4)
+
+La verifica automatica (axe-core, WCAG 2.2 AA, `e2e/a11y.spec.ts`) copre le pagine principali in tema chiaro e scuro, a 1280 e 390 px. Non copre il resto: la verifica con lettori di schermo è da fare a mano prima del lancio, e non risulta ancora fatta.
+
+Verifica manuale con lettore di schermo (VoiceOver su iOS e macOS, NVDA su Windows), su una build di produzione con un account di prova:
+
+- **Onboarding** (`/it/viaggio/nuovo`): ogni domanda annuncia il titolo e il numero (1 di 7); le radio dei giorni e del periodo si leggono come gruppo con l'etichetta; "Avanti" annuncia lo stato disabilitato finché la risposta manca; il cambio di domanda sposta l'attenzione o l'annuncio.
+- **Builder del viaggio** (`/it/viaggi/<id>`): i giorni sono pulsanti con il loro stato; lo spostamento di una tappa da tastiera annuncia la nuova posizione; i dialog "Togli il giorno" e "Elimina viaggio" annunciano titolo e descrizione e tornano al pulsante che li ha aperti.
+- **Voti del gruppo**: il voto annuncia "Voto salvato: mi piace" (o preferirei altro), il voto tolto e il conteggio; un errore arriva con role="alert".
+- **Salvataggi**: "Viaggio salvato" dopo "Salva il viaggio"; "Tappa aggiunta al giorno N" dopo "Aggiungi al viaggio"; "Impostazioni salvate" nelle impostazioni del viaggio; "Gusti salvati" in Preferenze.
+- **Check-in**: l'esito (con i punti) arriva con role="status".
+- **Chat** (`/it/chat`): il messaggio in corso viene letto mentre arriva, la risposta finale si legge una volta sola, l'errore con "Riprova" è annunciato.
+- **Chat del viaggio**: il pannello si apre come dialog, Esc lo chiude e il focus torna al pulsante "Chiedi all'assistente".
+- **Menu personale e menu delle azioni**: frecce, Home, Fine ed Esc; il focus torna al pulsante.
+- **Dichiarazione di accessibilità e informativa**: il titolo è il primo annuncio della pagina; il segnaposto "Testo in preparazione" non va letto come testo vero.
+- **Checkout**: non esiste ancora (passo 7). Quando arriva, questo elenco va esteso al carrello (aggiunta con annuncio di stato) e al pagamento.
+
+Da chiudere prima del lancio: il testo della dichiarazione è scritto dall'orchestratore su incarico di Ludovico (2026-10-16) e va aggiornato dopo la prova con i lettori di schermo; il contatto per le segnalazioni arriva con i dati del titolare (CONTACT_EMAIL, passo 8.3).

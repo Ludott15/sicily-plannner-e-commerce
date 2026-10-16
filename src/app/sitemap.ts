@@ -38,6 +38,7 @@ async function pathsFor(type: SitemapType): Promise<string[]> {
         ...(lodgingReady ? ["/dove-dormire"] : []),
         ...(carReady ? ["/noleggio-auto"] : []),
         "/crediti-foto",
+        "/accessibilita",
         // Pagine con testi ancora in sospeso: fuori dalla sitemap (e noindex) finché non sono scritte.
         ...(isPending("about.editorial", "about.founder") ? [] : ["/chi-siamo"]),
         ...(isPending("legal.privacy") ? [] : ["/privacy"]),
