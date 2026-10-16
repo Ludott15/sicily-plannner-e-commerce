@@ -28,6 +28,7 @@ Aggiornato da ogni PR. "In PR" = aperta e in attesa di merge; le PR dei passi su
 | 5.2 Badge | In PR: criteri tipizzati in badges.criteria, valutazione nel database a ogni accredito e all'ingresso in un gruppo, 5 badge della spec, notifica badge_earned, "I tuoi badge" e progresso in /punti, admin /admin/badge con creazione e modifica | `roadmap/5.2-badge` |
 | 5.3 Classifiche | In PR: classifica stagionale (primi 50, posizione propria, opt-out, nome pubblico o iniziali) con refresh ogni 15 minuti via pg_cron, classifica del gruppo nel periodo del viaggio, /classifica, chiusura delle stagioni e stato dei premi in /admin/stagioni | `roadmap/5.3-classifiche` |
 | 6.1 Riprogettazione | In PR: navigazione a due livelli (header essenziale, menu personale dall'avatar, barra mobile Esplora/Viaggi/Gruppi/Profilo), pagina /gruppi, intestazione di pagina, schede e menu ⋯ condivisi; viaggio con schede e tappe pulite, gruppo con schede e dialog di invito, flusso dagli itinerari e tutte le altre pagine con lo stesso linguaggio | `roadmap/6.1-design` |
+| 6.2 Mappa | In PR: componente TripMap (MapLibre + OpenFreeMap, colori dai token, marker numerati, percorso del giorno, caricamento pigro, stampa, nessun cookie) nel viaggio, negli itinerari pronti, nella pagina del luogo (attività vicine) e in /attivita (vista mappa) | `roadmap/6.2-mappa` |
 
 ---
 

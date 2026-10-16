@@ -231,6 +231,29 @@ a.is-tabbar__item { color: var(--lava-muted); }
 .is-bookings__title { font-size: 18px; font-weight: 600; }
 .is-bookings__disclose { display: block; margin-top: var(--space-3); font-size: 12px; line-height: 16px; color: var(--lava-muted); }
 
+/* Mappa (docs/design/components/Map/README.md). Altezza fissa per non spostare il layout quando arriva.
+   Il canvas di MapLibre sta sotto; l'elenco numerato copre il riquadro finché la mappa non è pronta,
+   poi resta solo per gli screen reader (is-map__panel--ready). Colori solo dai token. */
+.is-map { position: relative; height: 300px; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--card-edge); background: var(--calce-sunk); }
+@media (min-width: 768px) { .is-map { height: 360px; } }
+/* .is-map .is-map__canvas: più specifica di .maplibregl-map (position: relative) del CSS di MapLibre, caricato dopo. */
+.is-map .is-map__canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.is-map__panel { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; gap: var(--space-2); overflow: auto; padding: var(--space-4); background: var(--calce-sunk); color: var(--lava); }
+.is-map__panel--ready { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; background: none; z-index: auto; }
+.is-map__notice { margin: 0; font-size: 14px; line-height: 20px; color: var(--lava-muted); }
+.is-map__list { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; font-size: 15px; line-height: 22px; }
+/* Marker: cerchio di 28 px; con più numeri (tappe nello stesso luogo, "1·2") si allarga in una pillola. */
+.is-map__marker { display: inline-grid; place-items: center; box-sizing: border-box; min-width: 28px; height: 28px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--lava); color: var(--calce); border: 2px solid var(--calce-raised); box-shadow: var(--shadow-card); font-family: var(--font-sans); font-size: 13px; font-weight: 700; line-height: 1; white-space: nowrap; }
+.is-map__marker--dot { min-width: 14px; width: 14px; height: 14px; padding: 0; background: var(--coccio); }
+/* Attribuzione dei dati: una sola riga, sopra la mappa in basso, sempre visibile. */
+.is-map__credit { position: absolute; left: var(--space-2); bottom: var(--space-2); z-index: 2; max-width: calc(100% - 2 * var(--space-2)); margin: 0; padding: 2px 8px; border-radius: var(--radius-sm); background: var(--calce-raised); color: var(--lava-muted); font-size: 11px; line-height: 16px; }
+.is-map .maplibregl-ctrl-group { background: var(--calce-raised); border-color: var(--border-control); }
+.is-map .maplibregl-ctrl button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.is-map-details { margin-top: var(--space-4); }
+.is-map-details > summary { display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; font-weight: 600; color: var(--coccio-text); }
+.is-map-details > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.is-map-details[open] > summary { margin-bottom: var(--space-3); }
+
 @media (prefers-reduced-motion: reduce) {
   .is-btn, .is-chip, .is-card, .is-card__ph, .is-card__media img, .is-place__media img, .is-product, .is-scale__pip, .is-points { transition: opacity var(--dur-fast) linear; transition-delay: 0ms; }
   .is-card:hover, .is-product:hover, .is-card:hover .is-card__ph, .is-card:hover .is-card__media img, .is-place:hover .is-place__media img { transform: none; }
@@ -281,4 +304,20 @@ a.is-tabbar__item { color: var(--lava-muted); }
   .is-trip-page h1 {
     break-after: avoid;
   }
+}
+
+/* Mappa nella stampa: la mappa sparisce, resta l'elenco numerato. La colonna desktop non si stampa;
+   il pannello mobile (is-map-printable) si stampa aperto, anche quando è chiuso sullo schermo. */
+@media print {
+  .is-map-desktop { display: none !important; }
+  .is-map-printable { display: block !important; }
+  .is-map-printable > summary { display: none; }
+  .is-map-printable::details-content { display: block; content-visibility: visible; }
+  .is-map-printable > :not(summary) { display: block; }
+  .is-map { height: auto; overflow: visible; border: 0; background: none; break-inside: avoid; }
+  .is-map .is-map__canvas { display: none; }
+  .is-map__panel { position: static; width: auto; height: auto; padding: 0; overflow: visible; clip-path: none; white-space: normal; background: none; }
+  .is-map__panel--ready { position: static; width: auto; height: auto; padding: 0; overflow: visible; clip-path: none; white-space: normal; background: none; }
+  .is-map__notice { display: none; }
+  .is-map__credit { position: static; max-width: none; margin-top: var(--space-2); background: none; }
 }

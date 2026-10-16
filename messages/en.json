@@ -1923,5 +1923,29 @@
     "errorInvalid": "Check the details and try again.",
     "errorFailed": "We could not save. Try again.",
     "deletedAccount": "Deleted account"
+  },
+  "Map": {
+    "showMap": "Show map",
+    "dayMap": "Map of day {n}",
+    "markerLabel": "Stop {n}: {label}",
+    "listLabel": "Points on the map",
+    "unavailable": "The map does not load right now. The same points are listed below.",
+    "loading": "Loading the map…",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "gestureTouch": "Use two fingers to move the map",
+    "gestureMouse": "Use Ctrl and the wheel to zoom the map",
+    "gestureMac": "Use Cmd and the wheel to zoom the map",
+    "attribution": "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors",
+    "placeTitle": "On the map",
+    "placeIntro": "Nearby places within 15 km, with distance. This place’s activities are above.",
+    "placeMapLabel": "Activities near {place}",
+    "placeListLabel": "Nearby activities",
+    "placeDistance": "{km} km away",
+    "viewLabel": "View",
+    "viewList": "List",
+    "viewMap": "Map",
+    "activitiesMapLabel": "Map of the places of the activities",
+    "canvasTitle": "Map"
   }
 }

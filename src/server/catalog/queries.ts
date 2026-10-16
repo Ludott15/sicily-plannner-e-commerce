@@ -1,7 +1,8 @@
 import "server-only";
 import { cache } from "react";
-import { and, asc, desc, eq, exists, gte, inArray, isNotNull, lte, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, between, desc, eq, exists, gte, inArray, isNotNull, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import { activityCoverChain, itineraryCoverChain, placeCoverChain, type CoverMedia, type ResolvedCover } from "@/lib/media";
+import { distanceKm } from "@/lib/geo";
 import { templateFacts } from "@/lib/itinerary-checks";
 import { DAY_BUCKET_RANGE, NO_TEMPLATE_FILTERS, type TemplateFilters } from "@/lib/template-filters";
 import { dbPublic } from "@/server/db/public";
@@ -40,6 +41,9 @@ const activityCardColumns = {
   placeName: places.name,
   placeSlug: places.slug,
   placeProvince: places.province,
+  // Coordinate del luogo: per la vista mappa della lista attività.
+  placeLat: places.lat,
+  placeLng: places.lng,
   // Anelli della catena di ripiego (attività → luogo → area), già filtrati dalla RLS.
   ownCover: coverJson(activities.coverMediaId),
   placeCover: coverJson(places.coverMediaId),
@@ -152,8 +156,6 @@ export const getActivity = cache((slug: string) =>
         accessible: activities.accessible,
         seasonMonths: activities.seasonMonths,
         placeId: activities.placeId,
-        placeLat: places.lat,
-        placeLng: places.lng,
       })
       .from(activities)
       .innerJoin(places, eq(places.id, activities.placeId))
@@ -175,6 +177,51 @@ export const listNearbyActivities = cache((activityId: string, placeId: string, 
       .orderBy(sql`${activities.placeId} = ${placeId} desc`, desc(activities.rating), asc(activities.title))
       .limit(limit);
     return withTags(tx, rows);
+  }),
+);
+
+// Raggio della sezione "vicine" della pagina del luogo.
+const NEARBY_RADIUS_KM = 15;
+// Gradi di latitudine coperti dal raggio (1 grado ≈ 111 km): il filtro SQL riduce i candidati,
+// la distanza esatta si calcola poi con distanceKm.
+const NEARBY_LAT_DEGREES = NEARBY_RADIUS_KM / 111;
+
+// "Sulla mappa" della pagina del luogo: attività attive dello stesso luogo e dei luoghi attivi
+// entro 15 km, prima per distanza e poi per titolo. Il luogo di partenza deve essere attivo,
+// altrimenti la lista è vuota.
+export const nearbyActivities = cache((placeId: string, limit = 12) =>
+  dbPublic(async (tx) => {
+    const [origin] = await tx
+      .select({ lat: places.lat, lng: places.lng })
+      .from(places)
+      .where(and(eq(places.id, placeId), eq(places.isActive, true)));
+    if (!origin) return [];
+
+    const rows = await tx
+      .select({
+        id: activities.id,
+        slug: activities.slug,
+        title: activities.title,
+        placeName: places.name,
+        placeId: places.id,
+        lat: places.lat,
+        lng: places.lng,
+      })
+      .from(activities)
+      .innerJoin(places, eq(places.id, activities.placeId))
+      .where(
+        and(
+          eq(activities.isActive, true),
+          eq(places.isActive, true),
+          between(places.lat, origin.lat - NEARBY_LAT_DEGREES, origin.lat + NEARBY_LAT_DEGREES),
+        ),
+      );
+
+    return rows
+      .map((row) => ({ ...row, distanceKm: distanceKm(origin, row) }))
+      .filter((row) => row.distanceKm <= NEARBY_RADIUS_KM)
+      .sort((a, b) => a.distanceKm - b.distanceKm || a.title.localeCompare(b.title, "it"))
+      .slice(0, limit);
   }),
 );
 
@@ -375,6 +422,9 @@ export const getTemplate = cache((slug: string) =>
         placeId: places.id,
         placeSlug: places.slug,
         placeName: places.name,
+        // Coordinate del luogo della tappa (coalesce del luogo della voce e di quello dell'attività).
+        lat: places.lat,
+        lng: places.lng,
         placeAreaId: places.areaId,
         areaNameIt: areas.nameIt,
         areaNameEn: areas.nameEn,

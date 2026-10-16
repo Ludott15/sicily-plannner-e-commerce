@@ -50,3 +50,6 @@ supabase/.branches
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Worker di MapLibre copiato da scripts/vendor/copy-maplibre-worker.mjs
+/public/vendor/

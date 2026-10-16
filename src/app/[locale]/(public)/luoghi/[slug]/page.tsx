@@ -7,15 +7,19 @@ import { CoverFigure } from "@/components/catalog/cover-figure";
 import { ItineraryCard } from "@/components/catalog/itinerary-card";
 import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
+import { TripMap } from "@/components/design";
+import type { MapPoint } from "@/components/design/map/map-style";
+import { Link } from "@/lib/i18n/navigation";
 import { publicEnv } from "@/lib/env";
 import { provinceName } from "@/lib/provinces";
 import { localizedAlternates, truncate } from "@/lib/seo";
 import { interestLabels } from "@/server/catalog/labels";
-import { getPlace, listTemplatesThroughPlace } from "@/server/catalog/queries";
+import { getPlace, listTemplatesThroughPlace, nearbyActivities } from "@/server/catalog/queries";
 
 // Pagina di un luogo: nessun mockup dedicato, stessa struttura della scheda attività
 // (percorso, foto, titolo, "Cosa ti aspetta") seguita dalle attività del luogo e dagli
-// itinerari pronti che ci passano. Consigli locali e prodotti della zona arrivano con i dati.
+// itinerari pronti che ci passano. "Sulla mappa" (6.2): le attività vicine, con la mappa e l'elenco
+// dei link. Consigli locali e prodotti della zona arrivano con i dati.
 
 type Props = { params: Promise<{ locale: string; slug: string }> };
 
@@ -41,11 +45,17 @@ export default async function PlacePage({ params }: Props) {
   const place = await getPlace(slug);
   if (!place) notFound();
 
-  const [t, labels, templates] = await Promise.all([
+  const [t, tMap, labels, templates, nearby] = await Promise.all([
     getTranslations("Catalog"),
+    getTranslations("Map"),
     interestLabels(locale),
     listTemplatesThroughPlace(place.id),
+    nearbyActivities(place.id),
   ]);
+  const distanceFormat = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+  const nearbyPoints: MapPoint[] = nearby.map((a) => ({ id: a.id, lat: a.lat, lng: a.lng, label: a.title }));
+  // Le attività di questo luogo sono già elencate sopra: qui i link vanno solo ai luoghi vicini.
+  const elsewhere = nearby.filter((a) => a.placeId !== place.id);
 
   return (
     <article className="mx-auto w-full max-w-[1200px] px-4 pt-4 pb-12 md:px-16 md:pt-8 md:pb-16">
@@ -99,6 +109,38 @@ export default async function PlacePage({ params }: Props) {
           </ul>
         )}
       </section>
+
+      {nearby.length > 0 && (
+        <section aria-labelledby="sulla-mappa" className="mt-16">
+          <h2 id="sulla-mappa" className="is-display text-heading-1">
+            {tMap("placeTitle")}
+          </h2>
+          <p className="mt-3 max-w-[680px] text-body text-lava-muted">{tMap("placeIntro")}</p>
+          <div
+            className={
+              elsewhere.length > 0
+                ? "mt-6 grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,360px)] md:items-start"
+                : "mt-6"
+            }
+          >
+            <TripMap points={nearbyPoints} ariaLabel={tMap("placeMapLabel", { place: place.name })} listed={false} />
+            {elsewhere.length > 0 && (
+              <ul aria-label={tMap("placeListLabel")} className="flex flex-col divide-y divide-divider">
+                {elsewhere.map((a) => (
+                  <li key={a.id} className="flex flex-col gap-1 py-4">
+                    <Link href={`/attivita/${a.slug}`} className="text-body-l font-semibold text-lava underline-offset-4 hover:underline">
+                      {a.title}
+                    </Link>
+                    <span className="text-body-s text-lava-muted">
+                      {a.placeName} · {tMap("placeDistance", { km: distanceFormat.format(a.distanceKm) })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      )}
 
       {templates.length > 0 && (
         <section aria-labelledby="itinerari-luogo" className="mt-16">
