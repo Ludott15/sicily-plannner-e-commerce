@@ -28,7 +28,9 @@ async function tripWithPlaces(ownerId: string) {
     const [other] = await sql`
       select a.id as "activityId", a.place_id as "placeId"
       from public.activities a
-      where a.slug <> ${ZINGARO} and a.place_id is not null and a.place_id <> ${zingaro!.placeId}
+      where a.slug <> ${ZINGARO} and a.slug like 'demo-%' and a.is_active
+        and a.place_id is not null and a.place_id <> ${zingaro!.placeId}
+      order by a.slug
       limit 1`;
     const [trip] = await sql`insert into public.itineraries (owner_id, title, days) values (${ownerId}, 'e2e- Punti', 1) returning id`;
     await sql`
@@ -84,7 +86,9 @@ test("check-in vicino al luogo: +10 punti; lontano: messaggio di distanza", asyn
   // il primo "Sono qui" rimasto è quello della seconda tappa.
   await expect(page.getByText("Check-in fatto oggi")).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.waitForLoadState("networkidle");
+  // Non networkidle: la mappa del viaggio scarica tasselli di continuo. Dopo l'aggiornamento resta
+  // un solo "Sono qui", quello della seconda tappa.
+  await expect(page.getByRole("button", { name: "Sono qui", exact: true })).toHaveCount(1);
 
   // Seconda tappa, con la posizione in mezzo all'oceano: il server risponde too_far.
   await context.setGeolocation({ latitude: 0, longitude: 0 });

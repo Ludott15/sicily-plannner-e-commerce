@@ -1,6 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { Bell } from "lucide-react";
-import { ButtonLink } from "@/components/design";
+import { ButtonLink, Logo } from "@/components/design";
 import { ActionMenu, type ActionMenuItem } from "@/components/layout/action-menu";
 import { AvatarMenu } from "@/components/layout/avatar-menu";
 import { Link } from "@/lib/i18n/navigation";
@@ -59,9 +59,9 @@ export async function SiteHeader() {
           <Link
             href="/"
             aria-label={t("home")}
-            className="is-display text-[26px] leading-none tracking-[-0.02em] text-lava no-underline md:text-[30px]"
+            className="text-[26px] leading-none text-lava no-underline md:text-[30px]"
           >
-            Isula
+            <Logo />
           </Link>
           <nav aria-label={t("main")} className="hidden items-center gap-6 text-[15px] font-medium md:flex">
             <ActionMenu variant="text" text={t("explore")} items={exploreItems} align="start" />
