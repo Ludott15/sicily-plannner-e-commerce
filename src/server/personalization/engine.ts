@@ -12,6 +12,7 @@ import {
   SINGLE_INTEREST,
   REASONS,
   SCORE_WEIGHTS,
+  SIMILARITY_MIN_EVENTS,
   TWO_AREAS,
   VARIANT_FOCUS_BOOST,
 } from "./config";
@@ -43,6 +44,10 @@ export type Profile = {
   months: number[];
   // Aeroporto di arrivo: piccolo bonus alle aree vicine; null = nessun effetto.
   airport: Airport | null;
+  // Similarità coseno tra il profilo di gusto dell'utente e l'embedding di ogni attività (M11).
+  // Assente, o senza una voce per l'attività: il termine di similarità non entra nel punteggio e
+  // il suo peso va a match (come prima dell'M11). Calcolata solo con similarityActive.
+  similarity?: ReadonlyMap<string, number>;
 };
 
 export type CatalogActivity = {
@@ -158,14 +163,21 @@ export function fit(a: CatalogActivity, p: Profile): number {
   return (price + duration) / 2;
 }
 
-// Passo 2: punteggio. Similarità 0 (milestone 11): il suo peso passa a match.
+// La similarità si usa solo con almeno SIMILARITY_MIN_EVENTS eventi registrati (spec, passo 2).
+export function similarityActive(eventCount: number): boolean {
+  return eventCount >= SIMILARITY_MIN_EVENTS;
+}
+
+// Passo 2: punteggio. Con la similarità dell'attività (coseno, da 0 a 1) il suo peso è
+// SCORE_WEIGHTS.similarity; senza, il peso passa a match, come prima dell'M11.
 export function score(a: CatalogActivity, p: Profile): number {
   const rating = (a.rating ?? DEFAULT_RATING) / 5;
-  return (
-    (SCORE_WEIGHTS.match + SCORE_WEIGHTS.similarity) * match(a, p) +
-    SCORE_WEIGHTS.rating * rating +
-    SCORE_WEIGHTS.fit * fit(a, p)
-  );
+  const cos = p.similarity?.get(a.id);
+  const matchTerm =
+    cos === undefined
+      ? (SCORE_WEIGHTS.match + SCORE_WEIGHTS.similarity) * match(a, p)
+      : SCORE_WEIGHTS.match * match(a, p) + SCORE_WEIGHTS.similarity * Math.max(0, Math.min(1, cos));
+  return matchTerm + SCORE_WEIGHTS.rating * rating + SCORE_WEIGHTS.fit * fit(a, p);
 }
 
 export const mainInterest = (a: CatalogActivity) =>

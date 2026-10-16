@@ -65,3 +65,48 @@ export const AREA_TOP_RATING = 4.6;
 // comporle. maxPairsInProposals: coppie al massimo tra le proposte. minTransferDayMin: minuti
 // minimi per le tappe nel giorno di trasferimento (il resto va alla guida).
 export const TWO_AREAS = { maxDriveMin: 150, maxPairsInProposals: 1, minTransferDayMin: 60 } as const;
+
+// Apprendimento (M11, docs/spec.md "Passo 4, apprendimento"). Il cron notturno legge
+// user_events non processati e aggiorna preference_weights.implicit. Queste costanti vanno nel
+// jsonb passato a public.learn_from_events (supabase/migrations/20261016160438_learn.sql): unica fonte nel codice.
+// Variazione per evento (la forza del tag divide per TAG_STRENGTH_MAX), in punti di implicit.
+export const IMPLICIT_DELTAS = {
+  affiliate_click: 0.5,
+  add_to_itinerary: 0.4,
+  save: 0.3,
+  vote_up: 0.2,
+  view: 0.05,
+  vote_down: -0.3,
+  remove_from_itinerary: -0.4,
+} as const;
+
+// Recensione: (voto - base) × scale.
+export const REVIEW_DELTA = { base: 3, scale: 0.3 } as const;
+
+// Decadimento di implicit a ogni ricalcolo di un utente con eventi nuovi, e limite dei valori.
+export const IMPLICIT_DECAY = 0.05;
+export const IMPLICIT_RANGE = 2;
+
+// Forza massima di un tag (spec: 1-3): la variazione è delta × s / TAG_STRENGTH_MAX.
+export const TAG_STRENGTH_MAX = 3;
+
+// Eventi per esecuzione del cron (i più vecchi prima).
+export const LEARN_EVENTS_PER_RUN = 5000;
+
+// Embedding del profilo: media degli embedding delle attività con interazioni positive negli
+// ultimi TASTE_WINDOW_DAYS giorni.
+export const TASTE_WINDOW_DAYS = 90;
+
+// Similarità attiva nello scoring solo da questo numero di eventi registrati (M11).
+export const SIMILARITY_MIN_EVENTS = 5;
+
+// Parametri del cron, passati alla funzione SQL come jsonb.
+export const LEARNING_PARAMS = {
+  deltas: IMPLICIT_DELTAS,
+  reviewBase: REVIEW_DELTA.base,
+  reviewScale: REVIEW_DELTA.scale,
+  decay: IMPLICIT_DECAY,
+  range: IMPLICIT_RANGE,
+  strengthMax: TAG_STRENGTH_MAX,
+  tasteWindowDays: TASTE_WINDOW_DAYS,
+} as const;
