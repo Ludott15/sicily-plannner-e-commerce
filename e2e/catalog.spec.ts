@@ -28,8 +28,10 @@ test("attività: titolo, descrizione, canonical, hreflang e dati strutturati", a
   );
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "Valle dei Templi al tramonto");
 
-  const data = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent()) ?? "{}");
-  expect(data["@type"]).toBe("TouristAttraction");
+  // La pagina ha più blocchi JSON-LD (TouristAttraction e BreadcrumbList): si prende quello dell'attività.
+  const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
+  const data = blocks.map((text) => JSON.parse(text)).find((item) => item["@type"] === "TouristAttraction");
+  expect(data, "TouristAttraction").toBeTruthy();
   expect(data.location.address.addressRegion).toBe("AG");
 });
 
@@ -49,7 +51,10 @@ test("elenco attività, scheda e pagina del luogo", async ({ page }) => {
   await page.getByRole("link", { name: "Street food al mercato di Ballarò" }).click();
   await expect(page).toHaveURL(/\/it\/attivita\/demo-mercato-ballaro$/);
 
-  await page.getByRole("navigation", { name: "Percorso" }).getByRole("link", { name: "Palermo" }).click();
+  // Percorso: Sicilia › Area › Luogo › Attività. Area e luogo si chiamano entrambi Palermo: si sceglie il luogo.
+  const trail = page.getByRole("navigation", { name: "Percorso" });
+  await expect(trail.getByRole("link", { name: "Palermo" })).toHaveCount(2);
+  await trail.locator('a[href$="/luoghi/demo-palermo"]').click();
   await expect(page).toHaveURL(/\/it\/luoghi\/demo-palermo$/);
   await expect(page.getByRole("heading", { name: "Attività a Palermo" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Visita al Teatro Massimo" })).toBeVisible();
@@ -240,13 +245,14 @@ test("slug inesistente: 404", async ({ request }) => {
 });
 
 test("sitemap e robots", async ({ request }) => {
-  const sitemap = await (await request.get("/sitemap.xml")).text();
-  expect(sitemap).toContain("http://localhost:3000/it/attivita/demo-valle-templi");
-  expect(sitemap).toContain("http://localhost:3000/en/luoghi/demo-palermo");
-  expect(sitemap).toContain("http://localhost:3000/it/itinerari/demo-weekend-palermo");
+  // Sitemap divise per tipo (passo 11.1): /sitemap/<tipo>.xml, elencate in robots.txt.
+  const sitemap = async (id: string) => (await request.get(`/sitemap/${id}.xml`)).text();
+  expect(await sitemap("attivita")).toContain("http://localhost:3000/it/attivita/demo-valle-templi");
+  expect(await sitemap("luoghi")).toContain("http://localhost:3000/en/luoghi/demo-palermo");
+  expect(await sitemap("itinerari")).toContain("http://localhost:3000/it/itinerari/demo-weekend-palermo");
 
   const robots = await (await request.get("/robots.txt")).text();
-  expect(robots).toContain("Sitemap: http://localhost:3000/sitemap.xml");
+  expect(robots).toContain("Sitemap: http://localhost:3000/sitemap/attivita.xml");
   expect(robots).toContain("Disallow: /*/admin");
 });
 

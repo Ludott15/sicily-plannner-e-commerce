@@ -45,6 +45,14 @@ export async function SiteFooter() {
                   {tNav("activities")}
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/guide"
+                  className="text-on-ink-muted no-underline hover:underline"
+                >
+                  {tNav("guides")}
+                </Link>
+              </li>
             </ul>
           </div>
           <div>

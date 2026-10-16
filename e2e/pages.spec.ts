@@ -4,7 +4,8 @@ import { expect, test } from "@playwright/test";
 // 404 e banner dei cookie.
 
 test("sitemap: affiliazioni nelle due lingue; pagine con testi in sospeso, admin e profilo no", async ({ request }) => {
-  const sitemap = await (await request.get("/sitemap.xml")).text();
+  // Le pagine statiche stanno nella sitemap "pagine"; le altre sitemap per tipo non contengono admin né profilo.
+  const sitemap = await (await request.get("/sitemap/pagine.xml")).text();
   expect(sitemap).toContain("http://localhost:3000/it/affiliazioni");
   expect(sitemap).toContain("http://localhost:3000/en/affiliazioni");
   expect(sitemap).not.toContain("/link-affiliati");
@@ -12,8 +13,11 @@ test("sitemap: affiliazioni nelle due lingue; pagine con testi in sospeso, admin
   for (const path of ["/chi-siamo", "/privacy", "/cookie", "/condizioni-di-vendita"]) {
     expect(sitemap, path).not.toContain(path);
   }
-  expect(sitemap).not.toContain("/admin");
-  expect(sitemap).not.toContain("/profilo");
+  for (const id of ["pagine", "luoghi", "attivita", "itinerari", "aree", "guide", "voli"]) {
+    const xml = await (await request.get(`/sitemap/${id}.xml`)).text();
+    expect(xml, id).not.toContain("/admin");
+    expect(xml, id).not.toContain("/profilo");
+  }
 });
 
 test("pagine con testi in sospeso: noindex, \"Testo in preparazione\" e nessuna chiave di traduzione", async ({ page }) => {

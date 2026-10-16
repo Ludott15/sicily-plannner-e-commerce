@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { isSicilyAirport } from "@/lib/flights/airports";
 import { isIsoDate } from "@/lib/flights/search-params";
-import { localizedAlternates } from "@/lib/seo";
+import { canonicalFor } from "@/lib/seo";
 import { getPartnerConfig, VERTICAL_PARTNER } from "@/server/affiliates/partners";
 import { carAirports, verticalAvailability, verticalSearchHref } from "@/server/affiliates/verticals";
 
@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: t("title"),
     description: t("intro"),
-    alternates: localizedAlternates(locale, "/noleggio-auto"),
+    alternates: canonicalFor(locale, "/noleggio-auto"),
     ...(availability === "ready" ? {} : { robots: { index: false, follow: false } }),
   };
 }

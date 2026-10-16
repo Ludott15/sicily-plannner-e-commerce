@@ -12,4 +12,5 @@ export * from "./audit";
 export * from "./local-tips";
 export * from "./media";
 export * from "./drive-times";
+export * from "./guides";
 export * from "./notifications";

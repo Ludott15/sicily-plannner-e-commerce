@@ -10,7 +10,7 @@ import { isSicilyAirport, type SicilyAirportCode } from "@/lib/flights/airports"
 import { getDeparture } from "@/lib/flights/departures";
 import { type CalendarDay } from "@/lib/flights/offers";
 import { parseFlightSearchParams, type RawSearchParams } from "@/lib/flights/search-params";
-import { localizedAlternates } from "@/lib/seo";
+import { canonicalFor } from "@/lib/seo";
 import { recordFlightSearch } from "@/server/flights/events";
 import { monthCalendar, searchFlights, type SearchOutcome } from "@/server/flights/search";
 import { getUser } from "@/server/auth";
@@ -32,7 +32,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return {
     title: t("title"),
     description: t("description"),
-    alternates: localizedAlternates(locale, "/voli"),
+    alternates: canonicalFor(locale, "/voli"),
     robots: searched ? { index: false, follow: true } : undefined,
   };
 }

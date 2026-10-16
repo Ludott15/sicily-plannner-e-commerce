@@ -11,7 +11,7 @@ import { parseActivityFilters, type ActivitySearchParams } from "@/lib/activity-
 import { publicEnv } from "@/lib/env";
 import { Link } from "@/lib/i18n/navigation";
 import { provinceName } from "@/lib/provinces";
-import { localizedAlternates } from "@/lib/seo";
+import { canonicalFor } from "@/lib/seo";
 import { interestLabels } from "@/server/catalog/labels";
 import { listActivities, listActivityFilterOptions } from "@/server/catalog/queries";
 
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: Omit<Props, "searchParams">):
   return {
     title: t("activitiesTitle"),
     description: t("activitiesDescription"),
-    alternates: localizedAlternates(locale, "/attivita"),
+    alternates: canonicalFor(locale, "/attivita"),
     openGraph: { title: t("activitiesTitle"), description: t("activitiesDescription") },
   };
 }

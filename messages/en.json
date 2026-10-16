@@ -34,7 +34,8 @@
     "car": "Car rental",
     "createAccount": "Create your account",
     "personalMenu": "Personal menu",
-    "assistant": "Assistant"
+    "assistant": "Assistant",
+    "guides": "Guides"
   },
   "Home": {
     "title": "Sicily as locals know it, made for you.",
@@ -205,7 +206,8 @@
     "dayPlacesJoiner": " and ",
     "v2": {
       "filtersToggle": "Filters"
-    }
+    },
+    "sameItinerary": "In the same itinerary"
   },
   "Design": {
     "forYou": "For you",
@@ -913,6 +915,81 @@
       "aiCostPerUser": "Cost per active user",
       "continueTitle": "Continue in the admin area",
       "continueActivities": "Go to activities"
+    },
+    "guides": {
+      "nav": "Guides",
+      "title": "Guides",
+      "new": "New guide",
+      "empty": "There are no guides yet. A guide appears on the site only when you publish it.",
+      "statusDraft": "Draft",
+      "statusPublished": "Published",
+      "titleIt": "Italian title",
+      "titleEn": "English title",
+      "slug": "Address (slug)",
+      "slugHint": "Lowercase letters, numbers and hyphens only. It appears in the guide address.",
+      "authorName": "Author",
+      "authorHint": "Who signs the guide: the editorial team or a real person.",
+      "summaryIt": "Italian summary",
+      "summaryEn": "English summary",
+      "cover": "Cover image",
+      "coverHint": "Optional. A photo with credits or an illustration.",
+      "noCover": "No cover image",
+      "untitledMedia": "Media without alt text",
+      "bodyIt": "Italian text",
+      "bodyEn": "English text",
+      "bodyHint": "Markdown: headings with ## and ###, lists, **bold**, *italic*, links [text](https://...) or internal links such as /luoghi/name. No images, no HTML.",
+      "preview": "Preview",
+      "previewEmpty": "The text will appear here.",
+      "save": "Save",
+      "saving": "Saving",
+      "saved": "Changes saved.",
+      "errors": {
+        "invalid": "Check the fields: some data is not valid.",
+        "slug_taken": "A guide with this address already exists.",
+        "not_found": "Guide not found.",
+        "failed": "Could not save. Try again."
+      },
+      "links": {
+        "title": "Links",
+        "hint": "Places, activities, itineraries and products mentioned in the guide. They appear in the article in the order you choose them.",
+        "places": "Places",
+        "activities": "Activities",
+        "itineraries": "Ready itineraries",
+        "none": "Nothing available.",
+        "save": "Save the links",
+        "saved": "Links saved.",
+        "products": "Products"
+      },
+      "publishTitle": "Publication",
+      "status": {
+        "publish": "Publish the guide",
+        "publishConfirm": "The guide becomes visible to everyone. Do you want to publish it?",
+        "publishDone": "Guide published.",
+        "unpublish": "Unpublish the guide",
+        "unpublishConfirm": "The guide goes back to draft and is no longer visible. Do you want to unpublish it?",
+        "unpublishDone": "Guide unpublished.",
+        "delete": "Delete the guide",
+        "deleteConfirm": "The guide is deleted and cannot be recovered. Do you want to delete it?",
+        "deleteDone": "Guide deleted.",
+        "yes": "Yes, confirm",
+        "cancel": "Cancel"
+      }
+    },
+    "areas": {
+      "nav": "Areas",
+      "title": "Travel areas",
+      "intro": "Description of each area in Italian and English. If the field is empty, the area page does not show the section.",
+      "descriptionIt": "Italian description",
+      "descriptionEn": "English description",
+      "descriptionHint": "One paragraph with concrete facts about the area.",
+      "save": "Save the description",
+      "saving": "Saving",
+      "saved": "Description saved.",
+      "errors": {
+        "invalid": "Check the text and try again.",
+        "not_found": "Area not found.",
+        "failed": "Could not save. Try again."
+      }
     }
   },
   "Og": {
@@ -2176,5 +2253,27 @@
       "title": "Assistant for {title}",
       "disabled": "The assistant is not available right now."
     }
+  },
+  "Guides": {
+    "title": "Guides",
+    "description": "Editorial articles on places, food and travel in Sicily.",
+    "empty": "No guides have been published yet. In the meantime, start from the activities.",
+    "byAuthor": "By {author}",
+    "publishedOn": "Published on {date}",
+    "updatedOn": "Updated on {date}",
+    "notTranslated": "This guide is only available in Italian.",
+    "linksTitle": "In the places of this guide",
+    "linkedPlaces": "Places",
+    "linkedActivities": "Activities",
+    "linkedItineraries": "Ready itineraries"
+  },
+  "Area": {
+    "eyebrow": "Travel area",
+    "metaDescription": "Places, activities and ready itineraries in {area}.",
+    "placesTitle": "Places",
+    "activitiesTitle": "Activities",
+    "itinerariesTitle": "Ready itineraries",
+    "guidesTitle": "Guides",
+    "productsTitle": "From the territory"
   }
 }
