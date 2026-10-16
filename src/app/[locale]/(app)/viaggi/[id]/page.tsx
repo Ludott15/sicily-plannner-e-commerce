@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { z } from "zod";
+import { ChatLauncher } from "@/components/chat/chat-launcher";
 import { TripGroupPanel } from "@/components/groups/trip-group-panel";
 import { TripGroupSections } from "@/components/groups/trip-group-sections";
 import { PageContainer } from "@/components/layout/page-container";
@@ -19,6 +20,7 @@ import { getPartnerConfig, VERTICAL_PARTNER } from "@/server/affiliates/partners
 import { requireUser } from "@/server/auth";
 import { getGroup } from "@/server/groups/queries";
 import { getTripGroupState } from "@/server/groups/trip-group";
+import { chatStatus } from "@/server/chat/queries";
 import { getTrip, getTripVerticalChips, type VerticalChip } from "@/server/trips/queries";
 
 // Pagina del viaggio (M5, 1.4; riprogettata in 6.1). Solo il proprietario o i membri del gruppo la aprono:
@@ -37,7 +39,7 @@ export default async function TripPage({ params, searchParams }: Props) {
   setRequestLocale(locale);
   if (!z.uuid().safeParse(id).success) notFound();
   const user = await requireUser();
-  const [trip, t, tAff, tVert, format, { giorno, scheda }, chips, lodgingPartner, carPartner] = await Promise.all([
+  const [trip, t, tAff, tVert, format, { giorno, scheda }, chips, lodgingPartner, carPartner, chat] = await Promise.all([
     getTrip(user, id),
     getTranslations("Trips"),
     getTranslations("Affiliates"),
@@ -47,6 +49,7 @@ export default async function TripPage({ params, searchParams }: Props) {
     getTripVerticalChips(user, id, locale),
     getPartnerConfig(VERTICAL_PARTNER.lodging),
     getPartnerConfig(VERTICAL_PARTNER.car),
+    chatStatus(user),
   ]);
   if (!trip) notFound();
   // Gruppo del viaggio (4.1): il nome serve al link. Il viaggio è di chi lo apre, o di un membro.
@@ -198,15 +201,24 @@ export default async function TripPage({ params, searchParams }: Props) {
         eyebrow={t("eyebrow")}
         meta={meta.join(" · ")}
         menu={
-          <TripActions
-            locale={locale}
-            tripId={trip.id}
-            title={trip.title}
-            startDate={trip.startDate}
-            travelers={trip.travelers}
-            pace={trip.pace}
-            sharedSince={sharedSince}
-          />
+          <>
+            <ChatLauncher
+              itineraryId={trip.id}
+              title={trip.title}
+              enabled={chat.enabled}
+              remainingToday={chat.remainingToday}
+              limit={chat.limit}
+            />
+            <TripActions
+              locale={locale}
+              tripId={trip.id}
+              title={trip.title}
+              startDate={trip.startDate}
+              travelers={trip.travelers}
+              pace={trip.pace}
+              sharedSince={sharedSince}
+            />
+          </>
         }
         {...crumbs}
       />

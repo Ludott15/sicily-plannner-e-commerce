@@ -10,7 +10,7 @@ const SECTIONS: { key: TabKey; pattern: RegExp }[] = [
   { key: "explore", pattern: /^\/(attivita|itinerari|voli|dove-dormire|noleggio-auto|luoghi)(\/|$)/ },
   { key: "trips", pattern: /^\/(viaggi|viaggio)(\/|$)/ },
   { key: "groups", pattern: /^\/gruppi(\/|$)/ },
-  { key: "profile", pattern: /^\/(profilo|punti|classifica|notifiche|preferenze)(\/|$)/ },
+  { key: "profile", pattern: /^\/(profilo|punti|classifica|notifiche|preferenze|chat)(\/|$)/ },
 ];
 
 export function MobileTabBar() {

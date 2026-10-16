@@ -324,6 +324,42 @@ $$;
 ALTER FUNCTION "public"."affiliate_partner_config"("p_partner" "public"."partner") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."append_chat_message"("p_session" "uuid", "p_role" "text", "p_content" "jsonb", "p_tool_calls" "jsonb", "p_input_tokens" integer, "p_output_tokens" integer) RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_user uuid := (select auth.uid());
+  v_id uuid;
+begin
+  if v_user is null then
+    raise exception 'unauthenticated' using errcode = '42501';
+  end if;
+
+  if not exists (
+    select 1 from public.chat_sessions s
+    where s.id = p_session and s.user_id = v_user
+  ) then
+    raise exception 'chat_session_not_found' using errcode = 'P0001';
+  end if;
+
+  -- Limite di dimensione: un messaggio (testo e strumenti) non supera 64 KB.
+  if octet_length(p_content::text) > 65536 or coalesce(octet_length(p_tool_calls::text), 0) > 65536 then
+    raise exception 'chat_message_too_large' using errcode = 'P0001';
+  end if;
+
+  insert into public.chat_messages (session_id, role, content, tool_calls, input_tokens, output_tokens)
+  values (p_session, p_role, p_content, p_tool_calls, p_input_tokens, p_output_tokens)
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."append_chat_message"("p_session" "uuid", "p_role" "text", "p_content" "jsonb", "p_tool_calls" "jsonb", "p_input_tokens" integer, "p_output_tokens" integer) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") RETURNS boolean
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -534,6 +570,33 @@ $$;
 ALTER FUNCTION "public"."can_vote_item"("item_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."chat_messages_today"() RETURNS integer
+    LANGUAGE "plpgsql" STABLE
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_user uuid := (select auth.uid());
+  v_count int;
+begin
+  if v_user is null then
+    raise exception 'unauthenticated' using errcode = '42501';
+  end if;
+
+  select count(*)::int into v_count
+  from public.chat_messages m
+  join public.chat_sessions s on s.id = m.session_id
+  where s.user_id = v_user
+    and m.role = 'user'
+    and m.created_at >= (date_trunc('day', now() at time zone 'Europe/Rome') at time zone 'Europe/Rome');
+
+  return v_count;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."chat_messages_today"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."check_activity_has_tags"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -696,6 +759,50 @@ $_$;
 ALTER FUNCTION "public"."close_season"("p_season" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."create_chat_proposal"("p_session" "uuid", "p_message" "uuid", "p_kind" "text", "p_payload" "jsonb") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_user uuid := (select auth.uid());
+  v_id uuid;
+begin
+  if v_user is null then
+    raise exception 'unauthenticated' using errcode = '42501';
+  end if;
+
+  if not exists (
+    select 1 from public.chat_sessions s
+    where s.id = p_session and s.user_id = v_user
+  ) then
+    raise exception 'chat_session_not_found' using errcode = 'P0001';
+  end if;
+
+  -- Il messaggio a cui si lega la proposta è una risposta dell'assistente della stessa sessione.
+  if not exists (
+    select 1 from public.chat_messages m
+    where m.id = p_message and m.session_id = p_session and m.role = 'assistant'
+  ) then
+    raise exception 'chat_message_not_found' using errcode = 'P0001';
+  end if;
+
+  -- Limite di dimensione: il payload di una proposta non supera 16 KB.
+  if coalesce(octet_length(p_payload::text), 0) > 16384 then
+    raise exception 'chat_proposal_too_large' using errcode = 'P0001';
+  end if;
+
+  insert into public.chat_proposals (session_id, message_id, kind, payload)
+  values (p_session, p_message, p_kind, p_payload)
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."create_chat_proposal"("p_session" "uuid", "p_message" "uuid", "p_kind" "text", "p_payload" "jsonb") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -734,6 +841,72 @@ $$;
 
 
 ALTER FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
+
+SET default_tablespace = '';
+
+SET default_table_access_method = "heap";
+
+
+CREATE TABLE IF NOT EXISTS "public"."chat_proposals" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "session_id" "uuid" NOT NULL,
+    "message_id" "uuid" NOT NULL,
+    "kind" "text" NOT NULL,
+    "payload" "jsonb" NOT NULL,
+    "status" "text" DEFAULT 'pending'::"text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "decided_at" timestamp with time zone,
+    CONSTRAINT "chat_proposals_decided_consistent" CHECK ((("status" = 'pending'::"text") = ("decided_at" IS NULL))),
+    CONSTRAINT "chat_proposals_kind_valid" CHECK (("kind" = ANY (ARRAY['itinerary'::"text", 'preference'::"text"]))),
+    CONSTRAINT "chat_proposals_payload_object" CHECK (("jsonb_typeof"("payload") = 'object'::"text")),
+    CONSTRAINT "chat_proposals_status_valid" CHECK (("status" = ANY (ARRAY['pending'::"text", 'accepted'::"text", 'rejected'::"text"])))
+);
+
+
+ALTER TABLE "public"."chat_proposals" OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."decide_chat_proposal"("p_id" "uuid", "p_status" "text") RETURNS "public"."chat_proposals"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_user uuid := (select auth.uid());
+  v_row public.chat_proposals;
+begin
+  if v_user is null then
+    raise exception 'unauthenticated' using errcode = '42501';
+  end if;
+
+  if p_status not in ('accepted', 'rejected') then
+    raise exception 'invalid_chat_status' using errcode = 'P0001';
+  end if;
+
+  select p.* into v_row
+  from public.chat_proposals p
+  join public.chat_sessions s on s.id = p.session_id
+  where p.id = p_id and s.user_id = v_user
+  for update of p;
+
+  if not found then
+    raise exception 'chat_proposal_not_found' using errcode = 'P0001';
+  end if;
+
+  if v_row.status <> 'pending' then
+    raise exception 'chat_proposal_decided' using errcode = 'P0001';
+  end if;
+
+  update public.chat_proposals
+  set status = p_status, decided_at = now()
+  where id = p_id
+  returning * into v_row;
+
+  return v_row;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."decide_chat_proposal"("p_id" "uuid", "p_status" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."decide_proposal"("p_proposal_id" "uuid", "p_accept" boolean) RETURNS "void"
@@ -2526,10 +2699,6 @@ $$;
 
 ALTER FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") OWNER TO "postgres";
 
-SET default_tablespace = '';
-
-SET default_table_access_method = "heap";
-
 
 CREATE TABLE IF NOT EXISTS "public"."activities" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -3711,6 +3880,11 @@ ALTER TABLE ONLY "public"."chat_messages"
 
 
 
+ALTER TABLE ONLY "public"."chat_proposals"
+    ADD CONSTRAINT "chat_proposals_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."chat_sessions"
     ADD CONSTRAINT "chat_sessions_pkey" PRIMARY KEY ("id");
 
@@ -4011,6 +4185,14 @@ CREATE INDEX "affiliate_conversions_subid_idx" ON "public"."affiliate_conversion
 
 
 CREATE INDEX "chat_messages_session_created_idx" ON "public"."chat_messages" USING "btree" ("session_id", "created_at");
+
+
+
+CREATE INDEX "chat_proposals_message_id_idx" ON "public"."chat_proposals" USING "btree" ("message_id");
+
+
+
+CREATE INDEX "chat_proposals_session_created_idx" ON "public"."chat_proposals" USING "btree" ("session_id", "created_at");
 
 
 
@@ -4340,6 +4522,16 @@ ALTER TABLE ONLY "public"."areas"
 
 ALTER TABLE ONLY "public"."chat_messages"
     ADD CONSTRAINT "chat_messages_session_id_chat_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."chat_sessions"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."chat_proposals"
+    ADD CONSTRAINT "chat_proposals_message_id_chat_messages_id_fk" FOREIGN KEY ("message_id") REFERENCES "public"."chat_messages"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."chat_proposals"
+    ADD CONSTRAINT "chat_proposals_session_id_chat_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."chat_sessions"("id") ON DELETE CASCADE;
 
 
 
@@ -4881,6 +5073,15 @@ CREATE POLICY "chat_messages_select_own" ON "public"."chat_messages" FOR SELECT 
 
 
 
+ALTER TABLE "public"."chat_proposals" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "chat_proposals_select_own" ON "public"."chat_proposals" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."chat_sessions" "s"
+  WHERE (("s"."id" = "chat_proposals"."session_id") AND ("s"."user_id" = ( SELECT "auth"."uid"() AS "uid"))))));
+
+
+
 ALTER TABLE "public"."chat_sessions" ENABLE ROW LEVEL SECURITY;
 
 
@@ -5409,6 +5610,12 @@ GRANT ALL ON FUNCTION "public"."affiliate_partner_config"("p_partner" "public"."
 
 
 
+REVOKE ALL ON FUNCTION "public"."append_chat_message"("p_session" "uuid", "p_role" "text", "p_content" "jsonb", "p_tool_calls" "jsonb", "p_input_tokens" integer, "p_output_tokens" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."append_chat_message"("p_session" "uuid", "p_role" "text", "p_content" "jsonb", "p_tool_calls" "jsonb", "p_input_tokens" integer, "p_output_tokens" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."append_chat_message"("p_session" "uuid", "p_role" "text", "p_content" "jsonb", "p_tool_calls" "jsonb", "p_input_tokens" integer, "p_output_tokens" integer) TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") TO "service_role";
 
@@ -5451,6 +5658,12 @@ GRANT ALL ON FUNCTION "public"."can_vote_item"("item_id" "uuid") TO "service_rol
 
 
 
+REVOKE ALL ON FUNCTION "public"."chat_messages_today"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."chat_messages_today"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."chat_messages_today"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."check_activity_has_tags"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."check_activity_has_tags"() TO "service_role";
 
@@ -5477,10 +5690,27 @@ GRANT ALL ON FUNCTION "public"."close_season"("p_season" "text") TO "service_rol
 
 
 
+REVOKE ALL ON FUNCTION "public"."create_chat_proposal"("p_session" "uuid", "p_message" "uuid", "p_kind" "text", "p_payload" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."create_chat_proposal"("p_session" "uuid", "p_message" "uuid", "p_kind" "text", "p_payload" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_chat_proposal"("p_session" "uuid", "p_message" "uuid", "p_kind" "text", "p_payload" "jsonb") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."chat_proposals" TO "service_role";
+GRANT SELECT ON TABLE "public"."chat_proposals" TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."decide_chat_proposal"("p_id" "uuid", "p_status" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."decide_chat_proposal"("p_id" "uuid", "p_status" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."decide_chat_proposal"("p_id" "uuid", "p_status" "text") TO "service_role";
 
 
 

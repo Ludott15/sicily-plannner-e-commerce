@@ -56,6 +56,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   ] as const;
 
   const hub = [
+    { href: "/chat", label: tNav("assistant") },
     { href: "/punti", label: tPoints("title") },
     { href: "/classifica", label: tNav("leaderboard") },
     { href: "/notifiche", label: tNotifications("title") },

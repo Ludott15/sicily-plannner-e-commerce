@@ -30,6 +30,17 @@ export default defineConfig({
           fileParallelism: false,
         },
       },
+      {
+        // Valutazione del chatbot con il modello vero: npm run eval:chat (salta senza ANTHROPIC_API_KEY).
+        extends: true,
+        test: {
+          name: "eval",
+          include: ["src/**/*.eval.int.test.ts"],
+          setupFiles: ["./test/setup-integration.ts"],
+          fileParallelism: false,
+          testTimeout: 120_000,
+        },
+      },
     ],
   },
 });

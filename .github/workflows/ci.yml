@@ -59,6 +59,10 @@ jobs:
             echo "DATABASE_URL=$DB_URL"
             # Chiave di sola prova per firmare i link verso i partner negli e2e (non è un segreto).
             echo "FLIGHT_LINK_SECRET=ci-only-test-key-not-a-secret"
+            # Chatbot negli e2e: modello di prova deterministico (mai su Vercel) e chiave di prova per il
+            # rate limit, che per la chat rifiuta senza chiave (fail closed). Non sono segreti.
+            echo "CHAT_TEST_MODEL=scripted"
+            echo "RATE_LIMIT_SECRET=ci-only-rate-limit-key-not-a-secret"
           } > .env.local
           echo "MAILPIT_URL=$MAILPIT_URL" >> "$GITHUB_ENV"
 
