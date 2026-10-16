@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { connection } from "next/server";
 import { CatalogLocalTip } from "@/components/catalog/catalog-local-tip";
+import { JsonLd } from "@/components/catalog/json-ld";
 import { CoverPicture } from "@/components/catalog/cover-picture";
 import { FeaturedPlaces } from "@/components/catalog/featured-places";
 import { ItineraryCard } from "@/components/catalog/itinerary-card";
@@ -10,8 +11,9 @@ import { ButtonLink, PointsPill } from "@/components/design";
 import { FlightSearch } from "@/components/flights/flight-search";
 import { Link } from "@/lib/i18n/navigation";
 import type { CoverMedia } from "@/lib/media";
-import { localizedAlternates } from "@/lib/seo";
+import { canonicalFor } from "@/lib/seo";
 import { shuffle } from "@/lib/shuffle";
+import { organization } from "@/lib/structured-data";
 import { getUser } from "@/server/auth";
 import { getHomePoints } from "@/server/gamification/queries";
 import { getHomeHero, listFeaturedPlaces, listTemplates } from "@/server/catalog/queries";
@@ -30,7 +32,7 @@ type Props = { params: Promise<{ locale: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Metadata" });
-  return { description: t("description"), alternates: localizedAlternates(locale, "") };
+  return { description: t("description"), alternates: canonicalFor(locale, "") };
 }
 
 // Il carosello compare solo con almeno quattro luoghi con foto propria (contratto 1.2).
@@ -198,6 +200,7 @@ export default async function HomePage({ params }: Props) {
           </div>
         </section>
       )}
+      <JsonLd data={organization()} />
     </>
   );
 }

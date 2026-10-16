@@ -3062,6 +3062,9 @@ CREATE TABLE IF NOT EXISTS "public"."areas" (
     "sort" smallint DEFAULT 0 NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "cover_media_id" "uuid",
+    "description_it" "text",
+    "description_en" "text",
+    CONSTRAINT "areas_description_length" CHECK ((("char_length"("description_it") <= 1200) AND ("char_length"("description_en") <= 1200))),
     CONSTRAINT "areas_slug_format" CHECK (("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::"text"))
 );
 
@@ -3204,6 +3207,49 @@ CREATE TABLE IF NOT EXISTS "public"."groups" (
 
 
 ALTER TABLE "public"."groups" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."guide_links" (
+    "guide_id" "uuid" NOT NULL,
+    "kind" "text" NOT NULL,
+    "target_id" "uuid" NOT NULL,
+    "position" smallint DEFAULT 0 NOT NULL,
+    CONSTRAINT "guide_links_kind_valid" CHECK (("kind" = ANY (ARRAY['place'::"text", 'activity'::"text", 'itinerary'::"text", 'product'::"text"]))),
+    CONSTRAINT "guide_links_position_range" CHECK ((("position" >= 0) AND ("position" <= 99)))
+);
+
+
+ALTER TABLE "public"."guide_links" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."guides" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "slug" "text" NOT NULL,
+    "title_it" "text" NOT NULL,
+    "title_en" "text",
+    "summary_it" "text",
+    "summary_en" "text",
+    "body_it" "text" NOT NULL,
+    "body_en" "text",
+    "author_name" "text" NOT NULL,
+    "cover_media_id" "uuid",
+    "status" "text" DEFAULT 'draft'::"text" NOT NULL,
+    "published_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "guides_author_name_length" CHECK ((("char_length"("btrim"("author_name")) >= 2) AND ("char_length"("btrim"("author_name")) <= 120))),
+    CONSTRAINT "guides_body_en_length" CHECK (("char_length"("body_en") <= 60000)),
+    CONSTRAINT "guides_body_it_length" CHECK ((("char_length"("btrim"("body_it")) >= 1) AND ("char_length"("btrim"("body_it")) <= 60000))),
+    CONSTRAINT "guides_published_at" CHECK ((("status" = 'draft'::"text") OR ("published_at" IS NOT NULL))),
+    CONSTRAINT "guides_slug_format" CHECK (("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::"text")),
+    CONSTRAINT "guides_status_valid" CHECK (("status" = ANY (ARRAY['draft'::"text", 'published'::"text"]))),
+    CONSTRAINT "guides_summary_length" CHECK ((("char_length"("summary_it") <= 300) AND ("char_length"("summary_en") <= 300))),
+    CONSTRAINT "guides_title_en_length" CHECK (("char_length"("title_en") <= 160)),
+    CONSTRAINT "guides_title_it_length" CHECK ((("char_length"("btrim"("title_it")) >= 1) AND ("char_length"("btrim"("title_it")) <= 160)))
+);
+
+
+ALTER TABLE "public"."guides" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."image_authorizations" (
@@ -4064,6 +4110,21 @@ ALTER TABLE ONLY "public"."groups"
 
 
 
+ALTER TABLE ONLY "public"."guide_links"
+    ADD CONSTRAINT "guide_links_guide_id_kind_target_id_pk" PRIMARY KEY ("guide_id", "kind", "target_id");
+
+
+
+ALTER TABLE ONLY "public"."guides"
+    ADD CONSTRAINT "guides_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."guides"
+    ADD CONSTRAINT "guides_slug_unique" UNIQUE ("slug");
+
+
+
 ALTER TABLE ONLY "public"."image_authorizations"
     ADD CONSTRAINT "image_authorizations_pkey" PRIMARY KEY ("id");
 
@@ -4357,6 +4418,18 @@ CREATE INDEX "group_members_user_id_idx" ON "public"."group_members" USING "btre
 
 
 CREATE INDEX "groups_owner_id_idx" ON "public"."groups" USING "btree" ("owner_id");
+
+
+
+CREATE INDEX "guide_links_target_idx" ON "public"."guide_links" USING "btree" ("kind", "target_id");
+
+
+
+CREATE INDEX "guides_cover_media_id_idx" ON "public"."guides" USING "btree" ("cover_media_id");
+
+
+
+CREATE INDEX "guides_published_at_idx" ON "public"."guides" USING "btree" ("published_at") WHERE ("status" = 'published'::"text");
 
 
 
@@ -4736,6 +4809,16 @@ ALTER TABLE ONLY "public"."groups"
 
 ALTER TABLE ONLY "public"."groups"
     ADD CONSTRAINT "groups_owner_id_profiles_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."guide_links"
+    ADD CONSTRAINT "guide_links_guide_id_guides_id_fk" FOREIGN KEY ("guide_id") REFERENCES "public"."guides"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."guides"
+    ADD CONSTRAINT "guides_cover_media_id_media_id_fk" FOREIGN KEY ("cover_media_id") REFERENCES "public"."media"("id") ON DELETE SET NULL;
 
 
 
@@ -5294,6 +5377,54 @@ CREATE POLICY "groups_select_members" ON "public"."groups" FOR SELECT TO "authen
 
 
 CREATE POLICY "groups_update_owner" ON "public"."groups" FOR UPDATE TO "authenticated" USING (("owner_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("owner_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+ALTER TABLE "public"."guide_links" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "guide_links_delete_admin" ON "public"."guide_links" FOR DELETE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "guide_links_insert_admin" ON "public"."guide_links" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "guide_links_select_admin" ON "public"."guide_links" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "guide_links_select_published" ON "public"."guide_links" FOR SELECT TO "authenticated", "anon" USING ((EXISTS ( SELECT 1
+   FROM "public"."guides" "g"
+  WHERE (("g"."id" = "guide_links"."guide_id") AND ("g"."status" = 'published'::"text")))));
+
+
+
+CREATE POLICY "guide_links_update_admin" ON "public"."guide_links" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."guides" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "guides_delete_admin" ON "public"."guides" FOR DELETE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "guides_insert_admin" ON "public"."guides" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "guides_select_admin" ON "public"."guides" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "guides_select_published" ON "public"."guides" FOR SELECT TO "authenticated", "anon" USING (("status" = 'published'::"text"));
+
+
+
+CREATE POLICY "guides_update_admin" ON "public"."guides" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
 
 
 
@@ -6499,6 +6630,86 @@ GRANT SELECT,DELETE ON TABLE "public"."groups" TO "authenticated";
 
 
 GRANT UPDATE("name") ON TABLE "public"."groups" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."guide_links" TO "service_role";
+GRANT SELECT ON TABLE "public"."guide_links" TO "anon";
+GRANT SELECT,DELETE ON TABLE "public"."guide_links" TO "authenticated";
+
+
+
+GRANT INSERT("guide_id") ON TABLE "public"."guide_links" TO "authenticated";
+
+
+
+GRANT INSERT("kind") ON TABLE "public"."guide_links" TO "authenticated";
+
+
+
+GRANT INSERT("target_id") ON TABLE "public"."guide_links" TO "authenticated";
+
+
+
+GRANT INSERT("position"),UPDATE("position") ON TABLE "public"."guide_links" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."guides" TO "service_role";
+GRANT SELECT ON TABLE "public"."guides" TO "anon";
+GRANT SELECT,DELETE ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("id") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("slug"),UPDATE("slug") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("title_it"),UPDATE("title_it") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("title_en"),UPDATE("title_en") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("summary_it"),UPDATE("summary_it") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("summary_en"),UPDATE("summary_en") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("body_it"),UPDATE("body_it") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("body_en"),UPDATE("body_en") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("author_name"),UPDATE("author_name") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("cover_media_id"),UPDATE("cover_media_id") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("status"),UPDATE("status") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("published_at"),UPDATE("published_at") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT UPDATE("updated_at") ON TABLE "public"."guides" TO "authenticated";
 
 
 

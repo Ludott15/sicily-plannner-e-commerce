@@ -34,7 +34,8 @@
     "car": "Noleggio auto",
     "createAccount": "Crea l'account",
     "personalMenu": "Menu personale",
-    "assistant": "Assistente"
+    "assistant": "Assistente",
+    "guides": "Guide"
   },
   "Home": {
     "title": "La Sicilia di chi ci vive, su misura per te.",
@@ -205,7 +206,8 @@
     "dayPlacesJoiner": " e ",
     "v2": {
       "filtersToggle": "Filtri"
-    }
+    },
+    "sameItinerary": "Nello stesso itinerario"
   },
   "Design": {
     "forYou": "Per te",
@@ -913,6 +915,81 @@
       "aiCostPerUser": "Costo per utente attivo",
       "continueTitle": "Prosegui nell'area admin",
       "continueActivities": "Vai alle attività"
+    },
+    "guides": {
+      "nav": "Guide",
+      "title": "Guide",
+      "new": "Nuova guida",
+      "empty": "Non ci sono ancora guide. Una guida compare sul sito solo quando la pubblichi.",
+      "statusDraft": "Bozza",
+      "statusPublished": "Pubblicata",
+      "titleIt": "Titolo in italiano",
+      "titleEn": "Titolo in inglese",
+      "slug": "Indirizzo (slug)",
+      "slugHint": "Solo minuscole, numeri e trattini. Compare nell'indirizzo della guida.",
+      "authorName": "Autore",
+      "authorHint": "Chi firma la guida: la redazione o una persona reale.",
+      "summaryIt": "Riassunto in italiano",
+      "summaryEn": "Riassunto in inglese",
+      "cover": "Copertina",
+      "coverHint": "Facoltativa. Una foto con crediti o un'illustrazione.",
+      "noCover": "Nessuna copertina",
+      "untitledMedia": "Media senza testo alternativo",
+      "bodyIt": "Testo in italiano",
+      "bodyEn": "Testo in inglese",
+      "bodyHint": "Markdown: titoli con ## e ###, elenchi, **grassetto**, *corsivo*, link [testo](https://...) o link interni come /luoghi/nome. Niente immagini né HTML.",
+      "preview": "Anteprima",
+      "previewEmpty": "Il testo comparirà qui.",
+      "save": "Salva",
+      "saving": "Salvataggio in corso",
+      "saved": "Modifiche salvate.",
+      "errors": {
+        "invalid": "Controlla i campi: alcuni dati non sono validi.",
+        "slug_taken": "Esiste già una guida con questo indirizzo.",
+        "not_found": "Guida non trovata.",
+        "failed": "Non è stato possibile salvare. Riprova."
+      },
+      "links": {
+        "title": "Collegamenti",
+        "hint": "Luoghi, attività, itinerari e prodotti citati nella guida. Compaiono nell'articolo nell'ordine in cui li scegli.",
+        "places": "Luoghi",
+        "activities": "Attività",
+        "itineraries": "Itinerari pronti",
+        "none": "Nessun elemento disponibile.",
+        "save": "Salva i collegamenti",
+        "saved": "Collegamenti salvati.",
+        "products": "Prodotti"
+      },
+      "publishTitle": "Pubblicazione",
+      "status": {
+        "publish": "Pubblica la guida",
+        "publishConfirm": "La guida diventa visibile a tutti. Vuoi pubblicarla?",
+        "publishDone": "Guida pubblicata.",
+        "unpublish": "Ritira la guida",
+        "unpublishConfirm": "La guida torna in bozza e non è più visibile. Vuoi ritirarla?",
+        "unpublishDone": "Guida ritirata.",
+        "delete": "Elimina la guida",
+        "deleteConfirm": "La guida viene eliminata e non si recupera. Vuoi eliminarla?",
+        "deleteDone": "Guida eliminata.",
+        "yes": "Sì, conferma",
+        "cancel": "Annulla"
+      }
+    },
+    "areas": {
+      "nav": "Aree",
+      "title": "Aree di viaggio",
+      "intro": "Descrizione di ogni area in italiano e in inglese. Se il campo è vuoto, la pagina dell'area non mostra la sezione.",
+      "descriptionIt": "Descrizione in italiano",
+      "descriptionEn": "Descrizione in inglese",
+      "descriptionHint": "Un paragrafo con fatti concreti sull'area.",
+      "save": "Salva la descrizione",
+      "saving": "Salvataggio in corso",
+      "saved": "Descrizione salvata.",
+      "errors": {
+        "invalid": "Controlla il testo e riprova.",
+        "not_found": "Area non trovata.",
+        "failed": "Non è stato possibile salvare. Riprova."
+      }
     }
   },
   "Og": {
@@ -2176,5 +2253,27 @@
       "title": "Assistente per {title}",
       "disabled": "L'assistente non è attivo in questo momento."
     }
+  },
+  "Guides": {
+    "title": "Guide",
+    "description": "Articoli della redazione su luoghi, cibo e viaggi in Sicilia.",
+    "empty": "Non ci sono ancora guide pubblicate. Intanto puoi partire dalle attività.",
+    "byAuthor": "Di {author}",
+    "publishedOn": "Pubblicata il {date}",
+    "updatedOn": "Aggiornata il {date}",
+    "notTranslated": "Questa guida è disponibile solo in italiano.",
+    "linksTitle": "Nei luoghi di questa guida",
+    "linkedPlaces": "Luoghi",
+    "linkedActivities": "Attività",
+    "linkedItineraries": "Itinerari pronti"
+  },
+  "Area": {
+    "eyebrow": "Area di viaggio",
+    "metaDescription": "Luoghi, attività e itinerari pronti in {area}.",
+    "placesTitle": "Luoghi",
+    "activitiesTitle": "Attività",
+    "itinerariesTitle": "Itinerari pronti",
+    "guidesTitle": "Guide",
+    "productsTitle": "Dal territorio"
   }
 }

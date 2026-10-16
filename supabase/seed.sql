@@ -489,3 +489,22 @@ from (values
   ('demo-entroterra-enna', 6, null::text, 'demo-enna')
 ) as v(itinerary_slug, night_index, area_slug, place_slug)
 join public.itineraries i on i.slug = v.itinerary_slug;
+
+-- Guida demo (passo 11.1, e2e): pubblicata, con autore e testo di prova ([DEMO]). Il collegamento
+-- va a un luogo demo. Nessuna guida reale nel seed: le guide vere le scrive l'admin.
+insert into public.guides (slug, title_it, summary_it, body_it, author_name, status, published_at)
+values (
+  'demo-guida-prima-volta',
+  '[DEMO] Prima volta in Sicilia',
+  '[DEMO] Una guida di prova per le pagine delle guide.',
+  E'## Da dove partire\n\n[DEMO] Testo di prova: **Palermo** è il punto di partenza più comodo per il primo viaggio.\n\n## Cosa mettere in valigia\n\n- [DEMO] Scarpe comode\n- [DEMO] Documenti\n\n1. [DEMO] Prenotare le visite in anticipo\n2. [DEMO] Controllare gli orari\n\n[DEMO] Link di prova: [Palermo](/it/luoghi/demo-palermo).',
+  '[DEMO] Redazione',
+  'published',
+  now()
+);
+
+insert into public.guide_links (guide_id, kind, target_id, position)
+select g.id, 'place', p.id, 0
+from public.guides g
+join public.places p on p.slug = 'demo-palermo'
+where g.slug = 'demo-guida-prima-volta';
