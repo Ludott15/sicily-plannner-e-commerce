@@ -188,7 +188,7 @@ export default async function HomePage({ params }: Props) {
             <p className="mt-3 max-w-2xl text-body-l text-pretty text-lava-muted">{t("localText")}</p>
             <p className="mt-4 text-body-s">
               <span className="font-semibold">{t("founder")}</span> ·{" "}
-              <Link href="/chi-siamo">{t("aboutLink")}</Link>
+              <Link href="/chi-siamo" className="underline underline-offset-4">{t("aboutLink")}</Link>
             </p>
             <ul className="mt-8 grid gap-6 md:grid-cols-3">
               {tips.map((tip, i) => (

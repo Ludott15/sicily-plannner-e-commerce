@@ -122,3 +122,17 @@ test.describe("banner dei cookie", () => {
     expect((await context.cookies()).find((c) => c.name === "cookie_consent")?.value).toBe("accepted");
   });
 });
+
+test("dichiarazione di accessibilità: indicizzabile, nella sitemap, con stato e contatto", async ({ page, request }) => {
+  const sitemap = await (await request.get("/sitemap/pagine.xml")).text();
+  expect(sitemap).toContain("http://localhost:3000/it/accessibilita");
+  await page.goto("/it");
+  await page.getByRole("navigation", { name: "Piè di pagina" }).getByRole("link", { name: "Dichiarazione di accessibilità", exact: true }).click();
+  await expect(page).toHaveURL(/\/it\/accessibilita$/);
+  await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Dichiarazione di accessibilità");
+  await expect(page.getByRole("heading", { name: "Stato di conformità" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Metodo di verifica" })).toBeVisible();
+  // Nessun contatto inventato: finché CONTACT_EMAIL è vuoto la pagina dice che sarà indicato.
+  await expect(page.locator("main a[href^='mailto:']")).toHaveCount(0);
+});

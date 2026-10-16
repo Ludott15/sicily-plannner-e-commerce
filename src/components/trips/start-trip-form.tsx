@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Turnstile } from "@/components/auth/turnstile";
 import { Button } from "@/components/design";
+import { clearAnnouncement, queueAnnouncement } from "@/lib/announce";
 import { startTrip, type StartTripInput, type TripActionError } from "@/server/trips/actions";
 
 const FIELD =
@@ -34,6 +35,8 @@ export function StartTripForm({
     event.preventDefault();
     setError(null);
     startTransition(async () => {
+      // Se l'azione riesce il server reindirizza al viaggio, che legge l'annuncio appena montato.
+      queueAnnouncement(t("tripSavedAnnouncement"));
       const result = await startTrip({
         locale,
         source,
@@ -42,6 +45,7 @@ export function StartTripForm({
         captchaToken: captchaToken ?? undefined,
       });
       if (result?.status === "error") {
+        clearAnnouncement();
         setError(result.code);
         setCaptchaToken(null);
         setCaptchaKey((k) => k + 1);

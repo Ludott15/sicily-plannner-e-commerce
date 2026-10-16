@@ -35,7 +35,8 @@
     "createAccount": "Crea l'account",
     "personalMenu": "Menu personale",
     "assistant": "Assistente",
-    "guides": "Guide"
+    "guides": "Guide",
+    "accessibility": "Dichiarazione di accessibilità"
   },
   "Home": {
     "title": "La Sicilia di chi ci vive, su misura per te.",
@@ -1039,7 +1040,19 @@
     "eyebrow": "Informazioni legali",
     "privacy": "Privacy",
     "cookie": "Cookie",
-    "terms": "Condizioni di vendita"
+    "terms": "Condizioni di vendita",
+    "accessibility": "Dichiarazione di accessibilità",
+    "accessibilityIntro": "Come rendiamo Isula accessibile e che cosa manca ancora.",
+    "accessibilityStatusTitle": "Stato di conformità",
+    "accessibilityStatusText": "Il sito è in corso di verifica rispetto allo standard {standard} e non ne è ancora completamente conforme.",
+    "accessibilityCheckTitle": "Metodo di verifica",
+    "accessibilityCheckText": "Verifica automatica con {tool} sulle pagine principali, in tema chiaro e scuro e a 1280 e 390 px. L'ultima verifica è del {date}. Lo strumento non copre tutto e non sostituisce la prova con i lettori di schermo.",
+    "accessibilityKnownTitle": "Contenuti non accessibili noti",
+    "accessibilityKnownMap": "La mappa interattiva dell'itinerario non è ancora stata provata con i lettori di schermo: l'elenco delle tappe del giorno riporta gli stessi punti in testo.",
+    "accessibilityKnownPartners": "I contenuti dei partner esterni (prenotazioni, offerte e pagine di terzi) non dipendono da noi e non li abbiamo verificati.",
+    "accessibilityContactTitle": "Come segnalare un problema",
+    "accessibilityContactText": "Scrivi a",
+    "accessibilityContactMissing": "Il canale per le segnalazioni sarà indicato in questa pagina."
   },
   "Cookies": {
     "title": "Cookie",
@@ -1372,7 +1385,9 @@
       "menuRemoveStop": "Togli dal viaggio",
       "dayNoteEdit": "Modifica la nota",
       "dayNoteAdd": "Aggiungi una nota al giorno"
-    }
+    },
+    "stopAddedAnnouncement": "Tappa aggiunta al giorno {day}.",
+    "tripSavedAnnouncement": "Viaggio salvato."
   },
   "Media": {
     "photoCredit": "Foto:",
@@ -1756,7 +1771,11 @@
       "practicalNote": "Nota pratica",
       "seeStops": "Vedi le tappe",
       "stopsCount": "{count, plural, one {# tappa} other {# tappe}}"
-    }
+    },
+    "voteSaved": "Voto salvato: {vote}.",
+    "voteRemoved": "Voto tolto.",
+    "voteLikeWord": "mi piace",
+    "voteDislikeWord": "preferirei altro"
   },
   "GroupInvite": {
     "metaTitle": "Invito al gruppo",
