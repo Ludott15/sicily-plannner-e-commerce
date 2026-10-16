@@ -1124,7 +1124,8 @@
       "importErrorColumns": "Missing or unrecognised columns: {columns}",
       "productAllergensDeclared": "Allergens verified",
       "productAllergensDeclaredHint": "Tick only after checking the list. Without this box the product cannot be activated.",
-      "activeNeedsAllergens": "Not saved: an active product needs the \"Allergens verified\" box ticked."
+      "activeNeedsAllergens": "Not saved: an active product needs the \"Allergens verified\" box ticked.",
+      "activeNeedsIngredientsAndFormat": "Not saved: an active product needs ingredients and format."
     }
   },
   "Og": {
@@ -2551,6 +2552,7 @@
     "producerStory": "The story",
     "producerProducts": "Products",
     "producerEmpty": "No products from this producer for now.",
-    "noAllergens": "None of the 14 allergens of EU Reg. 1169/2011"
+    "noAllergens": "None of the 14 allergens of EU Reg. 1169/2011",
+    "withdrawalNotice": "You have 14 days from delivery to withdraw from the purchase without giving a reason."
   }
 }

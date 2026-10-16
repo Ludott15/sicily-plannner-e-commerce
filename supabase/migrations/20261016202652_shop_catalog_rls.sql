@@ -370,3 +370,11 @@ $$;
 
 revoke all on function public.search_site(text, text, int) from public;
 grant execute on function public.search_site(text, text, int) to anon, authenticated;
+
+----------------------------------------------------------------------------
+-- Obblighi informativi (Reg. UE 1169/2011): un prodotto attivo che non è una box ha ingredienti
+-- e formato in italiano. Il vincolo sta qui (non in Drizzle) e il server lo replica nel form.
+----------------------------------------------------------------------------
+alter table public.products
+  add constraint products_active_requires_label_info
+  check (not is_active or is_box or (ingredients_it is not null and format_label is not null));

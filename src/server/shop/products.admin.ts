@@ -66,6 +66,14 @@ const productInput = z
     if (!parseAllergens(value.allergens).ok) {
       ctx.addIssue({ code: "custom", path: ["allergens"], message: "unknown_allergen" });
     }
+    if (value.isActive && value.category !== "box") {
+      if (value.ingredientsIt === null) {
+        ctx.addIssue({ code: "custom", path: ["ingredientsIt"], message: "ingredients_required" });
+      }
+      if (value.formatLabel === null) {
+        ctx.addIssue({ code: "custom", path: ["formatLabel"], message: "format_required" });
+      }
+    }
     if (value.isActive && !value.allergensDeclared) {
       ctx.addIssue({ code: "custom", path: ["allergensDeclared"], message: "allergens_not_declared" });
     }
@@ -138,7 +146,6 @@ export const saveProduct: AdminFormAction = async (_prev, formData): Promise<Adm
     priceCents: value.priceCents,
     costCents: value.costCents,
     vatRate: value.vatRate,
-    weightG: null,
     ingredientsIt: value.ingredientsIt,
     ingredientsEn: value.ingredientsEn,
     allergens: allergens.keys,
@@ -222,6 +229,7 @@ export async function listProductsAdmin(): Promise<
 
 // Scheda per il modulo di modifica (con costo e codice del fornitore: solo admin). Null se non esiste.
 export async function getProductAdmin(id: string): Promise<ProductFormValues | null> {
+  if (!z.uuid().safeParse(id).success) return null;
   await requireAdmin();
   const [row] = await dbAdmin.select().from(products).where(eq(products.id, id));
   if (!row) return null;

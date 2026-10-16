@@ -44,15 +44,24 @@ function previewOf(plan: Extract<ProductImportPlan, { ok: true }>): ProductImpor
   };
 }
 
-async function loadLookup() {
+// Letture dal database per la validazione: produttori, prodotti già presenti (con il fornitore che
+// li possiede) e i codici fornitore già in uso per il fornitore scelto.
+async function loadLookup(supplierId: string) {
   const [producerRows, productRows] = await Promise.all([
     dbAdmin.select({ id: producers.id, slug: producers.slug }).from(producers),
-    dbAdmin.select({ slug: products.slug }).from(products),
+    dbAdmin.select({ slug: products.slug, supplierId: products.supplierId, supplierSku: products.supplierSku }).from(products),
   ]);
   const producerIds = new Map(producerRows.map((p) => [p.slug, p.id] as const));
+  const existingProducts = new Map(productRows.map((p) => [p.slug, p.supplierId] as const));
+  const supplierSkuOwners = new Map<string, string>();
+  for (const p of productRows) {
+    if (p.supplierId === supplierId && p.supplierSku !== null) supplierSkuOwners.set(p.supplierSku, p.slug);
+  }
   const lookup: ProductImportLookup = {
+    supplierId,
     producerSlugs: new Set(producerIds.keys()),
-    existingProductSlugs: new Set(productRows.map((p) => p.slug)),
+    existingProducts,
+    supplierSkuOwners,
   };
   return { lookup, producerIds };
 }
@@ -85,7 +94,7 @@ export const importProducts: ProductImportFormAction = async (_prev, formData): 
       .where(eq(suppliers.id, supplierId.data));
     if (!supplier) return { status: "error", code: "failed" };
 
-    const { lookup, producerIds } = await loadLookup();
+    const { lookup, producerIds } = await loadLookup(supplierId.data);
     const plan = planProductImport(file.text, lookup);
     if (!plan.ok) {
       if (plan.error === "header_missing_columns") {
@@ -135,6 +144,7 @@ function toRow(p: NormalizedProduct, supplierId: string, producerId: string) {
     weightG: p.weightG,
     ingredientsIt: p.ingredients,
     allergens: p.allergens,
+    allergensDeclared: p.allergensDeclared,
     storageIt: p.storage,
     isPerishable: p.isPerishable,
     minShelfLifeDays: p.minShelfLifeDays,
@@ -161,6 +171,7 @@ function updateSet(p: NormalizedProduct, supplierId: string, producerId: string)
     weightG: row.weightG,
     ingredientsIt: row.ingredientsIt,
     allergens: row.allergens,
+    allergensDeclared: row.allergensDeclared,
     storageIt: row.storageIt,
     isPerishable: row.isPerishable,
     minShelfLifeDays: row.minShelfLifeDays,

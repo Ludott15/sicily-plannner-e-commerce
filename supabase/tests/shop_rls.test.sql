@@ -13,10 +13,10 @@ insert into public.suppliers (id, name, kind, contact_email)
 values ('a1111111-aaaa-0000-0000-000000000001', 'Fornitore di prova', 'manual', 'fornitore@example.com');
 insert into public.producers (id, slug, name, email, is_public)
 values ('11111111-aaaa-0000-0000-000000000001', 'test-pistacchi', 'Pistacchi di Bronte', 'ordini@example.com', true);
-insert into public.products (id, slug, producer_id, supplier_id, supplier_sku, title, category, price_cents, weight_g, vat_rate, is_active, allergens_declared)
+insert into public.products (id, slug, producer_id, supplier_id, supplier_sku, title, category, price_cents, weight_g, vat_rate, is_active, allergens_declared, format_label, ingredients_it)
 values
-  ('22222222-aaaa-0000-0000-000000000001', 'test-crema', '11111111-aaaa-0000-0000-000000000001', 'a1111111-aaaa-0000-0000-000000000001', 'SKU-1', 'Crema di pistacchio', 'dolci', 1200, 200, 4, true, true),
-  ('22222222-aaaa-0000-0000-000000000002', 'test-bozza', '11111111-aaaa-0000-0000-000000000001', 'a1111111-aaaa-0000-0000-000000000001', 'SKU-2', 'Bozza', 'dolci', 900, 150, 4, false, true);
+  ('22222222-aaaa-0000-0000-000000000001', 'test-crema', '11111111-aaaa-0000-0000-000000000001', 'a1111111-aaaa-0000-0000-000000000001', 'SKU-1', 'Crema di pistacchio', 'dolci', 1200, 200, 4, true, true, 'vasetto 190 g', 'Pistacchi, zucchero'),
+  ('22222222-aaaa-0000-0000-000000000002', 'test-bozza', '11111111-aaaa-0000-0000-000000000001', 'a1111111-aaaa-0000-0000-000000000001', 'SKU-2', 'Bozza', 'dolci', 900, 150, 4, false, true, 'bottiglia 500 ml', 'Olio');
 insert into public.orders (id, user_id, email, status, subtotal_cents, discount_cents, shipping_cents, total_cents, stripe_session_id)
 values
   ('33333333-aaaa-0000-0000-000000000001', tests.uid('alice'), 'alice@example.com', 'paid', 2400, 0, 690, 3090, 'cs_test_alice'),

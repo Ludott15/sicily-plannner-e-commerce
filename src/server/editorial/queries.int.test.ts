@@ -111,6 +111,8 @@ beforeAll(async () => {
         supplierSku: slug("sku-aperto"),
         title: "int- prodotto aperto",
         category: "dolci",
+        formatLabel: "pacco 200 g",
+        ingredientsIt: "Farina, uova",
         priceCents: 1000,
         vatRate: 4,
         weightG: 100,

@@ -4154,6 +4154,7 @@ CREATE TABLE IF NOT EXISTS "public"."products" (
     "place_id" "uuid",
     "cover_media_id" "uuid",
     CONSTRAINT "products_active_requires_allergens_declared" CHECK (((NOT "is_active") OR "allergens_declared")),
+    CONSTRAINT "products_active_requires_label_info" CHECK (((NOT "is_active") OR "is_box" OR (("ingredients_it" IS NOT NULL) AND ("format_label" IS NOT NULL)))),
     CONSTRAINT "products_allergens_valid" CHECK (("allergens" <@ ARRAY['gluten'::"text", 'crustaceans'::"text", 'eggs'::"text", 'fish'::"text", 'peanuts'::"text", 'soybeans'::"text", 'milk'::"text", 'nuts'::"text", 'celery'::"text", 'mustard'::"text", 'sesame'::"text", 'sulphites'::"text", 'lupin'::"text", 'molluscs'::"text"])),
     CONSTRAINT "products_category_valid" CHECK (("category" = ANY (ARRAY['dolci'::"text", 'conserve'::"text", 'olio'::"text", 'vino'::"text", 'pasta'::"text", 'formaggi'::"text", 'spezie'::"text", 'box'::"text", 'altro'::"text"]))),
     CONSTRAINT "products_cost_non_negative" CHECK ((("cost_cents" IS NULL) OR ("cost_cents" >= 0))),

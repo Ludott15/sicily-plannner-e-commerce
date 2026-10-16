@@ -63,9 +63,14 @@ export function ProductFacts({ product, locale }: { product: ShopProduct; locale
         </dl>
       )}
 
-      {product.isPerishable && (
+      {product.isPerishable ? (
         <p role="note" className="rounded-md border border-border-control bg-calce-raised px-4 py-3 text-body">
           <span className="font-semibold">{t("perishableTitle")}</span> {t("perishableNotice")}
+        </p>
+      ) : (
+        <p role="note" className="rounded-md border border-border-control bg-calce-raised px-4 py-3 text-body">
+          {/* Il rimando alle condizioni di vendita arriva con il loro testo (passo 8.3). */}
+          {t("withdrawalNotice")}
         </p>
       )}
 

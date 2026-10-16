@@ -1,6 +1,6 @@
 // Import CSV dei prodotti dal catalogo del fornitore scelto nel form: lettura e validazione pura
-// (nessun DB). products-import.admin.ts risolve i produttori dal database, poi chiama
-// planProductImport; il salvataggio parte solo senza errori.
+// (nessun DB). products-import.admin.ts risolve dal database i produttori, i prodotti già presenti
+// e i codici fornitore in uso, poi chiama planProductImport; il salvataggio parte solo senza errori.
 
 import { CsvParseError, parseCsv } from "@/lib/catalog-import/csv";
 import { parseAllergens, type Allergen } from "@/lib/shop/allergens";
@@ -21,6 +21,7 @@ export const PRODUCT_IMPORT_COLUMNS = [
   "weight_g",
   "ingredients_it",
   "allergens",
+  "allergens_declared",
   "storage_it",
   "is_perishable",
   "min_shelf_life_days",
@@ -55,7 +56,9 @@ export type ProductImportIssueCode =
   | "invalid_bool"
   | "value_too_long"
   | "unknown_allergen"
+  | "allergens_not_declared"
   | "unknown_producer"
+  | "slug_other_supplier"
   | "duplicate_slug"
   | "duplicate_sku"
   | "wrong_column_count";
@@ -83,6 +86,7 @@ export type NormalizedProduct = {
   weightG: number | null;
   ingredients: string | null;
   allergens: Allergen[];
+  allergensDeclared: boolean;
   storage: string | null;
   isPerishable: boolean;
   minShelfLifeDays: number | null;
@@ -105,10 +109,15 @@ export type ProductImportPlan =
   | { ok: false; error: ProductImportFileError; columns?: string[] }
   | { ok: true; rows: ProductImportRow[]; counts: { create: number; update: number; error: number } };
 
-// Riferimenti risolti dal database prima della validazione.
+// Riferimenti letti dal database prima della validazione.
 export type ProductImportLookup = {
+  // Fornitore scelto nel form: l'import lavora solo su di lui.
+  supplierId: string;
   producerSlugs: ReadonlySet<string>;
-  existingProductSlugs: ReadonlySet<string>;
+  // Prodotti già presenti: slug -> id del fornitore che li possiede.
+  existingProducts: ReadonlyMap<string, string>;
+  // Codici fornitore già usati dal fornitore scelto: codice -> slug del prodotto.
+  supplierSkuOwners: ReadonlyMap<string, string>;
 };
 
 // Intestazione: colonne in qualsiasi ordine, maiuscole ignorate; le colonne sconosciute si respingono.
@@ -139,6 +148,7 @@ function parseInteger(raw: string, min: number, max: number): number | null {
   return n >= min && n <= max ? n : null;
 }
 
+// Vuoto = false (per le colonne facoltative); valori riconosciuti: sì/no, true/false, 1/0.
 function parseBool(raw: string): boolean | null {
   const value = raw.trim().toLowerCase();
   if (value === "") return false;
@@ -158,7 +168,8 @@ function readCell(cells: readonly string[], index: number | undefined): string {
 
 type ParseOutcome = { product: NormalizedProduct | null; issues: ProductImportIssue[] };
 
-// Valida una riga con le stesse regole dei check SQL e dell'azione di salvataggio.
+// Valida una riga con le stesse regole dei check SQL e dell'azione di salvataggio. Un prodotto
+// attivo che non è una box richiede ingredienti e formato (Reg. UE 1169/2011) e allergeni dichiarati.
 export function normalizeProductRow(cells: readonly string[], index: Partial<Record<ProductImportColumn, number>>): ParseOutcome {
   const issues: ProductImportIssue[] = [];
   const get = (column: ProductImportColumn): string => readCell(cells, index[column]).trim();
@@ -216,12 +227,23 @@ export function normalizeProductRow(cells: readonly string[], index: Partial<Rec
   if (perishable === null) issues.push({ code: "invalid_bool", column: "is_perishable", value: get("is_perishable") });
   const active = parseBool(get("is_active"));
   if (active === null) issues.push({ code: "invalid_bool", column: "is_active", value: get("is_active") });
+  const declared = parseBool(get("allergens_declared"));
+  if (declared === null) issues.push({ code: "invalid_bool", column: "allergens_declared", value: get("allergens_declared") });
 
   const allergenRaw = get("allergens");
   const allergenParse = parseAllergens(allergenRaw === "" ? [] : allergenRaw.split(/[;,|]/));
   if (!allergenParse.ok) {
     for (const value of allergenParse.unknown) issues.push({ code: "unknown_allergen", column: "allergens", value });
   }
+
+  // Obblighi informativi: un prodotto attivo che non è una box ha ingredienti, formato e allergeni dichiarati.
+  const ingredientsRaw = get("ingredients_it");
+  const formatRaw = get("format_label");
+  if (active === true && categoryRaw !== "box") {
+    if (ingredientsRaw === "") issues.push({ code: "missing_value", column: "ingredients_it" });
+    if (formatRaw === "") issues.push({ code: "missing_value", column: "format_label" });
+  }
+  if (active === true && declared !== true) issues.push({ code: "allergens_not_declared", column: "allergens_declared" });
 
   if (
     issues.length > 0 ||
@@ -231,6 +253,7 @@ export function normalizeProductRow(cells: readonly string[], index: Partial<Rec
     stockStatus === null ||
     perishable === null ||
     active === null ||
+    declared === null ||
     leadTimeDays === null ||
     !allergenParse.ok
   ) {
@@ -246,13 +269,14 @@ export function normalizeProductRow(cells: readonly string[], index: Partial<Rec
       titleEn: optionalText(get("title_en"), 200),
       description: optionalText(get("description_it"), 2000),
       category,
-      formatLabel: optionalText(get("format_label"), 80),
+      formatLabel: optionalText(formatRaw, 80),
       priceCents,
       costCents,
       vatRate,
       weightG,
-      ingredients: optionalText(get("ingredients_it"), 2000),
+      ingredients: optionalText(ingredientsRaw, 2000),
       allergens: allergenParse.keys,
+      allergensDeclared: declared,
       storage: optionalText(get("storage_it"), 2000),
       isPerishable: perishable,
       minShelfLifeDays,
@@ -266,6 +290,8 @@ export function normalizeProductRow(cells: readonly string[], index: Partial<Rec
 
 // Piano dell'import: una riga per riga del file, con stato create/update/error. Non scrive nulla.
 // Uno slug o un codice fornitore ripetuti nel file: la prima riga vale, le successive sono errori.
+// Contro il database: uno slug già di un altro fornitore è un errore; un codice fornitore già usato
+// da un altro prodotto dello stesso fornitore è un errore.
 export function planProductImport(text: string, lookup: ProductImportLookup): ProductImportPlan {
   let document: ReturnType<typeof parseCsv>;
   try {
@@ -298,6 +324,7 @@ export function planProductImport(text: string, lookup: ProductImportLookup): Pr
     const issues = [...outcome.issues];
     const product = outcome.product;
     const slug = product?.slug ?? readCell(record.cells, index.slug).trim().toLowerCase();
+    let update = false;
 
     if (product) {
       if (seenSlugs.has(product.slug)) issues.push({ code: "duplicate_slug", column: "slug", value: product.slug });
@@ -307,10 +334,20 @@ export function planProductImport(text: string, lookup: ProductImportLookup): Pr
       if (!lookup.producerSlugs.has(product.producerSlug)) {
         issues.push({ code: "unknown_producer", column: "producer_slug", value: product.producerSlug });
       }
+
+      const owner = lookup.existingProducts.get(product.slug);
+      if (owner !== undefined && owner !== lookup.supplierId) {
+        issues.push({ code: "slug_other_supplier", column: "slug", value: product.slug });
+      }
+      update = owner === lookup.supplierId;
+
+      const skuOwner = lookup.supplierSkuOwners.get(product.supplierSku);
+      if (skuOwner !== undefined && skuOwner !== product.slug) {
+        issues.push({ code: "duplicate_sku", column: "supplier_sku", value: product.supplierSku });
+      }
     }
 
-    const status: ProductImportRowStatus =
-      issues.length > 0 || product === null ? "error" : lookup.existingProductSlugs.has(slug) ? "update" : "create";
+    const status: ProductImportRowStatus = issues.length > 0 || product === null ? "error" : update ? "update" : "create";
     rows.push({ line: record.line, slug, status, issues, product: issues.length > 0 ? null : product });
   }
 

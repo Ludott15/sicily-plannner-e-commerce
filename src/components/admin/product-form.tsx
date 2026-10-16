@@ -42,21 +42,28 @@ export function ProductForm({
   const boxCandidates = options.products.filter((product) => product.id !== values.id);
   // Il server rifiuta un prodotto attivo senza "Allergeni verificati" con il codice generico
   // "invalid": qui si traduce in un messaggio chiaro, controllando i valori appena inviati.
-  const [activeWithoutAllergens, setActiveWithoutAllergens] = useState(false);
+  // Stesso criterio per ingredienti e formato (box esclusa): calcolato sui valori appena inviati.
+  const [missing, setMissing] = useState({ allergens: false, ingredientsOrFormat: false });
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     const data = new FormData(event.currentTarget);
-    setActiveWithoutAllergens(data.get("isActive") === "on" && data.get("allergensDeclared") !== "on");
+    const active = data.get("isActive") === "on";
+    const text = (name: string) => String(data.get(name) ?? "").trim();
+    setMissing({
+      allergens: active && data.get("allergensDeclared") !== "on",
+      ingredientsOrFormat:
+        active && text("category") !== "box" && (text("ingredientsIt") === "" || text("formatLabel") === ""),
+    });
     save.onSubmit(event);
   }
+  const rejected = save.state.status === "error" && save.state.code === "invalid";
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-8 rounded-lg border border-card-edge bg-calce-raised p-6">
       {values.id && <input type="hidden" name="id" value={values.id} />}
       <FormError message={save.state.status === "error" ? tAdmin(`errors.${save.state.code}`) : null} />
-      <FormError
-        message={save.state.status === "error" && save.state.code === "invalid" && activeWithoutAllergens ? t("activeNeedsAllergens") : null}
-      />
+      <FormError message={rejected && missing.allergens ? t("activeNeedsAllergens") : null} />
+      <FormError message={rejected && missing.ingredientsOrFormat ? t("activeNeedsIngredientsAndFormat") : null} />
       <FormNotice message={save.state.status === "saved" ? t("saved") : null} />
 
       <section className="flex flex-col gap-4">

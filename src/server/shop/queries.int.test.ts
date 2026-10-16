@@ -68,6 +68,8 @@ beforeAll(async () => {
       costCents: 500,
       allergens: ["milk", "gluten"],
       allergensDeclared: true,
+      ingredientsIt: "Farina, uova",
+      formatLabel: "pacco 200 g",
       priceCents: 1000,
       isActive: true,
     };

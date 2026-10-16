@@ -1124,7 +1124,8 @@
       "importErrorColumns": "Colonne mancanti o non riconosciute: {columns}",
       "productAllergensDeclared": "Allergeni verificati",
       "productAllergensDeclaredHint": "Spunta solo dopo aver controllato l'elenco. Senza questa spunta il prodotto non si può attivare.",
-      "activeNeedsAllergens": "Non salvato: un prodotto attivo richiede la casella «Allergeni verificati»."
+      "activeNeedsAllergens": "Non salvato: un prodotto attivo richiede la casella «Allergeni verificati».",
+      "activeNeedsIngredientsAndFormat": "Non salvato: un prodotto attivo richiede ingredienti e formato."
     }
   },
   "Og": {
@@ -2551,6 +2552,7 @@
     "producerStory": "La storia",
     "producerProducts": "Prodotti",
     "producerEmpty": "Nessun prodotto disponibile da questo produttore per ora.",
-    "noAllergens": "Nessuno dei 14 allergeni del Reg. UE 1169/2011"
+    "noAllergens": "Nessuno dei 14 allergeni del Reg. UE 1169/2011",
+    "withdrawalNotice": "Hai 14 giorni dalla consegna per recedere dall'acquisto senza indicare il motivo."
   }
 }

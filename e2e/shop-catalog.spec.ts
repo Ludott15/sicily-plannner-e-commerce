@@ -27,8 +27,10 @@ test("pagina prodotto: allergeni in evidenza, prezzo IVA inclusa e tempi di sped
   // Allergeni verificati: il seed ha frutta a guscio e latte, in badge in grassetto.
   await expect(page.getByText("Frutta a guscio", { exact: true })).toHaveClass(/font-bold/);
   await expect(page.getByText("Latte", { exact: true })).toHaveClass(/font-bold/);
-  // Non deperibile: nessun avviso sul recesso.
+  // Non deperibile: nessun avviso di deperibilità, ma il recesso di 14 giorni.
   await expect(page.getByText("Prodotto deperibile.")).toHaveCount(0);
+  const withdrawal = page.getByRole("note").filter({ hasText: "Hai 14 giorni dalla consegna" });
+  await expect(withdrawal).toBeVisible();
 
   // "Dal territorio": il pistacchio porta a Bronte.
   await expect(page.getByRole("link", { name: "Bronte", exact: true })).toBeVisible();
@@ -39,6 +41,8 @@ test("pagina prodotto deperibile: avviso sul recesso e scadenza minima", async (
   await expect(page.getByText("Prodotto deperibile.")).toBeVisible();
   await expect(page.getByText(/Il recesso non si applica ai prodotti deperibili/)).toBeVisible();
   await expect(page.getByText("5 giorni", { exact: true })).toBeVisible();
+  // Deperibile: al posto del recesso di 14 giorni c'è l'avviso che non si applica.
+  await expect(page.getByText("Hai 14 giorni dalla consegna")).toHaveCount(0);
   for (const allergen of ["Glutine", "Latte", "Uova"]) {
     await expect(page.getByText(allergen, { exact: true })).toHaveClass(/font-bold/);
   }
@@ -95,10 +99,18 @@ test("admin: crea un prodotto; attivo senza allergeni verificati non si salva", 
   await page.getByLabel("Prezzo di vendita (€)").fill("9,90");
   await page.getByLabel("Attivo", { exact: true }).check();
 
-  // Senza la spunta "Allergeni verificati" il server rifiuta: il messaggio dice cosa manca.
+  // Senza ingredienti, formato e la spunta "Allergeni verificati" il prodotto attivo non si salva:
+  // il messaggio dice cosa manca.
   await page.getByRole("button", { name: "Salva", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "ingredienti e formato" })).toBeVisible();
   await expect(page.getByRole("alert").filter({ hasText: "Allergeni verificati" })).toBeVisible();
   expect((await request.get(`/it/prodotti/${slug}`)).status()).toBe(404);
+
+  await page.getByLabel("Ingredienti (italiano)", { exact: true }).fill("Latte fresco, zucchero.");
+  await page.getByLabel("Formato", { exact: true }).fill("vasetto 190 g");
+  await page.getByRole("button", { name: "Salva", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "ingredienti e formato" })).toHaveCount(0);
+  await expect(page.getByRole("alert").filter({ hasText: "Allergeni verificati" })).toBeVisible();
 
   await page.getByLabel("Latte", { exact: true }).check();
   await page.getByLabel("Allergeni verificati", { exact: true }).check();

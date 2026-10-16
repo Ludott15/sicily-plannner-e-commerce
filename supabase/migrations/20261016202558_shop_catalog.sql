@@ -1,3 +1,9 @@
+-- Shop, passo 7.1: le tabelle nascono senza accesso dai client. Il ripristino dei grant per
+-- colonna (letture pubbliche) è nella migrazione 20261016202652_shop_catalog_rls: questa revoca
+-- chiude la finestra tra le due migrazioni. In produzione products e producers sono vuote
+-- (il catalogo non è mai stato caricato), quindi NOT NULL e DROP sono sicuri.
+revoke all on table "products", "producers" from anon, authenticated;
+--> statement-breakpoint
 CREATE TABLE "box_items" (
 	"box_id" uuid NOT NULL,
 	"product_id" uuid NOT NULL,

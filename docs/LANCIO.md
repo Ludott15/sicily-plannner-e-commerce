@@ -151,6 +151,8 @@ Il modello è quello di un intermediario (docs/spec.md, sezione E-commerce): il 
 - **Informazioni alimentari** (Reg. UE 1169/2011): prima di attivare un prodotto, verificare ingredienti e allergeni sull'etichetta del produttore. L'attivazione richiede la casella "Allergeni verificati" (regola nel server e nel database). Chi è operatore alimentare (fornitore e marchio) va verificato con il consulente.
 - **Marchi e produttori**: prima di pubblicare una storia o una foto di un produttore serve un accordo scritto con lui (uso del nome, della storia e delle immagini), come previsto dai rischi in docs/spec.md.
 - **Controlli di lancio**: nessun prodotto `[DEMO]` in produzione (il seed non si carica mai, `supabase db push` non esegue il seed); `npm run db:drift` e i test pgTAP `shop_rls` e `shop_catalog_rls` verdi in CI; import del catalogo reale solo dall'admin, con anteprima e nessun errore.
+- **Prima di applicare le migrazioni dello shop in produzione** (`20261016202558_shop_catalog` e seguenti): verificare `select count(*) from products;` e `select count(*) from producers;`. Devono essere 0: le colonne NOT NULL senza default e la rimozione di `producers.lead_time_days` presuppongono tabelle vuote.
+
 ## 10. Accessibilità (passo 11.4)
 
 La verifica automatica (axe-core, WCAG 2.2 AA, `e2e/a11y.spec.ts`) copre le pagine principali in tema chiaro e scuro, a 1280 e 390 px. Non copre il resto: la verifica con lettori di schermo è da fare a mano prima del lancio, e non risulta ancora fatta.
