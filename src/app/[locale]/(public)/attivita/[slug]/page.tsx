@@ -142,9 +142,11 @@ export default async function ActivityPage({ params, searchParams }: Props) {
           <Breadcrumb
             items={[
               { label: t("breadcrumbRoot") },
+              // Sicilia › Area › Luogo › Attività (senza area: la provincia al posto dell'area).
               activity.area
                 ? { label: activity.area.name, href: `/sicilia/${activity.area.slug}` }
-                : { label: provinceName(activity.placeProvince), href: `/luoghi/${activity.placeSlug}` },
+                : { label: provinceName(activity.placeProvince) },
+              { label: activity.placeName, href: `/luoghi/${activity.placeSlug}` },
               { label: activity.title },
             ]}
           />
@@ -269,9 +271,8 @@ export default async function ActivityPage({ params, searchParams }: Props) {
           data={breadcrumbList(
             [
               { name: t("breadcrumbRoot"), path: "/" },
-              activity.area
-                ? { name: activity.area.name, path: `/sicilia/${activity.area.slug}` }
-                : { name: provinceName(activity.placeProvince), path: `/luoghi/${activity.placeSlug}` },
+              ...(activity.area ? [{ name: activity.area.name, path: `/sicilia/${activity.area.slug}` }] : []),
+              { name: activity.placeName, path: `/luoghi/${activity.placeSlug}` },
               { name: activity.title, path: `/attivita/${activity.slug}` },
             ],
             locale,
