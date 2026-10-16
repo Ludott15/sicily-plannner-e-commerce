@@ -84,7 +84,9 @@ test("check-in vicino al luogo: +10 punti; lontano: messaggio di distanza", asyn
   // il primo "Sono qui" rimasto è quello della seconda tappa.
   await expect(page.getByText("Check-in fatto oggi")).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.waitForLoadState("networkidle");
+  // Non networkidle: la mappa del viaggio scarica tasselli di continuo. Dopo l'aggiornamento resta
+  // un solo "Sono qui", quello della seconda tappa.
+  await expect(page.getByRole("button", { name: "Sono qui", exact: true })).toHaveCount(1);
 
   // Seconda tappa, con la posizione in mezzo all'oceano: il server risponde too_far.
   await context.setGeolocation({ latitude: 0, longitude: 0 });
