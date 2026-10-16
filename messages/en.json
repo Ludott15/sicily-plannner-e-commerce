@@ -33,7 +33,8 @@
     "lodging": "Where to stay",
     "car": "Car rental",
     "createAccount": "Create your account",
-    "personalMenu": "Personal menu"
+    "personalMenu": "Personal menu",
+    "assistant": "Assistant"
   },
   "Home": {
     "title": "Sicily as locals know it, made for you.",
@@ -862,7 +863,26 @@
       "invalid_input": "Invalid activity.",
       "failed": "Operation failed. Try again."
     },
-    "content": "Video content"
+    "content": "Video content",
+    "ai": {
+      "nav": "Assistant",
+      "title": "Assistant: costs and conversations",
+      "intro": "Model call cost per day and per user, and the latest conversations. Only metadata appears here: the text of the messages is not shown.",
+      "byDayTitle": "Cost per day",
+      "byDayCaption": "Last {days} days",
+      "byUserTitle": "Cost per user",
+      "byUserCaption": "Top 10 users in the last {days} days",
+      "latestTitle": "Latest conversations",
+      "latestCaption": "Last 20 conversations, without text",
+      "colDay": "Day",
+      "colUser": "User",
+      "colMessages": "Messages",
+      "colTokens": "Tokens (input / output)",
+      "colCost": "Cost",
+      "colDate": "Date",
+      "empty": "No calls recorded in this period.",
+      "anonymous": "Guest"
+    }
   },
   "Og": {
     "activity": "Activity · {province}",
@@ -2029,5 +2049,101 @@
     "size": "PNG, 1080 × 1920 px",
     "download": "Download PNG",
     "day": "Day {day}"
+  },
+  "Chat": {
+    "server": {
+      "defaultTitle": "New conversation"
+    },
+    "title": "Assistant",
+    "intro": "Ask for activities, trip ideas or a change to your itinerary. I answer with the activities in the Isula catalogue.",
+    "newConversation": "New conversation",
+    "backToList": "All conversations",
+    "listEmpty": "You have no conversations yet. Start with a question below.",
+    "untitled": "Untitled conversation",
+    "forTrip": "For your trip",
+    "updatedAt": "Last message {date}",
+    "inputLabel": "Write to the assistant",
+    "inputHint": "Enter to send, Shift+Enter for a new line.",
+    "send": "Send",
+    "stop": "Stop",
+    "retry": "Try again",
+    "examplesTitle": "Where to start",
+    "example1": "Which activities are there in Noto with children?",
+    "example2": "Add a sea stop to the second day",
+    "example3": "I like nature and street food: update my tastes",
+    "assistantName": "Assistant",
+    "you": "You",
+    "thinking": "Preparing the answer",
+    "stopped": "Answer stopped.",
+    "tools": {
+      "get_user_profile": "Reading your preferences",
+      "search_activities": "Searching activities",
+      "get_activity": "Reading the activity page",
+      "search_flights": "Checking flights",
+      "propose_itinerary": "Preparing a trip draft",
+      "get_itinerary": "Reading your trip",
+      "apply_itinerary_changes": "Preparing the trip change",
+      "suggest_preference_update": "Preparing a tastes update",
+      "search_products": "Searching products"
+    },
+    "errors": {
+      "api_error": "We could not answer. Try again in a moment.",
+      "overloaded": "The assistant is very busy right now. Try again in a moment.",
+      "timeout": "The answer took too long. Try again.",
+      "rate_limited": "You have used all the messages available for today.",
+      "unauthenticated": "Chatting needs a session. You can continue without an account.",
+      "invalid_request": "Check your message and try again. It must be between 1 and {max} characters.",
+      "session_not_found": "This conversation no longer exists.",
+      "chat_disabled": "The assistant is not available right now. The rest of Isula works as usual.",
+      "network": "The connection was interrupted. Try again.",
+      "generic": "We could not send the message. Try again."
+    },
+    "resetAt": "You can write again at {time}.",
+    "remaining": "You have {count, plural, one {# message} other {# messages}} left today.",
+    "disabled": "The assistant is not available right now.",
+    "guestPrompt": "To chat you can continue without an account: conversations stay linked to this device.",
+    "activity": {
+      "view": "View",
+      "bookWith": "Book on {partner}",
+      "priceFrom": "from {price}",
+      "rating": "Rating {rating} out of 5",
+      "place": "Place"
+    },
+    "proposal": {
+      "title": "Proposed change",
+      "titlePreference": "Tastes update",
+      "accept": "Accept",
+      "reject": "Reject",
+      "accepted": "Change applied to the trip.",
+      "acceptedPreference": "Tastes updated.",
+      "rejected": "Proposal rejected.",
+      "pending": "Waiting for your answer",
+      "dayLabel": "Day {day}",
+      "add": "Add {title} to day {day}",
+      "remove": "Remove {title}",
+      "move": "Move {title} to day {day}, position {position}",
+      "preference": "{label}: from {from} to {to} out of 5",
+      "reason": "Why: {reason}",
+      "groupNote": "This becomes a group proposal: all members vote on it.",
+      "error": "We could not save your answer. Try again.",
+      "alreadyDecided": "You have already answered this proposal."
+    },
+    "session": {
+      "rename": "Rename",
+      "renameLabel": "Conversation title",
+      "save": "Save title",
+      "delete": "Delete conversation",
+      "deleteTitle": "Delete the conversation?",
+      "deleteText": "The messages and proposals of this conversation will disappear. Changes already applied to the trip stay.",
+      "cancel": "Cancel",
+      "confirmDelete": "Delete",
+      "error": "We could not complete the action. Try again."
+    },
+    "launcher": {
+      "open": "Ask the assistant",
+      "close": "Close the assistant",
+      "title": "Assistant for {title}",
+      "disabled": "The assistant is not available right now."
+    }
   }
 }

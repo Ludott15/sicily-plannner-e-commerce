@@ -15,6 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const tReviews = await getTranslations("AdminReviews");
   const tBadges = await getTranslations("AdminBadges");
   const tSeasons = await getTranslations("AdminSeasons");
+  const tAi = await getTranslations("Admin.ai");
   // Banner sopra ogni pagina dell'area admin (anche la home, che reindirizza all'elenco attività):
   // avviso se un partner configurato ha due esecuzioni di fila fallite.
   const alertPartners = await adminImportAlertPartners();
@@ -64,6 +65,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </Link>
         <Link href="/admin/stagioni" className="text-body font-semibold text-lava">
           {tSeasons("nav")}
+        </Link>
+        <Link href="/admin/ai" className="text-body font-semibold text-lava">
+          {tAi("nav")}
         </Link>
       </nav>
       {alertPartners.length > 0 && (

@@ -17,6 +17,7 @@
     "db:snapshot": "supabase db dump --local --schema public -f supabase/schema.sql",
     "db:drift": "bash scripts/check-schema-drift.sh",
     "test:int": "vitest run --project integration",
+    "eval:chat": "vitest run --project eval",
     "design:tokens": "node scripts/design/generate-tokens.mjs",
     "design:brand": "node scripts/design/brand-assets.mjs",
     "design:check": "node scripts/design/generate-tokens.mjs --check && node scripts/design/brand-assets.mjs --check && node scripts/design/check-src.mjs",

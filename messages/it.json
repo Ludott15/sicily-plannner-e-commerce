@@ -33,7 +33,8 @@
     "lodging": "Dove dormire",
     "car": "Noleggio auto",
     "createAccount": "Crea l'account",
-    "personalMenu": "Menu personale"
+    "personalMenu": "Menu personale",
+    "assistant": "Assistente"
   },
   "Home": {
     "title": "La Sicilia di chi ci vive, su misura per te.",
@@ -862,7 +863,26 @@
       "invalid_input": "Attività non valida.",
       "failed": "Operazione non riuscita. Riprova."
     },
-    "content": "Contenuti video"
+    "content": "Contenuti video",
+    "ai": {
+      "nav": "Assistente",
+      "title": "Assistente: costi e conversazioni",
+      "intro": "Costo delle chiamate al modello per giorno e per utente, e le ultime conversazioni. Qui compaiono solo i metadati: il testo dei messaggi non si vede.",
+      "byDayTitle": "Costo per giorno",
+      "byDayCaption": "Ultimi {days} giorni",
+      "byUserTitle": "Costo per utente",
+      "byUserCaption": "Primi 10 utenti negli ultimi {days} giorni",
+      "latestTitle": "Ultime conversazioni",
+      "latestCaption": "Ultime 20 conversazioni, senza testo",
+      "colDay": "Giorno",
+      "colUser": "Utente",
+      "colMessages": "Messaggi",
+      "colTokens": "Token (entrata / uscita)",
+      "colCost": "Costo",
+      "colDate": "Data",
+      "empty": "Nessuna chiamata registrata in questo periodo.",
+      "anonymous": "Ospite"
+    }
   },
   "Og": {
     "activity": "Attività · {province}",
@@ -2029,5 +2049,101 @@
     "size": "PNG, 1080 × 1920 px",
     "download": "Scarica PNG",
     "day": "Giorno {day}"
+  },
+  "Chat": {
+    "server": {
+      "defaultTitle": "Nuova conversazione"
+    },
+    "title": "Assistente",
+    "intro": "Chiedi attività, idee per il viaggio o una modifica al tuo itinerario. Rispondo con le attività del catalogo di Isula.",
+    "newConversation": "Nuova conversazione",
+    "backToList": "Tutte le conversazioni",
+    "listEmpty": "Non hai ancora una conversazione. Inizia da una domanda qui sotto.",
+    "untitled": "Conversazione senza titolo",
+    "forTrip": "Per il tuo viaggio",
+    "updatedAt": "Ultimo messaggio {date}",
+    "inputLabel": "Scrivi all'assistente",
+    "inputHint": "Invio per mandare, Maiusc+Invio per andare a capo.",
+    "send": "Invia",
+    "stop": "Interrompi",
+    "retry": "Riprova",
+    "examplesTitle": "Da dove partire",
+    "example1": "Quali attività ci sono a Noto con i bambini?",
+    "example2": "Aggiungi una tappa per il mare al secondo giorno",
+    "example3": "Mi piacciono la natura e il cibo di strada: aggiorna i miei gusti",
+    "assistantName": "Assistente",
+    "you": "Tu",
+    "thinking": "Sto preparando la risposta",
+    "stopped": "Risposta interrotta.",
+    "tools": {
+      "get_user_profile": "Leggo le tue preferenze",
+      "search_activities": "Cerco attività",
+      "get_activity": "Leggo la scheda dell'attività",
+      "search_flights": "Controllo i voli",
+      "propose_itinerary": "Preparo una bozza di viaggio",
+      "get_itinerary": "Leggo il tuo viaggio",
+      "apply_itinerary_changes": "Preparo la modifica al viaggio",
+      "suggest_preference_update": "Preparo un aggiornamento dei gusti",
+      "search_products": "Cerco prodotti"
+    },
+    "errors": {
+      "api_error": "Non siamo riusciti a rispondere. Riprova tra poco.",
+      "overloaded": "L'assistente è molto richiesto in questo momento. Riprova tra poco.",
+      "timeout": "La risposta ha impiegato troppo. Riprova.",
+      "rate_limited": "Per oggi hai usato tutti i messaggi disponibili.",
+      "unauthenticated": "Per chattare serve una sessione. Puoi continuare senza account.",
+      "invalid_request": "Controlla il messaggio e riprova. Deve avere da 1 a {max} caratteri.",
+      "session_not_found": "Questa conversazione non esiste più.",
+      "chat_disabled": "L'assistente non è attivo in questo momento. Il resto di Isula funziona normalmente.",
+      "network": "Connessione interrotta. Riprova.",
+      "generic": "Non siamo riusciti a inviare il messaggio. Riprova."
+    },
+    "resetAt": "Potrai scrivere di nuovo alle {time}.",
+    "remaining": "Ti restano {count, plural, one {# messaggio} other {# messaggi}} per oggi.",
+    "disabled": "L'assistente non è attivo in questo momento.",
+    "guestPrompt": "Per chattare puoi continuare senza account: le conversazioni restano legate al tuo dispositivo.",
+    "activity": {
+      "view": "Vedi",
+      "bookWith": "Prenota su {partner}",
+      "priceFrom": "da {price}",
+      "rating": "Valutazione {rating} su 5",
+      "place": "Luogo"
+    },
+    "proposal": {
+      "title": "Modifica proposta",
+      "titlePreference": "Aggiornamento dei gusti",
+      "accept": "Accetta",
+      "reject": "Rifiuta",
+      "accepted": "Modifica applicata al viaggio.",
+      "acceptedPreference": "Gusti aggiornati.",
+      "rejected": "Proposta rifiutata.",
+      "pending": "In attesa della tua risposta",
+      "dayLabel": "Giorno {day}",
+      "add": "Aggiungi {title} al giorno {day}",
+      "remove": "Togli {title}",
+      "move": "Sposta {title} al giorno {day}, posizione {position}",
+      "preference": "{label}: da {from} a {to} su 5",
+      "reason": "Perché: {reason}",
+      "groupNote": "Diventa una proposta per il gruppo: la votano tutti i membri.",
+      "error": "Non siamo riusciti a salvare la risposta. Riprova.",
+      "alreadyDecided": "Hai già risposto a questa proposta."
+    },
+    "session": {
+      "rename": "Rinomina",
+      "renameLabel": "Titolo della conversazione",
+      "save": "Salva titolo",
+      "delete": "Elimina conversazione",
+      "deleteTitle": "Eliminare la conversazione?",
+      "deleteText": "Messaggi e proposte di questa conversazione spariscono. Le modifiche già applicate al viaggio restano.",
+      "cancel": "Annulla",
+      "confirmDelete": "Elimina",
+      "error": "Non siamo riusciti a completare l'operazione. Riprova."
+    },
+    "launcher": {
+      "open": "Chiedi all'assistente",
+      "close": "Chiudi l'assistente",
+      "title": "Assistente per {title}",
+      "disabled": "L'assistente non è attivo in questo momento."
+    }
   }
 }

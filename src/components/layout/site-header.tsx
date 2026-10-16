@@ -32,6 +32,7 @@ export async function SiteHeader() {
 
   const memberItems: ActionMenuItem[] = [
     { kind: "link", href: "/viaggi", label: t("trips"), icon: "map" },
+    { kind: "link", href: "/chat", label: t("assistant"), icon: "message" },
     { kind: "link", href: "/gruppi", label: t("groups"), icon: "users" },
     { kind: "link", href: "/punti", label: t("points"), icon: "star" },
     { kind: "link", href: "/classifica", label: t("leaderboard"), icon: "trophy" },
@@ -44,6 +45,7 @@ export async function SiteHeader() {
 
   const guestItems: ActionMenuItem[] = [
     { kind: "link", href: "/viaggi", label: t("trips"), icon: "map" },
+    { kind: "link", href: "/chat", label: t("assistant"), icon: "message" },
     { kind: "link", href: "/preferenze", label: t("preferences"), icon: "settings" },
     { kind: "link", href: "/profilo", label: t("createAccount"), icon: "user" },
     { kind: "separator" },

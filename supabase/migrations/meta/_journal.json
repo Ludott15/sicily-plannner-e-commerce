@@ -351,6 +351,20 @@
       "when": 1792089624373,
       "tag": "20261015184024_classifiche",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1792162308753,
+      "tag": "20261016145148_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1792162322678,
+      "tag": "20261016145202_chat_rls",
+      "breakpoints": true
     }
   ]
 }
