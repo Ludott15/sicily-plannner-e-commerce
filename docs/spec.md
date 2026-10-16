@@ -463,11 +463,13 @@ Decisioni per la milestone 9 (Gamification):
 
 Lo shop vende box e prodotti che il produttore spedisce direttamente: noi incassiamo con Stripe, inoltriamo l'ordine e seguiamo il cliente. Niente magazzino e nessun motore e-commerce esterno.
 
+**Modello di vendita (deciso il 2026-10-16): intermediario.** Il prodotto si compra da un **fornitore** logistico che gestisce magazzino e spedizione (come un servizio di dropshipping). Il cliente paga Isula; Isula inoltra l'ordine al fornitore, che spedisce al cliente. Il **produttore** (marchio di origine: chi fa il prodotto, con la sua storia e il territorio) è un'informazione editoriale distinta dal fornitore. Il fornitore non compare mai nelle pagine pubbliche; il costo d'acquisto è solo admin. Un adattatore `api` resta inattivo finché non si sceglie il fornitore (docs/LANCIO.md, sezione 9). Spedizione solo in Italia nella prima versione, con tariffa fissa per ordine e soglia gratuita. Il recesso è di 14 giorni, esclusi i prodotti deperibili; i prodotti attivi richiedono gli allergeni dichiarati.
+
 **Carrello e checkout:**
 
 1. Il carrello vive in un cookie firmato; il checkout è possibile anche senza account.
 2. Il server crea la sessione Stripe Checkout leggendo prezzi e disponibilità dal database, mai dal client.
-3. Spedizione solo verso Italia e paesi UE nella prima versione; tariffe per zona in configurazione, calcolate per ogni produttore presente nel carrello, con soglia di spedizione gratuita.
+3. Spedizione solo verso l'Italia nella prima versione; tariffa fissa per ordine e soglia di spedizione gratuita (`src/lib/shop/config.ts`).
 4. Se l'utente è autenticato e sceglie di usare i punti, il server applica il coupon monouso (sezione Gamification).
 5. Stripe raccoglie indirizzo, email e telefono.
 

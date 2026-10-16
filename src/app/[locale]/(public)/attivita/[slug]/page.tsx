@@ -8,6 +8,7 @@ import { CatalogLocalTip } from "@/components/catalog/catalog-local-tip";
 import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
 import { ReviewsSection, type ReviewViewer } from "@/components/reviews/reviews-section";
+import { TerritoryProducts } from "@/components/shop/territory-products";
 import {
   AffiliateOffer,
   affiliateHref,
@@ -28,6 +29,7 @@ import { getActivity, listActivityOffers, listNearbyActivities } from "@/server/
 import { itinerariesWithActivity } from "@/server/catalog/area-queries";
 import { getActivityTip } from "@/server/catalog/tips";
 import { getActivityReviews } from "@/server/gamification/queries";
+import { productsForActivity } from "@/server/shop/queries";
 
 // Scheda attività (mockup Attivita.html e AttivitaMobile.html).
 // Non ancora in pagina, perché mancano dati o funzioni: galleria (una sola foto o il
@@ -66,7 +68,7 @@ export default async function ActivityPage({ params, searchParams }: Props) {
   if (!activity) notFound();
 
   const user = await getUser();
-  const [t, labels, nearby, offerRows, tip, { avviso }, reviewState, itineraries] = await Promise.all([
+  const [t, labels, nearby, offerRows, tip, { avviso }, reviewState, itineraries, territoryProducts] = await Promise.all([
     getTranslations("Catalog"),
     interestLabels(locale),
     listNearbyActivities(activity.id, activity.placeId, activity.placeProvince),
@@ -75,6 +77,7 @@ export default async function ActivityPage({ params, searchParams }: Props) {
     searchParams,
     getActivityReviews(activity.id, user),
     itinerariesWithActivity(activity.id, locale),
+    productsForActivity(activity.id, locale),
   ]);
   const viewer: ReviewViewer = !user ? "visitor" : user.is_anonymous ? "guest" : "user";
 
@@ -241,6 +244,8 @@ export default async function ActivityPage({ params, searchParams }: Props) {
             </ul>
           </section>
         )}
+
+        <TerritoryProducts id="dal-territorio-attivita" products={territoryProducts} locale={locale} />
 
         <div className="mt-16">
           <ReviewsSection

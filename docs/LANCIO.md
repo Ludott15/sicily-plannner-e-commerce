@@ -139,7 +139,21 @@ Dopo il primo deploy di produzione, per il dominio `NEXT_PUBLIC_SITE_URL`:
 - **Tag canonical**: le pagine con filtri nell'URL (`/attivita?...`) indicano la versione senza filtri; verificare nell'ispezione URL che Google scelga la pagina canonica attesa.
 - **Bozze e pagine in sospeso**: le guide in bozza e le pagine ancora in sospeso non devono comparire nelle sitemap né essere indicizzate. Le aree senza descrizione restano nella sitemap (la sezione descrizione semplicemente non compare).
 
-## 9. Accessibilità (passo 11.4)
+## 9. Shop: fornitore, API e IVA (passo 7)
+
+Il modello è quello di un intermediario (docs/spec.md, sezione E-commerce): il cliente paga Isula, il fornitore magazzina e spedisce. Prima di aprire lo shop servono queste decisioni, che non si prendono nel codice.
+
+- **Fornitore logistico (dropshipping)**: scegliere il fornitore e verificarne tempi di evasione, resi, giacenze e costo d'acquisto. Finché non c'è un contratto, l'ordine si inoltra a mano dal pannello admin (email o portale del fornitore), e si registrano corriere e tracking. Nessuna integrazione API viene attivata senza chiave: l'adattatore `api` (`SupplierAdapter`) resta inattivo come gli altri partner.
+- **API del fornitore**: se il fornitore ne offre una, l'adattatore si implementa dietro l'interfaccia `SupplierAdapter` e si attiva solo con la chiave di produzione; prima si prova con il sandbox del fornitore. Chiavi e segreti in variabili d'ambiente, mai nel repository.
+- **Contratto con il fornitore**: clausole su rimborsi al sito entro i tempi del recesso (14 giorni, esclusi i deperibili), gestione dei resi e delle contestazioni, responsabilità per la conformità alimentare e per la sicurezza dei prodotti, tempi di evasione, costo di spedizione coperto dalla tariffa (`SHIPPING_FLAT_CENTS`, `FREE_SHIPPING_THRESHOLD_CENTS` in `src/lib/shop/config.ts`).
+- **Privacy**: il fornitore riceve indirizzo e contatto del cliente per evadere l'ordine. Va elencato come responsabile del trattamento in docs/PRIVACY-TECNICA (passo 8.2) e nell'informativa (passo 0.5). Le email al fornitore contengono solo i dati necessari.
+- **IVA e fatturazione** (da decidere con il commercialista): aliquote per categoria (4, 10, 22% in `VAT_RATES`), prezzi IVA inclusa, Stripe Tax o aliquote fisse, fattura emessa dal sito anche quando spedisce il fornitore, soglia OSS oltre 10.000 € di vendite a distanza verso altri paesi UE (oggi la spedizione è solo in Italia).
+- **Informazioni alimentari** (Reg. UE 1169/2011): prima di attivare un prodotto, verificare ingredienti e allergeni sull'etichetta del produttore. L'attivazione richiede la casella "Allergeni verificati" (regola nel server e nel database). Chi è operatore alimentare (fornitore e marchio) va verificato con il consulente.
+- **Marchi e produttori**: prima di pubblicare una storia o una foto di un produttore serve un accordo scritto con lui (uso del nome, della storia e delle immagini), come previsto dai rischi in docs/spec.md.
+- **Controlli di lancio**: nessun prodotto `[DEMO]` in produzione (il seed non si carica mai, `supabase db push` non esegue il seed); `npm run db:drift` e i test pgTAP `shop_rls` e `shop_catalog_rls` verdi in CI; import del catalogo reale solo dall'admin, con anteprima e nessun errore.
+- **Prima di applicare le migrazioni dello shop in produzione** (`20261016202558_shop_catalog` e seguenti): verificare `select count(*) from products;` e `select count(*) from producers;`. Devono essere 0: le colonne NOT NULL senza default e la rimozione di `producers.lead_time_days` presuppongono tabelle vuote.
+
+## 10. Accessibilità (passo 11.4)
 
 La verifica automatica (axe-core, WCAG 2.2 AA, `e2e/a11y.spec.ts`) copre le pagine principali in tema chiaro e scuro, a 1280 e 390 px. Non copre il resto: la verifica con lettori di schermo è da fare a mano prima del lancio, e non risulta ancora fatta.
 

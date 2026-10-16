@@ -8,6 +8,7 @@ import { listAreaSlugs } from "@/server/catalog/area-queries";
 import { listPublicSlugs } from "@/server/catalog/queries";
 import { verticalAvailability } from "@/server/affiliates/verticals";
 import { listGuideSlugs } from "@/server/editorial/queries";
+import { listProducerSlugs, listProductSlugs } from "@/server/shop/queries";
 import { mapLimited, MAX_CONCURRENT_REQUESTS, routeHasPrices } from "@/server/flights/search";
 
 // Letta dal database a ogni richiesta: contiene solo contenuti pubblici (dbPublic).
@@ -55,6 +56,11 @@ async function pathsFor(type: SitemapType): Promise<string[]> {
       return (await listAreaSlugs()).map((s) => `/sicilia/${s}`);
     case "guide":
       return (await listGuideSlugs()).map((s) => `/guide/${s}`);
+    case "prodotti": {
+      // Prodotti vendibili e produttori pubblici (nessuna pagina per il solo produttore nella lista).
+      const [products, producers] = await Promise.all([listProductSlugs(), listProducerSlugs()]);
+      return [...products.map((s) => `/prodotti/${s}`), ...producers.map((s) => `/produttori/${s}`)];
+    }
     case "voli": {
       // Le coppie di voli entrano solo con prezzi (chiamate in cache; senza token nessuna).
       const priced = await mapLimited(POPULAR_ROUTES, MAX_CONCURRENT_REQUESTS, async (route) => ({

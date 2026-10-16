@@ -12,6 +12,7 @@ import {
   places,
   producers,
   products,
+  suppliers,
 } from "@/server/db/schema";
 import { getGuide, listGuides, listGuideSlugs } from "./queries";
 
@@ -30,6 +31,7 @@ const ids = {
   template: id(),
   templateDraft: id(),
   producer: id(),
+  supplier: id(),
   productOpen: id(),
   productClosed: id(),
   published: id(),
@@ -91,23 +93,42 @@ beforeAll(async () => {
     ]);
     await tx.insert(itineraryItems).values([{ itineraryId: ids.template, dayIndex: 0, position: 0, activityId: ids.activityOpen }]);
 
-    await tx.insert(producers).values({ id: ids.producer, name: "int- produttore", email: `int-${tag}@example.com` });
+    await tx.insert(suppliers).values({ id: ids.supplier, name: "int- fornitore", kind: "manual", contactEmail: `int-${tag}@example.com` });
+    await tx.insert(producers).values({
+      id: ids.producer,
+      slug: slug("produttore"),
+      name: "int- produttore",
+      email: `int-${tag}@example.com`,
+      isPublic: true,
+      isActive: true,
+    });
     await tx.insert(products).values([
       {
         id: ids.productOpen,
         slug: slug("prodotto-aperto"),
         producerId: ids.producer,
+        supplierId: ids.supplier,
+        supplierSku: slug("sku-aperto"),
         title: "int- prodotto aperto",
+        category: "dolci",
+        formatLabel: "pacco 200 g",
+        ingredientsIt: "Farina, uova",
         priceCents: 1000,
+        vatRate: 4,
         weightG: 100,
         isActive: true,
+        allergensDeclared: true,
       },
       {
         id: ids.productClosed,
         slug: slug("prodotto-chiuso"),
         producerId: ids.producer,
+        supplierId: ids.supplier,
+        supplierSku: slug("sku-chiuso"),
         title: "int- prodotto chiuso",
+        category: "dolci",
         priceCents: 1000,
+        vatRate: 4,
         weightG: 100,
         isActive: false,
       },
@@ -168,6 +189,7 @@ afterAll(async () => {
   await dbAdmin.delete(itineraries).where(inArray(itineraries.id, allTemplateIds));
   await dbAdmin.delete(products).where(inArray(products.id, allProductIds));
   await dbAdmin.delete(producers).where(inArray(producers.id, [ids.producer]));
+  await dbAdmin.delete(suppliers).where(inArray(suppliers.id, [ids.supplier]));
   await dbAdmin.delete(activities).where(inArray(activities.id, allActivityIds));
   await dbAdmin.delete(places).where(inArray(places.id, allPlaceIds));
 });

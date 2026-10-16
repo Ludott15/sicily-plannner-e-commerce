@@ -9,12 +9,14 @@ import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
 import { TripMap } from "@/components/design";
 import type { MapPoint } from "@/components/design/map/map-style";
+import { TerritoryProducts } from "@/components/shop/territory-products";
 import { Link } from "@/lib/i18n/navigation";
 import { provinceName } from "@/lib/provinces";
 import { canonicalFor, truncate } from "@/lib/seo";
 import { breadcrumbList, place as placeJsonLd } from "@/lib/structured-data";
 import { interestLabels } from "@/server/catalog/labels";
 import { getPlace, listTemplatesThroughPlace, nearbyActivities } from "@/server/catalog/queries";
+import { productsForPlace } from "@/server/shop/queries";
 
 // Pagina di un luogo: nessun mockup dedicato, stessa struttura della scheda attività
 // (percorso, foto, titolo, "Cosa ti aspetta") seguita dalle attività del luogo e dagli
@@ -45,12 +47,13 @@ export default async function PlacePage({ params }: Props) {
   const place = await getPlace(slug, locale);
   if (!place) notFound();
 
-  const [t, tMap, labels, templates, nearby] = await Promise.all([
+  const [t, tMap, labels, templates, nearby, territoryProducts] = await Promise.all([
     getTranslations("Catalog"),
     getTranslations("Map"),
     interestLabels(locale),
     listTemplatesThroughPlace(place.id),
     nearbyActivities(place.id),
+    productsForPlace(place.id, locale),
   ]);
   const distanceFormat = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
   const nearbyPoints: MapPoint[] = nearby.map((a) => ({ id: a.id, lat: a.lat, lng: a.lng, label: a.title }));
@@ -117,6 +120,8 @@ export default async function PlacePage({ params }: Props) {
           </ul>
         )}
       </section>
+
+      <TerritoryProducts id="dal-territorio-luogo" products={territoryProducts} locale={locale} />
 
       {nearby.length > 0 && (
         <section aria-labelledby="sulla-mappa" className="mt-16">

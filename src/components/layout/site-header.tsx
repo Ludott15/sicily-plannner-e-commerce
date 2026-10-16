@@ -35,6 +35,7 @@ export async function SiteHeader() {
     { kind: "link", href: "/itinerari", label: t("itineraries"), icon: "map" },
     { kind: "link", href: "/guide", label: t("guides"), icon: "book" },
     { kind: "link", href: "/noleggio-auto", label: t("car"), icon: "car" },
+    { kind: "link", href: "/shop", label: t("shop") },
   ];
 
   const memberItems: ActionMenuItem[] = [
