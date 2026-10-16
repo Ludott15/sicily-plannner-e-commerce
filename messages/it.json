@@ -990,6 +990,16 @@
         "not_found": "Area non trovata.",
         "failed": "Non è stato possibile salvare. Riprova."
       }
+    },
+    "searchMisses": {
+      "nav": "Ricerche vuote",
+      "title": "Ricerche senza risultati",
+      "intro": "Cosa cerca chi arriva sul sito e il catalogo non ha ancora. Solo il testo e il numero di volte: nessun dato su chi cerca.",
+      "empty": "Nessuna ricerca senza risultati finora.",
+      "colQuery": "Ricerca",
+      "colMisses": "Volte",
+      "colFirst": "Prima volta",
+      "colLast": "Ultima volta"
     }
   },
   "Og": {
@@ -2275,5 +2285,31 @@
     "itinerariesTitle": "Itinerari pronti",
     "guidesTitle": "Guide",
     "productsTitle": "Dal territorio"
+  },
+  "Search": {
+    "title": "Cerca",
+    "description": "Luoghi, attività, itinerari, guide e prodotti in un solo posto.",
+    "label": "Cerca nel sito",
+    "pageLabel": "Cosa cerchi?",
+    "placeholder": "Luogo, attività, itinerario…",
+    "suggestions": "Suggerimenti",
+    "loading": "Cerco…",
+    "noResults": "Nessun risultato per «{query}».",
+    "error": "La ricerca non risponde in questo momento.",
+    "retry": "Riprova",
+    "seeAll": "Vedi tutti i risultati",
+    "openSearch": "Apri la ricerca",
+    "resultsCount": "{count, plural, one {# risultato} other {# risultati}} per «{query}»",
+    "emptyPrompt": "Scrivi il nome di un luogo, di un'attività o di un itinerario.",
+    "emptyTitle": "Nessun risultato per «{query}».",
+    "emptyBody": "Prova con un altro nome, o parti da qui:",
+    "kinds": {
+      "place": "Luoghi",
+      "activity": "Attività",
+      "itinerary": "Itinerari pronti",
+      "guide": "Guide",
+      "product": "Prodotti"
+    },
+    "itineraryDays": "{count, plural, one {# giorno} other {# giorni}}"
   }
 }
