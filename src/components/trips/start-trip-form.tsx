@@ -6,13 +6,13 @@ import { Turnstile } from "@/components/auth/turnstile";
 import { Button } from "@/components/design";
 import { startTrip, type StartTripInput, type TripActionError } from "@/server/trips/actions";
 
+const FIELD =
+  "min-h-11 w-full rounded-sm border-[1.5px] border-border-control bg-calce-raised px-3 text-body font-normal text-lava";
+
 // Date e persone, chiesti quando si salva un viaggio (M5): da un itinerario pronto o da una
 // delle proposte. Chi non ha ancora una sessione la riceve da ospite (Turnstile). Il form sta
 // dentro la carta del passo di salvataggio (viaggio/salva): qui solo i campi, l'errore e l'azione.
 // onSubmit + startTransition (non <form action>): l'errore non fa perdere quello che si è scritto.
-const FIELD =
-  "min-h-11 w-full rounded-sm border-[1.5px] border-border-control bg-calce-raised px-3 text-body font-normal text-lava";
-
 export function StartTripForm({
   locale,
   source,
