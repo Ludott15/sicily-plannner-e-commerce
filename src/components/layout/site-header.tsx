@@ -1,8 +1,9 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { Bell } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import { ButtonLink, Logo } from "@/components/design";
 import { ActionMenu, type ActionMenuItem } from "@/components/layout/action-menu";
 import { AvatarMenu } from "@/components/layout/avatar-menu";
+import { SiteSearch } from "@/components/search/site-search";
 import { Link } from "@/lib/i18n/navigation";
 import { signOut } from "@/server/auth/actions";
 import { getHeaderUser } from "@/server/auth/header-user";
@@ -14,7 +15,12 @@ import { getHeaderUser } from "@/server/auth/header-user";
 // Ospite (sessione anonima): solo il menu personale, con I miei viaggi, Preferenze, Crea l'account ed Esci.
 // Il bottone principale della pagina sta nella pagina, non qui.
 export async function SiteHeader() {
-  const [user, locale, t] = await Promise.all([getHeaderUser(), getLocale(), getTranslations("Nav")]);
+  const [user, locale, t, tSearch] = await Promise.all([
+    getHeaderUser(),
+    getLocale(),
+    getTranslations("Nav"),
+    getTranslations("Search"),
+  ]);
 
   const signOutItem: ActionMenuItem = {
     kind: "form",
@@ -77,7 +83,18 @@ export async function SiteHeader() {
           </nav>
         </div>
 
+        {/* Campo di ricerca da lg (nel tablet la navigazione ha bisogno dello spazio): sotto, l'icona. */}
+        <div className="hidden min-w-0 flex-1 justify-end lg:flex">
+          <div className="w-56 xl:w-72">
+            <SiteSearch variant="header" />
+          </div>
+        </div>
+
         <div className="flex items-center gap-1">
+          <ButtonLink href="/cerca" variant="ghost" size="sm" className="lg:hidden" aria-label={tSearch("openSearch")}>
+            <Search size={20} strokeWidth={1.5} aria-hidden="true" />
+          </ButtonLink>
+
           {user?.kind === "member" && (
             <ButtonLink
               href="/notifiche"

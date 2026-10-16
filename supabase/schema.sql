@@ -1083,6 +1083,17 @@ $$;
 ALTER FUNCTION "public"."evaluate_badges"("p_user" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."f_unaccent"("p_text" "text") RETURNS "text"
+    LANGUAGE "sql" IMMUTABLE STRICT PARALLEL SAFE
+    SET "search_path" TO ''
+    AS $$
+  select extensions.unaccent('extensions.unaccent'::regdictionary, p_text)
+$$;
+
+
+ALTER FUNCTION "public"."f_unaccent"("p_text" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."group_has_other_members"("gid" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -2335,6 +2346,31 @@ $_$;
 ALTER FUNCTION "public"."record_flight_click"("p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."record_search_miss"("p_query" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'extensions', 'pg_temp'
+    AS $$
+declare
+  v_norm text;
+begin
+  v_norm := btrim(left(btrim(regexp_replace(
+    public.f_unaccent(lower(left(coalesce(p_query, ''), 200))), '\s+', ' ', 'g')), 100));
+  if char_length(v_norm) < 2 then
+    return;
+  end if;
+
+  insert into public.search_misses as m (query_norm, misses, first_seen, last_seen)
+  values (v_norm, 1, now(), now())
+  on conflict (query_norm) do update
+    set misses = m.misses + 1,
+        last_seen = excluded.last_seen;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."record_search_miss"("p_query" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."record_vertical_click"("p_partner" "public"."partner", "p_vertical" "text", "p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text" DEFAULT NULL::"text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "text"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -2579,6 +2615,141 @@ $$;
 
 
 ALTER FUNCTION "public"."review_eligible"("p_activity_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."search_site"("p_query" "text", "p_locale" "text", "p_limit" integer DEFAULT 5) RETURNS TABLE("kind" "text", "slug" "text", "title" "text", "subtitle" "text", "rank" real)
+    LANGUAGE "plpgsql" STABLE
+    SET "search_path" TO 'public', 'extensions', 'pg_temp'
+    AS $$
+declare
+  v_raw text;
+  v_norm text;
+  v_tsq tsquery;
+  v_limit int;
+  v_en boolean;
+begin
+  v_raw := btrim(left(btrim(regexp_replace(coalesce(p_query, ''), '\s+', ' ', 'g')), 100));
+  if char_length(v_raw) < 2 then
+    return;
+  end if;
+
+  v_norm := public.f_unaccent(lower(v_raw));
+  v_tsq := websearch_to_tsquery('public.isula_it', v_raw);
+  v_limit := least(greatest(coalesce(p_limit, 5), 1), 20);
+  v_en := p_locale = 'en';
+
+  return query
+  select u.kind, u.slug, u.title, u.subtitle, u.score
+  from (
+    (
+      select 'place'::text as kind, x.slug, x.title, x.subtitle, x.score
+      from (
+        select
+          p.slug,
+          p.name as title,
+          p.province::text as subtitle,
+          (ts_rank(to_tsvector('public.isula_it', p.name || ' ' || coalesce(p.tagline_it, '')), v_tsq)
+            + extensions.similarity(public.f_unaccent(lower(p.name)), v_norm))::real as score
+        from public.places p
+        where p.is_active
+          and (
+            to_tsvector('public.isula_it', p.name || ' ' || coalesce(p.tagline_it, '')) @@ v_tsq
+            or public.f_unaccent(lower(p.name)) operator(extensions.%) v_norm
+          )
+      ) x
+      order by x.score desc, x.title
+      limit v_limit
+    )
+    union all
+    (
+      select 'activity'::text as kind, x.slug, x.title, x.subtitle, x.score
+      from (
+        select
+          a.slug,
+          case when v_en and a.title_en is not null then a.title_en else a.title end as title,
+          pl.name as subtitle,
+          (ts_rank(to_tsvector('public.isula_it', a.title || ' ' || coalesce(a.title_en, '')), v_tsq)
+            + extensions.similarity(public.f_unaccent(lower(a.title)), v_norm))::real as score
+        from public.activities a
+        join public.places pl on pl.id = a.place_id and pl.is_active
+        where a.is_active
+          and (
+            to_tsvector('public.isula_it', a.title || ' ' || coalesce(a.title_en, '')) @@ v_tsq
+            or public.f_unaccent(lower(a.title)) operator(extensions.%) v_norm
+          )
+      ) x
+      order by x.score desc, x.title
+      limit v_limit
+    )
+    union all
+    (
+      select 'itinerary'::text as kind, x.slug, x.title, x.subtitle, x.score
+      from (
+        select
+          i.slug,
+          i.title,
+          i.days::text as subtitle,
+          (ts_rank(to_tsvector('public.isula_it', i.title || ' ' || coalesce(i.subtitle, '')), v_tsq)
+            + extensions.similarity(public.f_unaccent(lower(i.title)), v_norm))::real as score
+        from public.itineraries i
+        where i.is_template and i.slug is not null
+          and (
+            to_tsvector('public.isula_it', i.title || ' ' || coalesce(i.subtitle, '')) @@ v_tsq
+            or public.f_unaccent(lower(i.title)) operator(extensions.%) v_norm
+          )
+      ) x
+      order by x.score desc, x.title
+      limit v_limit
+    )
+    union all
+    (
+      select 'guide'::text as kind, x.slug, x.title, x.subtitle, x.score
+      from (
+        select
+          g.slug,
+          case when v_en and g.title_en is not null then g.title_en else g.title_it end as title,
+          g.author_name as subtitle,
+          (ts_rank(
+              to_tsvector('public.isula_it', g.title_it || ' ' || coalesce(g.title_en, '') || ' ' || coalesce(g.summary_it, '')),
+              v_tsq
+            ) + extensions.similarity(public.f_unaccent(lower(g.title_it)), v_norm))::real as score
+        from public.guides g
+        where g.status = 'published'
+          and (
+            to_tsvector('public.isula_it', g.title_it || ' ' || coalesce(g.title_en, '') || ' ' || coalesce(g.summary_it, '')) @@ v_tsq
+            or public.f_unaccent(lower(g.title_it)) operator(extensions.%) v_norm
+          )
+      ) x
+      order by x.score desc, x.title
+      limit v_limit
+    )
+    union all
+    (
+      select 'product'::text as kind, x.slug, x.title, x.subtitle, x.score
+      from (
+        select
+          pr.slug,
+          pr.title,
+          null::text as subtitle,
+          (ts_rank(to_tsvector('public.isula_it', pr.title), v_tsq)
+            + extensions.similarity(public.f_unaccent(lower(pr.title)), v_norm))::real as score
+        from public.products pr
+        where pr.is_active
+          and (
+            to_tsvector('public.isula_it', pr.title) @@ v_tsq
+            or public.f_unaccent(lower(pr.title)) operator(extensions.%) v_norm
+          )
+      ) x
+      order by x.score desc, x.title
+      limit v_limit
+    )
+  ) u
+  order by array_position(array['place', 'activity', 'itinerary', 'guide', 'product']::text[], u.kind), u.score desc;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."search_site"("p_query" "text", "p_locale" "text", "p_limit" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."season_for"("ts" timestamp with time zone) RETURNS "text"
@@ -2842,6 +3013,70 @@ $$;
 
 
 ALTER FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") OWNER TO "postgres";
+
+
+CREATE TEXT SEARCH CONFIGURATION "public"."isula_it" (
+    PARSER = "pg_catalog"."default" );
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "asciiword" WITH "italian_stem";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "word" WITH "extensions"."unaccent", "italian_stem";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "numword" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "email" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "url" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "host" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "sfloat" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "version" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "hword_numpart" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "hword_part" WITH "extensions"."unaccent", "italian_stem";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "hword_asciipart" WITH "italian_stem";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "numhword" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "asciihword" WITH "italian_stem";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "hword" WITH "extensions"."unaccent", "italian_stem";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "url_path" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "file" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "float" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "int" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "uint" WITH "simple";
+
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."activities" (
@@ -3871,6 +4106,19 @@ CREATE TABLE IF NOT EXISTS "public"."review_reports" (
 ALTER TABLE "public"."review_reports" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."search_misses" (
+    "query_norm" "text" NOT NULL,
+    "misses" integer DEFAULT 1 NOT NULL,
+    "first_seen" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "last_seen" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "search_misses_misses_positive" CHECK (("misses" > 0)),
+    CONSTRAINT "search_misses_query_norm_length" CHECK ((("char_length"("query_norm") >= 2) AND ("char_length"("query_norm") <= 100)))
+);
+
+
+ALTER TABLE "public"."search_misses" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."season_awards" (
     "season" "text" NOT NULL,
     "rank" smallint NOT NULL,
@@ -4320,6 +4568,11 @@ ALTER TABLE ONLY "public"."reviews"
 
 
 
+ALTER TABLE ONLY "public"."search_misses"
+    ADD CONSTRAINT "search_misses_pkey" PRIMARY KEY ("query_norm");
+
+
+
 ALTER TABLE ONLY "public"."season_awards"
     ADD CONSTRAINT "season_awards_season_rank_pk" PRIMARY KEY ("season", "rank");
 
@@ -4358,6 +4611,14 @@ CREATE INDEX "activities_needs_review_idx" ON "public"."activities" USING "btree
 
 
 CREATE INDEX "activities_place_id_idx" ON "public"."activities" USING "btree" ("place_id");
+
+
+
+CREATE INDEX "activities_search_fts_idx" ON "public"."activities" USING "gin" ("to_tsvector"('"public"."isula_it"'::"regconfig", (("title" || ' '::"text") || COALESCE("title_en", ''::"text")))) WHERE "is_active";
+
+
+
+CREATE INDEX "activities_search_trgm_idx" ON "public"."activities" USING "gin" ("public"."f_unaccent"("lower"("title")) "extensions"."gin_trgm_ops") WHERE "is_active";
 
 
 
@@ -4433,6 +4694,14 @@ CREATE INDEX "guides_published_at_idx" ON "public"."guides" USING "btree" ("publ
 
 
 
+CREATE INDEX "guides_search_fts_idx" ON "public"."guides" USING "gin" ("to_tsvector"('"public"."isula_it"'::"regconfig", (((("title_it" || ' '::"text") || COALESCE("title_en", ''::"text")) || ' '::"text") || COALESCE("summary_it", ''::"text")))) WHERE ("status" = 'published'::"text");
+
+
+
+CREATE INDEX "guides_search_trgm_idx" ON "public"."guides" USING "gin" ("public"."f_unaccent"("lower"("title_it")) "extensions"."gin_trgm_ops") WHERE ("status" = 'published'::"text");
+
+
+
 CREATE INDEX "item_votes_itinerary_id_idx" ON "public"."item_votes" USING "btree" ("itinerary_id");
 
 
@@ -4450,6 +4719,14 @@ CREATE INDEX "itineraries_group_id_idx" ON "public"."itineraries" USING "btree" 
 
 
 CREATE INDEX "itineraries_owner_id_idx" ON "public"."itineraries" USING "btree" ("owner_id");
+
+
+
+CREATE INDEX "itineraries_search_fts_idx" ON "public"."itineraries" USING "gin" ("to_tsvector"('"public"."isula_it"'::"regconfig", (("title" || ' '::"text") || COALESCE("subtitle", ''::"text")))) WHERE ("is_template" AND ("slug" IS NOT NULL));
+
+
+
+CREATE INDEX "itineraries_search_trgm_idx" ON "public"."itineraries" USING "gin" ("public"."f_unaccent"("lower"("title")) "extensions"."gin_trgm_ops") WHERE ("is_template" AND ("slug" IS NOT NULL));
 
 
 
@@ -4537,6 +4814,14 @@ CREATE INDEX "places_cover_media_id_idx" ON "public"."places" USING "btree" ("co
 
 
 
+CREATE INDEX "places_search_fts_idx" ON "public"."places" USING "gin" ("to_tsvector"('"public"."isula_it"'::"regconfig", (("name" || ' '::"text") || COALESCE("tagline_it", ''::"text")))) WHERE "is_active";
+
+
+
+CREATE INDEX "places_search_trgm_idx" ON "public"."places" USING "gin" ("public"."f_unaccent"("lower"("name")) "extensions"."gin_trgm_ops") WHERE "is_active";
+
+
+
 CREATE UNIQUE INDEX "places_single_home_hero" ON "public"."places" USING "btree" ("is_home_hero") WHERE "is_home_hero";
 
 
@@ -4546,6 +4831,14 @@ CREATE INDEX "points_ledger_season_user_idx" ON "public"."points_ledger" USING "
 
 
 CREATE INDEX "products_producer_id_idx" ON "public"."products" USING "btree" ("producer_id");
+
+
+
+CREATE INDEX "products_search_fts_idx" ON "public"."products" USING "gin" ("to_tsvector"('"public"."isula_it"'::"regconfig", "title")) WHERE "is_active";
+
+
+
+CREATE INDEX "products_search_trgm_idx" ON "public"."products" USING "gin" ("public"."f_unaccent"("lower"("title")) "extensions"."gin_trgm_ops") WHERE "is_active";
 
 
 
@@ -5812,6 +6105,13 @@ CREATE POLICY "reviews_select_own" ON "public"."reviews" FOR SELECT TO "authenti
 
 
 
+ALTER TABLE "public"."search_misses" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "search_misses_select_admin" ON "public"."search_misses" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
 ALTER TABLE "public"."season_awards" ENABLE ROW LEVEL SECURITY;
 
 
@@ -6002,6 +6302,12 @@ GRANT ALL ON FUNCTION "public"."delete_inactive_guests"("p_days" integer) TO "se
 
 REVOKE ALL ON FUNCTION "public"."evaluate_badges"("p_user" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."evaluate_badges"("p_user" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."f_unaccent"("p_text" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."f_unaccent"("p_text" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."f_unaccent"("p_text" "text") TO "service_role";
 
 
 
@@ -6235,6 +6541,13 @@ GRANT ALL ON FUNCTION "public"."record_flight_click"("p_subid" "text", "p_contex
 
 
 
+REVOKE ALL ON FUNCTION "public"."record_search_miss"("p_query" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."record_search_miss"("p_query" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."record_search_miss"("p_query" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."record_search_miss"("p_query" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."record_vertical_click"("p_partner" "public"."partner", "p_vertical" "text", "p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."record_vertical_click"("p_partner" "public"."partner", "p_vertical" "text", "p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."record_vertical_click"("p_partner" "public"."partner", "p_vertical" "text", "p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "authenticated";
@@ -6268,6 +6581,13 @@ GRANT ALL ON FUNCTION "public"."report_review"("p_review_id" "uuid", "p_reason" 
 REVOKE ALL ON FUNCTION "public"."review_eligible"("p_activity_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."review_eligible"("p_activity_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."review_eligible"("p_activity_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."search_site"("p_query" "text", "p_locale" "text", "p_limit" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."search_site"("p_query" "text", "p_locale" "text", "p_limit" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."search_site"("p_query" "text", "p_locale" "text", "p_limit" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."search_site"("p_query" "text", "p_locale" "text", "p_limit" integer) TO "service_role";
 
 
 
@@ -7236,6 +7556,11 @@ GRANT ALL ON TABLE "public"."rate_limit_hits" TO "service_role";
 
 GRANT ALL ON TABLE "public"."review_reports" TO "service_role";
 GRANT SELECT ON TABLE "public"."review_reports" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."search_misses" TO "service_role";
+GRANT SELECT ON TABLE "public"."search_misses" TO "authenticated";
 
 
 
