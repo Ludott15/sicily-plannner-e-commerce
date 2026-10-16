@@ -508,3 +508,65 @@ select g.id, 'place', p.id, 0
 from public.guides g
 join public.places p on p.slug = 'demo-palermo'
 where g.slug = 'demo-guida-prima-volta';
+
+-- Shop (passo 7.1): un fornitore, due produttori, otto prodotti demo con allergeni, un deperibile,
+-- una box e i collegamenti "Dal territorio". Tutto [DEMO]: nessun prodotto reale.
+insert into public.suppliers (name, kind, contact_email, notes, is_active) values
+  ('[DEMO] Fornitore', 'manual', 'demo-fornitore@example.com', '[DEMO] Fornitore di prova: nessun contratto reale.', true);
+
+insert into public.producers (slug, name, story_it, email, place_id, is_public, is_active)
+select v.slug, v.name, v.story, v.email, p.id, true, true
+from (values
+  ('demo-pistacchi-bronte', '[DEMO] Pistacchi di Bronte', '[DEMO] Storia di prova di un produttore di pistacchio.', 'demo-pistacchi@example.com', 'demo-bronte'),
+  ('demo-terra-iblea', '[DEMO] Terra Iblea', '[DEMO] Storia di prova di un produttore del Ragusano.', 'demo-terra@example.com', 'demo-ragusa-ibla')
+) as v(slug, name, story, email, place_slug)
+join public.places p on p.slug = v.place_slug;
+
+insert into public.products (
+  slug, producer_id, supplier_id, supplier_sku, title, description, category, format_label,
+  price_cents, cost_cents, vat_rate, weight_g, ingredients_it, allergens, storage_it,
+  min_shelf_life_days, is_perishable, stock_status, lead_time_days, place_id, is_box, is_active, allergens_declared
+)
+select v.slug, pr.id, s.id, v.sku, v.title, v.description, v.category, v.format_label,
+  v.price_cents, v.cost_cents, v.vat_rate, v.weight_g, v.ingredients, v.allergens::text[], v.storage,
+  v.min_shelf, v.perishable, v.stock, v.lead_time, pl.id, v.is_box, true, true
+from (values
+  ('demo-crema-pistacchio', 'demo-pistacchi-bronte', 'DEM-001', '[DEMO] Crema di pistacchio', '[DEMO] Crema spalmabile di prova.', 'dolci', 'vasetto 190 g', 1290, 690, 4, 220, '[DEMO] Pistacchi, zucchero, olio di girasole.', '{nuts,milk}', '[DEMO] Conservare in luogo fresco e asciutto.', null::smallint, false, 'available', 3, 'demo-bronte', false),
+  ('demo-pistacchi-tostati', 'demo-pistacchi-bronte', 'DEM-002', '[DEMO] Pistacchi tostati', '[DEMO] Pistacchi tostati e salati di prova.', 'altro', 'sacchetto 100 g', 890, 460, 10, 110, '[DEMO] Pistacchi, sale.', '{nuts}', '[DEMO] Conservare in luogo asciutto.', null::smallint, false, 'available', 3, 'demo-bronte', false),
+  ('demo-cannoli-ricotta', 'demo-pistacchi-bronte', 'DEM-003', '[DEMO] Cannolo alla ricotta', '[DEMO] Dolce fresco di prova, da consumare entro pochi giorni.', 'dolci', 'pezzo 80 g', 490, 210, 4, 80, '[DEMO] Ricotta, zucchero, farina, uova.', '{gluten,milk,eggs}', '[DEMO] Da conservare in frigorifero.', 5::smallint, true, 'on_request', 2, 'demo-bronte', false),
+  ('demo-ragusano-dop', 'demo-terra-iblea', 'DEM-004', '[DEMO] Formaggio ragusano', '[DEMO] Formaggio a pasta semidura di prova.', 'formaggi', 'pezzo 500 g', 1690, 1020, 10, 520, '[DEMO] Latte, sale, caglio.', '{milk}', '[DEMO] Da conservare in frigorifero, avvolto.', 15::smallint, true, 'available', 3, 'demo-ragusa-ibla', false),
+  ('demo-olio-iblea', 'demo-terra-iblea', 'DEM-005', '[DEMO] Olio extravergine iblea', '[DEMO] Olio extravergine di oliva di prova.', 'olio', 'bottiglia 500 ml', 1890, 1100, 10, 560, '[DEMO] Olio extravergine di oliva.', '{}', '[DEMO] Lontano da luce e calore.', null::smallint, false, 'available', 3, 'demo-ragusa-ibla', false),
+  ('demo-pasta-grano-antico', 'demo-terra-iblea', 'DEM-006', '[DEMO] Pasta di grano antico', '[DEMO] Pasta trafilata al bronzo, di prova.', 'pasta', 'confezione 500 g', 990, 450, 4, 520, '[DEMO] Semola di grano duro antico.', '{gluten}', '[DEMO] Conservare in luogo asciutto.', null::smallint, false, 'available', 3, 'demo-ragusa-ibla', false),
+  ('demo-sale-marino', 'demo-terra-iblea', 'DEM-007', '[DEMO] Sale marino aromatizzato', '[DEMO] Sale marino con erbe, di prova.', 'spezie', 'barattolo 120 g', 390, 150, 22, 130, '[DEMO] Sale marino, origano.', '{}', '[DEMO] Conservare in luogo asciutto.', null::smallint, false, 'available', 3, 'demo-ragusa-ibla', false),
+  ('demo-box-sicilia', 'demo-terra-iblea', 'DEM-008', '[DEMO] Box Sicilia', '[DEMO] Box di prova con tre prodotti.', 'box', 'box 1 kg', 3490, 2100, 10, 1000, null, '{gluten,milk,nuts}', null, null::smallint, false, 'available', 3, null, true)
+) as v(slug, producer_slug, sku, title, description, category, format_label, price_cents, cost_cents, vat_rate, weight_g, ingredients, allergens, storage, min_shelf, perishable, stock, lead_time, place_slug, is_box)
+join public.producers pr on pr.slug = v.producer_slug
+join public.suppliers s on s.contact_email = 'demo-fornitore@example.com'
+left join public.places pl on pl.slug = v.place_slug;
+
+insert into public.box_items (box_id, product_id, quantity)
+select b.id, p.id, v.quantity
+from (values
+  ('demo-box-sicilia', 'demo-crema-pistacchio', 1),
+  ('demo-box-sicilia', 'demo-ragusano-dop', 1),
+  ('demo-box-sicilia', 'demo-pasta-grano-antico', 2)
+) as v(box_slug, product_slug, quantity)
+join public.products b on b.slug = v.box_slug
+join public.products p on p.slug = v.product_slug;
+
+-- Dal territorio: il pistacchio porta a Bronte e alla sua attività demo, il ragusano a Ragusa Ibla.
+insert into public.product_links (product_id, kind, target_id, position)
+select p.id, 'place', pl.id, v.position
+from (values
+  ('demo-crema-pistacchio', 'demo-bronte', 0),
+  ('demo-pistacchi-tostati', 'demo-bronte', 0),
+  ('demo-ragusano-dop', 'demo-ragusa-ibla', 0)
+) as v(product_slug, place_slug, position)
+join public.products p on p.slug = v.product_slug
+join public.places pl on pl.slug = v.place_slug;
+
+insert into public.product_links (product_id, kind, target_id, position)
+select p.id, 'activity', a.id, 0
+from public.products p
+join public.activities a on a.slug = 'demo-mercato-ballaro'
+where p.slug = 'demo-pasta-grano-antico';

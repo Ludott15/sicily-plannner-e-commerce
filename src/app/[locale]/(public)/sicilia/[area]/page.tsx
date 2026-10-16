@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CatalogActivityCard } from "@/components/catalog/catalog-activity-card";
 import { CoverFigure } from "@/components/catalog/cover-figure";
 import { JsonLd } from "@/components/catalog/json-ld";
+import { ShopProductCard } from "@/components/shop/shop-product-card";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { Link } from "@/lib/i18n/navigation";
@@ -139,10 +140,10 @@ export default async function AreaPage({ params }: Props) {
           <h2 id="territorio-area" className="is-display text-heading-1">
             {t("productsTitle")}
           </h2>
-          <ul className="flex flex-col divide-y divide-divider">
+          <ul className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
             {page.products.map((product) => (
-              <li key={product.slug} className="py-4 text-body-l font-semibold">
-                {product.title}
+              <li key={product.id}>
+                <ShopProductCard product={product} locale={locale} />
               </li>
             ))}
           </ul>

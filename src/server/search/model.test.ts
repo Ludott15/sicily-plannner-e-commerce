@@ -39,7 +39,7 @@ describe("searchHref", () => {
   });
 
   it("i prodotti non hanno ancora una pagina pubblica", () => {
-    expect(searchHref("product", "crema")).toBeNull();
+    expect(searchHref("product", "crema")).toBe("/prodotti/crema");
   });
 });
 
@@ -64,19 +64,19 @@ describe("groupSearchRows", () => {
   it("raggruppa nell'ordine place, activity, itinerary, guide, product e salta i gruppi vuoti", () => {
     const result = groupSearchRows("cefalu", rows, 3);
     expect(result.query).toBe("cefalu");
-    expect(result.groups.map((group) => group.kind)).toEqual(["place", "activity", "guide"]);
+    expect(result.groups.map((group) => group.kind)).toEqual(["place", "activity", "guide", "product"]);
   });
 
   it("limita i risultati per tipo e conta il totale", () => {
     const result = groupSearchRows("cefalu", rows, 2);
     const activities = result.groups.find((group) => group.kind === "activity");
     expect(activities?.hits.map((hit) => hit.slug)).toEqual(["a-1", "a-2"]);
-    expect(result.total).toBe(4);
+    expect(result.total).toBe(5);
   });
 
-  it("scarta i prodotti (nessun href) e mantiene il link di ogni risultato", () => {
+  it("mantiene il link di ogni risultato, prodotti compresi", () => {
     const result = groupSearchRows("cefalu", rows, 5);
-    expect(result.groups.some((group) => group.kind === "product")).toBe(false);
+    expect(result.groups.find((group) => group.kind === "product")?.hits[0]?.href).toBe("/prodotti/crema");
     const place = result.groups.find((group) => group.kind === "place")?.hits[0];
     expect(place).toEqual({ kind: "place", slug: "p-1", title: "Cefalù", subtitle: "PA", href: "/luoghi/p-1" });
   });
