@@ -194,9 +194,11 @@ test("offline: dopo l'uscita il viaggio esce dalla cache e il secondo utente non
   await page.reload();
   await expect.poll(() => cachedTripUrls(page)).not.toEqual([]);
 
-  // Uscita dal profilo (navigazione interna): la sessione vuota fa uscire i viaggi dalla cache.
+  // Uscita dal menu personale (navigazione interna, come in auth.spec): la sessione vuota fa uscire i
+  // viaggi dalla cache.
   await page.goto("/it/profilo");
-  await page.locator("main").getByRole("button", { name: "Esci", exact: true }).click();
+  await page.getByRole("button", { name: "Menu personale" }).click();
+  await page.getByRole("menuitem", { name: "Esci" }).click();
   await expect(page).toHaveURL(/\/it$/);
   await expect.poll(() => cachedTripUrls(page)).toEqual([]);
 
