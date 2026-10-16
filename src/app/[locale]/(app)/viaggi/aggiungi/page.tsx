@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ButtonLink } from "@/components/design";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
 import { AddToTripForm } from "@/components/trips/add-to-trip-form";
 import { Link } from "@/lib/i18n/navigation";
 import { requireUser } from "@/server/auth";
@@ -12,6 +14,7 @@ import { placeArea, tripsForPicker } from "@/server/trips/queries";
 
 // "Aggiungi al viaggio" dalla scheda attività (?attivita=<slug>): scelta del viaggio e del
 // giorno, con il giorno compatibile per area già proposto. Senza viaggi: "Crea il tuo viaggio".
+// Un solo passo: il titolo dice cosa si aggiunge (l'attività e il luogo), sotto il modulo.
 type Props = { params: Promise<{ locale: string }>; searchParams: Promise<{ attivita?: string }> };
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -40,13 +43,16 @@ export default async function AddToTripPage({ params, searchParams }: Props) {
   );
 
   return (
-    <section className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-10">
-      <div className="flex flex-col gap-2">
-        <h1 className="is-display text-display-l">{t("addTitle")}</h1>
-        <p className="text-body-l text-lava-muted">
-          <Link href={`/attivita/${activity.slug}`}>{activity.title}</Link> · {activity.placeName}
-        </p>
-      </div>
+    <PageContainer width="prose">
+      <PageHeader
+        title={t("addTitle")}
+        subtitle={
+          <Link href={`/attivita/${activity.slug}`} className="text-lava underline underline-offset-4">
+            {activity.title}
+          </Link>
+        }
+        meta={activity.placeName}
+      />
       {trips.length === 0 ? (
         <div className="flex flex-col items-start gap-4">
           <p className="text-body-l">{t("noTripsYet")}</p>
@@ -63,6 +69,6 @@ export default async function AddToTripPage({ params, searchParams }: Props) {
           trips={trips}
         />
       )}
-    </section>
+    </PageContainer>
   );
 }

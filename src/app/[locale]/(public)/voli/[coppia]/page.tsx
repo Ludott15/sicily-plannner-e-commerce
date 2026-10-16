@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { FlightCalendar } from "@/components/flights/flight-results";
 import { FlightSearch } from "@/components/flights/flight-search";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
 import { SICILY_AIRPORTS } from "@/lib/flights/airports";
 import { getDeparture } from "@/lib/flights/departures";
 import { nextMonth } from "@/lib/flights/offers";
@@ -54,12 +56,8 @@ export default async function FlightRoutePage({ params }: Props) {
   ]);
 
   return (
-    <section className="mx-auto flex w-full max-w-[1200px] flex-col gap-10 px-4 py-10 md:px-16 md:py-14">
-      <header className="flex max-w-2xl flex-col gap-3">
-        <p className="text-label uppercase text-lava-muted">{t("eyebrow")}</p>
-        <h1 className="is-display text-display-l">{t("routeTitle", names)}</h1>
-        <p className="text-body-l text-pretty text-lava-muted">{t("routeIntro", names)}</p>
-      </header>
+    <PageContainer width="work">
+      <PageHeader eyebrow={t("eyebrow")} title={t("routeTitle", names)} subtitle={t("routeIntro", names)} />
 
       <FlightSearch
         variant="compact"
@@ -81,6 +79,6 @@ export default async function FlightRoutePage({ params }: Props) {
         itineraryId={null}
         days={days}
       />
-    </section>
+    </PageContainer>
   );
 }

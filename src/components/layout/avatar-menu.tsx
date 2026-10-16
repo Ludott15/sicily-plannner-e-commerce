@@ -13,5 +13,7 @@ export function AvatarMenu({
   avatarUrl?: string | null;
   items: ActionMenuItem[];
 }) {
-  return <ActionMenu variant="avatar" label={label} initials={initials} avatarUrl={avatarUrl ?? null} items={items} align="end" />;
+  // Un valore senza lettere o cifre (es. un simbolo) non è un'iniziale: si mostra l'icona della persona.
+  const shownInitials = initials && /[\p{L}\p{N}]/u.test(initials) ? initials : null;
+  return <ActionMenu variant="avatar" label={label} initials={shownInitials} avatarUrl={avatarUrl ?? null} items={items} align="end" />;
 }

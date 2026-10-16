@@ -21,6 +21,7 @@ async function ownerGroup(page: Page, request: APIRequestContext) {
   const tripId = await createTrip(title, await sessionUserId(page));
 
   await page.goto(`/it/viaggi/${tripId}`);
+  await page.getByRole("tab", { name: "Gruppo" }).click();
   await expect(page.getByRole("heading", { name: "Viaggia in gruppo" })).toBeVisible();
   await page.getByRole("button", { name: "Crea il gruppo" }).click();
   await expect(page).toHaveURL(/\/it\/gruppi\/[0-9a-f-]{36}$/);
@@ -29,12 +30,22 @@ async function ownerGroup(page: Page, request: APIRequestContext) {
   return { title, tripId, groupPath };
 }
 
-// Il link compare una sola volta, appena creato: se ne legge il percorso.
+// L'invito si apre dal pulsante "Invita" dell'intestazione (dialog con link ed email).
+async function openInvite(page: Page) {
+  await page.getByRole("button", { name: "Invita", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Invita al gruppo" })).toBeVisible();
+}
+
+// Il link compare una sola volta, appena creato: se ne legge il percorso. Poi il dialog si chiude.
 async function createInviteLink(page: Page) {
+  await openInvite(page);
   await page.getByRole("button", { name: "Crea link" }).click();
   const link = page.getByLabel("Link di invito");
   await expect(link).toHaveValue(/\/it\/invito\/.+/);
-  return new URL(await link.inputValue()).pathname;
+  const path = new URL(await link.inputValue()).pathname;
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Invita al gruppo" })).toBeHidden();
+  return path;
 }
 
 test("gruppo dal viaggio: anteprima senza account, accesso con codice, ingresso e rimozione", async ({ page, request, browser }) => {
@@ -76,8 +87,9 @@ test("gruppo dal viaggio: anteprima senza account, accesso con codice, ingresso 
   const members = page.getByRole("region", { name: "Persone nel gruppo" });
   await expect(members.getByRole("listitem")).toHaveCount(2);
   const newcomer = members.getByRole("listitem").filter({ hasNotText: "(tu)" });
-  await newcomer.getByRole("button", { name: "Rimuovi" }).click();
-  await newcomer.getByRole("button", { name: "Sì, rimuovi" }).click();
+  await newcomer.getByRole("button", { name: /^Azioni per/ }).click();
+  await page.getByRole("menuitem", { name: "Rimuovi" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Sì, rimuovi" }).click();
   await expect(members.getByRole("listitem")).toHaveCount(1);
 
   const removed = await invitee.goto(groupPath);
@@ -87,8 +99,9 @@ test("gruppo dal viaggio: anteprima senza account, accesso con codice, ingresso 
 
   // Il link revocato: chi lo apre legge il motivo, senza dati del gruppo.
   await page.goto(groupPath);
+  await openInvite(page);
   await page.getByRole("button", { name: "Revoca link" }).click();
-  await expect(page.getByText("Nessun link attivo.")).toBeVisible();
+  await expect(page.getByRole("dialog").getByText("Nessun link attivo.")).toBeVisible();
   await invitee.goto(invitePath);
   await expect(invitee.getByText("Questo invito non è più attivo")).toBeVisible();
 
@@ -98,9 +111,10 @@ test("gruppo dal viaggio: anteprima senza account, accesso con codice, ingresso 
 test("invito per email: senza servizio di posta il messaggio dice cosa fare", async ({ page, request }) => {
   const { groupPath } = await ownerGroup(page, request);
   await page.goto(groupPath);
+  await openInvite(page);
   await page.getByLabel("Email di chi vuoi invitare").fill(testEmail());
   await page.getByRole("button", { name: "Invia l'invito" }).click();
-  await expect(page.locator("main").getByRole("alert")).toContainText("L'invio di email non è disponibile");
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText("L'invio di email non è disponibile");
 });
 
 test("ospite: l'invito mostra l'anteprima e chiede l'account, senza il pulsante di ingresso", async ({ page, request, browser }) => {

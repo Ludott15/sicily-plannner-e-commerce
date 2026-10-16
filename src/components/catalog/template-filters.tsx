@@ -1,15 +1,19 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { TRAVEL_PARTIES, type TravelParty } from "@/lib/itinerary-checks";
 import { useRouter } from "@/lib/i18n/navigation";
 import { DAY_BUCKETS, templateFiltersQuery, type DayBucket, type TemplateFilters as Filters } from "@/lib/template-filters";
+import { cn } from "@/lib/utils";
 
-// Filtri della lista degli itinerari pronti: durata (più scelte, basta una), zona e mese con un
-// select nativo, per chi (una scelta sola) con chip a pressione. Lo stato è nell'URL e la lista
-// la renderizza il server: qui si cambia solo l'URL, e la scelta si vede subito (useOptimistic).
-// Stesso schema di ActivityFilters.
+// Filtri della lista degli itinerari pronti. Durata e "per chi" sono due righe di chip: su mobile
+// scorrono in orizzontale, su desktop vanno a capo. Zona e mese stanno in un pannello "Filtri":
+// su mobile si apre con il pulsante, su desktop sono sempre visibili in una riga compatta.
+// Lo stato è nell'URL e la lista la renderizza il server: qui si cambia solo l'URL, e la scelta si
+// vede subito (useOptimistic). Stesso schema di ActivityFilters.
+
+const PANEL_ID = "filtri-zona-mese";
 
 export function TemplateFilters({
   areas,
@@ -23,6 +27,7 @@ export function TemplateFilters({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [filters, setFilters] = useOptimistic(selected);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   function apply(next: Filters) {
     startTransition(() => {
@@ -41,17 +46,18 @@ export function TemplateFilters({
   }
 
   const monthFormat = new Intl.DateTimeFormat(locale, { month: "long" });
+  const extraCount = (filters.area !== null ? 1 : 0) + (filters.month !== null ? 1 : 0);
 
   return (
-    <div className="mt-8 flex flex-col gap-6" aria-busy={pending}>
-      <fieldset>
+    <div className="flex flex-col gap-6" aria-busy={pending}>
+      <fieldset className="flex flex-col gap-3">
         <legend className="text-body-s font-semibold">{t("filterDays")}</legend>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
           {DAY_BUCKETS.map((bucket) => (
             <button
               key={bucket}
               type="button"
-              className="is-chip"
+              className="is-chip shrink-0"
               aria-pressed={filters.days.includes(bucket)}
               onClick={() => toggleDay(bucket)}
             >
@@ -61,14 +67,14 @@ export function TemplateFilters({
         </div>
       </fieldset>
 
-      <fieldset>
+      <fieldset className="flex flex-col gap-3">
         <legend className="text-body-s font-semibold">{t("filterParty")}</legend>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
           {TRAVEL_PARTIES.map((party) => (
             <button
               key={party}
               type="button"
-              className="is-chip"
+              className="is-chip shrink-0"
               aria-pressed={filters.party === party}
               onClick={() => togglePartyOf(party)}
             >
@@ -78,7 +84,23 @@ export function TemplateFilters({
         </div>
       </fieldset>
 
-      <div className="grid gap-6 sm:max-w-2xl sm:grid-cols-2">
+      <div className="md:hidden">
+        <button
+          type="button"
+          className="is-chip"
+          aria-expanded={panelOpen}
+          aria-controls={PANEL_ID}
+          onClick={() => setPanelOpen((open) => !open)}
+        >
+          {t("v2.filtersToggle")}
+          {extraCount > 0 && <span className="ml-1 text-lava-muted">· {extraCount}</span>}
+        </button>
+      </div>
+
+      <div
+        id={PANEL_ID}
+        className={cn("gap-4 md:grid md:max-w-xl md:grid-cols-2 md:gap-6", panelOpen ? "grid" : "hidden")}
+      >
         <div className="flex flex-col gap-1.5">
           <label htmlFor="filtro-zona" className="text-body-s font-semibold">
             {t("filterArea")}

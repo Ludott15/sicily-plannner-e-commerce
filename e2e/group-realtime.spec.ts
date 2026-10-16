@@ -33,6 +33,7 @@ test("voti, modifiche e proposte del gruppo arrivano in tempo reale", async ({ p
   // Owner: crea il gruppo dalla pagina del viaggio. Da mobile il sposta-giorno è un menu visibile.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/it/viaggi/${seeded.tripId}`);
+  await page.getByRole("tab", { name: "Gruppo" }).click();
   await page.getByRole("button", { name: "Crea il gruppo" }).click();
   await expect(page).toHaveURL(/\/it\/gruppi\/[0-9a-f-]{36}$/);
   const groupId = new URL(page.url()).pathname.split("/").pop()!;
@@ -63,8 +64,10 @@ test("voti, modifiche e proposte del gruppo arrivano in tempo reale", async ({ p
     .toBe(1);
   await expect(page.getByRole("button", { name: "Mi piace, 1 voto" })).toBeVisible({ timeout: 2000 });
 
-  // L'owner sposta la tappa al giorno 2: il membro lo vede nelle modifiche recenti.
-  await page.getByRole("combobox", { name: /al giorno/ }).selectOption("1");
+  // L'owner sposta la tappa al giorno 2: il membro lo vede nelle modifiche recenti (scheda Gruppo).
+  await member.getByRole("tab", { name: "Gruppo" }).click();
+  await page.getByRole("button", { name: /^Azioni per / }).first().click();
+  await page.getByRole("menuitem", { name: "Sposta al giorno 2" }).click();
   await expect(member.getByText(/ha spostato .* al giorno 2\./)).toBeVisible({ timeout: 5000 });
 
   // Il membro propone la tappa dalla scheda dell'attività (scelta del viaggio, poi "Proponi al gruppo").
@@ -73,6 +76,7 @@ test("voti, modifiche e proposte del gruppo arrivano in tempo reale", async ({ p
   await expect(member.getByText("Proposta inviata.")).toBeVisible();
 
   // L'owner vede la proposta nella sezione Proposte e la accetta.
+  await page.getByRole("tab", { name: "Gruppo" }).click();
   const proposals = page.getByRole("region", { name: "Proposte" });
   const proposal = proposals.getByRole("listitem").filter({ hasText: seeded.activityTitle });
   await expect(proposal).toBeVisible({ timeout: 5000 });

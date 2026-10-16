@@ -22,6 +22,7 @@ test("gruppo: interessi comuni senza nomi, tre viaggi per il gruppo e nota dei m
   });
 
   await page.goto(`/it/viaggi/${trip!.id}`);
+  await page.getByRole("tab", { name: "Gruppo" }).click();
   await page.getByRole("button", { name: "Crea il gruppo" }).click();
   await expect(page).toHaveURL(/\/it\/gruppi\/[0-9a-f-]{36}$/);
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
@@ -34,7 +35,9 @@ test("gruppo: interessi comuni senza nomi, tre viaggi per il gruppo e nota dei m
   await expect(interests.getByText("Molto in comune")).toHaveCount(0);
   await expect(interests).not.toContainText(displayName);
 
-  // Tre viaggi per il gruppo, con la nota dei motivi pratici (un solo membro).
+  // Tre viaggi per il gruppo, nella scheda "Viaggi proposti", con la nota dei motivi pratici (un solo membro).
+  await page.getByRole("tab", { name: "Viaggi proposti" }).click();
+  await expect(page).toHaveURL(/scheda=viaggi/);
   const proposals = page.getByRole("region", { name: "Ecco tre viaggi per il gruppo" });
   await expect(proposals).toBeVisible();
   await expect(proposals.getByRole("note").filter({ hasText: "Con meno di 3 persone mostriamo solo motivi pratici" })).toBeVisible();

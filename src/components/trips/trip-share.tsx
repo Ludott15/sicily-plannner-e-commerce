@@ -7,10 +7,10 @@ import { createShareLink, revokeShareLink, type ShareLinkState, type TripFormSta
 import { FieldLabel, FormAlert, controlClass } from "./trip-ui";
 import { useTripForm } from "./use-trip-form";
 
-// Link pubblico in sola lettura. Il token in chiaro arriva una sola volta, dall'azione di
-// creazione: lo si mostra con "Copia" e "Condividi" (Web Share dove c'è, altrimenti copia).
-// "Rigenera" crea un link nuovo e il server revoca il precedente; "Revoca" spegne quello attivo.
-// Dopo la revoca il pannello si rimonta (key sul padre) e riparte pulito.
+// Link pubblico in sola lettura, dentro il dialog "Link pubblico" del menu del viaggio (TripActions).
+// Il token in chiaro arriva una sola volta, dall'azione di creazione: lo si mostra con "Copia" e
+// "Condividi" (Web Share dove c'è, altrimenti copia). "Rigenera" crea un link nuovo e il server revoca
+// il precedente; "Revoca" spegne quello attivo. Dopo la revoca il pannello si rimonta (key sul padre).
 
 const IDLE_LINK: ShareLinkState = { status: "error", code: "invalid" };
 const IDLE: TripFormState = { status: "ok" };
@@ -66,13 +66,9 @@ export function TripShare({
   const revokeError = revoke.submitted && revoke.state.status === "error" ? t(`errors.${revoke.state.code}`) : null;
 
   return (
-    <section aria-labelledby={`${id}-title`} aria-busy={create.pending || revoke.pending} className="is-trip-tools rounded-lg border border-card-edge bg-calce-raised p-4">
-      <h2 id={`${id}-title`} className="text-heading-3">
-        {t("shareHeading")}
-      </h2>
-
+    <div aria-busy={create.pending || revoke.pending} className="flex flex-col gap-4">
       {url ? (
-        <div className="mt-4 flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
           <FieldLabel htmlFor={`${id}-url`}>{t("shareUrlLabel")}</FieldLabel>
           <input id={`${id}-url`} readOnly value={url} onFocus={(event) => event.currentTarget.select()} className={controlClass} />
           <p className="text-body-s text-lava-muted">{t("shareOnce")}</p>
@@ -86,12 +82,12 @@ export function TripShare({
           </div>
         </div>
       ) : activeSince ? (
-        <p className="mt-3 text-body text-lava-muted">{t("shareActiveSince", { date: activeSince })}</p>
+        <p className="text-body text-lava-muted">{t("shareActiveSince", { date: activeSince })}</p>
       ) : (
-        <p className="mt-3 text-body text-lava-muted">{t("shareNone")}</p>
+        <p className="text-body text-lava-muted">{t("shareNone")}</p>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
         <form onSubmit={create.submit}>
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="tripId" value={tripId} />
@@ -108,10 +104,10 @@ export function TripShare({
           </form>
         )}
       </div>
-      <div className="mt-3 flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
         <FormAlert message={createError} />
         <FormAlert message={revokeError} />
       </div>
-    </section>
+    </div>
   );
 }

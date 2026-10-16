@@ -57,7 +57,7 @@ export default async function NewTripPage({ params, searchParams }: Props) {
     .sort((a, b) => b.weight - a.weight || a.key.localeCompare(b.key));
 
   const summary = (
-    <section aria-labelledby="gusti" className="flex flex-col gap-3 rounded-lg border border-card-edge bg-calce-raised p-4">
+    <section aria-labelledby="gusti" className="flex flex-col gap-3 border-b border-divider pb-8">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="gusti" className="text-body font-semibold">
           {t("tastesTitle")}

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { NotificationsList } from "@/components/notifications/notifications-list";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
 import { requireUser } from "@/server/auth";
 import { listNotifications } from "@/server/notifications/queries";
 
@@ -17,11 +19,9 @@ export default async function NotificationsPage({ params }: Props) {
   const [t, items] = await Promise.all([getTranslations("Notifications"), listNotifications(user)]);
 
   return (
-    <section className="mx-auto flex w-full max-w-[720px] flex-col gap-8 px-4 py-8 md:px-16 md:py-12">
-      <header className="flex flex-col gap-2">
-        <h1 className="is-display text-display-l">{t("title")}</h1>
-      </header>
+    <PageContainer>
+      <PageHeader title={t("title")} />
       <NotificationsList items={items} />
-    </section>
+    </PageContainer>
   );
 }

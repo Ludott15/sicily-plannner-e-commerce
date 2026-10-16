@@ -201,7 +201,10 @@
     },
     "templatesCount": "{count, plural, =0 {No itineraries} one {# itinerary} other {# itineraries}}",
     "templatesFilteredEmpty": "There is no itinerary with these filters yet. Remove a filter or choose another one.",
-    "dayPlacesJoiner": " and "
+    "dayPlacesJoiner": " and ",
+    "v2": {
+      "filtersToggle": "Filters"
+    }
   },
   "Design": {
     "forYou": "For you",
@@ -1099,9 +1102,6 @@
     "stopsCount": "{count, plural, one {# stop} other {# stops}}",
     "dayEmptyName": "To be filled",
     "emptyDay": "No stops on this day. Add one from an activity page.",
-    "moveUp": "Move up: {title}",
-    "moveDown": "Move down: {title}",
-    "remove": "Remove from trip: {title}",
     "booking": {
       "lodging": "Accommodation",
       "car": "Car hire",
@@ -1166,8 +1166,6 @@
     "dayNoteSave": "Save the day note",
     "dayNoteSaved": "Day note saved.",
     "dragHandle": "Drag to move: {title}",
-    "moveToDay": "Move «{title}» to day",
-    "moveToDayOption": "Day {n}",
     "dropOnDay": "Drop here: day {n}",
     "moved": "«{title}» moved to day {day}, position {position}.",
     "dragStart": "Stop «{title}» picked up from day {day}, position {position}.",
@@ -1216,7 +1214,26 @@
     "lodgingMissing": "To search for a stay we need the area of the first night and the trip dates.",
     "carMissing": "To compare car rentals we need the arrival airport and the trip dates.",
     "openActivity": "Open the activity",
-    "proposalTripTitlePair": "{first} and {second} in {days, plural, one {# day} other {# days}}"
+    "proposalTripTitlePair": "{first} and {second} in {days, plural, one {# day} other {# days}}",
+    "v2": {
+      "tabsLabel": "Trip sections",
+      "tabItinerary": "Itinerary",
+      "tabBookings": "To book",
+      "tabGroup": "Group",
+      "breadcrumbLabel": "Path",
+      "actionsLabel": "More trip actions",
+      "setDates": "Set the dates",
+      "addActivity": "Add activity",
+      "groupNone": "This trip is not in a group.",
+      "stopActions": "Actions for {title}",
+      "menuMoveUp": "Move up",
+      "menuMoveDown": "Move down",
+      "menuMoveToDay": "Move to day {n}",
+      "menuStopNote": "Note and time slot",
+      "menuRemoveStop": "Remove from trip",
+      "dayNoteEdit": "Edit note",
+      "dayNoteAdd": "Add a note for the day"
+    }
   },
   "Media": {
     "photoCredit": "Photo:",
@@ -1476,7 +1493,6 @@
     "openTripPlain": "Open the trip",
     "noTrip": "The trip of this group is no longer available.",
     "membersHeading": "People in the group",
-    "soloMember": "For now it is only you. Invite the people travelling with you: you will find the links below.",
     "unnamedMember": "No name",
     "youSuffix": " (you)",
     "roleOwner": "Created the group",
@@ -1593,7 +1609,24 @@
     "listEmptyAction": "Create a group from one of your trips",
     "memberCount": "{count, plural, one {# member} other {# members}}",
     "tripLine": "Trip: {title}",
-    "listNoTrip": "No trip linked"
+    "listNoTrip": "No trip linked",
+    "v2": {
+      "breadcrumbLabel": "Breadcrumb",
+      "crumbGroups": "Your groups",
+      "tabsLabel": "Group sections",
+      "tabOverview": "Overview",
+      "tabTrips": "Proposed trips",
+      "tabRanking": "Ranking",
+      "menuLabel": "More group actions",
+      "rename": "Rename",
+      "inviteTitle": "Invite to the group",
+      "memberMenu": "Actions for {name}",
+      "soloMember": "For now it is just you. Invite who travels with you: create the link from the Invite button.",
+      "seeAllRanking": "See the full ranking",
+      "practicalNote": "Practical note",
+      "seeStops": "See the stops",
+      "stopsCount": "{count, plural, one {# stop} other {# stops}}"
+    }
   },
   "GroupInvite": {
     "metaTitle": "Group invite",

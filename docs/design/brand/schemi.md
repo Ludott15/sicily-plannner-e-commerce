@@ -60,7 +60,7 @@ Chi arriva da TikTok o Instagram apre le pagine nel browser interno dell'app. L�
 
 ## Navigazione mobile
 
-- Barra inferiore a 4 voci: Viaggi, Attività, Shop, Profilo. Etichette sempre visibili, icona 24px, area 56px, `env(safe-area-inset-bottom)` sotto.
+- Barra inferiore a 4 voci: Esplora, Viaggi, Gruppi, Profilo (Shop torna con il passo 7). Su desktop: header con Esplora, Voli, Dove dormire e il menu personale dall'avatar (viaggi, gruppi, punti, classifica, notifiche, preferenze, profilo). Etichette sempre visibili, icona 24px, area 56px, `env(safe-area-inset-bottom)` sotto.
 - La barra del chatbot sta sopra la barra inferiore, solo nelle schermate di itinerario. Quando la barra chat ha il focus, la barra inferiore si nasconde per lasciare spazio alla tastiera.
 - Nella scheda attività la barra inferiore lascia il posto a una barra fissa con "Aggiungi al viaggio" e l'offerta affiliata principale.
 - Schede dei giorni scorrevoli in orizzontale, con il nome del giorno: "G1 · Noto e costa".

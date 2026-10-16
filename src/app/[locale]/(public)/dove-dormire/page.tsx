@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { buttonClass, ButtonAnchor, PendingButton } from "@/components/design";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
 import { isIsoDate } from "@/lib/flights/search-params";
 import { localizedAlternates } from "@/lib/seo";
 import { getPartnerConfig, VERTICAL_PARTNER } from "@/server/affiliates/partners";
@@ -94,11 +96,8 @@ export default async function LodgingPage({ params, searchParams }: Props) {
       : null;
 
   return (
-    <section className="mx-auto flex w-full max-w-[1200px] flex-col gap-8 px-4 py-10 md:px-16 md:py-14">
-      <header className="flex max-w-2xl flex-col gap-3">
-        <h1 className="is-display text-display-l">{t("title")}</h1>
-        <p className="text-body-l text-pretty text-lava-muted">{t("intro")}</p>
-      </header>
+    <PageContainer width="work">
+      <PageHeader title={t("title")} subtitle={t("intro")} />
 
       {query.avviso === "non-disponibile" && (
         <p role="alert" className="rounded-lg border border-card-edge bg-calce-raised p-4 text-body">
@@ -190,6 +189,6 @@ export default async function LodgingPage({ params, searchParams }: Props) {
           </div>
         </>
       )}
-    </section>
+    </PageContainer>
   );
 }

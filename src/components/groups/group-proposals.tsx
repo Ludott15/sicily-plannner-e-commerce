@@ -1,13 +1,14 @@
 import "server-only";
 import { getTranslations } from "next-intl/server";
 import type { requireUser } from "@/server/auth";
-import { ProposalCard } from "@/components/proposals/proposal-card";
 import { proposalTexts } from "@/components/proposals/proposal-texts";
 import { getGroupProposals } from "@/server/groups/proposals-group";
+import { GroupProposalCard } from "./group-proposal-card";
 
-// "Ecco tre viaggi per il gruppo": le stesse card di /viaggio/proposte, con il perché delle
-// tappe sotto "Per il gruppo". Con meno di 3 membri (reasonsMode "logistic") il motore lascia
-// solo i motivi pratici e la pagina lo dice. Nessun pulsante di salvataggio in questo passo.
+// "Ecco tre viaggi per il gruppo" (brief 6.1, scheda "Viaggi proposti"): le tre proposte una sotto
+// l'altra, a tutta larghezza (mai colonne strette). Ogni proposta è una GroupProposalCard con le
+// tappe in "Vedi le tappe". Con meno di 3 membri (reasonsMode "logistic") il motore lascia solo i
+// motivi pratici e la pagina lo dice. Nessun pulsante di salvataggio in questo passo.
 // Stati: caricamento (Suspense in pagina), errore, vuoto, lista.
 type GroupUser = Awaited<ReturnType<typeof requireUser>>;
 
@@ -36,7 +37,7 @@ export async function GroupProposals({ user, groupId, locale }: { user: GroupUse
 
   return (
     <section aria-labelledby="group-proposals" className="flex flex-col gap-6">
-      <div className="max-w-2xl">
+      <div className="max-w-[680px]">
         <h2 id="group-proposals" className="is-display text-heading-2">
           {t("tripsHeading")}
         </h2>
@@ -44,12 +45,12 @@ export async function GroupProposals({ user, groupId, locale }: { user: GroupUse
       </div>
 
       {reasonsMode === "logistic" && (
-        <p role="note" className="rounded-lg border border-card-edge bg-calce-raised p-4 text-body">
+        <p role="note" className="max-w-[680px] rounded-lg bg-calce-sunk p-4 text-body">
           {t("logisticNote")}
         </p>
       )}
       {shortened && (
-        <p role="note" className="rounded-lg border border-card-edge bg-calce-raised p-4 text-body">
+        <p role="note" className="max-w-[680px] rounded-lg bg-calce-sunk p-4 text-body">
           {tProposals("shortened", { days })}
         </p>
       )}
@@ -57,17 +58,13 @@ export async function GroupProposals({ user, groupId, locale }: { user: GroupUse
       {proposals.length === 0 ? (
         <p className="text-body-l">{t("tripsEmpty")}</p>
       ) : (
-        <ol className="grid gap-12 lg:grid-cols-3 lg:gap-8">
+        <ol className="flex flex-col gap-10">
           {proposals.map((proposal, i) => (
-            <ProposalCard
+            <GroupProposalCard
               key={`${proposal.area}:${proposal.variant ?? ""}`}
               proposal={proposal}
               index={i}
               texts={texts}
-              whyKind="group"
-              rentalCar={false}
-              showSave={false}
-              level={3}
             />
           ))}
         </ol>

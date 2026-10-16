@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { EarnedBadges } from "@/components/badges/earned-badges";
 import { ButtonLink, PendingButton, PointsPill, Stamp } from "@/components/design";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
 import { requireUser } from "@/server/auth";
 import { getMyBadges } from "@/server/gamification/badges";
 import { getMyPoints } from "@/server/gamification/queries";
 
 // I miei punti (passo 5.1). Saldo, movimenti, regole di guadagno, badge (passo 5.2) e il regolamento
 // (testo legale in sospeso). L'ospite vede come creare l'account: i punti sono degli account.
+// Intestazione di pagina con il saldo nella riga dei fatti; sezioni separate da divider, senza card.
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -31,29 +34,26 @@ export default async function PointsPage({ params }: Props) {
 
   if (user.is_anonymous) {
     return (
-      <section className="mx-auto flex w-full max-w-[720px] flex-col gap-8 px-4 py-8 md:px-16 md:py-12">
-        <header className="flex flex-col gap-2">
-          <p className="text-label uppercase text-lava-muted">{t("eyebrow")}</p>
-          <h1 className="is-display text-display-l">{t("title")}</h1>
-        </header>
-        <div className="flex flex-col items-start gap-4 rounded-lg border border-card-edge bg-calce-raised p-6">
-          <h2 className="is-display text-heading-2">{t("guestTitle")}</h2>
+      <PageContainer>
+        <PageHeader title={t("title")} eyebrow={t("eyebrow")} />
+        <section aria-labelledby="ospite-punti" className="flex flex-col items-start gap-4 border-t border-divider pt-8">
+          <h2 id="ospite-punti" className="is-display text-heading-2">
+            {t("guestTitle")}
+          </h2>
           <p className="text-body text-lava-muted">{t("guestText")}</p>
           <ButtonLink href="/profilo" variant="primary">
             {t("guestCta")}
           </ButtonLink>
-        </div>
-        <div>
+        </section>
+        <div className="flex flex-wrap gap-3">
           <ButtonLink href="/classifica" variant="secondary">
             {tLeaderboard("pointsLink")}
           </ButtonLink>
-        </div>
-        <div>
           <PendingButton id="points.rules" variant="secondary">
             {t("rulesLink")}
           </PendingButton>
         </div>
-      </section>
+      </PageContainer>
     );
   }
 
@@ -66,15 +66,17 @@ export default async function PointsPage({ params }: Props) {
   const grouping = { useGrouping: "always" } as const;
 
   return (
-    <section className="mx-auto flex w-full max-w-[720px] flex-col gap-10 px-4 py-8 md:px-16 md:py-12">
-      <header className="flex flex-col gap-4">
-        <p className="text-label uppercase text-lava-muted">{t("eyebrow")}</p>
-        <h1 className="is-display text-display-l">{t("title")}</h1>
-        <div className="flex flex-wrap items-center gap-4">
-          <PointsPill points={data.balance} />
-          <span className="text-body text-lava-muted">{t("balanceLabel")}</span>
-        </div>
-      </header>
+    <PageContainer>
+      <PageHeader
+        title={t("title")}
+        eyebrow={t("eyebrow")}
+        meta={
+          <span className="flex flex-wrap items-center gap-3">
+            <PointsPill points={data.balance} />
+            <span>{t("balanceLabel")}</span>
+          </span>
+        }
+      />
 
       <section aria-labelledby="come-si-guadagna" className="flex flex-col gap-4">
         <h2 id="come-si-guadagna" className="is-display text-heading-2">
@@ -150,17 +152,14 @@ export default async function PointsPage({ params }: Props) {
         )}
       </section>
 
-      <div>
+      <div className="flex flex-wrap gap-3">
         <ButtonLink href="/classifica" variant="secondary">
           {tLeaderboard("pointsLink")}
         </ButtonLink>
-      </div>
-
-      <div>
         <PendingButton id="points.rules" variant="secondary">
           {t("rulesLink")}
         </PendingButton>
       </div>
-    </section>
+    </PageContainer>
   );
 }

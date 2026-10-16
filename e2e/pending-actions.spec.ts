@@ -56,7 +56,7 @@ async function collectPending(page: Page) {
   });
   // Un viaggio dell'ospite: la checklist "Da prenotare" ha i link ai partner in sospeso (M6).
   const [trip] = await withDb((sql) => sql`insert into public.itineraries (owner_id, title, days) values (${id}, 'e2e- Viaggio', 2) returning id`);
-  await collectFrom(page, [...SESSION_PAGES, `/it/viaggi/${trip!.id}`], found);
+  await collectFrom(page, [...SESSION_PAGES, `/it/viaggi/${trip!.id}?scheda=prenotare`], found);
   return found;
 }
 

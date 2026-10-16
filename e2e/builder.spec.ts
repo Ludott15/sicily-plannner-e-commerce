@@ -70,11 +70,15 @@ test("builder: riordino, rimozione con evento, checklist con il conteggio", asyn
   const stops = page.locator("li.is-stop .is-stop__title");
   await expect(stops).toHaveText(["Street food al mercato di Ballarò", "Palazzo dei Normanni e Cappella Palatina", "Aperitivo e vita notturna alla Vucciria"]);
 
-  await page.getByRole("button", { name: "Sposta giù: Street food al mercato di Ballarò" }).click();
+  await page.getByRole("button", { name: "Azioni per Street food al mercato di Ballarò" }).click();
+  await page.getByRole("menuitem", { name: "Sposta giù" }).click();
   await expect(stops).toHaveText(["Palazzo dei Normanni e Cappella Palatina", "Street food al mercato di Ballarò", "Aperitivo e vita notturna alla Vucciria"]);
-  await expect(page.getByRole("button", { name: "Sposta su: Palazzo dei Normanni e Cappella Palatina" })).toBeDisabled();
+  await page.getByRole("button", { name: "Azioni per Palazzo dei Normanni e Cappella Palatina" }).click();
+  await expect(page.getByRole("menuitem", { name: "Sposta su" })).toBeDisabled();
+  await page.keyboard.press("Escape");
 
-  await page.getByRole("button", { name: "Togli dal viaggio: Aperitivo e vita notturna alla Vucciria" }).click();
+  await page.getByRole("button", { name: "Azioni per Aperitivo e vita notturna alla Vucciria" }).click();
+  await page.getByRole("menuitem", { name: "Togli dal viaggio" }).click();
   await expect(stops).toHaveCount(2);
 
   // Giorno 3.
@@ -89,6 +93,7 @@ test("builder: riordino, rimozione con evento, checklist con il conteggio", asyn
   expect(events).toEqual([{ type: "remove_from_itinerary", slug: "demo-palermo-notte" }]);
 
   // Checklist: alloggio e voli; nessuna tappa in auto, nessuna offerta nel weekend a Palermo.
+  await page.getByRole("tab", { name: "Da prenotare" }).click();
   const list = page.getByRole("region", { name: "Da prenotare" });
   await expect(list.getByText("2 da prenotare · 0 fatti")).toBeVisible();
   await page.getByRole("checkbox", { name: "Segna come prenotato: Alloggio" }).click();

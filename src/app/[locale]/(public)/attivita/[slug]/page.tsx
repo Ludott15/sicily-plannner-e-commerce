@@ -172,12 +172,10 @@ export default async function ActivityPage({ params, searchParams }: Props) {
           <h1 className="is-display max-w-4xl text-display-l">{activity.title}</h1>
           {/* Su desktop Condividi sta a destra dei metadati; Salva arriva con il builder (M5). */}
           <div className="flex flex-wrap items-end justify-between gap-4">
-          <p className="text-body text-lava-muted">
-            {meta.join(" · ")}
-          </p>
-          <div className="hidden flex-wrap items-start gap-3 md:flex">
-            <ShareButton title={activity.title} />
-          </div>
+            <p className="text-body text-lava-muted">{meta.join(" · ")}</p>
+            <div className="hidden flex-wrap items-start gap-3 md:flex">
+              <ShareButton title={activity.title} />
+            </div>
           </div>
         </header>
 

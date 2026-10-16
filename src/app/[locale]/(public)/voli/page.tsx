@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { FlightCalendar, FlightResults } from "@/components/flights/flight-results";
 import { FlightSearch } from "@/components/flights/flight-search";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
 import { CONSENT_COOKIE, hasAnalyticsConsent, parseConsent } from "@/lib/consent";
 import { isSicilyAirport, type SicilyAirportCode } from "@/lib/flights/airports";
 import { getDeparture } from "@/lib/flights/departures";
@@ -66,12 +68,8 @@ export default async function FlightsPage({ params, searchParams }: Props) {
   }
 
   return (
-    <section className="mx-auto flex w-full max-w-[1200px] flex-col gap-8 px-4 py-10 md:px-16 md:py-14">
-      <header className="flex max-w-2xl flex-col gap-3">
-        <p className="text-label uppercase text-lava-muted">{t("eyebrow")}</p>
-        <h1 className="is-display text-display-l">{t("title")}</h1>
-        <p className="text-body-l text-pretty text-lava-muted">{t("intro")}</p>
-      </header>
+    <PageContainer width="work">
+      <PageHeader eyebrow={t("eyebrow")} title={t("title")} subtitle={t("intro")} />
 
       {avviso === "non-disponibile" && (
         <p role="alert" className="rounded-lg border border-card-edge bg-calce-raised p-4 text-body">
@@ -125,6 +123,6 @@ export default async function FlightsPage({ params, searchParams }: Props) {
           />
         </>
       )}
-    </section>
+    </PageContainer>
   );
 }

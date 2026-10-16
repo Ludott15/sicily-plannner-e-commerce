@@ -9,9 +9,9 @@ import { setItemVote, type VoteResult } from "@/server/groups/votes-actions";
 import { useGroupAction } from "./use-group-action";
 
 // Voti di una tappa nel viaggio di gruppo: StopVotes del design system (controllato), con i valori
-// ottimistici (useOptimistic) e il ritorno allo stato del server se l'azione fallisce. Sotto la
-// tappa, solo se ci sono alternative vicine, l'elenco con titolo, luogo e distanza; solo l'owner del
-// gruppo può sostituire la tappa con una di quelle.
+// ottimistici (useOptimistic) e il ritorno allo stato del server se l'azione fallisce. Sotto la tappa,
+// solo se ci sono alternative vicine, l'elenco con titolo, luogo e distanza; solo l'owner del gruppo può
+// sostituire la tappa con una di quelle. In riga compatta: i voti restano sotto il luogo della tappa.
 
 export type StopVoteCounts = { up: number; down: number; mine: 1 | -1 | null };
 
@@ -67,7 +67,7 @@ export function GroupStopVotes({ itemId, votes, members, alternatives, isGroupOw
   const myVote: Side | null = sideOf(optimistic.mine);
 
   return (
-    <div className="flex flex-col gap-3" aria-busy={pending}>
+    <div className="flex flex-col gap-2" aria-busy={pending}>
       <StopVotes
         up={optimistic.up}
         down={optimistic.down}
@@ -78,13 +78,13 @@ export function GroupStopVotes({ itemId, votes, members, alternatives, isGroupOw
       />
 
       {alternatives.length > 0 && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
           <p className="text-body-s font-semibold">{t("alternativesLabel")}</p>
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col">
             {alternatives.map((alternative) => (
               <li
                 key={alternative.activityId}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-divider p-3"
+                className="flex flex-wrap items-center justify-between gap-3 border-b border-divider py-3 last:border-b-0"
               >
                 <div className="min-w-0">
                   <p className="text-body font-semibold">{alternative.title}</p>

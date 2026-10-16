@@ -155,7 +155,7 @@ export function ActionMenu(props: ActionMenuProps) {
         disabled={item.disabled}
         className={cn(ITEM_CLASS, tone)}
         onClick={() => {
-          setOpen(false);
+          closeAndFocusTrigger();
           item.onSelect();
         }}
       >

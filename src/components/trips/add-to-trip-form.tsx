@@ -67,13 +67,13 @@ export function AddToTripForm({
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-6">
+    <form onSubmit={submit} className="flex flex-col gap-8">
       <label className="flex flex-col gap-2 text-body-s font-semibold">
         {t("pickTrip")}
         <select
           value={tripId}
           onChange={(e) => setTripId(e.target.value)}
-          className="min-h-11 rounded-md border border-divider bg-calce px-3 text-body font-normal"
+          className="min-h-11 w-full rounded-sm border-[1.5px] border-border-control bg-calce-raised px-3 text-body font-normal text-lava"
         >
           {trips.map((x) => (
             <option key={x.id} value={x.id}>
@@ -87,7 +87,7 @@ export function AddToTripForm({
         <select
           value={day}
           onChange={(e) => setDayByTrip({ ...dayByTrip, [tripId]: Number(e.target.value) })}
-          className="min-h-11 rounded-md border border-divider bg-calce px-3 text-body font-normal"
+          className="min-h-11 w-full rounded-sm border-[1.5px] border-border-control bg-calce-raised px-3 text-body font-normal text-lava"
         >
           {Array.from({ length: trip.days }, (_, d) => (
             <option key={d} value={d}>
@@ -98,12 +98,12 @@ export function AddToTripForm({
         </select>
       </label>
       {suggestion.far && (
-        <p role="note" className="rounded-lg border border-card-edge bg-calce-raised p-4 text-body-s">
+        <p role="note" className="rounded-lg bg-calce-sunk p-4 text-body-s">
           {t("farTrip", { areas: tripAreas.join(", "), area: activityArea ? (areaNames[activityArea] ?? activityArea) : "" })}
         </p>
       )}
       {proposing && (
-        <p role="note" className="rounded-lg border border-card-edge bg-calce-raised p-4 text-body-s">
+        <p role="note" className="rounded-lg bg-calce-sunk p-4 text-body-s">
           {tg("proposeNote")}
         </p>
       )}
@@ -121,7 +121,7 @@ export function AddToTripForm({
         </p>
       )}
       <div>
-        <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
+        <Button type="submit" variant="primary" className="w-full sm:w-auto" disabled={pending} aria-busy={pending}>
           {proposing ? tg("proposeAction") : t("addHere")}
         </Button>
       </div>

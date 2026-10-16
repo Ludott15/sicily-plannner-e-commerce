@@ -28,7 +28,7 @@ export function TripForm({ locale, initial, summary }: { locale: string; initial
   }
 
   const section = (id: string, title: string, children: ReactNode) => (
-    <section aria-labelledby={id} className="flex flex-col gap-4 border-t border-divider pt-6">
+    <section aria-labelledby={id} className="flex flex-col gap-5 border-t border-divider pt-8">
       <h2 id={id} className="is-display text-heading-2">
         {title}
       </h2>
@@ -37,13 +37,13 @@ export function TripForm({ locale, initial, summary }: { locale: string; initial
   );
 
   return (
-    <section className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-8 md:py-12">
-      <div className="flex flex-col gap-2">
-        <h1 className="is-display text-display-l">{t("tripTitle")}</h1>
+    <section className="mx-auto flex w-full max-w-2xl flex-col gap-10 px-4 py-8 md:gap-12 md:py-14">
+      <div className="flex max-w-[680px] flex-col gap-3">
+        <h1 className="is-display text-display-l text-balance">{t("tripTitle")}</h1>
         <p className="text-body-l text-pretty text-lava-muted">{t("tripHint")}</p>
       </div>
       {summary}
-      <form onSubmit={submit} className="flex flex-col gap-8">
+      <form onSubmit={submit} className="flex flex-col gap-10">
         {section("giorni", t("daysTitle"), <DaysField answers={answers} set={set} />)}
         {section("compagnia", t("partyTitle"), <PartyField answers={answers} set={set} />)}
         {section("arrivo", t("airportTitle"), <AirportField answers={answers} set={set} />)}
@@ -54,7 +54,7 @@ export function TripForm({ locale, initial, summary }: { locale: string; initial
           </p>
         )}
         <div>
-          <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
+          <Button type="submit" variant="primary" className="w-full sm:w-auto" disabled={pending} aria-busy={pending}>
             {t("finish")}
           </Button>
         </div>

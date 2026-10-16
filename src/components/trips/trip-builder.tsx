@@ -1,28 +1,18 @@
 "use client";
 
 import { flushSync } from "react-dom";
-import { useEffect, useOptimistic, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useState, useTransition, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import {
-  DndContext,
-  DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type Announcements,
-  type DragEndEvent,
-  type DragStartEvent,
-  type ScreenReaderInstructions,
-} from "@dnd-kit/core";
+import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type Announcements, type DragEndEvent, type DragStartEvent, type ScreenReaderInstructions, MeasuringStrategy } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { BookingList, Button, DayTabs, Route, type BookingItem } from "@/components/design";
-import type { TimeSlot, Pace } from "@/lib/itinerary-checks";
+import type { TimeSlot } from "@/lib/itinerary-checks";
 import { useRouter } from "@/lib/i18n/navigation";
 import { MAX_TRIP_DAYS } from "@/lib/trip-days";
 import { dayFromZoneId, dayZoneId, dropOn, locate, placements, stepInDay, type DayOrder } from "@/lib/trip-order";
 import { formatDriveTime } from "@/lib/format";
+import { tabIds } from "@/lib/tabs";
+import type { TripTab } from "@/lib/trip-tabs";
 import type { TripWarning } from "@/lib/trip-warnings";
 import {
   addDay,
@@ -39,19 +29,18 @@ import { useItineraryRealtime } from "@/components/groups/use-itinerary-realtime
 import type { TripGroupState } from "@/server/groups/trip-group";
 import { ConfirmDialog } from "./confirm-dialog";
 import { CheckInButton } from "./check-in-button";
-import { DayDropZone, StopItem } from "./sortable-days";
-import { TripActions } from "./trip-actions";
-import { DayNoteForm } from "./trip-notes";
-import { TripSettings } from "./trip-settings";
-import { TripShare } from "./trip-share";
+import { DayDropZone, DayDropZones, StopItem } from "./sortable-days";
+import { DayNote } from "./trip-notes";
 import { FormAlert } from "./trip-ui";
 import { useTripForm } from "./use-trip-form";
 
-// Builder del viaggio (1.4): giorni con le tappe (trascinamento da md in su, su/giù e "sposta al
-// giorno" sotto), avvisi per giorno, note del giorno e delle tappe, aggiunta e rimozione di un
-// giorno, impostazioni, azioni (stampa, calendario, duplica, elimina) e link pubblico. Ogni
-// modifica passa dalle azioni server; l'ordine si mostra subito (useOptimistic) e poi si ricarica.
-// In stampa tutti i giorni entrano nel documento (beforeprint).
+// Builder del viaggio (1.4, riprogettato in 6.1). Ogni scheda ha il suo pannello: l'itinerario (giorni con
+// le tappe, trascinamento da md in su, menu ⋯ per tappa, nota del giorno in un dialog, avvisi, aggiunta e
+// rimozione di un giorno), le cose da prenotare e la scheda del gruppo, già resa dalla pagina. Ogni modifica
+// passa dalle azioni server; l'ordine si mostra subito (useOptimistic) e poi si ricarica. In stampa tutti i
+// giorni entrano nel documento (beforeprint). Le azioni del viaggio (stampa, duplica, link, impostazioni,
+// elimina) stanno nell'intestazione della pagina (TripActions).
+
 
 export type BuilderStop = {
   id: string;
@@ -69,19 +58,17 @@ export type BuilderDay = { name: string; note: string; stops: BuilderStop[] };
 export type BuilderBooking = BookingItem & { kind: "activity" | "lodging" | "car" | "flight"; activityId: string | null };
 
 export type TripBuilderProps = {
-  locale: string;
   tripId: string;
-  title: string;
-  startDate: string | null;
-  travelers: number | null;
-  pace: Pace;
   days: BuilderDay[];
   warnings: TripWarning[];
   initialDay: number;
   bookings: BuilderBooking[];
-  sharedSince: string | null;
   /** Stato del gruppo (4.2) se il viaggio è di gruppo: voti, alternative, proposte, modifiche. */
   group: TripGroupState | null;
+  /** Scheda attiva (da ?scheda=). */
+  tab: TripTab;
+  /** Contenuto della scheda Gruppo, reso dalla pagina (pannello del gruppo e sezioni). */
+  groupTab: ReactNode;
 };
 
 const OK: TripFormState = { status: "ok" };
@@ -90,27 +77,13 @@ const NO_ALTERNATIVES: TripGroupState["alternatives"][string] = [];
 
 type Outcome = { status: "ok" } | TripActionError;
 
-export function TripBuilder({
-  locale,
-  tripId,
-  title,
-  startDate,
-  travelers,
-  pace,
-  days,
-  warnings,
-  initialDay,
-  bookings,
-  sharedSince,
-  group,
-}: TripBuilderProps) {
+export function TripBuilder({ tripId, days, warnings, initialDay, bookings, group, tab, groupTab }: TripBuilderProps) {
   const t = useTranslations("Trips");
   const router = useRouter();
   const [picked, setPicked] = useState(initialDay);
   const [error, setError] = useState<TripActionError["code"] | null>(null);
   const [notice, setNotice] = useState("");
   const [printing, setPrinting] = useState(false);
-  const [shareEpoch, setShareEpoch] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [removeOpen, setRemoveOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -131,7 +104,7 @@ export function TripBuilder({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  // Stampa (Ctrl+P o il pulsante): tutti i giorni nel documento. flushSync rende prima della
+  // Stampa (Ctrl+P o il menu del viaggio): tutti i giorni nel documento. flushSync rende prima della
   // finestra di stampa; afterprint torna alla vista di un giorno.
   useEffect(() => {
     const before = () => flushSync(() => setPrinting(true));
@@ -269,50 +242,58 @@ export function TripBuilder({
   }
 
   const dayNames = days.map((day) => ({ name: day.name }));
+  const ids = tabIds("trip", tab);
 
-  return (
-    <div className="flex flex-col gap-8" aria-busy={pending}>
-      {group && <GroupRealtime itineraryId={tripId} />}
-      <TripActions locale={locale} tripId={tripId} startDate={startDate} />
+  let content: ReactNode;
+  if (tab === "prenotare") {
+    content = <BookingList items={bookings} onDoneChange={setBooked} />;
+  } else if (tab === "gruppo") {
+    content = groupTab;
+  } else {
+    content = (
+      <>
+        <div className="is-trip-tools">
+          <DayTabs days={dayNames} current={activeDay} onSelect={setPicked} />
+        </div>
+        <FormAlert message={error ? t(`errors.${error}`) : null} />
+        <p aria-live="polite" className="text-body-s text-lava-muted">
+          {notice}
+        </p>
 
-      <div className="grid gap-10 lg:grid-cols-[1fr_360px]">
-        <div className="flex min-w-0 flex-col gap-8">
-          <div className="is-trip-tools">
-            <DayTabs days={dayNames} current={activeDay} onSelect={setPicked} />
-          </div>
-          <FormAlert message={error ? t(`errors.${error}`) : null} />
-          <p aria-live="polite" className="text-body-s text-lava-muted">
-            {notice}
-          </p>
-
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragCancel={() => setActiveId(null)}
-            accessibility={{ announcements, screenReaderInstructions }}
-          >
-            <SortableContext items={visibleIds} strategy={verticalListSortingStrategy}>
-              {visibleDays.map((d) => {
-                const day = days[d];
-                if (!day) return null;
-                const dayStops = (order[d] ?? []).flatMap((id) => {
-                  const stop = stopById.get(id);
-                  return stop ? [stop] : [];
-                });
-                const dayWarnings = warnings.filter((warning) => warningDayIndex(warning) === d);
-                return (
-                  <section key={d} data-day-panel aria-labelledby={`day-title-${d}`} className="flex flex-col gap-4">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setActiveId(null)}
+          accessibility={{ announcements, screenReaderInstructions }}
+          // Le zone dei giorni cambiano aspetto durante il trascinamento: misurarle sempre.
+          measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+        >
+          <SortableContext items={visibleIds} strategy={verticalListSortingStrategy}>
+            {visibleDays.map((d) => {
+              const day = days[d];
+              if (!day) return null;
+              const dayStops = (order[d] ?? []).flatMap((id) => {
+                const stop = stopById.get(id);
+                return stop ? [stop] : [];
+              });
+              const dayWarnings = warnings.filter((warning) => warningDayIndex(warning) === d);
+              return (
+                <section key={d} data-day-panel aria-labelledby={`day-title-${d}`} className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
                     <h2 id={`day-title-${d}`} className="text-heading-3">
                       {day.name}
                     </h2>
+                    <DayNote tripId={tripId} dayIndex={d} note={day.note} />
+                  </div>
 
-                    {dayStops.length === 0 ? (
-                      <DayDropZone id={dayZoneId(d)} className="rounded-md border border-dashed border-border-control p-4 text-body text-lava-muted">
-                        {t("emptyDay")}
-                      </DayDropZone>
-                    ) : (
+                  {dayStops.length === 0 ? (
+                    <DayDropZone id={dayZoneId(d)} className="rounded-md border border-dashed border-border-control p-4 text-body text-lava-muted">
+                      {t("emptyDay")}
+                    </DayDropZone>
+                  ) : (
+                    <div className="max-md:[&_.is-route]:[--stop-time-w:80px]">
                       <Route>
                         {dayStops.map((stop, index) => (
                           <StopItem
@@ -343,101 +324,94 @@ export function TripBuilder({
                           />
                         ))}
                       </Route>
-                    )}
+                    </div>
+                  )}
 
-                    {dayWarnings.length > 0 && (
-                      <ul className="flex flex-col gap-2">
-                        {dayWarnings.map((warning, i) => (
-                          <li key={`${warning.code}-${i}`}>
-                            <p role="note" className="rounded-sm border-[1.5px] border-border-control bg-calce-raised px-4 py-3 text-body">
-                              {warningText(warning)}
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                  {dayWarnings.length > 0 && (
+                    <ul className="flex flex-col gap-2">
+                      {dayWarnings.map((warning, i) => (
+                        <li key={`${warning.code}-${i}`}>
+                          <p role="note" className="rounded-sm border-[1.5px] border-border-control bg-calce-raised px-4 py-3 text-body">
+                            {warningText(warning)}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
 
-                    {!printing && d === activeDay && dayCount > 1 && (
-                      <div className="is-trip-tools hidden flex-col items-start gap-2 md:flex">
-                        {days.map((_other, k) =>
-                          k === d ? null : (
-                            <DayDropZone
-                              key={k}
-                              id={dayZoneId(k)}
-                              className="rounded-full border-[1.5px] border-border-control px-4 py-2 text-body-s text-lava"
-                            >
-                              {t("dropOnDay", { n: k + 1 })}
-                            </DayDropZone>
-                          ),
-                        )}
-                      </div>
-                    )}
+                  {!printing && d === activeDay && dayCount > 1 && (
+                    <DayDropZones className="is-trip-tools hidden flex-col items-stretch gap-2 md:flex">
+                      {days.map((_other, k) =>
+                        k === d ? null : (
+                          <DayDropZone
+                            key={k}
+                            id={dayZoneId(k)}
+                            className="w-full rounded-md border-[1.5px] border-dashed border-border-control px-4 py-2 text-body-s text-lava"
+                          >
+                            {t("dropOnDay", { n: k + 1 })}
+                          </DayDropZone>
+                        ),
+                      )}
+                    </DayDropZones>
+                  )}
+                </section>
+              );
+            })}
+          </SortableContext>
+          <DragOverlay>
+            {activeId ? (
+              <div className="rounded-md border border-card-edge bg-calce-raised px-4 py-3 text-body shadow-card">{titleOf(activeId)}</div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
 
-                    <DayNoteForm tripId={tripId} dayIndex={d} note={day.note} />
-                  </section>
-                );
-              })}
-            </SortableContext>
-            <DragOverlay>
-              {activeId ? (
-                <div className="rounded-md border border-card-edge bg-calce-raised px-4 py-3 text-body shadow-card">{titleOf(activeId)}</div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
-
-          <div className="is-trip-tools flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <form onSubmit={addForm.submit}>
-                <input type="hidden" name="tripId" value={tripId} />
-                <Button type="submit" variant="secondary" disabled={addForm.pending || dayCount >= MAX_TRIP_DAYS}>
-                  {t("addDay")}
-                </Button>
-              </form>
-              <Button variant="ghost" disabled={dayCount <= 1} onClick={() => setRemoveOpen(true)}>
-                {t("removeDay", { n: activeDay + 1 })}
-              </Button>
-            </div>
-            <FormAlert message={addAlert} />
-          </div>
-
-          <ConfirmDialog open={removeOpen} title={t("removeDayTitle", { n: activeDay + 1 })} onClose={() => setRemoveOpen(false)}>
-            <form onSubmit={removeForm.submit} className="flex flex-col gap-4" aria-busy={removeForm.pending}>
+        <div className="is-trip-tools flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <form onSubmit={addForm.submit}>
               <input type="hidden" name="tripId" value={tripId} />
-              <input type="hidden" name="dayIndex" value={activeDay} />
-              <p className="text-body">{t("removeDayBody", { n: activeDay + 1 })}</p>
-              <FormAlert message={removeAlert} />
-              <div className="flex flex-wrap gap-3">
-                <Button variant="secondary" onClick={() => setRemoveOpen(false)}>
-                  {t("cancel")}
-                </Button>
-                <Button type="submit" variant="primary" disabled={removeForm.pending}>
-                  {t("removeDayConfirm")}
-                </Button>
-              </div>
+              <Button type="submit" variant="secondary" disabled={addForm.pending || dayCount >= MAX_TRIP_DAYS}>
+                {t("addDay")}
+              </Button>
             </form>
-          </ConfirmDialog>
+            <Button variant="ghost" disabled={dayCount <= 1} onClick={() => setRemoveOpen(true)}>
+              {t("removeDay", { n: activeDay + 1 })}
+            </Button>
+          </div>
+          <FormAlert message={addAlert} />
         </div>
 
-        <aside className="is-trip-aside flex flex-col gap-6 lg:self-start">
-          <div className="rounded-lg border border-card-edge bg-calce-raised p-4">
-            <BookingList items={bookings} onDoneChange={setBooked} />
-          </div>
-          <TripShare
-            key={shareEpoch}
-            tripId={tripId}
-            locale={locale}
-            title={title}
-            activeSince={sharedSince}
-            onRevoked={() => setShareEpoch((n) => n + 1)}
-          />
-          <TripSettings tripId={tripId} title={title} startDate={startDate} travelers={travelers} pace={pace} />
-        </aside>
+        <ConfirmDialog open={removeOpen} title={t("removeDayTitle", { n: activeDay + 1 })} onClose={() => setRemoveOpen(false)}>
+          <form onSubmit={removeForm.submit} className="flex flex-col gap-4" aria-busy={removeForm.pending}>
+            <input type="hidden" name="tripId" value={tripId} />
+            <input type="hidden" name="dayIndex" value={activeDay} />
+            <p className="text-body">{t("removeDayBody", { n: activeDay + 1 })}</p>
+            <FormAlert message={removeAlert} />
+            <div className="flex flex-wrap gap-3">
+              <Button variant="secondary" onClick={() => setRemoveOpen(false)}>
+                {t("cancel")}
+              </Button>
+              <Button type="submit" variant="primary" disabled={removeForm.pending}>
+                {t("removeDayConfirm")}
+              </Button>
+            </div>
+          </form>
+        </ConfirmDialog>
+      </>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-8" aria-busy={pending}>
+      {group && <GroupRealtime itineraryId={tripId} />}
+      <div id={ids.panel} role="tabpanel" aria-labelledby={ids.tab} className="flex flex-col gap-8">
+        {content}
       </div>
     </div>
   );
 }
 
 // Tempo reale dei viaggi di gruppo: una modifica di un membro ricarica la pagina (use-itinerary-realtime).
+// Il componente resta montato in ogni scheda, così il tempo reale vale anche fuori dall'itinerario.
 function GroupRealtime({ itineraryId }: { itineraryId: string }) {
   const subscribed = useItineraryRealtime(itineraryId);
   return <span hidden data-realtime={subscribed ? "subscribed" : "connecting"} />;

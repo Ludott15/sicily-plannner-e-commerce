@@ -4,9 +4,15 @@ import { getFormatter, getTranslations, setRequestLocale } from "next-intl/serve
 import { z } from "zod";
 import { TripGroupPanel } from "@/components/groups/trip-group-panel";
 import { TripGroupSections } from "@/components/groups/trip-group-sections";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
+import { Tabs } from "@/components/layout/tabs";
+import { TripActions } from "@/components/trips/trip-actions";
 import { TripBuilder, type BuilderBooking, type BuilderDay } from "@/components/trips/trip-builder";
+import { TRIP_TABS, type TripTab } from "@/lib/trip-tabs";
 import { formatDuration } from "@/lib/format";
 import { flightSearchPath, MAX_PASSENGERS } from "@/lib/flights/search-params";
+import { activeTab } from "@/lib/tabs";
 import { bookingEntries } from "@/lib/trips";
 import { partnerName, type Partner } from "@/server/affiliates/links";
 import { getPartnerConfig, VERTICAL_PARTNER } from "@/server/affiliates/partners";
@@ -15,10 +21,14 @@ import { getGroup } from "@/server/groups/queries";
 import { getTripGroupState } from "@/server/groups/trip-group";
 import { getTrip, getTripVerticalChips, type VerticalChip } from "@/server/trips/queries";
 
-// Pagina del viaggio (M5, 1.4). Solo il proprietario o i membri del gruppo la aprono: getTrip
-// legge con dbAsUser, quindi per chiunque altro il viaggio non esiste (404). Il nome di un giorno
-// è il titolo scelto o ereditato; senza titolo, i luoghi delle sue tappe.
-type Props = { params: Promise<{ locale: string; id: string }>; searchParams: Promise<{ giorno?: string }> };
+// Pagina del viaggio (M5, 1.4; riprogettata in 6.1). Solo il proprietario o i membri del gruppo la aprono:
+// getTrip legge con dbAsUser, quindi per chiunque altro il viaggio non esiste (404). Il nome di un giorno
+// è il titolo scelto o ereditato; senza titolo, i luoghi delle sue tappe. Le schede stanno in ?scheda=
+// (itinerario di default, poi prenotare e gruppo); il giorno resta in ?giorno=.
+type Props = {
+  params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<{ giorno?: string; scheda?: string }>;
+};
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -27,7 +37,7 @@ export default async function TripPage({ params, searchParams }: Props) {
   setRequestLocale(locale);
   if (!z.uuid().safeParse(id).success) notFound();
   const user = await requireUser();
-  const [trip, t, tAff, tVert, format, { giorno }, chips, lodgingPartner, carPartner] = await Promise.all([
+  const [trip, t, tAff, tVert, format, { giorno, scheda }, chips, lodgingPartner, carPartner] = await Promise.all([
     getTrip(user, id),
     getTranslations("Trips"),
     getTranslations("Affiliates"),
@@ -43,6 +53,8 @@ export default async function TripPage({ params, searchParams }: Props) {
   const group = trip.groupId ? await getGroup(user, trip.groupId) : null;
   // Stato del gruppo (4.2): voti, alternative, proposte e modifiche di questo viaggio.
   const groupState = group ? await getTripGroupState(user, id, group.id) : null;
+
+  const tab = activeTab(TRIP_TABS, scheda) as TripTab;
 
   const days: BuilderDay[] = Array.from({ length: trip.days }, (_, d) => {
     const stops = trip.stops.filter((s) => s.dayIndex === d);
@@ -145,13 +157,15 @@ export default async function TripPage({ params, searchParams }: Props) {
     ? format.dateTime(new Date(trip.activeShareLink.createdAt), { dateStyle: "long" })
     : null;
 
-  return (
-    <section className="is-trip-page mx-auto flex w-full max-w-[1200px] flex-col gap-8 px-4 py-8 md:px-16 md:py-12">
-      <header className="flex flex-col gap-2">
-        <p className="text-label uppercase text-lava-muted">{t("eyebrow")}</p>
-        <h1 className="is-display text-display-l">{trip.title}</h1>
-        <p className="text-body text-lava-muted">{meta.join(" · ")}</p>
-      </header>
+  const tabs = [
+    { id: "itinerario", label: t("v2.tabItinerary") },
+    { id: "prenotare", label: t("v2.tabBookings") },
+    { id: "gruppo", label: t("v2.tabGroup") },
+  ] as const;
+
+  // Scheda del gruppo: il pannello del gruppo (creazione, invito o link) e, se c'è, proposte e modifiche.
+  const groupTab = (
+    <div className="flex flex-col gap-8">
       <TripGroupPanel
         locale={locale}
         tripId={trip.id}
@@ -161,26 +175,53 @@ export default async function TripPage({ params, searchParams }: Props) {
         isGuest={Boolean(user.is_anonymous)}
       />
       {groupState && (
-        <TripGroupSections
-          proposals={groupState.proposals}
-          changes={groupState.changes}
-          isGroupOwner={groupState.isGroupOwner}
-        />
+        <TripGroupSections proposals={groupState.proposals} changes={groupState.changes} isGroupOwner={groupState.isGroupOwner} />
       )}
-      <TripBuilder
-        locale={locale}
-        tripId={trip.id}
+      {!group && trip.ownerId !== user.id && !user.is_anonymous && (
+        <p className="text-body text-lava-muted">{t("v2.groupNone")}</p>
+      )}
+    </div>
+  );
+
+  // Il gruppo del viaggio compare come percorso: gruppo → viaggio.
+  const crumbs = group
+    ? { breadcrumb: [{ label: group.name, href: `/gruppi/${group.id}` }], breadcrumbLabel: t("v2.breadcrumbLabel") }
+    : {};
+
+  return (
+    <PageContainer width="work" className="is-trip-page">
+      <PageHeader
         title={trip.title}
-        startDate={trip.startDate}
-        travelers={trip.travelers}
-        pace={trip.pace}
-        days={days}
-        warnings={trip.warnings}
-        initialDay={(Number(giorno) || 1) - 1}
-        bookings={bookings}
-        sharedSince={sharedSince}
-        group={groupState}
+        eyebrow={t("eyebrow")}
+        meta={meta.join(" · ")}
+        menu={
+          <TripActions
+            locale={locale}
+            tripId={trip.id}
+            title={trip.title}
+            startDate={trip.startDate}
+            travelers={trip.travelers}
+            pace={trip.pace}
+            sharedSince={sharedSince}
+          />
+        }
+        {...crumbs}
       />
-    </section>
+      <div className="flex flex-col gap-6">
+        <div className="is-trip-tools">
+          <Tabs idPrefix="trip" label={t("v2.tabsLabel")} tabs={tabs} value={tab} />
+        </div>
+        <TripBuilder
+          tripId={trip.id}
+          days={days}
+          warnings={trip.warnings}
+          initialDay={(Number(giorno) || 1) - 1}
+          bookings={bookings}
+          group={groupState}
+          tab={tab}
+          groupTab={groupTab}
+        />
+      </div>
+    </PageContainer>
   );
 }

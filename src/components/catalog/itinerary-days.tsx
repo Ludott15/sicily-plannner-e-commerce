@@ -92,16 +92,16 @@ export function ItineraryDays({ days }: { days: Day[] }) {
                 </Route>
               )}
               {day.night && (
-                <div className="rounded-lg border border-card-edge bg-calce-raised p-5 shadow-card">
+                <div className="flex flex-col gap-2 border-t border-divider pt-6">
                   <p className="text-label uppercase text-lava-muted">{t("sleepWhere")}</p>
-                  <p className="mt-2 text-body-l">{day.night}</p>
+                  <p className="text-body-l">{day.night}</p>
                 </div>
               )}
             </div>
             <aside className="hidden md:col-span-4 md:block">
-              <div className="sticky top-6 rounded-lg border border-card-edge bg-calce-raised p-6 shadow-card">
+              <div className="sticky top-6 flex flex-col gap-4 border-l border-divider pl-8">
                 <h2 className="text-heading-3">{t("dayInBrief")}</h2>
-                <dl className="mt-4 grid grid-cols-2 gap-4">
+                <dl className="grid grid-cols-2 gap-6">
                   <div>
                     <dt className="sr-only">{t("stops", { count: day.stops.length })}</dt>
                     <dd className="is-display text-stat">{day.stops.length}</dd>

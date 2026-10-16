@@ -201,7 +201,10 @@
     },
     "templatesCount": "{count, plural, =0 {Nessun itinerario} one {# itinerario} other {# itinerari}}",
     "templatesFilteredEmpty": "Con questi filtri non c'è ancora nessun itinerario. Togli un filtro o scegline un altro.",
-    "dayPlacesJoiner": " e "
+    "dayPlacesJoiner": " e ",
+    "v2": {
+      "filtersToggle": "Filtri"
+    }
   },
   "Design": {
     "forYou": "Per te",
@@ -1099,9 +1102,6 @@
     "stopsCount": "{count, plural, one {# tappa} other {# tappe}}",
     "dayEmptyName": "Da riempire",
     "emptyDay": "Nessuna tappa in questo giorno. Aggiungine una dalla scheda di un'attività.",
-    "moveUp": "Sposta su: {title}",
-    "moveDown": "Sposta giù: {title}",
-    "remove": "Togli dal viaggio: {title}",
     "booking": {
       "lodging": "Alloggio",
       "car": "Noleggio auto",
@@ -1166,8 +1166,6 @@
     "dayNoteSave": "Salva la nota del giorno",
     "dayNoteSaved": "Nota del giorno salvata.",
     "dragHandle": "Trascina per spostare: {title}",
-    "moveToDay": "Sposta «{title}» al giorno",
-    "moveToDayOption": "Giorno {n}",
     "dropOnDay": "Trascina qui: giorno {n}",
     "moved": "«{title}» spostata al giorno {day}, posizione {position}.",
     "dragStart": "Tappa «{title}» presa dal giorno {day}, posizione {position}.",
@@ -1216,7 +1214,26 @@
     "lodgingMissing": "Per cercare un alloggio servono la zona della prima notte e le date del viaggio.",
     "carMissing": "Per confrontare i noleggi servono l'aeroporto di arrivo e le date del viaggio.",
     "openActivity": "Apri l'attività",
-    "proposalTripTitlePair": "{first} e {second} in {days, plural, one {# giorno} other {# giorni}}"
+    "proposalTripTitlePair": "{first} e {second} in {days, plural, one {# giorno} other {# giorni}}",
+    "v2": {
+      "tabsLabel": "Sezioni del viaggio",
+      "tabItinerary": "Itinerario",
+      "tabBookings": "Da prenotare",
+      "tabGroup": "Gruppo",
+      "breadcrumbLabel": "Percorso",
+      "actionsLabel": "Altre azioni del viaggio",
+      "setDates": "Imposta le date",
+      "addActivity": "Aggiungi attività",
+      "groupNone": "Questo viaggio non è in un gruppo.",
+      "stopActions": "Azioni per {title}",
+      "menuMoveUp": "Sposta su",
+      "menuMoveDown": "Sposta giù",
+      "menuMoveToDay": "Sposta al giorno {n}",
+      "menuStopNote": "Nota e fascia oraria",
+      "menuRemoveStop": "Togli dal viaggio",
+      "dayNoteEdit": "Modifica la nota",
+      "dayNoteAdd": "Aggiungi una nota al giorno"
+    }
   },
   "Media": {
     "photoCredit": "Foto:",
@@ -1476,7 +1493,6 @@
     "openTripPlain": "Apri il viaggio",
     "noTrip": "Il viaggio di questo gruppo non è più disponibile.",
     "membersHeading": "Persone nel gruppo",
-    "soloMember": "Per ora ci sei solo tu. Invita chi viaggia con te: trovi i link qui sotto.",
     "unnamedMember": "Senza nome",
     "youSuffix": " (tu)",
     "roleOwner": "Ha creato il gruppo",
@@ -1593,7 +1609,24 @@
     "listEmptyAction": "Crea un gruppo da uno dei tuoi viaggi",
     "memberCount": "{count, plural, one {# membro} other {# membri}}",
     "tripLine": "Viaggio: {title}",
-    "listNoTrip": "Nessun viaggio collegato"
+    "listNoTrip": "Nessun viaggio collegato",
+    "v2": {
+      "breadcrumbLabel": "Percorso",
+      "crumbGroups": "I tuoi gruppi",
+      "tabsLabel": "Sezioni del gruppo",
+      "tabOverview": "Panoramica",
+      "tabTrips": "Viaggi proposti",
+      "tabRanking": "Classifica",
+      "menuLabel": "Altre azioni del gruppo",
+      "rename": "Rinomina",
+      "inviteTitle": "Invita al gruppo",
+      "memberMenu": "Azioni per {name}",
+      "soloMember": "Per ora ci sei solo tu. Invita chi viaggia con te: il link si crea dal pulsante Invita.",
+      "seeAllRanking": "Vedi tutta la classifica",
+      "practicalNote": "Nota pratica",
+      "seeStops": "Vedi le tappe",
+      "stopsCount": "{count, plural, one {# tappa} other {# tappe}}"
+    }
   },
   "GroupInvite": {
     "metaTitle": "Invito al gruppo",

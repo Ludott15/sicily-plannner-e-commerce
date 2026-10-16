@@ -37,6 +37,8 @@ test("un altro utente non apre il viaggio né il suo calendario", async ({ page,
 
 test("link pubblico: si legge senza account, revocato porta a 404", async ({ page, browser }) => {
   await useTemplate(page);
+  await page.getByRole("button", { name: "Altre azioni del viaggio" }).click();
+  await page.getByRole("menuitem", { name: "Link pubblico" }).click();
   await page.getByRole("button", { name: "Crea link pubblico" }).click();
   const link = page.getByLabel("Link del viaggio");
   await expect(link).toHaveValue(/\/it\/v\/[A-Za-z0-9_-]{43}$/);
@@ -103,7 +105,10 @@ test(".ics: un evento per giorno", async ({ page }) => {
   await useTemplate(page);
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("link", { name: "Esporta calendario (.ics)" }).click(),
+    (async () => {
+      await page.getByRole("button", { name: "Altre azioni del viaggio" }).click();
+      await page.getByRole("menuitem", { name: "Esporta calendario (.ics)" }).click();
+    })(),
   ]);
   const path = await download.path();
   const text = await readFile(path!, "utf8");
