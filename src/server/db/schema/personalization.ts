@@ -51,7 +51,7 @@ export const userConstraints = pgTable(
     check("user_constraints_heat_range", sql`${t.heatTolerance} between 0 and 5`),
     check("user_constraints_crowd_range", sql`${t.crowdTolerance} between 0 and 5`),
     check("user_constraints_trip_days_range", sql`${t.tripDays} between 1 and 14`),
-    check("user_constraints_arrival_airport_valid", sql`${t.arrivalAirport} in ('CTA', 'PMO', 'TPS', 'CIY')`),
+    check("user_constraints_arrival_airport_valid", sql`${t.arrivalAirport} in ('CTA', 'PMO', 'TPS', 'CIY', 'LMP', 'PNL')`),
     check("user_constraints_diet_valid", sql`${t.diet} <@ '{vegetarian,vegan,gluten_free,lactose_free}'::text[]`),
     check(
       "user_constraints_sensitive_consent",

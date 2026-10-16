@@ -1,20 +1,20 @@
-import { Compass, Map, ShoppingBag, User, type LucideIcon } from "lucide-react";
+import { Compass, Map, User, Users, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/lib/i18n/navigation";
 import { pendingAttributes, type PendingId } from "@/lib/pending-actions";
 
 // TabBar (docs/design/components/TabBar/README.md)
-// Barra inferiore mobile: Viaggi, Attività, Shop, Profilo. Etichette sempre visibili,
+// Barra inferiore mobile: Esplora, Viaggi, Gruppi, Profilo. Etichette sempre visibili,
 // icona 24px, voce attiva in lava con aria-current="page", altezza 56px più
 // env(safe-area-inset-bottom). La barra del chatbot sta sopra; nella scheda attività
 // la TabBar è sostituita dalla BookingBar.
 
-export type TabKey = "trips" | "activities" | "shop" | "profile";
+export type TabKey = "explore" | "trips" | "groups" | "profile";
 
-const TABS: { key: TabKey; href: string; label: "tabTrips" | "tabActivities" | "tabShop" | "tabProfile"; icon: LucideIcon }[] = [
+const TABS: { key: TabKey; href: string; label: "tabExplore" | "tabTrips" | "tabGroups" | "tabProfile"; icon: LucideIcon }[] = [
+  { key: "explore", href: "/attivita", label: "tabExplore", icon: Compass },
   { key: "trips", href: "/viaggi", label: "tabTrips", icon: Map },
-  { key: "activities", href: "/attivita", label: "tabActivities", icon: Compass },
-  { key: "shop", href: "/shop", label: "tabShop", icon: ShoppingBag },
+  { key: "groups", href: "/gruppi", label: "tabGroups", icon: Users },
   { key: "profile", href: "/profilo", label: "tabProfile", icon: User },
 ];
 

@@ -24,7 +24,11 @@
     "media:demo": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON scripts/media/demo-images.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.134.0",
     "@base-ui/react": "^1.8.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "class-variance-authority": "^0.7.1",
@@ -36,6 +40,7 @@
     "postgres": "^3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "resend": "^6.33.0",
     "server-only": "^0.0.1",
     "shadcn": "^4.21.0",
     "sharp": "^0.35.5",

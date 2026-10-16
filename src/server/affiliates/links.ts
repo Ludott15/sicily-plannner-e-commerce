@@ -2,9 +2,17 @@ import { randomBytes } from "node:crypto";
 
 // Link in uscita verso i partner affiliati (docs/spec.md, "Route di uscita /api/go/[id]").
 // L'URL finale con il parametro del subid lo costruisce record_affiliate_click in SQL
-// (affiliate_subid_param): affiliate_url non è leggibile dal client.
+// (affiliate_partners.subid_param): affiliate_url non è leggibile dal client.
 
-export type Partner = "travelpayouts" | "getyourguide" | "viator" | "car_rental" | "internal";
+export type Partner =
+  | "travelpayouts"
+  | "getyourguide"
+  | "viator"
+  | "car_rental"
+  | "internal"
+  | "booking"
+  | "discovercars"
+  | "civitatis";
 
 // Nome del partner mostrato nell'offerta e nella riga di trasparenza.
 // null: nessun partner da nominare, quindi nessuna offerta affiliata.
@@ -12,6 +20,9 @@ const PARTNER_NAME: Record<Partner, string | null> = {
   getyourguide: "GetYourGuide",
   viator: "Viator",
   travelpayouts: "Aviasales",
+  civitatis: "Civitatis",
+  booking: "Booking.com",
+  discovercars: "DiscoverCars",
   car_rental: null,
   internal: null,
 };

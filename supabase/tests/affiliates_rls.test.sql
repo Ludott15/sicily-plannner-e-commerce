@@ -12,8 +12,8 @@ select tests.create_user('admin', true);
 -- Il server registra click e conversioni.
 insert into public.affiliate_clicks (user_id, partner, target_url, subid, context)
 values (tests.uid('alice'), 'getyourguide', 'https://www.getyourguide.com/x', 'test-sub-1', 'page');
-insert into public.affiliate_conversions (partner, subid, amount_eur, commission_eur, status, reported_at)
-values ('getyourguide', 'test-sub-1', 120.00, 9.60, 'approved', now());
+insert into public.affiliate_conversions (partner, subid, external_id, amount_eur, commission_eur, status, reported_at, source)
+values ('getyourguide', 'test-sub-1', 'test-ext-1', 120.00, 9.60, 'approved', now(), 'csv');
 
 select throws_ok(
   $$insert into public.affiliate_clicks (partner, target_url, subid, context) values ('viator', 'https://x', 'test-sub-1', 'page')$$,
@@ -55,7 +55,7 @@ select tests.authenticate_as('bob');
 select is_empty($$select 1 from public.affiliate_clicks$$, 'altro utente: non legge i click');
 select is_empty($$select 1 from public.affiliate_conversions$$, 'altro utente: non legge le conversioni');
 select throws_ok(
-  $$insert into public.affiliate_conversions (partner, subid, status, reported_at) values ('viator', 'x', 'approved', now())$$,
+  $$insert into public.affiliate_conversions (partner, subid, external_id, status, reported_at, source) values ('viator', 'x', 'x', 'approved', now(), 'csv')$$,
   '42501', null, 'altro utente: non inserisce conversioni'
 );
 

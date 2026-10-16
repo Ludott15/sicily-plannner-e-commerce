@@ -23,7 +23,7 @@ export type OfferFormValues = {
   isActive: boolean;
 };
 
-const PARTNERS = ["getyourguide", "viator", "travelpayouts", "car_rental"];
+const PARTNERS = ["getyourguide", "viator", "civitatis", "travelpayouts", "car_rental"];
 
 export function OfferForm({
   action,

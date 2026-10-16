@@ -3,7 +3,6 @@ import {
   bigserial,
   check,
   date,
-  doublePrecision,
   index,
   integer,
   jsonb,
@@ -45,6 +44,18 @@ export const pointsLedger = pgTable(
   ],
 );
 
+// Punti di ogni azione guadagnabile (passo 5.1). Letta da tutti (la UI mostra la tabella
+// "Come si guadagnano"); scritta solo dalla migrazione. I valori iniziali sono nel SQL custom
+// del passo 5.1 e in src/server/gamification/config.ts (POINT_DEFAULTS).
+export const pointRules = pgTable(
+  "point_rules",
+  {
+    reason: pointReason("reason").primaryKey(),
+    delta: integer("delta").notNull(),
+  },
+  (t) => [check("point_rules_delta_positive", sql`${t.delta} > 0`)],
+);
+
 export const badges = pgTable("badges", {
   key: text("key").primaryKey(),
   nameIt: text("name_it").notNull(),
@@ -69,8 +80,8 @@ export const userBadges = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.badgeKey] })],
 );
 
-// Un check-in per luogo al giorno (ora italiana); distanza e limite giornaliero
-// li verifica la funzione server che registra il check-in.
+// Un check-in per luogo al giorno (ora italiana). La posizione dell'utente non si salva: la
+// funzione record_check_in la usa solo per verificare la distanza (300 m).
 export const checkIns = pgTable(
   "check_ins",
   {
@@ -82,8 +93,6 @@ export const checkIns = pgTable(
       .notNull()
       .references(() => places.id, { onDelete: "restrict" }),
     itineraryId: uuid("itinerary_id").references(() => itineraries.id, { onDelete: "set null" }),
-    lat: doublePrecision("lat").notNull(),
-    lng: doublePrecision("lng").notNull(),
     localDate: date("local_date")
       .notNull()
       .default(sql`(now() at time zone 'Europe/Rome')::date`),
@@ -92,11 +101,11 @@ export const checkIns = pgTable(
   (t) => [
     unique("check_ins_user_place_day_unique").on(t.userId, t.placeId, t.localDate),
     index("check_ins_user_date_idx").on(t.userId, t.localDate),
-    check("check_ins_lat_range", sql`${t.lat} between -90 and 90`),
-    check("check_ins_lng_range", sql`${t.lng} between -180 and 180`),
   ],
 );
 
+// Recensioni: si scrivono solo con submit_review (SQL custom), che verifica l'idoneità e
+// accredita i punti. hidden_at e hidden_by li imposta solo il moderatore (dbAdmin).
 export const reviews = pgTable(
   "reviews",
   {
@@ -110,6 +119,9 @@ export const reviews = pgTable(
     rating: smallint("rating").notNull(),
     body: text("body"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    hiddenBy: uuid("hidden_by").references(() => profiles.id, { onDelete: "set null" }),
   },
   (t) => [
     unique("reviews_user_activity_unique").on(t.userId, t.activityId),
@@ -118,3 +130,47 @@ export const reviews = pgTable(
     check("reviews_body_length", sql`char_length(${t.body}) <= 4000`),
   ],
 );
+
+// Segnalazioni di una recensione: una per (recensione, utente). Le legge solo l'admin.
+export const reviewReports = pgTable(
+  "review_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reviewId: uuid("review_id")
+      .notNull()
+      .references(() => reviews.id, { onDelete: "cascade" }),
+    reporterId: uuid("reporter_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    reason: text("reason").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("review_reports_review_reporter_unique").on(t.reviewId, t.reporterId),
+    check("review_reports_reason_valid", sql`${t.reason} in ('spam', 'offensive', 'off_topic', 'other')`),
+  ],
+);
+
+// Premi della classifica stagionale (passo 5.3): i primi dieci di una stagione chiusa, scritti una
+// volta sola da close_season (SQL custom). Letti solo dall'admin; prize_status segue il premio.
+// user_id diventa null se l'account si elimina: il posto e i punti restano.
+export const seasonAwards = pgTable(
+  "season_awards",
+  {
+    season: text("season").notNull(),
+    rank: smallint("rank").notNull(),
+    userId: uuid("user_id").references(() => profiles.id, { onDelete: "set null" }),
+    points: integer("points").notNull(),
+    prizeStatus: text("prize_status").notNull().default("pending"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.season, t.rank] }),
+    check("season_awards_season_format", sql`${t.season} ~ '^[0-9]{4}-(estate|inverno)$'`),
+    check("season_awards_rank_range", sql`${t.rank} between 1 and 10`),
+    check("season_awards_points_positive", sql`${t.points} > 0`),
+    check("season_awards_prize_status_valid", sql`${t.prizeStatus} in ('pending', 'assigned', 'shipped')`),
+  ],
+);
+
+export type SeasonAward = typeof seasonAwards.$inferSelect;

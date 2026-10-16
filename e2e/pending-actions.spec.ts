@@ -16,12 +16,18 @@ const PAGES = [
   "/it/cookie",
   "/it/condizioni-di-vendita",
   "/it/viaggio/nuovo",
+  // Verticali del passo 3.1: "in arrivo" finché manca l'ID del partner (vertical.lodging, vertical.car).
+  "/it/dove-dormire",
+  "/it/noleggio-auto",
+  // Classifica (passo 5.3): pubblica, con il regolamento in sospeso (points.rules).
+  "/it/classifica",
 ];
 
-// Pagine personali: servono una sessione e risposte salvate. Ospite con auto a noleggio e cibo e
+// Pagine personali: servono una sessione e risposte salvate. /punti (passo 5.1) per l'ospite mostra
+// l'invito a creare l'account e il regolamento in sospeso. Ospite con auto a noleggio e cibo e
 // vino al massimo, così i tre viaggi hanno tappe in auto (l'Etna nel seed) e l'avviso del noleggio.
 // Cinque giorni: nel seed demo almeno due aree li coprono (Costa nord e Madonie, Interno).
-const SESSION_PAGES = ["/it/viaggio/proposte", "/it/preferenze"];
+const SESSION_PAGES = ["/it/viaggio/proposte", "/it/preferenze", "/it/punti"];
 
 async function collectFrom(page: Page, paths: string[], found: Map<string, string>) {
   for (const path of paths) {
@@ -50,7 +56,7 @@ async function collectPending(page: Page) {
   });
   // Un viaggio dell'ospite: la checklist "Da prenotare" ha i link ai partner in sospeso (M6).
   const [trip] = await withDb((sql) => sql`insert into public.itineraries (owner_id, title, days) values (${id}, 'e2e- Viaggio', 2) returning id`);
-  await collectFrom(page, [...SESSION_PAGES, `/it/viaggi/${trip!.id}`], found);
+  await collectFrom(page, [...SESSION_PAGES, `/it/viaggi/${trip!.id}?scheda=prenotare`], found);
   return found;
 }
 
@@ -60,10 +66,9 @@ test("le azioni in sospeso nelle pagine sono esattamente quelle dell'elenco", as
 });
 
 test("un'azione in sospeso non fa nulla", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/it/attivita");
+  await page.goto("/it/privacy");
   const url = page.url();
-  await page.locator('[data-pending-id="tabbar.shop"]').first().click({ force: true });
+  await page.locator('[data-pending-id="legal.privacy"]').first().click({ force: true });
   await expect(page).toHaveURL(url);
 });
 

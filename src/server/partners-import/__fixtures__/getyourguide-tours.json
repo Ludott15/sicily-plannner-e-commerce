@@ -1,0 +1,27 @@
+{
+  "data": [
+    {
+      "tour_id": 4412,
+      "title": "Valle dei Templi di Agrigento: visita guidata",
+      "abstract": "Due ore tra i templi dorici con archeologo.",
+      "url": "https://www.getyourguide.com/agrigento-l1234/valley-of-the-temples-t4412/",
+      "city": "Agrigento",
+      "coordinates": { "latitude": 37.2868, "longitude": 13.5906 },
+      "price": { "amount": 24.0, "currency": "EUR" },
+      "rating": 4.7,
+      "review_count": 5120,
+      "free_cancellation": true
+    },
+    {
+      "tour_id": "AB-77",
+      "title": "Cooking class a Palermo",
+      "url": "https://evil.example.com/tour",
+      "city": "Palermo",
+      "price": { "amount": 65 }
+    },
+    {
+      "tour_id": 9,
+      "title": "Tour senza link"
+    }
+  ]
+}

@@ -42,6 +42,7 @@ export function AffiliateOffer({
   priceUpdated,
 }: AffiliateOfferProps) {
   const t = useTranslations("Design");
+  const tAff = useTranslations("Affiliates");
   return (
     <div className="is-offer">
       <div className="is-offer__head">
@@ -62,7 +63,7 @@ export function AffiliateOffer({
       <ButtonAnchor variant="secondary" href={affiliateHref(offerId, { locale })} rel="sponsored nofollow">
         {t("offerCta", { partner })}
       </ButtonAnchor>
-      <span className="is-offer__disclose">{t("offerDisclose", { partner })}</span>
+      <span className="is-offer__disclose">{tAff("disclosure", { partner })}</span>
     </div>
   );
 }
