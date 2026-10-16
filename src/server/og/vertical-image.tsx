@@ -76,8 +76,8 @@ export async function verticalImage(content: VerticalContent, labels: VerticalLa
             }}
           >
             <svg width={360} height={360} viewBox={brandMark.viewBox}>
-              <path fill={c.coccio} d={brandMark.body} />
-              <path fill={c.coccio} d={brandMark.sun} />
+              <path fill={c.coccio} d={brandMark.tile} />
+              <path fill={c.calce} d={brandMark.rosette} />
             </svg>
           </div>
         )}
@@ -169,8 +169,8 @@ export async function verticalImage(content: VerticalContent, labels: VerticalLa
 
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
             <svg width={64} height={64} viewBox={brandMark.viewBox}>
-              <path fill={c.coccio} d={brandMark.body} />
-              <path fill={c.coccio} d={brandMark.sun} />
+              <path fill={c.coccio} d={brandMark.tile} />
+              <path fill={c.calce} d={brandMark.rosette} />
             </svg>
             <div style={{ display: "flex", fontFamily: ogFamilies.display, fontWeight: 600, fontSize: 64, letterSpacing: -1.5 }}>
               {BRAND_NAME}

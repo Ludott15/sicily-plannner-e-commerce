@@ -369,7 +369,7 @@ export function TripBuilder({ tripId, days, warnings, initialDay, bookings, grou
                               <DayDropZone
                                 key={k}
                                 id={dayZoneId(k)}
-                                className="w-full rounded-md border-[1.5px] border-dashed border-border-control px-4 py-2 text-body-s text-lava"
+                                className="w-full rounded-md border-[1.5px] border-dashed border-border-control px-4 py-2 text-body-s"
                               >
                                 {t("dropOnDay", { n: k + 1 })}
                               </DayDropZone>

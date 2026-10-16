@@ -4,6 +4,7 @@ import { useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { Button } from "@/components/design";
+import { trapFocus } from "@/components/ui/dialog";
 import { ChatPanel } from "./chat-panel";
 
 // "Chiedi all'assistente" nella pagina del viaggio: apre il pannello legato al viaggio (itineraryId).
@@ -45,6 +46,7 @@ export function ChatLauncher({
         ref={ref}
         aria-labelledby={titleId}
         onClose={() => setOpen(false)}
+        onKeyDown={(event) => trapFocus(event, ref.current)}
         className="m-0 h-dvh max-h-none w-full max-w-none bg-calce p-0 text-lava backdrop:bg-calce/70 md:ml-auto md:w-[min(440px,100vw)]"
       >
         {open && (
