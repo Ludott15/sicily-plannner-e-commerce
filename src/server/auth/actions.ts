@@ -1,6 +1,7 @@
 "use server";
 
 import type { AuthError } from "@supabase/supabase-js";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { publicEnv } from "@/lib/env";
@@ -207,6 +208,9 @@ export async function signOut(formData: FormData) {
 
   const supabase = await createClient();
   await supabase.auth.signOut();
+
+  // Il layout si ricalcola: il service worker riceve la sessione vuota e svuota le pagine dei viaggi (passo 11.3).
+  revalidatePath("/", "layout");
 
   redirect(`/${locale}`);
 }

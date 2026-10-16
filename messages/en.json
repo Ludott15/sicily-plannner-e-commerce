@@ -2311,5 +2311,25 @@
       "product": "Products"
     },
     "itineraryDays": "{count, plural, one {# day} other {# days}}"
+  },
+  "Pwa": {
+    "offlineBanner": "You're offline: you're seeing the last saved version.",
+    "offlinePage": {
+      "title": "You're offline",
+      "text": "Trips you opened recently stay available. When you're back online, everything updates.",
+      "trips": "My trips"
+    },
+    "install": {
+      "title": "Use Isula as an app",
+      "text": "Add it to your Home screen: it opens full screen, and your trips stay available without a connection.",
+      "button": "Install the app",
+      "ios": "To add it to your Home screen: tap Share › Add to Home Screen.",
+      "generic": "From the browser menu, choose Install app or Add to Home Screen.",
+      "later": "Not now"
+    },
+    "todayTitle": "Today · Day {n}",
+    "todayEmpty": "No stops today. Add one from the itinerary.",
+    "mapsGoogle": "Open in Google Maps",
+    "mapsApple": "Open in Apple Maps"
   }
 }

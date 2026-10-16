@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { ButtonLink } from "@/components/design";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { Link } from "@/lib/i18n/navigation";
+import { detectInAppBrowser } from "@/lib/in-app-browser";
 import { requireUser } from "@/server/auth";
 import { listMyTrips } from "@/server/trips/queries";
 
@@ -22,7 +25,14 @@ export default async function TripsPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
   const user = await requireUser();
-  const [{ upcoming, past }, t, format] = await Promise.all([listMyTrips(user), getTranslations("Trips"), getFormatter()]);
+  const [{ upcoming, past }, t, format, requestHeaders] = await Promise.all([
+    listMyTrips(user),
+    getTranslations("Trips"),
+    getFormatter(),
+    headers(),
+  ]);
+  // Invito all'installazione (passo 11.3): solo con almeno due viaggi e fuori dai browser delle app social.
+  const inApp = detectInAppBrowser(requestHeaders.get("user-agent")) !== null;
 
   const row = (trip: (typeof upcoming)[number]) => (
     <li key={trip.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-4">
@@ -51,6 +61,8 @@ export default async function TripsPage({ params }: Props) {
           </ButtonLink>
         }
       />
+
+      <InstallPrompt trips={upcoming.length + past.length} inApp={inApp} />
 
       {empty ? (
         <p className="text-body-l text-lava-muted">{t("listEmpty")}</p>
