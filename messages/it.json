@@ -2311,5 +2311,25 @@
       "product": "Prodotti"
     },
     "itineraryDays": "{count, plural, one {# giorno} other {# giorni}}"
+  },
+  "Pwa": {
+    "offlineBanner": "Sei offline: stai vedendo l'ultima versione salvata.",
+    "offlinePage": {
+      "title": "Sei offline",
+      "text": "I viaggi che hai aperto di recente restano disponibili. Quando torni online, tutto si aggiorna.",
+      "trips": "I miei viaggi"
+    },
+    "install": {
+      "title": "Usa Isula come app",
+      "text": "Aggiungila alla schermata Home: si apre a schermo intero e i tuoi viaggi restano disponibili anche senza rete.",
+      "button": "Installa l'app",
+      "ios": "Per averla sulla schermata Home: Condividi › Aggiungi alla schermata Home.",
+      "generic": "Dal menu del browser scegli Installa app o Aggiungi alla schermata Home.",
+      "later": "Non ora"
+    },
+    "todayTitle": "Oggi · Giorno {n}",
+    "todayEmpty": "Nessuna tappa per oggi. Aggiungine una dall'itinerario.",
+    "mapsGoogle": "Apri in Google Maps",
+    "mapsApple": "Apri in Mappe di Apple"
   }
 }

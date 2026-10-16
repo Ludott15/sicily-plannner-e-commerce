@@ -17,6 +17,18 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "3mb",
     },
   },
+  async headers() {
+    return [
+      {
+        // Service worker (passo 11.3): mai in cache HTTP, così il browser riprende sempre la versione nuova.
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       // Pagina delle affiliazioni (passo 3.1): il vecchio percorso /link-affiliati resta per i link

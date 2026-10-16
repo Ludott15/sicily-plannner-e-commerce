@@ -10,7 +10,10 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Tabs } from "@/components/layout/tabs";
 import { TripActions } from "@/components/trips/trip-actions";
 import { TripBuilder, type BuilderBooking, type BuilderDay } from "@/components/trips/trip-builder";
+import { TodayPanel } from "@/components/trips/today-panel";
+import { romeToday } from "@/lib/trip-days";
 import { TRIP_TABS, type TripTab } from "@/lib/trip-tabs";
+import { tripDayIndex } from "@/lib/trip-today";
 import { formatDuration } from "@/lib/format";
 import { flightSearchPath, MAX_PASSENGERS } from "@/lib/flights/search-params";
 import { activeTab } from "@/lib/tabs";
@@ -58,6 +61,28 @@ export default async function TripPage({ params, searchParams }: Props) {
   const groupState = group ? await getTripGroupState(user, id, group.id) : null;
 
   const tab = activeTab(TRIP_TABS, scheda) as TripTab;
+
+  // "Oggi" (passo 11.3): le tappe di tutti i giorni vanno al client, che sceglie il giorno con la data
+  // di oggi del browser. Il server calcola lo stesso giorno per il primo render (initialDayIndex).
+  const todayStops = trip.stops.map((s) => ({
+    id: s.id,
+    dayIndex: s.dayIndex,
+    position: s.position,
+    title: s.title,
+    placeName: s.placeName,
+    timeSlot: s.timeSlot,
+    lat: s.lat,
+    lng: s.lng,
+    checkIn: s.placeId !== null && !user.is_anonymous ? { checkedInToday: s.checkedInToday } : null,
+  }));
+  const today = (
+    <TodayPanel
+      startDate={trip.startDate}
+      days={trip.days}
+      initialDayIndex={tripDayIndex(trip.startDate, trip.days, romeToday(new Date()))}
+      stops={todayStops}
+    />
+  );
 
   const days: BuilderDay[] = Array.from({ length: trip.days }, (_, d) => {
     const stops = trip.stops.filter((s) => s.dayIndex === d);
@@ -235,6 +260,7 @@ export default async function TripPage({ params, searchParams }: Props) {
           group={groupState}
           tab={tab}
           groupTab={groupTab}
+          today={today}
         />
       </div>
     </PageContainer>
