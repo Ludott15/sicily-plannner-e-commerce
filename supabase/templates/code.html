@@ -1,12 +1,39 @@
 <!doctype html>
 <html lang="it">
-  <body>
-    <p>Il tuo codice per accedere a Isula:</p>
-    <p style="font-size: 28px; font-weight: 600; letter-spacing: 4px">{{ .Token }}</p>
-    <p>Scrivilo nella pagina da cui l'hai chiesto. Vale un'ora.</p>
-    <p>Se preferisci, puoi <a href="{{ .ConfirmationURL }}">accedere con questo link</a>, aprendolo nello stesso browser.</p>
-    <hr />
-    <p lang="en">Your Isula sign-in code: <strong>{{ .Token }}</strong>. Type it on the page where you asked for it. It is valid for one hour.</p>
-    <p>Se non l'hai chiesto tu, ignora questa email. / If you didn't ask for it, ignore this email.</p>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Isula</title>
+</head>
+<body style="margin:0;padding:0;background:#f7f2ea;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">Il tuo codice per accedere a Isula:</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f2ea;">
+<tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;">
+<tr><td style="padding:0 8px 24px;font-family:'Fraunces', ui-serif, serif;font-size:28px;font-weight:600;line-height:1;color:#1f1b18;">Isula</td></tr>
+<tr><td style="background:#fffdf9;border:1px solid #e3d9cb;border-radius:16px;padding:32px;">
+<div lang="it">
+<p style="margin:0 0 16px;font-family:'Instrument Sans', system-ui, sans-serif;font-size:16px;line-height:1.5;color:#1f1b18;">Il tuo codice per accedere a Isula:</p>
+<p style="margin:0 0 16px;font-family:'Fraunces', ui-serif, serif;font-size:28px;font-weight:600;letter-spacing:4px;line-height:1.2;color:#1f1b18;">{{ .Token }}</p>
+<p style="margin:0 0 16px;font-family:'Instrument Sans', system-ui, sans-serif;font-size:16px;line-height:1.5;color:#1f1b18;">Scrivilo nella pagina da cui l’hai chiesto. Vale un’ora.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 16px;"><tr><td style="border-radius:999px;background:#b5452b;"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 24px;border-radius:999px;font-family:'Instrument Sans', system-ui, sans-serif;font-size:16px;font-weight:600;line-height:1.2;color:#ffffff;text-decoration:none;">Accedi con questo link</a></td></tr></table>
+<p style="margin:0 0 16px;font-family:'Instrument Sans', system-ui, sans-serif;font-size:13px;line-height:1.5;color:#5e554d;">Se preferisci, apri il link nello stesso browser.</p>
+<p style="margin:0 0 16px;font-family:'Instrument Sans', system-ui, sans-serif;font-size:13px;line-height:1.5;color:#5e554d;">Se non l’hai chiesto tu, ignora questa email.</p>
+</div>
+<hr style="border:0;border-top:1px solid #e3d9cb;margin:24px 0;">
+<div lang="en">
+<p style="margin:0 0 16px;font-family:'Instrument Sans', system-ui, sans-serif;font-size:16px;line-height:1.5;color:#1f1b18;">Your sign-in code for Isula:</p>
+<p style="margin:0 0 16px;font-family:'Fraunces', ui-serif, serif;font-size:28px;font-weight:600;letter-spacing:4px;line-height:1.2;color:#1f1b18;">{{ .Token }}</p>
+<p style="margin:0 0 16px;font-family:'Instrument Sans', system-ui, sans-serif;font-size:16px;line-height:1.5;color:#1f1b18;">Type it on the page where you asked for it. It is valid for one hour.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 16px;"><tr><td style="border-radius:999px;background:#b5452b;"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 24px;border-radius:999px;font-family:'Instrument Sans', system-ui, sans-serif;font-size:16px;font-weight:600;line-height:1.2;color:#ffffff;text-decoration:none;">Sign in with this link</a></td></tr></table>
+<p style="margin:0 0 16px;font-family:'Instrument Sans', system-ui, sans-serif;font-size:13px;line-height:1.5;color:#5e554d;">Or open the link in the same browser.</p>
+<p style="margin:0 0 16px;font-family:'Instrument Sans', system-ui, sans-serif;font-size:13px;line-height:1.5;color:#5e554d;">If you did not ask for it, ignore this email.</p>
+</div>
+</td></tr>
+<tr><td style="padding:24px 8px 0;font-family:'Instrument Sans', system-ui, sans-serif;font-size:13px;line-height:1.5;color:#5e554d;">Isula: La Sicilia di chi ci vive, su misura per te.</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
 </html>

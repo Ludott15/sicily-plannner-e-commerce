@@ -35,7 +35,7 @@ Restano manuali solo i segreti (passo 2 e sezione 2) e l'SMTP di produzione, se 
 | Accessi anonimi | attivi | `/auth/v1/settings`: `external.anonymous_users` è `true` |
 | Accesso via email | attivo | `/auth/v1/settings`: `external.email` è `true`, `disable_signup` è `false` |
 | CAPTCHA Turnstile | attivo, con la chiave segreta vera | `POST <url>/auth/v1/signup` con body `{}` risponde 400 `captcha_failed`. A mano: "Continua senza account" sul sito funziona. |
-| Template email | `supabase/templates/code.html` (Magic Link e Confirm signup), `email-change.html` (Change Email Address) | A mano: chiedi un codice dalla pagina di accesso; l'oggetto è "Il tuo codice Isula: 123456" |
+| Template email | `supabase/templates/code.html` (Magic Link e Confirm signup) e `email-change.html` (Change Email Address). Si rigenerano con `npm run email:templates` (testi in `messages/*.json`, namespace `Email.supabase`; colori dai token): dopo ogni modifica si rigenerano e si copiano nella dashboard (Authentication → Email Templates), o si inviano con `config push` (sopra). In CI, `scripts/email/build-supabase-templates.test.ts` verifica che i file siano aggiornati. | A mano: chiedi un codice dalla pagina di accesso; l'oggetto è "Il tuo codice Isula: 123456"; il pulsante porta al dominio di produzione |
 | Site URL e redirect | dominio di produzione e `https://<dominio>/api/auth/callback` | A mano: il link nell'email porta al dominio di produzione |
 
 ## 2. Vercel

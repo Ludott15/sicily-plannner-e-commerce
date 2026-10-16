@@ -861,7 +861,8 @@
       "no_proposals": "Nessuna proposta da confermare.",
       "invalid_input": "Attività non valida.",
       "failed": "Operazione non riuscita. Riprova."
-    }
+    },
+    "content": "Contenuti video"
   },
   "Og": {
     "activity": "Attività · {province}",
@@ -1466,16 +1467,7 @@
     "save": "Salva",
     "saved": "Tempi di guida salvati."
   },
-  "GroupInviteEmail": {
-    "subject": "{inviter} ti invita nel gruppo {groupName}",
-    "someone": "Un amico",
-    "greeting": "Ciao,",
-    "body": "{inviter} ti ha invitato nel gruppo {groupName}: dal link vedi il viaggio e le tappe, poi entri con il tuo account.",
-    "cta": "Apri l’invito",
-    "note": "Il link vale sette giorni e funziona una sola volta.",
-    "linkLabel": "Se il pulsante non funziona, copia questo indirizzo nel browser:",
-    "footer": "Ricevi questa email perché {inviter} ti ha invitato a un gruppo su Isula. Se non ti aspettavi l’invito, ignorala."
-  },
+  "GroupInviteEmail": {},
   "Groups": {
     "eyebrow": "Gruppo",
     "tripGroupHeading": "Viaggia in gruppo",
@@ -1947,5 +1939,95 @@
     "viewMap": "Mappa",
     "activitiesMapLabel": "Mappa dei luoghi delle attività",
     "canvasTitle": "Mappa"
+  },
+  "Email": {
+    "layout": {
+      "tagline": "La Sicilia di chi ci vive, su misura per te.",
+      "linkFallback": "Se il pulsante non funziona, copia questo indirizzo nel browser:"
+    },
+    "groupInvite": {
+      "subject": "{inviter} ti invita nel gruppo {groupName}",
+      "heading": "Sei invitato in {groupName}",
+      "preheader": "Dal link vedi il viaggio e le tappe, poi entri con il tuo account.",
+      "someone": "Un amico",
+      "greeting": "Ciao,",
+      "body": "{inviter} ti ha invitato nel gruppo {groupName}: dal link vedi il viaggio e le tappe, poi entri con il tuo account.",
+      "cta": "Apri l’invito",
+      "note": "Il link vale sette giorni e funziona una sola volta.",
+      "footer": "Ricevi questa email perché {inviter} ti ha invitato a un gruppo su {brand}. Se non ti aspettavi l’invito, ignorala."
+    },
+    "orderConfirmation": {
+      "subject": "Ordine {orderNumber} confermato",
+      "heading": "Grazie per l’ordine",
+      "preheader": "Ordine {orderNumber}: lo abbiamo ricevuto.",
+      "greeting": "Ciao,",
+      "greetingNamed": "Ciao {name},",
+      "body": "Abbiamo ricevuto il tuo ordine {orderNumber}. Ti scriviamo di nuovo quando parte.",
+      "line": "{name} × {quantity}: {total}",
+      "total": "Totale: {total}",
+      "cta": "Vedi l’ordine",
+      "footer": "Ricevi questa email perché hai fatto un ordine su {brand}."
+    },
+    "shipping": {
+      "subject": "Il tuo ordine {orderNumber} è partito",
+      "heading": "Il tuo ordine è in viaggio",
+      "preheader": "L’ordine {orderNumber} è partito con {carrier}.",
+      "greeting": "Ciao,",
+      "body": "L’ordine {orderNumber} è partito con {carrier}.",
+      "tracking": "Codice di tracciamento: {code}",
+      "eta": "Arrivo previsto: {date}",
+      "cta": "Segui la spedizione",
+      "footer": "Ricevi questa email perché hai fatto un ordine su {brand}."
+    },
+    "producerOrder": {
+      "subject": "Nuovo ordine {orderNumber}: spedire entro {shipBy}",
+      "heading": "Nuovo ordine da preparare",
+      "preheader": "Ordine {orderNumber}: spedire entro {shipBy}.",
+      "greeting": "Ciao {producerName},",
+      "body": "C’è un nuovo ordine da preparare. Spediscilo entro {shipBy}.",
+      "line": "{name} × {quantity}",
+      "cta": "Apri l’ordine",
+      "footer": "Ricevi questa email perché sei un produttore su {brand}. I dati del cliente non compaiono in questa email."
+    },
+    "tripReminder": {
+      "subject": "{tripName}: si parte {startDate}",
+      "heading": "{tripName}",
+      "preheader": "Il viaggio {tripName} parte {startDate}.",
+      "greeting": "Ciao,",
+      "body": "Tra poco parte il viaggio {tripName}, {startDate}.",
+      "stopsLabel": "Le tappe:",
+      "stop": "{index}. {name}",
+      "cta": "Apri il viaggio",
+      "footer": "Ricevi questa email perché hai salvato il viaggio {tripName} su {brand}."
+    },
+    "supabase": {
+      "code": {
+        "lead": "Il tuo codice per accedere a {brand}:",
+        "hint": "Scrivilo nella pagina da cui l’hai chiesto. Vale un’ora.",
+        "cta": "Accedi con questo link",
+        "linkHint": "Se preferisci, apri il link nello stesso browser.",
+        "ignore": "Se non l’hai chiesto tu, ignora questa email."
+      },
+      "emailChange": {
+        "lead": "Il tuo codice per salvare il tuo account {brand} con questa email:",
+        "hint": "Scrivilo nella pagina da cui l’hai chiesto. Vale un’ora. I viaggi che hai creato restano tuoi.",
+        "ignore": "Se non l’hai chiesto tu, ignora questa email."
+      }
+    }
+  },
+  "AdminContent": {
+    "title": "Contenuti video",
+    "intro": "Immagini verticali 1080×1920 per i video: un itinerario pronto o un luogo, con la foto e le tappe principali.",
+    "choose": "Itinerario o luogo",
+    "choosePlaceholder": "Scegli un itinerario o un luogo",
+    "templatesGroup": "Itinerari pronti",
+    "placesGroup": "Luoghi",
+    "preview": "Mostra anteprima",
+    "previewTitle": "Anteprima",
+    "imageAlt": "Anteprima dell'immagine verticale per i video",
+    "noSelection": "Scegli un itinerario o un luogo per vedere l'immagine.",
+    "size": "PNG, 1080 × 1920 px",
+    "download": "Scarica PNG",
+    "day": "Giorno {day}"
   }
 }

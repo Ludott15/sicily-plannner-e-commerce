@@ -1,12 +1,14 @@
 import { getTranslations } from "next-intl/server";
+import { BRAND_NAME } from "@/lib/brand";
 import { getInvitePage } from "@/server/groups/queries";
 import { ogContentType, ogImage, ogSize } from "@/server/og/og-image";
 
-// Anteprima dell'invito: il viaggio del gruppo con i luoghi delle tappe. Nessun dato personale
-// (né il nome né la foto del proprietario). Un invito non valido dà l'anteprima generica.
+// Anteprima dell'invito: il viaggio del gruppo con i luoghi delle tappe, senza foto (l'anteprima
+// dell'invito non porta copertine). Nessun dato personale (né il nome né la foto del proprietario).
+// Un invito non valido dà l'anteprima generica.
 export const size = ogSize;
 export const contentType = ogContentType;
-export const alt = "Isula";
+export const alt = BRAND_NAME;
 
 export default async function Image({ params }: { params: Promise<{ locale: string; token: string }> }) {
   const { locale, token } = await params;
@@ -15,7 +17,7 @@ export default async function Image({ params }: { params: Promise<{ locale: stri
     getTranslations({ locale, namespace: "GroupInvite" }),
     getTranslations({ locale, namespace: "Og" }),
   ]);
-  if (invite.status !== "active") return ogImage({ eyebrow: "Isula", title: tOg("fallbackTitle"), stops: [] });
+  if (invite.status !== "active") return ogImage({ eyebrow: BRAND_NAME, title: tOg("fallbackTitle"), stops: [] });
 
   const { preview } = invite;
   const eyebrow = preview.itineraryDays
