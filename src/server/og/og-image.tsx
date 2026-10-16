@@ -148,8 +148,8 @@ export async function ogImage({
 
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <svg width={48} height={48} viewBox={brandMark.viewBox}>
-                <path fill={c.coccio} d={brandMark.body} />
-                <path fill={c.coccio} d={brandMark.sun} />
+                <path fill={c.coccio} d={brandMark.tile} />
+                <path fill={c.calce} d={brandMark.rosette} />
               </svg>
               <div
                 style={{
