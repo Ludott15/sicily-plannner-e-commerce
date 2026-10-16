@@ -36,9 +36,9 @@ export function ShopFilters({
 
   return (
     <form method="get" action={action} className="grid gap-4 rounded-lg border border-card-edge bg-calce-raised p-4 md:grid-cols-4 md:p-6">
-      <label className="flex flex-col gap-1.5">
-        <span className="text-body-s font-semibold">{t("filterCategory")}</span>
-        <select name="categoria" defaultValue={selected.category ?? ""} className={cn(control)}>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="shop-filtro-categoria" className="text-body-s font-semibold">{t("filterCategory")}</label>
+        <select id="shop-filtro-categoria" name="categoria" defaultValue={selected.category ?? ""} className={cn(control)}>
           <option value="">{t("filterAllCategories")}</option>
           {PRODUCT_CATEGORIES.map((category) => (
             <option key={category} value={category}>
@@ -46,11 +46,11 @@ export function ShopFilters({
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-body-s font-semibold">{t("filterProducer")}</span>
-        <select name="produttore" defaultValue={selected.producer ?? ""} className={cn(control)}>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="shop-filtro-produttore" className="text-body-s font-semibold">{t("filterProducer")}</label>
+        <select id="shop-filtro-produttore" name="produttore" defaultValue={selected.producer ?? ""} className={cn(control)}>
           <option value="">{t("filterAllProducers")}</option>
           {producers.map((producer) => (
             <option key={producer.slug} value={producer.slug}>
@@ -58,11 +58,11 @@ export function ShopFilters({
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-body-s font-semibold">{t("filterArea")}</span>
-        <select name="area" defaultValue={selected.area ?? ""} className={cn(control)}>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="shop-filtro-area" className="text-body-s font-semibold">{t("filterArea")}</label>
+        <select id="shop-filtro-area" name="area" defaultValue={selected.area ?? ""} className={cn(control)}>
           <option value="">{t("filterAllAreas")}</option>
           {areas.map((area) => (
             <option key={area.slug} value={area.slug}>
@@ -70,11 +70,11 @@ export function ShopFilters({
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-body-s font-semibold">{t("filterPrice")}</span>
-        <select name="prezzo" defaultValue={selected.maxPriceEur ? String(selected.maxPriceEur) : ""} className={cn(control)}>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="shop-filtro-prezzo" className="text-body-s font-semibold">{t("filterPrice")}</label>
+        <select id="shop-filtro-prezzo" name="prezzo" defaultValue={selected.maxPriceEur ? String(selected.maxPriceEur) : ""} className={cn(control)}>
           <option value="">{t("filterAnyPrice")}</option>
           {PRICE_CAPS_EUR.map((cap) => (
             <option key={cap} value={cap}>
@@ -82,7 +82,7 @@ export function ShopFilters({
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
       <div className="flex flex-wrap items-center gap-3 md:col-span-4">
         <Button type="submit" variant="secondary">
