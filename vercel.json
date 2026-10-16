@@ -3,6 +3,7 @@
   "crons": [
     { "path": "/api/cron/cleanup-guests", "schedule": "0 3 * * *" },
     { "path": "/api/cron/import-catalog", "schedule": "30 2 * * *" },
+    { "path": "/api/cron/learn", "schedule": "30 3 * * *" },
     { "path": "/api/cron/embed-activities", "schedule": "0 4 * * *" },
     { "path": "/api/cron/import-conversions", "schedule": "0 5 * * *" }
   ]

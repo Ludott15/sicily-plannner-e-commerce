@@ -10,7 +10,7 @@ import { listInterests } from "@/server/catalog/queries";
 import { getGroupPreferences } from "@/server/groups/aggregate";
 import { itineraries } from "@/server/db/schema";
 import { dbAsUser, type DbUser, type UserTx } from "@/server/db/user";
-import { areaNames, driveTimesBySlug, engineCatalog, getSavedPreferences, toProfile } from "@/server/personalization/data";
+import { areaNames, driveTimesBySlug, engineCatalog, getSavedPreferences, personalProfile } from "@/server/personalization/data";
 import { proposeTrips, type CatalogActivity, type Profile } from "@/server/personalization/engine";
 import { searchFlights } from "@/server/flights/search";
 import { tripStopsTx } from "@/server/trips/changes";
@@ -419,7 +419,7 @@ async function searchFlightsTool(state: ToolState, input: z.infer<typeof schemas
 async function proposeItinerary(state: ToolState, input: z.infer<typeof schemas.propose_itinerary>): Promise<ToolRun> {
   const saved = await getSavedPreferences(state.user);
   if (!saved?.completed) return result({ status: "needs_preferences" });
-  const base: Profile = toProfile(saved);
+  const base: Profile = await personalProfile(state.user, saved);
   const profile: Profile = input.days === undefined ? base : { ...base, days: input.days };
   const [catalog, driveTimes, names] = await Promise.all([engineCatalog(), driveTimesBySlug(), areaNames(state.locale)]);
   const { proposals } = proposeTrips(catalog, profile, driveTimes);

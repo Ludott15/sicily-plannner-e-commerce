@@ -9,7 +9,7 @@ import { proposalTexts } from "@/components/proposals/proposal-texts";
 import { isSicilyAirport } from "@/lib/flights/airports";
 import { redirect } from "@/lib/i18n/navigation";
 import { getUser } from "@/server/auth";
-import { driveTimesBySlug, engineCatalog, getSavedPreferences, toProfile } from "@/server/personalization/data";
+import { driveTimesBySlug, engineCatalog, getSavedPreferences, personalProfile, toProfile } from "@/server/personalization/data";
 import { proposeTrips } from "@/server/personalization/engine";
 
 // "Ecco tre viaggi pensati per te" (schemi.md): tre proposte costruite dal catalogo dal
@@ -42,7 +42,7 @@ export default async function ProposalsPage({ params }: Props) {
     engineCatalog(),
     driveTimesBySlug(),
   ]);
-  const profile = toProfile(saved);
+  const profile = user ? await personalProfile(user, saved) : toProfile(saved);
   // Se nessuna area copre i giorni scelti: i viaggi sul massimo di giorni coperto, e lo diciamo.
   const { proposals, days: coveredDays, shortened } = proposeTrips(catalog, profile, driveTimes);
   const personal = Object.values(saved.weights).some((w) => w > 0);
