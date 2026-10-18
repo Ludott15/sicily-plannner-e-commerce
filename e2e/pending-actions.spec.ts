@@ -93,6 +93,6 @@ test("prima del lancio l'elenco delle azioni in sospeso è vuoto", async ({ page
   for (const path of ["/it/privacy", "/it/cookie", "/it/condizioni-di-vendita", "/it/termini", "/it/punti/regolamento", "/it/chi-siamo"]) {
     await page.goto(path);
     await expect(page.locator('[data-legal-entity="missing"]'), path).toHaveCount(0);
-    await expect(page.locator('meta[name="robots"]'), path).toHaveCount(0);
+    await expect(page.locator('meta[name="robots"][content*="noindex"]'), path).toHaveCount(0);
   }
 });

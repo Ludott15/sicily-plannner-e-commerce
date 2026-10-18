@@ -1,6 +1,6 @@
 ---
 updated: 2026-10-18
-version: 1
+version: 2
 ---
 
 ## In breve
@@ -17,9 +17,11 @@ Puoi cambiare la tua scelta in ogni momento da **Preferenze cookie**, in fondo a
 
 ## Cookie non tecnico (solo con il tuo consenso)
 
-- **anon_id**: se non hai un account, ci permette di riconoscere i tuoi click verso i siti dei partner (attività, voli, alloggi, noleggi), così il partner può riconoscerci una commissione se prenoti. Contiene solo un codice casuale. Dura un anno.
+- **anon_id**: ci permette di riconoscere i tuoi click verso i siti dei partner (attività, voli, alloggi, noleggi) anche in visite diverse, così a Isula può essere attribuita la commissione se prenoti. Contiene solo un codice casuale. Dura un anno.
 
-Se rifiuti, il sito funziona allo stesso modo: semplicemente non possiamo attribuire quei click.
+Con il consenso registriamo anche le ricerche di voli che fai sul sito, per migliorare le proposte.
+
+Se rifiuti, il sito funziona allo stesso modo: ogni click resta legato solo al codice della singola uscita, e non riconosciamo i tuoi click nelle visite successive.
 
 ## Archiviazione nel browser
 

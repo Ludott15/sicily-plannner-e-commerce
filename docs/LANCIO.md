@@ -6,6 +6,12 @@ Passi da fare una volta sul progetto Supabase di produzione e su Vercel prima di
 
 Le pagine legali (privacy, cookie, termini, condizioni di vendita, regolamento punti, chi siamo) e il contatto leggono i dati del titolare dall'ambiente di Vercel. Sono pubblici (`NEXT_PUBLIC_`), quindi non vanno messi in nessun segreto. Da compilare prima del lancio.
 
+Prima di impostarli, verificare che il sito faccia davvero quello che i testi descrivono (impostarli rende le pagine indicizzabili):
+- **Condizioni di vendita**: esistono carrello e checkout con accettazione delle condizioni (7.2), email di conferma e di spedizione con tracciamento, pagina "I miei ordini" (7.3), rimborsi e segnalazione dei problemi (7.4). Se lo shop non apre insieme al sito, togliere la voce dal footer o aspettare.
+- **Privacy e cookie**: elenco dei fornitori e conservazione coerenti con docs/PRIVACY-TECNICA.md; regioni di Supabase, Vercel e Cloudflare verificate; durata del cookie NEXT_LOCALE verificata nel browser.
+- **Turnstile del modulo contatti**: in produzione serve TURNSTILE_SECRET_KEY; senza, la verifica fallisce. Sulle preview di Vercel si usa la chiave di prova (accetta ogni invio: resta il limite per IP).
+- Rilettura dei testi da parte di un consulente (trasferimenti verso gli USA, conservazione dei dati fiscali, ADR, età minima).
+
 | Variabile | Valore | Verifica |
 | --- | --- | --- |
 | `NEXT_PUBLIC_LEGAL_NAME` | ragione sociale del titolare | A mano: in `/it/privacy` il nome compare al posto del trattino "—" |
