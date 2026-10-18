@@ -14,7 +14,15 @@ import {
 } from "@/server/db/schema";
 import { dbPublic } from "@/server/db/public";
 import { dbAsUser, type DbUser, type UserTx } from "@/server/db/user";
-import { effectiveWeight, type Airport, type CarAccess, type CatalogActivity, type Pace, type Profile } from "./engine";
+import {
+  effectiveWeight,
+  similarityActive,
+  type Airport,
+  type CarAccess,
+  type CatalogActivity,
+  type Pace,
+  type Profile,
+} from "./engine";
 import { NEUTRAL } from "@/lib/onboarding";
 import { pairKey, type DriveTimes } from "@/lib/drive-pairs";
 
@@ -207,6 +215,34 @@ export function toProfile(saved: SavedPreferences): Profile {
     months: saved.months,
     airport: saved.airport,
   };
+}
+
+// Similarità coseno (M11) tra il profilo di gusto dell'utente (user_taste) e l'embedding di ogni
+// attività attiva con embedding. Undefined sotto la soglia di eventi (similarityActive) o senza
+// profilo di gusto: lo scoring resta senza similarità. Letture con dbAsUser: il conteggio dei propri
+// eventi passa da public.my_event_count() (user_events non è leggibile dai ruoli applicativi).
+export async function activitySimilarity(user: DbUser): Promise<ReadonlyMap<string, number> | undefined> {
+  return dbAsUser(user, async (tx) => {
+    const [counted] = await tx.execute<{ n: number }>(sql`select public.my_event_count() as n`);
+    if (!similarityActive(Number(counted?.n ?? 0))) return undefined;
+    const rows = await tx.execute<{ id: string; cos: number }>(sql`
+      select a.id, (1 - (a.embedding <=> t.embedding))::float8 as cos
+      from public.user_taste t
+      cross join public.activities a
+      where t.user_id = ${user.id}::uuid
+        and t.embedding is not null
+        and a.is_active
+        and a.embedding is not null`);
+    if (rows.length === 0) return undefined;
+    return new Map(rows.map((r) => [r.id, Number(r.cos)]));
+  });
+}
+
+// Profilo per il motore di un utente: le sue risposte e, se ha abbastanza eventi, la similarità.
+export async function personalProfile(user: DbUser, saved: SavedPreferences): Promise<Profile> {
+  const profile = toProfile(saved);
+  const similarity = await activitySimilarity(user);
+  return similarity === undefined ? profile : { ...profile, similarity };
 }
 
 // Catalogo per il motore: solo attività attive (dbPublic), con tag, area e coordinate del luogo.

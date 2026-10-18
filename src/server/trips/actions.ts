@@ -14,7 +14,7 @@ import { moveInDay } from "@/lib/trips";
 import { getUser, requireUser } from "@/server/auth";
 import { itineraries, itineraryItems } from "@/server/db/schema";
 import { dbAsUser, type DbUser, type UserTx } from "@/server/db/user";
-import { areaNames, driveTimesBySlug, engineCatalog, getSavedPreferences, toProfile } from "@/server/personalization/data";
+import { areaNames, driveTimesBySlug, engineCatalog, getSavedPreferences, personalProfile } from "@/server/personalization/data";
 import { proposeTrips } from "@/server/personalization/engine";
 import { createClient } from "@/server/supabase/server";
 import { proposalErrorCodeOf, type ProposalErrorCode } from "@/server/groups/proposal-state";
@@ -206,7 +206,7 @@ export async function startTrip(input: StartTripInput): Promise<TripActionError>
         getTranslations({ locale, namespace: "Trips" }),
         driveTimesBySlug(),
       ]);
-      const { proposals } = proposeTrips(catalog, toProfile(saved), driveTimes);
+      const { proposals } = proposeTrips(catalog, await personalProfile(user, saved), driveTimes);
       const proposal = proposals.find((p) => p.area === source.area && p.variant === source.variant);
       if (!proposal) return { status: "error", code: "not_found" };
       const items: NewItem[] = proposal.days.flatMap((day, d) =>

@@ -21,7 +21,8 @@ export type AiLatestSession = {
   costUsd: number;
 };
 
-function costOf(inputTokens: number, outputTokens: number): number {
+// Stima in dollari di un insieme di token (usata anche dalla dashboard admin).
+export function costOf(inputTokens: number, outputTokens: number): number {
   const price = AI_PRICES[CHAT_MODEL];
   if (!price) return 0;
   return Math.round(((inputTokens * price.input + outputTokens * price.output) / 1_000_000) * 10_000) / 10_000;
