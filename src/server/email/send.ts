@@ -10,6 +10,8 @@ export type EmailMessage = {
   subject: string;
   html: string;
   text: string;
+  // Indirizzo a cui rispondere, se diverso dal mittente (modulo di contatto).
+  replyTo?: string;
 };
 
 export type EmailSendResult = { status: "sent" } | { status: "unavailable" } | { status: "failed" };
@@ -39,6 +41,7 @@ export async function sendEmail(message: EmailMessage): Promise<EmailSendResult>
       subject: message.subject,
       html: message.html,
       text: message.text,
+      ...(message.replyTo ? { replyTo: message.replyTo } : {}),
     });
     return error ? { status: "failed" } : { status: "sent" };
   } catch {

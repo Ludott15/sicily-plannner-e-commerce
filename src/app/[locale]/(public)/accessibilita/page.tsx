@@ -3,7 +3,7 @@ import { getFormatter, getTranslations, setRequestLocale } from "next-intl/serve
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { ACCESSIBILITY_CHECK } from "@/lib/accessibility";
-import { CONTACT_EMAIL } from "@/lib/brand";
+import { legalEntity } from "@/lib/legal-entity";
 import { canonicalFor } from "@/lib/seo";
 
 type Props = { params: Promise<{ locale: string }> };
@@ -21,6 +21,8 @@ export default async function Page({ params }: Props) {
   setRequestLocale(locale);
   const t = await getTranslations("Legal");
   const format = await getFormatter();
+  // Il canale per le segnalazioni è l'indirizzo di assistenza dei dati del titolare, se configurato.
+  const supportEmail = legalEntity()?.supportEmail ?? null;
   const date = format.dateTime(new Date(`${ACCESSIBILITY_CHECK.lastAutomatedCheck}T12:00:00Z`), {
     dateStyle: "long",
     timeZone: "Europe/Rome",
@@ -66,11 +68,11 @@ export default async function Page({ params }: Props) {
         <h2 id="accessibilita-segnala" className="is-display text-heading-2">
           {t("accessibilityContactTitle")}
         </h2>
-        {CONTACT_EMAIL ? (
+        {supportEmail ? (
           <p className="text-body-l text-pretty">
             {t("accessibilityContactText")}{" "}
-            <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold text-coccio-text underline underline-offset-4">
-              {CONTACT_EMAIL}
+            <a href={`mailto:${supportEmail}`} className="font-semibold text-coccio-text underline underline-offset-4">
+              {supportEmail}
             </a>
           </p>
         ) : (

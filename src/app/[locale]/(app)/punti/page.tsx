@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { EarnedBadges } from "@/components/badges/earned-badges";
-import { ButtonLink, PendingButton, PointsPill, Stamp } from "@/components/design";
+import { ButtonLink, PointsPill, Stamp } from "@/components/design";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { requireUser } from "@/server/auth";
@@ -9,7 +9,7 @@ import { getMyBadges } from "@/server/gamification/badges";
 import { getMyPoints } from "@/server/gamification/queries";
 
 // I miei punti (passo 5.1). Saldo, movimenti, regole di guadagno, badge (passo 5.2) e il regolamento
-// (testo legale in sospeso). L'ospite vede come creare l'account: i punti sono degli account.
+// (/punti/regolamento). L'ospite vede come creare l'account: i punti sono degli account.
 // Intestazione di pagina con il saldo nella riga dei fatti; sezioni separate da divider, senza card.
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -49,9 +49,9 @@ export default async function PointsPage({ params }: Props) {
           <ButtonLink href="/classifica" variant="secondary">
             {tLeaderboard("pointsLink")}
           </ButtonLink>
-          <PendingButton id="points.rules" variant="secondary">
+          <ButtonLink href="/punti/regolamento" variant="secondary">
             {t("rulesLink")}
-          </PendingButton>
+          </ButtonLink>
         </div>
       </PageContainer>
     );
@@ -156,9 +156,9 @@ export default async function PointsPage({ params }: Props) {
         <ButtonLink href="/classifica" variant="secondary">
           {tLeaderboard("pointsLink")}
         </ButtonLink>
-        <PendingButton id="points.rules" variant="secondary">
+        <ButtonLink href="/punti/regolamento" variant="secondary">
           {t("rulesLink")}
-        </PendingButton>
+        </ButtonLink>
       </div>
     </PageContainer>
   );

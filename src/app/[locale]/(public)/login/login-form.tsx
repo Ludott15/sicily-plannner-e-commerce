@@ -2,6 +2,7 @@ import { useTranslations } from "next-intl";
 import { EmailCodeForm } from "@/components/auth/email-code-form";
 import { GuestStart } from "@/components/auth/guest-start";
 import { Button } from "@/components/design";
+import { Link } from "@/lib/i18n/navigation";
 import type { InAppBrowser } from "@/lib/in-app-browser";
 import { signInWithGoogle } from "@/server/auth/actions";
 
@@ -54,6 +55,21 @@ export function LoginForm({
       )}
 
       <GuestStart locale={locale} next={next} />
+
+      <p className="text-body-s text-lava-muted">
+        {t.rich("legalNotice", {
+          terms: (chunks) => (
+            <Link href="/termini" className="font-semibold text-coccio-text underline underline-offset-4">
+              {chunks}
+            </Link>
+          ),
+          privacy: (chunks) => (
+            <Link href="/privacy" className="font-semibold text-coccio-text underline underline-offset-4">
+              {chunks}
+            </Link>
+          ),
+        })}
+      </p>
     </div>
   );
 }
