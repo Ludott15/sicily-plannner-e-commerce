@@ -11,6 +11,7 @@ Prima di impostarli, verificare che il sito faccia davvero quello che i testi de
 - **Privacy e cookie**: elenco dei fornitori e conservazione coerenti con docs/PRIVACY-TECNICA.md; regioni di Supabase, Vercel e Cloudflare verificate; durata del cookie NEXT_LOCALE verificata nel browser.
 - **Turnstile del modulo contatti**: in produzione serve TURNSTILE_SECRET_KEY; senza, la verifica fallisce. Sulle preview di Vercel si usa la chiave di prova (accetta ogni invio: resta il limite per IP).
 - Rilettura dei testi da parte di un consulente (trasferimenti verso gli USA, conservazione dei dati fiscali, ADR, età minima).
+- **Messaggi di contatto**: l'informativa promette di conservarli al massimo 12 mesi nella casella dell'assistenza. Non c'è un meccanismo automatico: impostare una regola di archiviazione o cancellazione nella casella, o cancellarli a mano ogni mese.
 
 | Variabile | Valore | Verifica |
 | --- | --- | --- |
