@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { TextPage, TextSection } from "@/components/layout/text-page";
 import { Link } from "@/lib/i18n/navigation";
-import { localizedAlternates } from "@/lib/seo";
+import { canonicalFor } from "@/lib/seo";
 import { listActivePartners } from "@/server/affiliates/public-partners";
 
 // Pagina delle affiliazioni (passo 3.1, sostituisce /link-affiliati, che fa 308 qui). Come
@@ -20,7 +20,7 @@ function isVerticalKey(value: string): value is VerticalKey {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Affiliates" });
-  return { title: t("title"), description: t("intro"), alternates: localizedAlternates(locale, "/affiliazioni") };
+  return { title: t("title"), description: t("intro"), alternates: canonicalFor(locale, "/affiliazioni") };
 }
 
 export default async function AffiliationsPage({ params }: Props) {

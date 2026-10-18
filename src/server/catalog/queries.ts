@@ -86,7 +86,7 @@ async function tagsByActivity(tx: UserTx, ids: string[]) {
   return map;
 }
 
-async function withTags<T extends { id: string } & CoverColumns>(tx: UserTx, rows: T[]) {
+export async function withTags<T extends { id: string } & CoverColumns>(tx: UserTx, rows: T[]) {
   const tags = await tagsByActivity(
     tx,
     rows.map((r) => r.id),
@@ -147,7 +147,15 @@ export const listActivityFilterOptions = cache(() =>
   }),
 );
 
-export const getActivity = cache((slug: string) =>
+// Area di viaggio di un luogo come la mostra il breadcrumb: slug e nome nella lingua richiesta.
+export type AreaLink = { slug: string; name: string } | null;
+
+function areaLink(slug: string | null, nameIt: string | null, nameEn: string | null, locale: string): AreaLink {
+  if (!slug || !nameIt) return null;
+  return { slug, name: locale === "en" && nameEn ? nameEn : nameIt };
+}
+
+export const getActivity = cache((slug: string, locale = "it") =>
   dbPublic(async (tx) => {
     const [row] = await tx
       .select({
@@ -156,13 +164,18 @@ export const getActivity = cache((slug: string) =>
         accessible: activities.accessible,
         seasonMonths: activities.seasonMonths,
         placeId: activities.placeId,
+        areaSlug: areas.slug,
+        areaNameIt: areas.nameIt,
+        areaNameEn: areas.nameEn,
       })
       .from(activities)
       .innerJoin(places, eq(places.id, activities.placeId))
+      .leftJoin(areas, eq(areas.id, places.areaId))
       .where(eq(activities.slug, slug));
     if (!row) return null;
-    const [withTag] = await withTags(tx, [row]);
-    return withTag!;
+    const { areaSlug, areaNameIt, areaNameEn, ...card } = row;
+    const [withTag] = await withTags(tx, [card]);
+    return { ...withTag!, area: areaLink(areaSlug, areaNameIt, areaNameEn, locale) };
   }),
 );
 
@@ -245,7 +258,7 @@ export const nearbyActivities = cache((placeId: string, limit = 12) =>
   }),
 );
 
-export const getPlace = cache((slug: string) =>
+export const getPlace = cache((slug: string, locale = "it") =>
   dbPublic(async (tx) => {
     const [row] = await tx
       .select({
@@ -258,23 +271,32 @@ export const getPlace = cache((slug: string) =>
         description: places.description,
         ownCover: coverJson(places.coverMediaId),
         areaCover: areaCoverJson(places.areaId),
+        areaSlug: areas.slug,
+        areaNameIt: areas.nameIt,
+        areaNameEn: areas.nameEn,
       })
       .from(places)
+      .leftJoin(areas, eq(areas.id, places.areaId))
       .where(eq(places.slug, slug));
     if (!row) return null;
-    const { ownCover, areaCover, ...place } = row;
+    const { ownCover, areaCover, areaSlug, areaNameIt, areaNameEn, ...place } = row;
     const rows = await tx
       .select(activityCardColumns)
       .from(activities)
       .innerJoin(places, eq(places.id, activities.placeId))
       .where(eq(activities.placeId, place.id))
       .orderBy(desc(activities.rating), asc(activities.title));
-    return { ...place, cover: placeCoverChain({ own: ownCover, area: areaCover }), activities: await withTags(tx, rows) };
+    return {
+      ...place,
+      cover: placeCoverChain({ own: ownCover, area: areaCover }),
+      area: areaLink(areaSlug, areaNameIt, areaNameEn, locale),
+      activities: await withTags(tx, rows),
+    };
   }),
 );
 
 // Itinerari pronti (template editoriali pubblicati) con i luoghi toccati, in ordine di visita.
-async function templateSummaries(tx: UserTx, where?: SQL) {
+export async function templateSummaries(tx: UserTx, where?: SQL) {
   const templates = await tx
     .select({
       id: itineraries.id,

@@ -128,3 +128,13 @@ I template e il link dell'email si controllano a mano, come indicato nella tabel
 - **Prezzi**: `AI_PRICES` in `src/server/chat/config.ts` sono valori indicativi per la stima dei costi nell'admin (`/admin/ai`). Verificarli sulla pagina prezzi di Anthropic prima del lancio e aggiornare la tabella. La stima non tiene conto della cache.
 - **Modello di prova**: `CHAT_TEST_MODEL=scripted` è ignorato su Vercel (`VERCEL_ENV` presente). Serve solo per e2e e sviluppo locale.
 - **Valutazione**: `npm run eval:chat` con `ANTHROPIC_API_KEY`, oppure il workflow manuale `chat-eval.yml`.
+
+## 8. Ricerca: Search Console e Bing Webmaster
+
+Dopo il primo deploy di produzione, per il dominio `NEXT_PUBLIC_SITE_URL`:
+
+- **Verifica del dominio** (proprietà a livello di dominio, non di prefisso URL): nel DNS aggiungere il record TXT che Google Search Console e Bing Webmaster Tools mostrano in fase di verifica. Il record va aggiunto, non sostituito: i record TXT esistenti (SPF, altri servizi) restano.
+- **Sitemap**: inviare `https://<dominio>/sitemap.xml` (indice). L'indice elenca una sitemap per tipo (`/sitemap/pagine.xml`, `luoghi`, `attivita`, `itinerari`, `aree`, `guide`, `voli`); `robots.txt` le dichiara tutte. Dopo l'invio, controllare che ogni sitemap risponda XML senza errori e che il numero di URL corrisponda ai contenuti pubblicati.
+- **Dati strutturati**: controllare con il Rich Results Test di Google una scheda di attività, una di luogo, un itinerario pronto, una guida (articolo con autore e data) e la home (organizzazione). Nessun avviso di errore; gli avvisi sui campi facoltativi si valutano caso per caso.
+- **Tag canonical**: le pagine con filtri nell'URL (`/attivita?...`) indicano la versione senza filtri; verificare nell'ispezione URL che Google scelga la pagina canonica attesa.
+- **Bozze e pagine in sospeso**: le guide in bozza e le pagine ancora in sospeso non devono comparire nelle sitemap né essere indicizzate. Le aree senza descrizione restano nella sitemap (la sezione descrizione semplicemente non compare).

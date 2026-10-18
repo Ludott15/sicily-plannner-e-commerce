@@ -27,6 +27,7 @@ export async function SiteHeader() {
   const exploreItems: ActionMenuItem[] = [
     { kind: "link", href: "/attivita", label: t("activities"), icon: "compass" },
     { kind: "link", href: "/itinerari", label: t("itineraries"), icon: "map" },
+    { kind: "link", href: "/guide", label: t("guides"), icon: "book" },
     { kind: "link", href: "/noleggio-auto", label: t("car"), icon: "car" },
   ];
 
