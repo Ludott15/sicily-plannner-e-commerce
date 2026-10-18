@@ -10,6 +10,8 @@ const PAGES = [
   "/it",
   "/it/attivita",
   "/it/attivita/demo-zingaro",
+  // Shop (passo 7.1): "Aggiungi al carrello" è in sospeso fino al 7.2.
+  "/it/shop",
   "/it/itinerari/demo-sicilia-orientale",
   "/it/chi-siamo",
   "/it/privacy",
