@@ -37,3 +37,4 @@ Questa cartella contiene il design system e i mockup di riferimento. "Isula" è 
 | Componenti React | `src/components/design/`, stili in `isula.css` |
 | Controllo in CI | `npm run design:check` |
 | Catalogo dei componenti | `/it/dev/design`, solo in sviluppo; screenshot in `screenshots/` |
+| Marchio: geometria, kit SVG, favicon e percorsi | `docs/design/brand/logo/mark.json` (fonte unica), `scripts/design/brand-assets.mjs` (`npm run design:brand`), `generated/design/brand.ts`, `src/app/icon.svg` |

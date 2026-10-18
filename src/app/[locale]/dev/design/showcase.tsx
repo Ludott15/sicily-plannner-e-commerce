@@ -10,6 +10,7 @@ import {
   InterestChip,
   ItineraryStop,
   LocalTip,
+  Logo,
   PointsPill,
   PreferenceScale,
   ProductCard,
@@ -312,6 +313,21 @@ export function DesignShowcase({ themeId, themeLabel }: { themeId: string; theme
               </Button>
             }
           />
+        </div>
+      </Block>
+
+      <Block title="Logo" readme="Logo">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div className="flex flex-col items-start gap-6 rounded-lg bg-calce-raised p-6 shadow-card">
+            <Logo className="text-[36px]" />
+            <Logo variant="mark" className="text-[48px]" />
+            <Logo variant="mark" className="text-[16px]" />
+          </div>
+          <div className="flex flex-col items-start gap-6 rounded-lg bg-ink p-6 text-on-ink">
+            <Logo className="text-[36px]" />
+            <Logo variant="mark" tone="mono" className="text-[48px]" />
+            <Logo variant="mark" tone="mono" className="text-[16px]" />
+          </div>
         </div>
       </Block>
 

@@ -861,7 +861,8 @@
       "no_proposals": "No proposals to confirm.",
       "invalid_input": "Invalid activity.",
       "failed": "Operation failed. Try again."
-    }
+    },
+    "content": "Video content"
   },
   "Og": {
     "activity": "Activity · {province}",
@@ -1466,16 +1467,7 @@
     "save": "Save",
     "saved": "Travel times saved."
   },
-  "GroupInviteEmail": {
-    "subject": "{inviter} invited you to the group {groupName}",
-    "someone": "A friend",
-    "greeting": "Hi,",
-    "body": "{inviter} invited you to the group {groupName}: the link shows the trip and its stops, then you join with your account.",
-    "cta": "Open the invitation",
-    "note": "The link lasts seven days and works once.",
-    "linkLabel": "If the button does not work, copy this address into your browser:",
-    "footer": "You receive this email because {inviter} invited you to a group on Isula. If you did not expect it, ignore this email."
-  },
+  "GroupInviteEmail": {},
   "Groups": {
     "eyebrow": "Group",
     "tripGroupHeading": "Travel as a group",
@@ -1947,5 +1939,95 @@
     "viewMap": "Map",
     "activitiesMapLabel": "Map of the places of the activities",
     "canvasTitle": "Map"
+  },
+  "Email": {
+    "layout": {
+      "tagline": "Sicily by the people who live there, made for you.",
+      "linkFallback": "If the button does not work, copy this address into your browser:"
+    },
+    "groupInvite": {
+      "subject": "{inviter} invited you to the group {groupName}",
+      "heading": "You are invited to {groupName}",
+      "preheader": "The link shows the trip and its stops, then you join with your account.",
+      "someone": "A friend",
+      "greeting": "Hi,",
+      "body": "{inviter} invited you to the group {groupName}: the link shows the trip and its stops, then you join with your account.",
+      "cta": "Open the invitation",
+      "note": "The link lasts seven days and works once.",
+      "footer": "You receive this email because {inviter} invited you to a group on {brand}. If you did not expect the invitation, ignore it."
+    },
+    "orderConfirmation": {
+      "subject": "Order {orderNumber} confirmed",
+      "heading": "Thank you for your order",
+      "preheader": "Order {orderNumber}: we have received it.",
+      "greeting": "Hi,",
+      "greetingNamed": "Hi {name},",
+      "body": "We have received your order {orderNumber}. We will write again when it ships.",
+      "line": "{name} × {quantity}: {total}",
+      "total": "Total: {total}",
+      "cta": "View the order",
+      "footer": "You receive this email because you placed an order on {brand}."
+    },
+    "shipping": {
+      "subject": "Your order {orderNumber} has shipped",
+      "heading": "Your order is on its way",
+      "preheader": "Order {orderNumber} has shipped with {carrier}.",
+      "greeting": "Hi,",
+      "body": "Order {orderNumber} has shipped with {carrier}.",
+      "tracking": "Tracking code: {code}",
+      "eta": "Estimated arrival: {date}",
+      "cta": "Track the shipment",
+      "footer": "You receive this email because you placed an order on {brand}."
+    },
+    "producerOrder": {
+      "subject": "New order {orderNumber}: ship by {shipBy}",
+      "heading": "New order to prepare",
+      "preheader": "Order {orderNumber}: ship by {shipBy}.",
+      "greeting": "Hi {producerName},",
+      "body": "There is a new order to prepare. Ship it by {shipBy}.",
+      "line": "{name} × {quantity}",
+      "cta": "Open the order",
+      "footer": "You receive this email because you are a producer on {brand}. The customer’s details are not in this email."
+    },
+    "tripReminder": {
+      "subject": "{tripName}: departure {startDate}",
+      "heading": "{tripName}",
+      "preheader": "The trip {tripName} starts {startDate}.",
+      "greeting": "Hi,",
+      "body": "The trip {tripName} starts soon, {startDate}.",
+      "stopsLabel": "The stops:",
+      "stop": "{index}. {name}",
+      "cta": "Open the trip",
+      "footer": "You receive this email because you saved the trip {tripName} on {brand}."
+    },
+    "supabase": {
+      "code": {
+        "lead": "Your sign-in code for {brand}:",
+        "hint": "Type it on the page where you asked for it. It is valid for one hour.",
+        "cta": "Sign in with this link",
+        "linkHint": "Or open the link in the same browser.",
+        "ignore": "If you did not ask for it, ignore this email."
+      },
+      "emailChange": {
+        "lead": "Your code to save your {brand} account with this email:",
+        "hint": "Type it on the page where you asked for it. It is valid for one hour. The trips you created stay yours.",
+        "ignore": "If you did not ask for it, ignore this email."
+      }
+    }
+  },
+  "AdminContent": {
+    "title": "Video content",
+    "intro": "Vertical 1080×1920 images for videos: a ready itinerary or a place, with its photo and main stops.",
+    "choose": "Itinerary or place",
+    "choosePlaceholder": "Choose an itinerary or a place",
+    "templatesGroup": "Ready itineraries",
+    "placesGroup": "Places",
+    "preview": "Show preview",
+    "previewTitle": "Preview",
+    "imageAlt": "Preview of the vertical image for videos",
+    "noSelection": "Choose an itinerary or a place to see the image.",
+    "size": "PNG, 1080 × 1920 px",
+    "download": "Download PNG",
+    "day": "Day {day}"
   }
 }
