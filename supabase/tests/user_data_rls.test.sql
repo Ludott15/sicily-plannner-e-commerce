@@ -7,6 +7,8 @@ select * from no_plan();
 select tests.create_user('alice');
 select tests.create_user('bob');
 select tests.create_user('admin', true);
+insert into public.user_consents (user_id, kind, granted, text_version) values (tests.uid('alice'), 'profiling', true, 'profiling-test-v1');
+insert into public.user_consents (user_id, kind, granted, text_version) values (tests.uid('bob'), 'profiling', true, 'profiling-test-v1');
 
 -- user_taste lo scrive solo il cron: lo prepariamo come postgres.
 insert into public.user_taste (user_id) values (tests.uid('alice'));

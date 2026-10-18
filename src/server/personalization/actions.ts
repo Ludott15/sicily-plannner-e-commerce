@@ -7,6 +7,7 @@ import { SICILY_AIRPORT_CODES } from "@/lib/flights/airports";
 import { routing } from "@/lib/i18n/routing";
 import { getUser, requireUser } from "@/server/auth";
 import { safeNextPath } from "@/server/auth/redirect";
+import { setConsent, withdrawConsent } from "@/server/privacy/consents";
 import { createClient } from "@/server/supabase/server";
 import { clearSensitivePreferences, getSavedPreferences, saveAnswers, saveExtraPreferences, saveTastes, saveTrip } from "./data";
 
@@ -42,6 +43,9 @@ const onboardingSchema = z.object({
   captchaToken: z.string().min(1).max(4096).optional(),
   // Destinazione dopo l'onboarding (per es. il ritorno a un invito): validata con safeNextPath.
   next: z.string().max(2048).optional(),
+  // Consenso alla profilazione, chiesto alla fine dell'onboarding (passo 8.2). Assente = non chiesto
+  // (nessuna riga nel registro); true/false = risposta esplicita, registrata con la sua versione.
+  profilingConsent: z.boolean().optional(),
 });
 
 // La lingua arriva come stringa dal client: la valida Zod.
@@ -51,7 +55,7 @@ export type ActionError = { status: "error"; code: "invalid" | "captcha_failed" 
 export async function submitOnboarding(input: OnboardingInput): Promise<ActionError> {
   const parsed = onboardingSchema.safeParse(input);
   if (!parsed.success) return { status: "error", code: "invalid" };
-  const { locale, captchaToken, next, ...answers } = parsed.data;
+  const { locale, captchaToken, next, profilingConsent, ...answers } = parsed.data;
 
   let user = await getUser();
   if (!user) {
@@ -64,6 +68,7 @@ export async function submitOnboarding(input: OnboardingInput): Promise<ActionEr
 
   try {
     await saveAnswers(user, answers);
+    if (profilingConsent !== undefined) await setConsent(user, "profiling", profilingConsent);
   } catch {
     return { status: "error", code: "failed" };
   }
@@ -114,6 +119,9 @@ export async function savePreferences(input: PreferencesInput): Promise<ActionEr
   try {
     await saveTastes(user, tastes);
     await saveExtraPreferences(user, { reducedMobility, diet, heatTolerance, crowdTolerance, sensitiveConsent });
+    // Il registro segue la casella: concessa, o ritirata se era concessa (passo 8.2).
+    if (sensitiveConsent) await setConsent(user, "sensitive", true);
+    else await withdrawConsent(user, "sensitive");
   } catch {
     return { status: "error", code: "failed" };
   }
@@ -130,6 +138,7 @@ export async function deleteSensitivePreferences(input: { locale: string }): Pro
   const user = await requireUser();
   try {
     await clearSensitivePreferences(user);
+    await withdrawConsent(user, "sensitive");
   } catch {
     return { status: "error", code: "failed" };
   }

@@ -7,6 +7,8 @@ select * from no_plan();
 
 select tests.create_user('alice');
 select tests.create_user('bob');
+-- Profilazione (passo 8.2): alice ha dato il consenso, bob no.
+insert into public.user_consents (user_id, kind, granted, text_version) values (tests.uid('alice'), 'profiling', true, 'profiling-test-v1');
 select tests.create_user('admin', true);
 
 insert into public.places (id, slug, name, province, lat, lng)
@@ -61,6 +63,22 @@ select is(
   (select count(*)::int from public.user_events where user_id = tests.uid('alice') and type = 'affiliate_click'),
   1,
   'utente: registrato anche l''evento affiliate_click'
+);
+
+-- Gemella senza consenso: il click si registra in affiliate_clicks, ma nessun evento di profilazione.
+select tests.authenticate_as('bob');
+select lives_ok(
+  $$select public.record_affiliate_click('dddddddd-0000-0000-0000-000000000001', 'bobsubid00001', 'itinerary')$$,
+  'senza consenso: il click di bob si registra'
+);
+reset role;
+select is(
+  (select count(*)::int from public.affiliate_clicks where subid = 'bobsubid00001'), 1,
+  'senza consenso: il click affiliato resta in affiliate_clicks'
+);
+select is(
+  (select count(*)::int from public.user_events where user_id = tests.uid('bob')), 0,
+  'senza consenso alla profilazione: nessun evento affiliate_click'
 );
 
 select tests.authenticate_as('alice');

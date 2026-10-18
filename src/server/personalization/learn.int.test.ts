@@ -76,6 +76,12 @@ beforeAll(async () => {
     insert into public.preference_weights (user_id, interest_key, explicit, implicit) values
       (${idle.id}, 'villages', 3, 1.0)`);
 
+  // Consenso alla profilazione (passo 8.2): senza, il trigger non scrive gli eventi.
+  await dbAdmin.execute(sql`
+    insert into public.user_consents (user_id, kind, granted, text_version) values
+      (${learner.id}, 'profiling', true, 'profiling-test-v1'),
+      (${idle.id}, 'profiling', true, 'profiling-test-v1')`);
+
   // Cinque eventi positivi o negativi per learner, un evento per idle.
   await dbAdmin.execute(sql`
     insert into public.user_events (user_id, type, activity_id) values

@@ -6,6 +6,12 @@ import { sessionUserId, testEmail, waitForCode } from "./helpers";
 // viaggio in una schermata (parte 5); Preferenze con i soli gusti, mobilità e dieta solo con
 // consenso; il profilo resta all'utente nella conversione da ospite ad account.
 
+// In locale la prima compilazione delle pagine e il CAPTCHA rendono ogni percorso lungo: il
+// percorso completo (sette domande, invio, pagine dopo l'invio) supera i 30 secondi predefiniti.
+test.beforeEach(({}, testInfo) => {
+  testInfo.setTimeout(120_000);
+});
+
 const FALLBACK = "Tra le più vicine ai tuoi gusti in questa zona";
 const next = (page: Page) => page.getByRole("button", { name: "Avanti", exact: true });
 
@@ -243,10 +249,12 @@ test("Preferenze: mobilità e dieta solo con consenso, e si cancellano", async (
   }
   await expect(page.getByRole("heading", { name: "Quanto conta ognuno?" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Che ritmo ti piace?" })).toBeVisible();
-  await expect(page.locator('[data-pending-id="preferences.consent"]')).toHaveAttribute("data-pending", "testi");
+  // Consenso ai dati sensibili: testo vero, nessun segnaposto.
+  await expect(page.getByText("Possono arrivare all'assistente", { exact: false })).toBeVisible();
+  await expect(page.locator('[data-pending-id="preferences.consent"]')).toHaveCount(0);
   const mobility = page.getByRole("checkbox", { name: "Mobilità ridotta: solo attività accessibili" });
   await expect(mobility).toBeDisabled();
-  await page.getByRole("checkbox", { name: "Testo in preparazione." }).check();
+  await page.getByRole("checkbox", { name: "Uso mobilità e dieta per filtrare le proposte" }).check();
   await mobility.check();
   await page.getByRole("checkbox", { name: "Vegana" }).check();
   await page.getByRole("button", { name: "Salva i gusti" }).click();
@@ -256,8 +264,11 @@ test("Preferenze: mobilità e dieta solo con consenso, e si cancellano", async (
   );
   expect(saved).toMatchObject({ reduced_mobility: true, diet: ["vegan"], consent: true });
 
-  await page.getByRole("button", { name: "Cancella mobilità e dieta" }).click();
-  await expect(page).toHaveURL(/cancellati=1$/, { timeout: 30_000 });
+  // Il pulsante agisce solo dopo l'idratazione: se il clic arriva prima, si ripete (l'azione è idempotente).
+  await expect(async () => {
+    await page.getByRole("button", { name: "Cancella mobilità e dieta" }).click();
+    await expect(page).toHaveURL(/cancellati=1$/, { timeout: 5_000 });
+  }).toPass({ timeout: 60_000 });
   await expect(page.getByRole("status")).toHaveText("Mobilità e dieta cancellate.");
   const [cleared] = await withDb(
     (sql) => sql`select reduced_mobility, diet, sensitive_consent_at, car_access::text as car from public.user_constraints where user_id = ${id}`,

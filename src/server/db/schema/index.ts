@@ -15,3 +15,4 @@ export * from "./drive-times";
 export * from "./guides";
 export * from "./notifications";
 export * from "./search";
+export * from "./privacy";

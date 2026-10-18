@@ -2,7 +2,7 @@
 
 import { useState, useTransition, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Button, PendingText, PreferenceScale } from "@/components/design";
+import { Button, PreferenceScale } from "@/components/design";
 import {
   deleteSensitivePreferences,
   savePreferences,
@@ -16,7 +16,7 @@ import { InterestsField, PaceField, WeightsField, type Interest } from "./fields
 // i pesi, ritmo, tolleranza al caldo e alla folla, mobilità ridotta e dieta. Giorni, periodo,
 // compagnia, aeroporto, budget e auto sono del viaggio e stanno in "Crea il tuo viaggio".
 // Mobilità e dieta sono dati sensibili: si compilano solo dopo aver spuntato il consenso
-// (testo in sospeso, lo scrive Ludovico), e si possono cancellare. Lo scoring le usa come
+// (testo in Preferences.consentLabel), e si possono cancellare. Lo scoring le usa come
 // filtri; la dieta è indicativa.
 
 const DIETS = ["vegetarian", "vegan", "gluten_free", "lactose_free"] as const;
@@ -93,18 +93,23 @@ export function PreferencesForm({
         "esigenze",
         t("needsTitle"),
         <div className="flex flex-col gap-4">
-          <label className="flex min-h-11 items-start gap-3 text-body">
-            <input
-              type="checkbox"
-              className="mt-1 size-5 accent-lava"
-              checked={extra.sensitiveConsent}
-              onChange={(e) =>
-                setX(e.target.checked ? { sensitiveConsent: true } : { sensitiveConsent: false, reducedMobility: false, diet: [] })
-              }
-            />
-            {/* Testo del consenso: lo scrive Ludovico (in sospeso, blocca il lancio). */}
-            <PendingText id="preferences.consent" inline />
-          </label>
+          <div className="flex flex-col gap-1">
+            <label className="flex min-h-11 items-start gap-3 text-body">
+              <input
+                type="checkbox"
+                className="mt-1 size-5 shrink-0 accent-lava"
+                checked={extra.sensitiveConsent}
+                aria-describedby="sensitive-consent-detail"
+                onChange={(e) =>
+                  setX(e.target.checked ? { sensitiveConsent: true } : { sensitiveConsent: false, reducedMobility: false, diet: [] })
+                }
+              />
+              {t("consentLabel")}
+            </label>
+            <p id="sensitive-consent-detail" className="pl-8 text-body-s text-lava-muted">
+              {t("consentDetail")}
+            </p>
+          </div>
           <fieldset disabled={!extra.sensitiveConsent} className="flex flex-col gap-3 disabled:opacity-60">
             <legend className="sr-only">{t("needsTitle")}</legend>
             <label className="flex min-h-11 items-center gap-3 text-body">
