@@ -20,6 +20,8 @@ export const PENDING_ACTIONS = {
   "legal.privacy": "legale",
   "legal.cookie": "legale",
   "legal.terms": "legale",
+  // Aggiungi al carrello (ProductCard, pagina prodotto): il carrello è il passo 7.2.
+  "cart.add": "7.2",
 } as const;
 
 export type PendingId = keyof typeof PENDING_ACTIONS;

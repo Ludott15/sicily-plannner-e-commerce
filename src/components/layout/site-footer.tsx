@@ -56,6 +56,19 @@ export async function SiteFooter() {
             </ul>
           </div>
           <div>
+            <p className="font-semibold">{tNav("shop")}</p>
+            <ul className="mt-1 flex flex-col leading-7">
+              <li>
+                <Link
+                  href="/shop"
+                  className="text-on-ink-muted no-underline hover:underline"
+                >
+                  {tNav("shopProducts")}
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
             <p className="font-semibold">{BRAND_NAME}</p>
             <ul className="mt-1 flex flex-col leading-7">
               {(

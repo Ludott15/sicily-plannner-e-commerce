@@ -6,6 +6,8 @@ import { dbPublic } from "@/server/db/public";
 import { activities, areas, guideLinks, guides, itineraries, places } from "@/server/db/schema";
 import { coverJson } from "./covers";
 import { activityCardColumns, templateSummaries, withTags, type CatalogActivity } from "./queries";
+import { productCardsForArea } from "@/server/shop/queries";
+import type { ShopCard } from "@/server/shop/types";
 
 // Letture pubbliche delle aree di viaggio (dbPublic, ruolo anon): come le altre letture del
 // catalogo, le attività inattive e gli itinerari non pronti non escono da qui.
@@ -22,8 +24,8 @@ export type AreaPage = {
   places: { slug: string; name: string }[];
   activities: CatalogActivity[];
   itineraries: { slug: string; title: string; days: number }[];
-  // I prodotti non hanno ancora un'area (arrivano con lo shop, passo 7): la lista resta vuota.
-  products: { slug: string; title: string }[];
+  // Prodotti vendibili dell'area (area diretta o luogo dell'area), dallo shop.
+  products: ShopCard[];
   guides: { slug: string; title: string }[];
 };
 
@@ -88,6 +90,8 @@ export const getAreaPage = cache((slug: string, locale: string) =>
       return [{ slug: guide.slug, title: en && guide.titleEn ? guide.titleEn : guide.titleIt }];
     });
 
+    const productCards = await productCardsForArea(tx, area.id, locale);
+
     return {
       slug: area.slug,
       name: en ? area.nameEn : area.nameIt,
@@ -96,7 +100,7 @@ export const getAreaPage = cache((slug: string, locale: string) =>
       places: placeRows,
       activities: await withTags(tx, activityRows),
       itineraries: itineraryRows.map(({ slug, title, days }) => ({ slug, title, days })),
-      products: [],
+      products: productCards,
       guides: guideList,
     };
   }),

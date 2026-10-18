@@ -514,6 +514,22 @@ $$;
 ALTER FUNCTION "public"."badge_progress"("p_user" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."box_items_check_box"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if not exists (select 1 from public.products where id = new.box_id and is_box) then
+    raise exception 'box_not_box' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."box_items_check_box"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."can_access_itinerary"("iid" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -1871,6 +1887,18 @@ CREATE OR REPLACE FUNCTION "public"."media_is_public"("p_media_id" "uuid") RETUR
       select 1 from public.itineraries
       where cover_media_id = p_media_id and is_template and slug is not null
     )
+    or exists (
+      select 1 from public.producers
+      where cover_media_id = p_media_id and is_public and is_active
+    )
+    or exists (
+      select 1 from public.products
+      where cover_media_id = p_media_id and public.product_is_sellable(id)
+    )
+    or exists (
+      select 1 from public.product_media pm
+      where pm.media_id = p_media_id and public.product_is_sellable(pm.product_id)
+    )
   );
 $$;
 
@@ -2087,6 +2115,46 @@ $$;
 
 
 ALTER FUNCTION "public"."prevent_mutation"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."product_is_sellable"("p_product_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select exists (
+    select 1
+    from public.products p
+    join public.producers pr on pr.id = p.producer_id
+    join public.suppliers s on s.id = p.supplier_id
+    where p.id = p_product_id
+      and p.is_active
+      and pr.is_public
+      and pr.is_active
+      and s.is_active
+  );
+$$;
+
+
+ALTER FUNCTION "public"."product_is_sellable"("p_product_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."product_links_check_target"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if new.kind = 'place' and not exists (select 1 from public.places where id = new.target_id) then
+    raise exception 'product_link_target_missing' using errcode = 'P0001';
+  end if;
+  if new.kind = 'activity' and not exists (select 1 from public.activities where id = new.target_id) then
+    raise exception 'product_link_target_missing' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."product_links_check_target"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."public_name_for"("p_display_name" "text", "p_fallback_name" "text") RETURNS "text"
@@ -2729,12 +2797,13 @@ begin
       from (
         select
           pr.slug,
-          pr.title,
-          null::text as subtitle,
+          case when v_en and pr.title_en is not null then pr.title_en else pr.title end as title,
+          pm.name as subtitle,
           (ts_rank(to_tsvector('public.isula_it', pr.title), v_tsq)
             + extensions.similarity(public.f_unaccent(lower(pr.title)), v_norm))::real as score
         from public.products pr
-        where pr.is_active
+        join public.producers pm on pm.id = pr.producer_id
+        where public.product_is_sellable(pr.id)
           and (
             to_tsvector('public.isula_it', pr.title) @@ v_tsq
             or public.f_unaccent(lower(pr.title)) operator(extensions.%) v_norm
@@ -3320,6 +3389,18 @@ CREATE TABLE IF NOT EXISTS "public"."badges" (
 
 
 ALTER TABLE "public"."badges" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."box_items" (
+    "box_id" "uuid" NOT NULL,
+    "product_id" "uuid" NOT NULL,
+    "quantity" smallint DEFAULT 1 NOT NULL,
+    CONSTRAINT "box_items_not_self" CHECK (("box_id" <> "product_id")),
+    CONSTRAINT "box_items_quantity_positive" CHECK (("quantity" > 0))
+);
+
+
+ALTER TABLE "public"."box_items" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."chat_messages" (
@@ -3992,17 +4073,50 @@ ALTER TABLE "public"."preference_weights" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."producers" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" "text" NOT NULL,
-    "email" "text" NOT NULL,
+    "email" "text",
     "vat_number" "text",
     "address" "text",
-    "lead_time_days" smallint DEFAULT 3 NOT NULL,
     "is_active" boolean DEFAULT true NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "producers_lead_time_positive" CHECK (("lead_time_days" > 0))
+    "slug" "text" NOT NULL,
+    "story_it" "text",
+    "story_en" "text",
+    "area_id" "uuid",
+    "place_id" "uuid",
+    "cover_media_id" "uuid",
+    "is_public" boolean DEFAULT false NOT NULL,
+    CONSTRAINT "producers_name_length" CHECK ((("char_length"("btrim"("name")) >= 1) AND ("char_length"("btrim"("name")) <= 200))),
+    CONSTRAINT "producers_slug_format" CHECK (("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::"text")),
+    CONSTRAINT "producers_story_length" CHECK ((("char_length"("story_it") <= 4000) AND ("char_length"("story_en") <= 4000)))
 );
 
 
 ALTER TABLE "public"."producers" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."product_links" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "product_id" "uuid" NOT NULL,
+    "kind" "text" NOT NULL,
+    "target_id" "uuid" NOT NULL,
+    "position" smallint DEFAULT 0 NOT NULL,
+    CONSTRAINT "product_links_kind_valid" CHECK (("kind" = ANY (ARRAY['place'::"text", 'activity'::"text"]))),
+    CONSTRAINT "product_links_position_non_negative" CHECK (("position" >= 0))
+);
+
+
+ALTER TABLE "public"."product_links" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."product_media" (
+    "product_id" "uuid" NOT NULL,
+    "media_id" "uuid" NOT NULL,
+    "position" smallint DEFAULT 0 NOT NULL,
+    CONSTRAINT "product_media_position_non_negative" CHECK (("position" >= 0))
+);
+
+
+ALTER TABLE "public"."product_media" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."products" (
@@ -4012,14 +4126,48 @@ CREATE TABLE IF NOT EXISTS "public"."products" (
     "title" "text" NOT NULL,
     "description" "text",
     "price_cents" integer NOT NULL,
-    "weight_g" integer NOT NULL,
+    "weight_g" integer,
     "images" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
     "is_box" boolean DEFAULT false NOT NULL,
-    "is_active" boolean DEFAULT true NOT NULL,
+    "is_active" boolean DEFAULT false NOT NULL,
     "stripe_price_id" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "supplier_id" "uuid" NOT NULL,
+    "supplier_sku" "text",
+    "title_en" "text",
+    "description_en" "text",
+    "category" "text" NOT NULL,
+    "format_label" "text",
+    "cost_cents" integer,
+    "vat_rate" smallint NOT NULL,
+    "ingredients_it" "text",
+    "ingredients_en" "text",
+    "allergens" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "allergens_declared" boolean DEFAULT false NOT NULL,
+    "storage_it" "text",
+    "storage_en" "text",
+    "min_shelf_life_days" smallint,
+    "is_perishable" boolean DEFAULT false NOT NULL,
+    "stock_status" "text" DEFAULT 'available'::"text" NOT NULL,
+    "lead_time_days" smallint DEFAULT 3 NOT NULL,
+    "area_id" "uuid",
+    "place_id" "uuid",
+    "cover_media_id" "uuid",
+    CONSTRAINT "products_active_requires_allergens_declared" CHECK (((NOT "is_active") OR "allergens_declared")),
+    CONSTRAINT "products_active_requires_label_info" CHECK (((NOT "is_active") OR "is_box" OR (("ingredients_it" IS NOT NULL) AND ("format_label" IS NOT NULL)))),
+    CONSTRAINT "products_allergens_valid" CHECK (("allergens" <@ ARRAY['gluten'::"text", 'crustaceans'::"text", 'eggs'::"text", 'fish'::"text", 'peanuts'::"text", 'soybeans'::"text", 'milk'::"text", 'nuts'::"text", 'celery'::"text", 'mustard'::"text", 'sesame'::"text", 'sulphites'::"text", 'lupin'::"text", 'molluscs'::"text"])),
+    CONSTRAINT "products_category_valid" CHECK (("category" = ANY (ARRAY['dolci'::"text", 'conserve'::"text", 'olio'::"text", 'vino'::"text", 'pasta'::"text", 'formaggi'::"text", 'spezie'::"text", 'box'::"text", 'altro'::"text"]))),
+    CONSTRAINT "products_cost_non_negative" CHECK ((("cost_cents" IS NULL) OR ("cost_cents" >= 0))),
+    CONSTRAINT "products_description_length" CHECK ((("char_length"("description") <= 2000) AND ("char_length"("description_en") <= 2000))),
+    CONSTRAINT "products_lead_time_positive" CHECK (("lead_time_days" > 0)),
+    CONSTRAINT "products_min_shelf_life_positive" CHECK ((("min_shelf_life_days" IS NULL) OR ("min_shelf_life_days" > 0))),
     CONSTRAINT "products_price_non_negative" CHECK (("price_cents" >= 0)),
-    CONSTRAINT "products_weight_positive" CHECK (("weight_g" > 0))
+    CONSTRAINT "products_slug_format" CHECK (("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::"text")),
+    CONSTRAINT "products_stock_status_valid" CHECK (("stock_status" = ANY (ARRAY['available'::"text", 'on_request'::"text", 'unavailable'::"text"]))),
+    CONSTRAINT "products_supplier_sku_length" CHECK ((("char_length"("btrim"("supplier_sku")) >= 1) AND ("char_length"("btrim"("supplier_sku")) <= 80))),
+    CONSTRAINT "products_title_length" CHECK ((("char_length"("btrim"("title")) >= 1) AND ("char_length"("btrim"("title")) <= 200))),
+    CONSTRAINT "products_vat_rate_valid" CHECK (("vat_rate" = ANY (ARRAY[4, 10, 22]))),
+    CONSTRAINT "products_weight_positive" CHECK ((("weight_g" IS NULL) OR ("weight_g" > 0)))
 );
 
 
@@ -4134,6 +4282,27 @@ CREATE TABLE IF NOT EXISTS "public"."season_awards" (
 
 
 ALTER TABLE "public"."season_awards" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."suppliers" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" "text" NOT NULL,
+    "kind" "text" DEFAULT 'manual'::"text" NOT NULL,
+    "contact_email" "text" NOT NULL,
+    "portal_url" "text",
+    "adapter_key" "text",
+    "notes" "text",
+    "is_active" boolean DEFAULT true NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "suppliers_api_has_adapter" CHECK ((("kind" = 'manual'::"text") OR ("adapter_key" IS NOT NULL))),
+    CONSTRAINT "suppliers_contact_email_format" CHECK (("contact_email" ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$'::"text")),
+    CONSTRAINT "suppliers_kind_valid" CHECK (("kind" = ANY (ARRAY['manual'::"text", 'api'::"text"]))),
+    CONSTRAINT "suppliers_name_length" CHECK ((("char_length"("btrim"("name")) >= 1) AND ("char_length"("btrim"("name")) <= 200))),
+    CONSTRAINT "suppliers_portal_url_https" CHECK ((("portal_url" IS NULL) OR ("portal_url" ~ '^https://'::"text")))
+);
+
+
+ALTER TABLE "public"."suppliers" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."user_badges" (
@@ -4310,6 +4479,11 @@ ALTER TABLE ONLY "public"."areas"
 
 ALTER TABLE ONLY "public"."badges"
     ADD CONSTRAINT "badges_pkey" PRIMARY KEY ("key");
+
+
+
+ALTER TABLE ONLY "public"."box_items"
+    ADD CONSTRAINT "box_items_box_id_product_id_pk" PRIMARY KEY ("box_id", "product_id");
 
 
 
@@ -4528,6 +4702,21 @@ ALTER TABLE ONLY "public"."producers"
 
 
 
+ALTER TABLE ONLY "public"."producers"
+    ADD CONSTRAINT "producers_slug_unique" UNIQUE ("slug");
+
+
+
+ALTER TABLE ONLY "public"."product_links"
+    ADD CONSTRAINT "product_links_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."product_media"
+    ADD CONSTRAINT "product_media_product_id_media_id_pk" PRIMARY KEY ("product_id", "media_id");
+
+
+
 ALTER TABLE ONLY "public"."products"
     ADD CONSTRAINT "products_pkey" PRIMARY KEY ("id");
 
@@ -4575,6 +4764,11 @@ ALTER TABLE ONLY "public"."search_misses"
 
 ALTER TABLE ONLY "public"."season_awards"
     ADD CONSTRAINT "season_awards_season_rank_pk" PRIMARY KEY ("season", "rank");
+
+
+
+ALTER TABLE ONLY "public"."suppliers"
+    ADD CONSTRAINT "suppliers_pkey" PRIMARY KEY ("id");
 
 
 
@@ -4647,6 +4841,10 @@ CREATE INDEX "affiliate_clicks_created_at_idx" ON "public"."affiliate_clicks" US
 
 
 CREATE INDEX "affiliate_conversions_subid_idx" ON "public"."affiliate_conversions" USING "btree" ("subid");
+
+
+
+CREATE INDEX "box_items_product_id_idx" ON "public"."box_items" USING "btree" ("product_id");
 
 
 
@@ -4830,6 +5028,42 @@ CREATE INDEX "points_ledger_season_user_idx" ON "public"."points_ledger" USING "
 
 
 
+CREATE INDEX "producers_area_id_idx" ON "public"."producers" USING "btree" ("area_id");
+
+
+
+CREATE INDEX "producers_cover_media_id_idx" ON "public"."producers" USING "btree" ("cover_media_id");
+
+
+
+CREATE INDEX "producers_place_id_idx" ON "public"."producers" USING "btree" ("place_id");
+
+
+
+CREATE INDEX "product_links_target_idx" ON "public"."product_links" USING "btree" ("kind", "target_id");
+
+
+
+CREATE UNIQUE INDEX "product_links_unique" ON "public"."product_links" USING "btree" ("product_id", "kind", "target_id");
+
+
+
+CREATE INDEX "product_media_media_id_idx" ON "public"."product_media" USING "btree" ("media_id");
+
+
+
+CREATE INDEX "products_area_id_idx" ON "public"."products" USING "btree" ("area_id");
+
+
+
+CREATE INDEX "products_cover_media_id_idx" ON "public"."products" USING "btree" ("cover_media_id");
+
+
+
+CREATE INDEX "products_place_id_idx" ON "public"."products" USING "btree" ("place_id");
+
+
+
 CREATE INDEX "products_producer_id_idx" ON "public"."products" USING "btree" ("producer_id");
 
 
@@ -4839,6 +5073,14 @@ CREATE INDEX "products_search_fts_idx" ON "public"."products" USING "gin" ("to_t
 
 
 CREATE INDEX "products_search_trgm_idx" ON "public"."products" USING "gin" ("public"."f_unaccent"("lower"("title")) "extensions"."gin_trgm_ops") WHERE "is_active";
+
+
+
+CREATE INDEX "products_supplier_id_idx" ON "public"."products" USING "btree" ("supplier_id");
+
+
+
+CREATE UNIQUE INDEX "products_supplier_sku_unique" ON "public"."products" USING "btree" ("supplier_id", "supplier_sku") WHERE ("supplier_sku" IS NOT NULL);
 
 
 
@@ -4871,6 +5113,10 @@ CREATE OR REPLACE TRIGGER "admin_audit_log_immutable" BEFORE DELETE OR UPDATE ON
 
 
 CREATE OR REPLACE TRIGGER "admin_audit_log_no_truncate" BEFORE TRUNCATE ON "public"."admin_audit_log" FOR EACH STATEMENT EXECUTE FUNCTION "public"."prevent_mutation"();
+
+
+
+CREATE OR REPLACE TRIGGER "box_items_box_is_box" BEFORE INSERT OR UPDATE ON "public"."box_items" FOR EACH ROW EXECUTE FUNCTION "public"."box_items_check_box"();
 
 
 
@@ -4939,6 +5185,10 @@ CREATE OR REPLACE TRIGGER "points_ledger_immutable" BEFORE DELETE OR UPDATE ON "
 
 
 CREATE OR REPLACE TRIGGER "points_ledger_no_truncate" BEFORE TRUNCATE ON "public"."points_ledger" FOR EACH STATEMENT EXECUTE FUNCTION "public"."prevent_mutation"();
+
+
+
+CREATE OR REPLACE TRIGGER "product_links_target_exists" BEFORE INSERT OR UPDATE ON "public"."product_links" FOR EACH ROW EXECUTE FUNCTION "public"."product_links_check_target"();
 
 
 
@@ -5027,6 +5277,16 @@ ALTER TABLE ONLY "public"."area_drive_times"
 
 ALTER TABLE ONLY "public"."areas"
     ADD CONSTRAINT "areas_cover_media_id_media_id_fk" FOREIGN KEY ("cover_media_id") REFERENCES "public"."media"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."box_items"
+    ADD CONSTRAINT "box_items_box_id_products_id_fk" FOREIGN KEY ("box_id") REFERENCES "public"."products"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."box_items"
+    ADD CONSTRAINT "box_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE RESTRICT;
 
 
 
@@ -5325,8 +5585,58 @@ ALTER TABLE ONLY "public"."preference_weights"
 
 
 
+ALTER TABLE ONLY "public"."producers"
+    ADD CONSTRAINT "producers_area_id_areas_id_fk" FOREIGN KEY ("area_id") REFERENCES "public"."areas"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."producers"
+    ADD CONSTRAINT "producers_cover_media_id_media_id_fk" FOREIGN KEY ("cover_media_id") REFERENCES "public"."media"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."producers"
+    ADD CONSTRAINT "producers_place_id_places_id_fk" FOREIGN KEY ("place_id") REFERENCES "public"."places"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."product_links"
+    ADD CONSTRAINT "product_links_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."product_media"
+    ADD CONSTRAINT "product_media_media_id_media_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."product_media"
+    ADD CONSTRAINT "product_media_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."products"
+    ADD CONSTRAINT "products_area_id_areas_id_fk" FOREIGN KEY ("area_id") REFERENCES "public"."areas"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."products"
+    ADD CONSTRAINT "products_cover_media_id_media_id_fk" FOREIGN KEY ("cover_media_id") REFERENCES "public"."media"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."products"
+    ADD CONSTRAINT "products_place_id_places_id_fk" FOREIGN KEY ("place_id") REFERENCES "public"."places"("id") ON DELETE SET NULL;
+
+
+
 ALTER TABLE ONLY "public"."products"
     ADD CONSTRAINT "products_producer_id_producers_id_fk" FOREIGN KEY ("producer_id") REFERENCES "public"."producers"("id") ON DELETE RESTRICT;
+
+
+
+ALTER TABLE ONLY "public"."products"
+    ADD CONSTRAINT "products_supplier_id_suppliers_id_fk" FOREIGN KEY ("supplier_id") REFERENCES "public"."suppliers"("id") ON DELETE RESTRICT;
 
 
 
@@ -5581,6 +5891,17 @@ CREATE POLICY "badges_select_all" ON "public"."badges" FOR SELECT TO "authentica
 
 
 CREATE POLICY "badges_update_admin" ON "public"."badges" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."box_items" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "box_items_select" ON "public"."box_items" FOR SELECT TO "authenticated", "anon" USING ((( SELECT "public"."is_admin"() AS "is_admin") OR ("public"."product_is_sellable"("box_id") AND "public"."product_is_sellable"("product_id"))));
+
+
+
+CREATE POLICY "box_items_write_admin" ON "public"."box_items" TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
 
 
 
@@ -6046,7 +6367,37 @@ CREATE POLICY "producers_select_admin" ON "public"."producers" FOR SELECT TO "au
 
 
 
+CREATE POLICY "producers_select_public" ON "public"."producers" FOR SELECT TO "authenticated", "anon" USING (("is_public" AND "is_active"));
+
+
+
 CREATE POLICY "producers_update_admin" ON "public"."producers" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."product_links" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "product_links_select" ON "public"."product_links" FOR SELECT TO "authenticated", "anon" USING ((( SELECT "public"."is_admin"() AS "is_admin") OR ("public"."product_is_sellable"("product_id") AND ((("kind" = 'place'::"text") AND (EXISTS ( SELECT 1
+   FROM "public"."places" "pl"
+  WHERE (("pl"."id" = "product_links"."target_id") AND "pl"."is_active")))) OR (("kind" = 'activity'::"text") AND (EXISTS ( SELECT 1
+   FROM "public"."activities" "a"
+  WHERE (("a"."id" = "product_links"."target_id") AND "a"."is_active"))))))));
+
+
+
+CREATE POLICY "product_links_write_admin" ON "public"."product_links" TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."product_media" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "product_media_select" ON "public"."product_media" FOR SELECT TO "authenticated", "anon" USING (("public"."product_is_sellable"("product_id") OR ( SELECT "public"."is_admin"() AS "is_admin")));
+
+
+
+CREATE POLICY "product_media_write_admin" ON "public"."product_media" TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
 
 
 
@@ -6061,11 +6412,11 @@ CREATE POLICY "products_insert_admin" ON "public"."products" FOR INSERT TO "auth
 
 
 
-CREATE POLICY "products_select_active_anon" ON "public"."products" FOR SELECT TO "anon" USING ("is_active");
+CREATE POLICY "products_select_admin" ON "public"."products" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
 
 
 
-CREATE POLICY "products_select_active_or_admin" ON "public"."products" FOR SELECT TO "authenticated" USING (("is_active" OR ( SELECT "public"."is_admin"() AS "is_admin")));
+CREATE POLICY "products_select_sellable" ON "public"."products" FOR SELECT TO "authenticated", "anon" USING (("is_active" AND "public"."product_is_sellable"("id")));
 
 
 
@@ -6116,6 +6467,25 @@ ALTER TABLE "public"."season_awards" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "season_awards_select_admin" ON "public"."season_awards" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."suppliers" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "suppliers_delete_admin" ON "public"."suppliers" FOR DELETE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "suppliers_insert_admin" ON "public"."suppliers" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "suppliers_select_admin" ON "public"."suppliers" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "suppliers_update_admin" ON "public"."suppliers" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
 
 
 
@@ -6209,6 +6579,12 @@ GRANT ALL ON FUNCTION "public"."badge_criterion_value"("p_user" "uuid", "p_crite
 
 REVOKE ALL ON FUNCTION "public"."badge_progress"("p_user" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."badge_progress"("p_user" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."box_items_check_box"() TO "anon";
+GRANT ALL ON FUNCTION "public"."box_items_check_box"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."box_items_check_box"() TO "service_role";
 
 
 
@@ -6512,6 +6888,19 @@ GRANT ALL ON FUNCTION "public"."points_ledger_award_badges"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "anon";
 GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."product_is_sellable"("p_product_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."product_is_sellable"("p_product_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."product_is_sellable"("p_product_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."product_is_sellable"("p_product_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."product_links_check_target"() TO "anon";
+GRANT ALL ON FUNCTION "public"."product_links_check_target"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."product_links_check_target"() TO "service_role";
 
 
 
@@ -6834,6 +7223,12 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."areas" TO "authenticated";
 GRANT ALL ON TABLE "public"."badges" TO "service_role";
 GRANT SELECT ON TABLE "public"."badges" TO "anon";
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."badges" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."box_items" TO "service_role";
+GRANT SELECT ON TABLE "public"."box_items" TO "anon";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."box_items" TO "authenticated";
 
 
 
@@ -7523,13 +7918,219 @@ GRANT UPDATE("updated_at") ON TABLE "public"."preference_weights" TO "authentica
 
 
 GRANT ALL ON TABLE "public"."producers" TO "service_role";
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."producers" TO "authenticated";
+GRANT INSERT,DELETE,UPDATE ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("id") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("name") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("name") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("is_active") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("is_active") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("created_at") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("created_at") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("slug") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("slug") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("story_it") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("story_it") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("story_en") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("story_en") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("area_id") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("area_id") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("place_id") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("place_id") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("cover_media_id") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("cover_media_id") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("is_public") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("is_public") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."product_links" TO "service_role";
+GRANT SELECT ON TABLE "public"."product_links" TO "anon";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."product_links" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."product_media" TO "service_role";
+GRANT SELECT ON TABLE "public"."product_media" TO "anon";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."product_media" TO "authenticated";
 
 
 
 GRANT ALL ON TABLE "public"."products" TO "service_role";
-GRANT SELECT ON TABLE "public"."products" TO "anon";
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."products" TO "authenticated";
+GRANT INSERT,DELETE,UPDATE ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("id") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("slug") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("slug") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("producer_id") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("producer_id") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("title") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("title") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("description") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("description") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("price_cents") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("price_cents") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("weight_g") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("weight_g") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("is_box") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("is_box") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("is_active") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("is_active") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("created_at") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("created_at") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("title_en") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("title_en") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("description_en") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("description_en") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("category") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("category") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("format_label") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("format_label") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("vat_rate") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("vat_rate") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("ingredients_it") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("ingredients_it") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("ingredients_en") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("ingredients_en") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("allergens") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("allergens") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("allergens_declared") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("allergens_declared") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("storage_it") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("storage_it") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("storage_en") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("storage_en") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("min_shelf_life_days") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("min_shelf_life_days") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("is_perishable") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("is_perishable") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("stock_status") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("stock_status") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("lead_time_days") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("lead_time_days") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("area_id") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("area_id") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("place_id") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("place_id") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("cover_media_id") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("cover_media_id") ON TABLE "public"."products" TO "authenticated";
 
 
 
@@ -7566,6 +8167,11 @@ GRANT SELECT ON TABLE "public"."search_misses" TO "authenticated";
 
 GRANT ALL ON TABLE "public"."season_awards" TO "service_role";
 GRANT SELECT ON TABLE "public"."season_awards" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."suppliers" TO "service_role";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."suppliers" TO "authenticated";
 
 
 

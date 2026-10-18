@@ -43,7 +43,6 @@ export function normalizeSearchQuery(raw: string): string {
 }
 
 // Percorso pubblico di un risultato, senza prefisso di lingua (lo aggiunge il Link di next-intl).
-// I prodotti non hanno ancora una pagina pubblica: senza href non compaiono nei risultati.
 export function searchHref(kind: SearchKind, slug: string): string | null {
   switch (kind) {
     case "place":
@@ -55,7 +54,7 @@ export function searchHref(kind: SearchKind, slug: string): string | null {
     case "guide":
       return `/guide/${slug}`;
     case "product":
-      return null;
+      return `/prodotti/${slug}`;
   }
 }
 
