@@ -107,7 +107,8 @@
     "role": "Role",
     "memberSince": "Member since",
     "accountHeading": "Account",
-    "hubHeading": "Your sections"
+    "hubHeading": "Your sections",
+    "privacyLink": "Privacy and data"
   },
   "Catalog": {
     "activitiesTitle": "Things to do in Sicily",
@@ -1182,7 +1183,7 @@
   },
   "Cookies": {
     "title": "Cookies",
-    "text": "We use technical cookies, needed for the site to work. Other cookies, for example to measure visits, only if you accept. Details are on the <cookie>Cookies</cookie> page.",
+    "text": "We use only technical cookies, needed for the site to work. If you accept, we add one more: an anonymous code that lets us recognise clicks to partners without an account and credit commissions. We do not measure visits. Details are on the <cookie>Cookies</cookie> page.",
     "accept": "Accept",
     "reject": "Reject",
     "preferences": "Cookie preferences"
@@ -1289,7 +1290,12 @@
     "tastesTitle": "Your tastes",
     "editTastes": "Edit tastes",
     "tastesNone": "No interests given: trips draw on the whole catalogue.",
-    "tastesPace": "Pace: {pace}"
+    "tastesPace": "Pace: {pace}",
+    "profilingLegend": "Learning from your clicks",
+    "profilingTitle": "Should Isula learn from your clicks, additions and votes to improve the suggestions?",
+    "profilingHint": "If yes, we use what you do in the app to better understand what you like. If no, the suggestions are based only on the tastes you chose here. You can change your mind at any time, on the Privacy page of your profile.",
+    "profilingYes": "Yes, learn from my clicks",
+    "profilingNo": "No, thanks"
   },
   "Proposals": {
     "title": "Here are three trips for you",
@@ -1358,7 +1364,9 @@
     "heading": "Your tastes",
     "subtitle": "They apply to all your trips. Days, period, company, airport, budget and car are chosen for each trip, in \"Plan your trip\".",
     "empty": "You haven't told us what you like yet. A few questions are enough, and they apply to all your trips.",
-    "createTrip": "Plan your trip"
+    "createTrip": "Plan your trip",
+    "consentLabel": "Use mobility and diet to filter suggestions",
+    "consentDetail": "They can reach the assistant, run by Anthropic (United States), only to answer your questions. You can delete them at any time, with the button below."
   },
   "Trips": {
     "listTitle": "My trips",
@@ -2015,7 +2023,8 @@
       "not_eligible": "You can review the activities in your trip and the ones you opened an offer for.",
       "cannot_report_own": "You cannot report your own review.",
       "failed": "We could not save. Try again."
-    }
+    },
+    "deletedUser": "Deleted user"
   },
   "Points": {
     "eyebrow": "Your account",
@@ -2554,5 +2563,62 @@
     "producerEmpty": "No products from this producer for now.",
     "noAllergens": "None of the 14 allergens of EU Reg. 1169/2011",
     "withdrawalNotice": "You have 14 days from delivery to withdraw from the purchase without giving a reason."
+  },
+  "Privacy": {
+    "title": "Privacy and data",
+    "intro": "Here you decide which data Isula can use about you, download a copy of what we hold and, if you want, delete your account.",
+    "consentsHeading": "Your consents",
+    "consentsIntro": "You can change them at any time. Each choice stays recorded with its date.",
+    "consent": {
+      "profiling": {
+        "title": "Learn from my clicks",
+        "text": "Isula uses your clicks, the additions to your trips and your votes to improve the suggestions. Without them, the suggestions are based only on the tastes you chose."
+      },
+      "location": {
+        "title": "Location at check-in",
+        "text": "The browser asks for your location only when you confirm a check-in. We do not save coordinates, only the confirmation."
+      },
+      "sensitive": {
+        "title": "Mobility and diet",
+        "text": "They are used to filter the suggestions. They can reach the assistant, run by Anthropic (United States), only to answer your questions. To change or delete them, go to Preferences."
+      }
+    },
+    "on": "On",
+    "off": "Off",
+    "never": "You have not chosen yet",
+    "lastChoice": "Last choice: {date}",
+    "downloadHeading": "Download your data",
+    "downloadText": "Get a file with your profile, preferences, consents, trips, groups you belong to (without the data of other members), votes, reviews, points, notifications, chats and orders. The file is not kept on the server: you download it right away.",
+    "downloadJson": "Download all data (JSON)",
+    "downloadCsv": "Download points (CSV)",
+    "deleteHeading": "Delete the account",
+    "deleteGuestHeading": "Delete the guest data",
+    "deleteOpen": "Start deletion",
+    "deleteIntro": "Deleting the account removes your trips, votes, points, notifications and chats. Groups you created pass to the oldest member, or are deleted if you are alone. This cannot be undone.",
+    "deleteStays": "These stay, without your name: orders, for tax obligations, and your reviews, shown as Deleted user.",
+    "deleteGuestIntro": "Deleting the guest data removes the trips and preferences saved with this access. This cannot be undone. If you want to keep them, create the account first with your email.",
+    "sendCode": "Send me the code",
+    "codeSent": "We sent a code to the address of your account. If it expires, ask for a new one.",
+    "codeLabel": "6-digit code",
+    "confirmLabel": "Type {phrase} to confirm",
+    "deleteAccount": "Delete the account for good",
+    "deleteGuest": "Delete the guest data",
+    "cancel": "Cancel",
+    "saved": "Choice saved.",
+    "errors": {
+      "invalid": "Check the fields and try again.",
+      "guest_not_allowed": "Create your account to use this feature.",
+      "not_applicable": "This action is not available for your type of access.",
+      "wrong_confirmation": "The phrase does not match: type it exactly as shown.",
+      "invalid_code": "The code is not valid or has expired. Check your email and try again.",
+      "captcha_failed": "We could not verify that you are a person. Try again.",
+      "rate_limited": "You asked for too many codes. Try again in a few minutes.",
+      "failed": "We could not complete the action. Try again."
+    }
+  },
+  "AccountDeleted": {
+    "title": "Account deleted",
+    "text": "We deleted your data and you signed out of this device. Orders stay, for tax obligations; reviews stay, without your name.",
+    "home": "Back to the home page"
   }
 }

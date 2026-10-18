@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { routing } from "@/lib/i18n/routing";
 import { requireUser } from "@/server/auth";
+import { setConsent } from "@/server/privacy/consents";
 import { REPORT_REASONS, type ReportReason } from "./config";
 import { recordCheckIn, reportReview, submitReview } from "./core";
 import type { CheckInResult, ReportReviewState, ReviewFormState } from "./types";
@@ -33,6 +34,13 @@ export async function checkInAction(input: { itemId: string; lat: number; lng: n
   const parsed = checkInSchema.safeParse(input);
   if (!parsed.success) return { status: "error", code: "invalid" };
   const user = await requireUser();
+  // La posizione arriva solo dopo il dialogo di consenso del check-in: quella scelta si registra
+  // (passo 8.2). Le coordinate non si salvano, né qui né altrove.
+  try {
+    await setConsent(user, "location", true);
+  } catch {
+    return { status: "error", code: "failed" };
+  }
   const result = await recordCheckIn(user, parsed.data);
   if (result.status === "ok") {
     revalidatePath("/[locale]/viaggi/[id]", "page");

@@ -143,7 +143,7 @@ select public.refresh_leaderboard();
 
 select tests.authenticate_as('alice');
 select results_eq(
-  $$select public_name, points, rank, is_me from public.seasonal_leaderboard_top(null)
+  $$select public_name, points, (row_number() over (order by rank))::int as posizione, is_me from public.seasonal_leaderboard_top(null)
     where public_name in ('alice', 'bob', 'carol', 'dan')
     order by rank$$,
   $$values ('alice', 70, 1, true), ('dan', 40, 2, false), ('bob', 10, 3, false)$$,
@@ -309,7 +309,7 @@ select throws_ok($$select * from public.reviews$$, '42501', null, 'anon: non leg
 select results_eq(
   $$select column_name::text collate "default" from information_schema.columns
     where table_schema = 'public' and table_name = 'public_reviews' order by ordinal_position$$,
-  $$values ('id'), ('activity_id'), ('rating'), ('body'), ('created_at'), ('display_name'), ('avatar_url'), ('rewarded')$$,
+  $$values ('id'), ('activity_id'), ('rating'), ('body'), ('created_at'), ('display_name'), ('avatar_url'), ('rewarded'), ('author_deleted')$$,
   'public_reviews: espone nome e avatar dell''autore, il premio, senza user_id'
 );
 

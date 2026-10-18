@@ -38,6 +38,9 @@ beforeAll(async () => {
   await dbAdmin.execute(sql`
     insert into public.group_members (group_id, user_id, invited_by, joined_at)
     values (${groupId}, ${member}, ${inviter}, '2099-03-06 13:00+01')`);
+  // Consenso alla profilazione (passo 8.2): senza, il trigger non scrive l'evento.
+  await dbAdmin.execute(sql`
+    insert into public.user_consents (user_id, kind, granted, text_version) values (${member}, 'profiling', true, 'profiling-test-v1')`);
   await dbAdmin.execute(sql`
     insert into public.user_events (user_id, type, created_at) values (${member}, 'view', '2099-03-07 10:00+01')`);
 });

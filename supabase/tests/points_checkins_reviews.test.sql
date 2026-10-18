@@ -300,7 +300,7 @@ select results_eq(
 select results_eq(
   $$select column_name::text collate "default" from information_schema.columns
     where table_schema = 'public' and table_name = 'public_reviews' order by ordinal_position$$,
-  $$values ('id'), ('activity_id'), ('rating'), ('body'), ('created_at'), ('display_name'), ('avatar_url'), ('rewarded')$$,
+  $$values ('id'), ('activity_id'), ('rating'), ('body'), ('created_at'), ('display_name'), ('avatar_url'), ('rewarded'), ('author_deleted')$$,
   'public_reviews: senza user_id, con il flag del premio'
 );
 

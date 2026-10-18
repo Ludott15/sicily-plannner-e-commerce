@@ -7,6 +7,8 @@ select * from no_plan();
 
 select tests.create_user('alice');
 select tests.create_user('bob');
+insert into public.user_consents (user_id, kind, granted, text_version) values (tests.uid('alice'), 'profiling', true, 'profiling-test-v1');
+insert into public.user_consents (user_id, kind, granted, text_version) values (tests.uid('bob'), 'profiling', true, 'profiling-test-v1');
 
 insert into public.user_events (user_id, type)
 values (tests.uid('alice'), 'view'), (tests.uid('alice'), 'view');

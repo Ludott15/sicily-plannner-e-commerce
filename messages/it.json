@@ -107,7 +107,8 @@
     "role": "Ruolo",
     "memberSince": "Iscritto dal",
     "accountHeading": "Account",
-    "hubHeading": "Le tue sezioni"
+    "hubHeading": "Le tue sezioni",
+    "privacyLink": "Privacy e dati"
   },
   "Catalog": {
     "activitiesTitle": "Attività in Sicilia",
@@ -1182,7 +1183,7 @@
   },
   "Cookies": {
     "title": "Cookie",
-    "text": "Usiamo cookie tecnici, necessari al funzionamento del sito. Altri cookie, per esempio per misurare le visite, solo se accetti. I dettagli sono nella pagina <cookie>Cookie</cookie>.",
+    "text": "Usiamo solo cookie tecnici, necessari al funzionamento del sito. Se accetti, ne aggiungiamo uno: un codice anonimo che ci serve a riconoscere i click verso i partner senza account e ad attribuire le commissioni. Non misuriamo le visite. Dettagli nella pagina <cookie>Cookie</cookie>.",
     "accept": "Accetta",
     "reject": "Rifiuta",
     "preferences": "Preferenze cookie"
@@ -1289,7 +1290,12 @@
     "tastesTitle": "I tuoi gusti",
     "editTastes": "Modifica i gusti",
     "tastesNone": "Nessun interesse indicato: i viaggi partono da tutto il catalogo.",
-    "tastesPace": "Ritmo: {pace}"
+    "tastesPace": "Ritmo: {pace}",
+    "profilingLegend": "Impara dai tuoi click",
+    "profilingTitle": "Vuoi che Isula impari dai tuoi click, aggiunte e voti per migliorare le proposte?",
+    "profilingHint": "Se sì, usiamo quello che fai nell'app per capire meglio cosa ti piace. Se no, le proposte si basano solo sui gusti che hai scelto qui. Puoi cambiare idea in ogni momento, nella pagina Privacy del tuo profilo.",
+    "profilingYes": "Sì, impara dai miei click",
+    "profilingNo": "No, grazie"
   },
   "Proposals": {
     "title": "Ecco tre viaggi pensati per te",
@@ -1358,7 +1364,9 @@
     "heading": "I tuoi gusti",
     "subtitle": "Valgono per tutti i tuoi viaggi. Giorni, periodo, compagnia, aeroporto, budget e auto li scegli a ogni viaggio, in \"Crea il tuo viaggio\".",
     "empty": "Non ci hai ancora detto cosa ti piace. Bastano poche domande, e valgono per tutti i tuoi viaggi.",
-    "createTrip": "Crea il tuo viaggio"
+    "createTrip": "Crea il tuo viaggio",
+    "consentLabel": "Uso mobilità e dieta per filtrare le proposte",
+    "consentDetail": "Possono arrivare all'assistente, il servizio di Anthropic (Stati Uniti), solo per rispondere alle tue domande. Puoi cancellarli quando vuoi, con il pulsante qui sotto."
   },
   "Trips": {
     "listTitle": "I miei viaggi",
@@ -2015,7 +2023,8 @@
       "not_eligible": "Puoi recensire le attività del tuo viaggio e quelle per cui hai aperto un'offerta.",
       "cannot_report_own": "Non puoi segnalare una tua recensione.",
       "failed": "Non è stato possibile salvare. Riprova."
-    }
+    },
+    "deletedUser": "Utente eliminato"
   },
   "Points": {
     "eyebrow": "Il tuo account",
@@ -2554,5 +2563,62 @@
     "producerEmpty": "Nessun prodotto disponibile da questo produttore per ora.",
     "noAllergens": "Nessuno dei 14 allergeni del Reg. UE 1169/2011",
     "withdrawalNotice": "Hai 14 giorni dalla consegna per recedere dall'acquisto senza indicare il motivo."
+  },
+  "Privacy": {
+    "title": "Privacy e dati",
+    "intro": "Qui decidi quali dati Isula può usare su di te, scarichi una copia di quello che abbiamo e, se vuoi, elimini l'account.",
+    "consentsHeading": "I tuoi consensi",
+    "consentsIntro": "Puoi cambiarli quando vuoi. Ogni scelta resta registrata con la sua data.",
+    "consent": {
+      "profiling": {
+        "title": "Impari dai miei click",
+        "text": "Isula usa i tuoi click, le aggiunte ai viaggi e i voti per migliorare le proposte. Senza, le proposte si basano solo sui gusti che hai scelto."
+      },
+      "location": {
+        "title": "Posizione al check-in",
+        "text": "Il browser ti chiede la posizione solo quando confermi un check-in. Non salviamo le coordinate, solo la conferma."
+      },
+      "sensitive": {
+        "title": "Mobilità e dieta",
+        "text": "Servono a filtrare le proposte. Possono arrivare all'assistente, il servizio di Anthropic (Stati Uniti), solo per rispondere alle tue domande. Per cambiarli o cancellarli vai in Preferenze."
+      }
+    },
+    "on": "Attivo",
+    "off": "Disattivo",
+    "never": "Non hai ancora scelto",
+    "lastChoice": "Ultima scelta: {date}",
+    "downloadHeading": "Scarica i tuoi dati",
+    "downloadText": "Ottieni un file con il tuo profilo, le preferenze, i consensi, i viaggi, i gruppi di cui fai parte (senza i dati degli altri membri), i voti, le recensioni, i punti, le notifiche, le chat e gli ordini. Il file non resta sul server: lo scarichi subito.",
+    "downloadJson": "Scarica tutti i dati (JSON)",
+    "downloadCsv": "Scarica i punti (CSV)",
+    "deleteHeading": "Elimina l'account",
+    "deleteGuestHeading": "Elimina i dati dell'ospite",
+    "deleteOpen": "Inizia l'eliminazione",
+    "deleteIntro": "Eliminando l'account cancelliamo i tuoi viaggi, i voti, i punti, le notifiche e le chat. I gruppi che hai creato passano al membro più vecchio, o si cancellano se sei solo. Non si annulla.",
+    "deleteStays": "Restano, senza il tuo nome: gli ordini, per gli obblighi fiscali, e le tue recensioni, mostrate come Utente eliminato.",
+    "deleteGuestIntro": "Eliminando i dati dell'ospite cancelliamo i viaggi e le preferenze salvati con questo accesso. Non si annulla. Se vuoi conservarli, crea prima l'account con la tua email.",
+    "sendCode": "Mandami il codice",
+    "codeSent": "Ti abbiamo mandato un codice all'indirizzo del tuo account. Se scade, chiedine uno nuovo.",
+    "codeLabel": "Codice di 6 cifre",
+    "confirmLabel": "Scrivi {phrase} per confermare",
+    "deleteAccount": "Elimina definitivamente l'account",
+    "deleteGuest": "Elimina i dati dell'ospite",
+    "cancel": "Annulla",
+    "saved": "Scelta salvata.",
+    "errors": {
+      "invalid": "Controlla i campi e riprova.",
+      "guest_not_allowed": "Crea il tuo account per usare questa funzione.",
+      "not_applicable": "Questa azione non è disponibile per il tuo tipo di accesso.",
+      "wrong_confirmation": "La frase non corrisponde: scrivila esattamente come indicato.",
+      "invalid_code": "Il codice non è valido o è scaduto. Controlla l'email e riprova.",
+      "captcha_failed": "Non siamo riusciti a verificare che sei una persona. Riprova.",
+      "rate_limited": "Hai chiesto troppi codici. Riprova tra qualche minuto.",
+      "failed": "Non è stato possibile completare l'operazione. Riprova."
+    }
+  },
+  "AccountDeleted": {
+    "title": "Account eliminato",
+    "text": "Abbiamo eliminato i tuoi dati e sei uscito da questo dispositivo. Gli ordini restano per gli obblighi fiscali, le recensioni restano senza il tuo nome.",
+    "home": "Torna alla home"
   }
 }
