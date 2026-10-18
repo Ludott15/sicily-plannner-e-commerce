@@ -24,7 +24,7 @@ import { areaCoverJson, coverJson } from "./covers";
 // Letture pubbliche del catalogo: passano tutte da dbPublic (ruolo anon), quindi
 // le attività inattive e gli itinerari non template non escono mai da qui.
 
-const activityCardColumns = {
+export const activityCardColumns = {
   id: activities.id,
   slug: activities.slug,
   title: activities.title,
@@ -160,6 +160,26 @@ export const getActivity = cache((slug: string) =>
       .from(activities)
       .innerJoin(places, eq(places.id, activities.placeId))
       .where(eq(activities.slug, slug));
+    if (!row) return null;
+    const [withTag] = await withTags(tx, [row]);
+    return withTag!;
+  }),
+);
+
+// Stessa scheda di getActivity, per id: il chatbot cita le attività per id (passo 9.1).
+export const getActivityById = cache((id: string) =>
+  dbPublic(async (tx) => {
+    const [row] = await tx
+      .select({
+        ...activityCardColumns,
+        description: activities.description,
+        accessible: activities.accessible,
+        seasonMonths: activities.seasonMonths,
+        placeId: activities.placeId,
+      })
+      .from(activities)
+      .innerJoin(places, eq(places.id, activities.placeId))
+      .where(eq(activities.id, id));
     if (!row) return null;
     const [withTag] = await withTags(tx, [row]);
     return withTag!;

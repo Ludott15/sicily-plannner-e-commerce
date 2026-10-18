@@ -119,3 +119,12 @@ Fallisce se:
 - un luogo in evidenza o un itinerario pubblicato non ha una foto vera, un media pubblico non ha il testo alternativo, una foto con licenza non ha autore e licenza, un bene culturale non ha un'autorizzazione valida, un luogo non ha una foto vera, un'area non ha la copertina o un luogo non ha l'area.
 
 I template e il link dell'email si controllano a mano, come indicato nella tabella.
+
+## 7. Chatbot (passo 9.1)
+
+- **Chiave**: `ANTHROPIC_API_KEY` solo lato server (Vercel, ambiente di produzione). Senza chiave il chatbot è spento: `/api/chat` risponde 403 `chat_disabled` e l'interfaccia mostra lo stato spento.
+- **Interruttore**: `CHAT_ENABLED=false` spegne il chatbot senza toccare la chiave.
+- **Limite di messaggi**: 40 al giorno per utente, 10 per gli ospiti, 120 l'ora per IP. Il contatore è fail closed: se non risponde, la richiesta è rifiutata. Richiede `RATE_LIMIT_SECRET` (o `AFFILIATE_LINK_SECRET`).
+- **Prezzi**: `AI_PRICES` in `src/server/chat/config.ts` sono valori indicativi per la stima dei costi nell'admin (`/admin/ai`). Verificarli sulla pagina prezzi di Anthropic prima del lancio e aggiornare la tabella. La stima non tiene conto della cache.
+- **Modello di prova**: `CHAT_TEST_MODEL=scripted` è ignorato su Vercel (`VERCEL_ENV` presente). Serve solo per e2e e sviluppo locale.
+- **Valutazione**: `npm run eval:chat` con `ANTHROPIC_API_KEY`, oppure il workflow manuale `chat-eval.yml`.
