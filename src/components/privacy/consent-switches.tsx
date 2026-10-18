@@ -33,7 +33,11 @@ function ConsentSwitch({ consent }: { consent: ConsentView }) {
   const t = useTranslations("Privacy");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [optimistic, setOptimistic] = useOptimistic(consent.granted);
+  // Lo stato confermato dal server è locale: useOptimistic torna a questo valore quando la
+  // transizione finisce. Se tornasse alla prop (aggiornata solo dopo router.refresh), il secondo
+  // clic invierebbe di nuovo "concesso" e il registro non riceverebbe la revoca.
+  const [saved, setSaved] = useState(consent.granted);
+  const [optimistic, setOptimistic] = useOptimistic(saved);
   const [error, setError] = useState<PrivacyErrorCode | null>(null);
   const titleId = `consent-${consent.kind}-title`;
   const textId = `consent-${consent.kind}-text`;
@@ -44,7 +48,8 @@ function ConsentSwitch({ consent }: { consent: ConsentView }) {
     startTransition(async () => {
       setOptimistic(next);
       const result = await recordConsentAction({ kind: consent.kind, granted: next });
-      if (result.status === "error") setError(result.code);
+      if (result.status === "ok") setSaved(next);
+      else setError(result.code);
       router.refresh();
     });
   }
