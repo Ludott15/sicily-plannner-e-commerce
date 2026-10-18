@@ -95,7 +95,7 @@
       "not_guest": "Il tuo account ha già un'email.",
       "failed": "Qualcosa non ha funzionato. Riprova."
     },
-    "legalNotice": "Continuando accetti i <terms>Termini d'uso</terms> e l'<privacy>Informativa privacy</privacy>."
+    "legalNotice": "Continuando accetti i <terms>Termini d'uso</terms> e l’<privacy>Informativa privacy</privacy>."
   },
   "Guest": {
     "title": "Stai usando Isula come ospite",

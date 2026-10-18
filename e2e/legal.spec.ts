@@ -15,6 +15,8 @@ const LEGAL = [
 ];
 
 test("pagine legali: titolo, data e versione, nessun segnaposto né parentesi quadre", async ({ page }) => {
+  // Sei pagine: in locale la prima visita a ciascuna la compila (come in onboarding.spec.ts).
+  test.setTimeout(120_000);
   for (const { path, heading } of LEGAL) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 }), path).toHaveText(heading);
@@ -41,8 +43,10 @@ test("footer: Termini d'uso e Contatti", async ({ page }) => {
 
 test("accesso: accordo con i termini e l'informativa, con i link", async ({ page }) => {
   await page.goto("/it/login");
-  await expect(page.getByRole("link", { name: "Termini d'uso", exact: true })).toHaveAttribute("href", "/it/termini");
-  await expect(page.getByRole("link", { name: "Informativa privacy", exact: true })).toHaveAttribute("href", "/it/privacy");
+  // Il footer ha gli stessi link: si controlla il contenuto della pagina, non il piè di pagina.
+  const content = page.getByRole("main");
+  await expect(content.getByRole("link", { name: "Termini d'uso", exact: true })).toHaveAttribute("href", "/it/termini");
+  await expect(content.getByRole("link", { name: "Informativa privacy", exact: true })).toHaveAttribute("href", "/it/privacy");
 });
 
 test("pagina prodotto: avviso di recesso con il link alle condizioni di vendita", async ({ page }) => {
@@ -66,11 +70,12 @@ test.describe("modulo di contatto", () => {
   test("invio: senza un canale email configurato l'esito è mostrato all'utente", async ({ page }) => {
     await page.goto("/it/contatti");
     const submit = page.getByRole("button", { name: "Invia il messaggio" });
-    // Turnstile con la chiave di prova: il token arriva da solo, a volte dopo qualche secondo.
-    await expect(submit).toBeEnabled({ timeout: 30_000 });
     await page.getByLabel("Email").fill(`e2e-contatto-${Date.now()}@example.com`);
     await page.getByLabel("Messaggio").fill("Vorrei sapere se il tour dell'Etna parte anche in bassa stagione.");
+    // Il bottone si attiva con email e messaggio e con il token Turnstile (chiave di prova).
+    await expect(submit).toBeEnabled({ timeout: 30_000 });
     await submit.click();
-    await expect(page.getByRole("alert")).toContainText(/non è disponibile|non è partito/);
+    // Next usa un proprio elemento role="alert" (il route announcer): si cerca quello del modulo.
+    await expect(page.getByRole("alert").filter({ hasText: /non è disponibile|non è partito/ })).toBeVisible();
   });
 });

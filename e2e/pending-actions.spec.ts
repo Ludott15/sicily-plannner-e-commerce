@@ -63,6 +63,8 @@ async function collectPending(page: Page) {
 }
 
 test("le azioni in sospeso nelle pagine sono esattamente quelle dell'elenco", async ({ page }) => {
+  // Quindici pagine in un test: in locale la compilazione a freddo supera i 30 secondi predefiniti.
+  test.setTimeout(180_000);
   const found = await collectPending(page);
   expect(Object.fromEntries([...found].sort())).toEqual(Object.fromEntries(Object.entries(PENDING_ACTIONS).sort()));
 });
@@ -82,6 +84,7 @@ test("\"Disponibile a breve\" solo in sviluppo", async ({ page }) => {
 
 // Controllo di lancio: prima di andare in produzione nessuna azione può restare in sospeso.
 test("prima del lancio l'elenco delle azioni in sospeso è vuoto", async ({ page }) => {
+  test.setTimeout(180_000);
   test.skip(process.env.PRE_LAUNCH !== "1", "attivo solo con PRE_LAUNCH=1 sulla build di produzione");
   expect(Object.keys(PENDING_ACTIONS)).toEqual([]);
   expect([...(await collectPending(page)).keys()]).toEqual([]);

@@ -52,6 +52,8 @@ test("la home mostra i punti e porta a /punti con saldo e regole", async ({ page
 });
 
 test("il regolamento dei punti si apre dal link in /punti", async ({ page, request }) => {
+  // Compilazione a freddo di /punti e del regolamento in locale: più dei 30 secondi predefiniti.
+  test.setTimeout(120_000);
   await registeredUserWithPoints(page, request);
   await page.goto("/it/punti");
   await page.getByRole("link", { name: "Regolamento dei punti" }).click();

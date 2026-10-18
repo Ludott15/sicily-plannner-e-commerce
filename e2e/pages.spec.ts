@@ -23,6 +23,8 @@ test("sitemap: affiliazioni nelle due lingue; pagine con testi in sospeso, admin
 });
 
 test("pagine legali senza dati del titolare: noindex, avviso di preparazione e nessuna chiave di traduzione", async ({ page }) => {
+  // Sette pagine: in locale la prima visita a ciascuna la compila (come in onboarding.spec.ts).
+  test.setTimeout(120_000);
   for (const path of ["/it/privacy", "/it/cookie", "/it/condizioni-di-vendita", "/it/termini", "/it/punti/regolamento", "/it/chi-siamo", "/en/privacy"]) {
     await page.goto(path);
     await expect(page.locator('meta[name="robots"]'), path).toHaveAttribute("content", /noindex/);
@@ -65,6 +67,8 @@ test("Chi siamo dalla firma della redazione e dalla firma del fondatore in home"
 });
 
 test("pagine dal footer: link affiliati e informazioni legali", async ({ page }) => {
+  // Più pagine in un solo test: in locale la compilazione a freddo supera i 30 secondi predefiniti.
+  test.setTimeout(120_000);
   await page.goto("/it");
   const footer = page.getByRole("navigation", { name: "Piè di pagina" });
   await footer.getByRole("link", { name: "Link affiliati" }).click();
