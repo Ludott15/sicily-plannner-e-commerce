@@ -46,6 +46,9 @@ export type AccountExport = {
   format: "isula-account-export";
   version: 1;
   profile: {
+    // Email dell'account (dato personale dell'utente): viene dalla sessione verificata con getUser.
+    // Gli ospiti non hanno email: null.
+    email: string | null;
     displayName: string | null;
     avatarUrl: string | null;
     locale: string;
@@ -180,7 +183,7 @@ export async function buildAccountExport(user: DbUser): Promise<AccountExport> {
     exportedAt: new Date().toISOString(),
     format: "isula-account-export",
     version: 1,
-    profile: data.profile,
+    profile: data.profile === null ? null : { ...data.profile, email: user.email ?? null },
     consents,
     preferences: { constraints: data.constraints, weights: data.weights },
     profilingEvents: data.events,

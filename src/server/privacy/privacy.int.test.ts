@@ -201,6 +201,7 @@ describe("export: solo i dati dell'utente", () => {
       select i.id, i.itinerary_id, ${other.id}, -1 from public.itinerary_items i where i.itinerary_id = ${TRIP} limit 1`);
 
     const data = await buildAccountExport(member);
+    expect(data.profile?.email).toBe(member.email);
     const serialized = JSON.stringify(data);
     expect(serialized).not.toContain(other.id);
     expect(data.votes.every((vote) => vote.userId === member.id)).toBe(true);

@@ -67,6 +67,10 @@ test("criterio M5: ospite, usa un itinerario pronto, registrazione con codice, i
 test("builder: riordino, rimozione con evento, checklist con il conteggio", async ({ page }) => {
   const tripId = await useTemplate(page);
   const guestId = await sessionUserId(page);
+  const db = await import("./db.mjs");
+  await db.withDb(
+    (sql) => sql`insert into public.user_consents (user_id, kind, granted, text_version) values (${guestId}, 'profiling', true, 'profiling-2026-10-v1')`,
+  );
   const stops = page.locator("li.is-stop .is-stop__title");
   await expect(stops).toHaveText(["Street food al mercato di Ballarò", "Palazzo dei Normanni e Cappella Palatina", "Aperitivo e vita notturna alla Vucciria"]);
 
@@ -110,6 +114,10 @@ test("builder: riordino, rimozione con evento, checklist con il conteggio", asyn
 test("Aggiungi al viaggio: giorno compatibile per zona, avviso se il viaggio è lontano, evento registrato", async ({ page }) => {
   const tripId = await useTemplate(page);
   const guestId = await sessionUserId(page);
+  const db = await import("./db.mjs");
+  await db.withDb(
+    (sql) => sql`insert into public.user_consents (user_id, kind, granted, text_version) values (${guestId}, 'profiling', true, 'profiling-2026-10-v1')`,
+  );
 
   // Un'attività di Palermo: proposto il giorno con tappe a Palermo, nessun avviso.
   await page.goto("/it/attivita/demo-teatro-massimo");
