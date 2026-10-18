@@ -15,6 +15,7 @@ import { fontVariables } from "@generated/design/fonts";
 import { publicEnv } from "@/lib/env";
 import { ANONYMOUS_SESSION } from "@/lib/pwa";
 import { getUser } from "@/server/auth";
+import { readCartCount } from "@/server/shop/cart";
 import { routing } from "@/lib/i18n/routing";
 import "../globals.css";
 import "@/components/design/isula.css";
@@ -60,7 +61,7 @@ export default async function LocaleLayout({ children, params }: Props) {
           </main>
           <SiteFooter />
           <CookieBanner initial={parseConsent((await cookies()).get(CONSENT_COOKIE)?.value)} />
-          <MobileTabBar />
+          <MobileTabBar cartCount={await readCartCount()} />
           <ServiceWorkerRegistration sessionId={sessionId} />
         </NextIntlClientProvider>
       </body>

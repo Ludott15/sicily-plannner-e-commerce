@@ -435,6 +435,20 @@
       "when": 1792187976315,
       "tag": "20261016215936_gdpr_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1792354864832,
+      "tag": "20261018202104_checkout",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1792354880207,
+      "tag": "20261018202120_checkout_rls",
+      "breakpoints": true
     }
   ]
 }

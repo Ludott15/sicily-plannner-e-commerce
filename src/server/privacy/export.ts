@@ -1,10 +1,12 @@
 import "server-only";
 import { eq, inArray, sql } from "drizzle-orm";
+import { z } from "zod";
 import {
   affiliateClicks,
   chatMessages,
   chatSessions,
   checkIns,
+  checkoutSessions,
   groupMembers,
   groups,
   itemVotes,
@@ -39,6 +41,25 @@ export type PointsRow = {
   reason: string;
   delta: number;
   season: string;
+};
+
+// Righe dello snapshot del carrello: solo i campi del prodotto acquistato, nient'altro del cartello.
+const checkoutLineSchema = z.object({
+  productId: z.string(),
+  title: z.string(),
+  quantity: z.number(),
+  unitPriceCents: z.number(),
+  vatRate: z.number(),
+});
+
+export type CheckoutExportRow = {
+  createdAt: Date;
+  status: string;
+  subtotalCents: number;
+  shippingCents: number;
+  discountCents: number;
+  pointsRedeemed: number;
+  lines: z.infer<typeof checkoutLineSchema>[];
 };
 
 export type AccountExport = {
@@ -82,6 +103,7 @@ export type AccountExport = {
   chats: { session: Record<string, unknown>; messages: Record<string, unknown>[] }[];
   affiliateClicks: Record<string, unknown>[];
   orders: Record<string, unknown>[];
+  checkouts: CheckoutExportRow[];
 };
 
 async function collect(tx: UserTx, user: DbUser) {
@@ -148,6 +170,19 @@ async function collect(tx: UserTx, user: DbUser) {
 
   const clicks = await tx.select().from(affiliateClicks).where(eq(affiliateClicks.userId, user.id));
   const ownOrders = await tx.select().from(orders).where(eq(orders.userId, user.id));
+  // Colonne esplicite: token_hash non è leggibile dai ruoli applicativi (grant per colonna).
+  const ownCheckouts = await tx
+    .select({
+      createdAt: checkoutSessions.createdAt,
+      status: checkoutSessions.status,
+      subtotalCents: checkoutSessions.subtotalCents,
+      shippingCents: checkoutSessions.shippingCents,
+      discountCents: checkoutSessions.discountCents,
+      pointsRedeemed: checkoutSessions.pointsRedeemed,
+      cart: checkoutSessions.cart,
+    })
+    .from(checkoutSessions)
+    .where(eq(checkoutSessions.userId, user.id));
 
   return {
     profile: profile ?? null,
@@ -169,6 +204,15 @@ async function collect(tx: UserTx, user: DbUser) {
     })),
     clicks,
     orders: ownOrders,
+    checkouts: ownCheckouts.map((row) => ({
+      createdAt: row.createdAt,
+      status: row.status,
+      subtotalCents: row.subtotalCents,
+      shippingCents: row.shippingCents,
+      discountCents: row.discountCents,
+      pointsRedeemed: row.pointsRedeemed,
+      lines: z.array(checkoutLineSchema).safeParse(row.cart).data ?? [],
+    })),
   };
 }
 
@@ -199,6 +243,7 @@ export async function buildAccountExport(user: DbUser): Promise<AccountExport> {
     chats: data.chats,
     affiliateClicks: data.clicks,
     orders: data.orders,
+    checkouts: data.checkouts,
   };
 }
 

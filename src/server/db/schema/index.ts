@@ -7,6 +7,7 @@ export * from "./trips";
 export * from "./gamification";
 export * from "./affiliates";
 export * from "./shop";
+export * from "./checkout";
 export * from "./ai";
 export * from "./audit";
 export * from "./local-tips";

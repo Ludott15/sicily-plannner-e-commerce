@@ -14,8 +14,9 @@
 export const PENDING_ACTIONS = {
   "vertical.lodging": "M6-partner",
   "vertical.car": "M6-partner",
-  // Aggiungi al carrello (ProductCard, pagina prodotto): il carrello è il passo 7.2.
-  "cart.add": "7.2",
+  // Pagamento (passo 7.2): in sospeso solo senza provider (né STRIPE_SECRET_KEY né CHECKOUT_TEST_PROVIDER=fake).
+  // La pagina del carrello lo mostra in quel caso; con il provider il pulsante è attivo.
+  "checkout.pay": "7.2-stripe",
 } as const;
 
 export type PendingId = keyof typeof PENDING_ACTIONS;

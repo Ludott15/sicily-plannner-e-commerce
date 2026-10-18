@@ -4,7 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Breadcrumb } from "@/components/catalog/breadcrumb";
 import { CoverFigure } from "@/components/catalog/cover-figure";
 import { JsonLd } from "@/components/catalog/json-ld";
-import { PendingButton } from "@/components/design";
+import { AddToCart } from "@/components/cart/add-to-cart";
 import { ProductFacts } from "@/components/shop/product-facts";
 import { Link } from "@/lib/i18n/navigation";
 import { canonicalFor, truncate } from "@/lib/seo";
@@ -101,9 +101,7 @@ export default async function ProductPage({ params }: Props) {
             <p className="text-body font-semibold">{t(`stock.${product.stockStatus}`)}</p>
             <p className="text-body">{t("leadTime", { days: product.leadTimeDays })}</p>
             <div className="pt-2">
-              <PendingButton id="cart.add" variant="primary" fullWidth>
-                {t("addToCart")}
-              </PendingButton>
+              <AddToCart productId={product.id} productTitle={product.title} variant="primary" fullWidth withQuantity />
             </div>
           </div>
 

@@ -1,18 +1,21 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { Bell, Search } from "lucide-react";
 import { ButtonLink, Logo } from "@/components/design";
+import { CartButton } from "@/components/cart/cart-button";
 import { ActionMenu, type ActionMenuItem } from "@/components/layout/action-menu";
 import { AvatarMenu } from "@/components/layout/avatar-menu";
 import { SiteSearch } from "@/components/search/site-search";
 import { Link } from "@/lib/i18n/navigation";
 import { signOut } from "@/server/auth/actions";
 import { getHeaderUser } from "@/server/auth/header-user";
+import { emptyCartView, readCart, readCartCount } from "@/server/shop/cart";
 
 // Intestazione (brief 6.1, navigazione a due livelli).
 // Desktop: logo, Esplora (menu: Attività, Itinerari pronti, Noleggio auto), Voli, Dove dormire.
 // A destra: senza sessione "Accedi"; con account la campanella e il menu personale (avatar con le iniziali).
 // Mobile: logo, campanella e avatar; la navigazione sta nella barra in basso (MobileTabBar).
 // Ospite (sessione anonima): solo il menu personale, con I miei viaggi, Preferenze, Crea l'account ed Esci.
+// Carrello: icona con il numero di articoli, a tutte le larghezze (drawer da md, pagina su mobile).
 // Il bottone principale della pagina sta nella pagina, non qui.
 export async function SiteHeader() {
   const [user, locale, t, tSearch] = await Promise.all([
@@ -21,6 +24,9 @@ export async function SiteHeader() {
     getTranslations("Nav"),
     getTranslations("Search"),
   ]);
+  // Carrello (passo 7.2): il conteggio viene dal cookie; la vista (con i prezzi) solo se c'è almeno un articolo.
+  const cartCount = await readCartCount();
+  const cartView = cartCount > 0 ? await readCart() : emptyCartView();
 
   const signOutItem: ActionMenuItem = {
     kind: "form",
@@ -95,6 +101,8 @@ export async function SiteHeader() {
           <ButtonLink href="/cerca" variant="ghost" size="sm" className="lg:hidden" aria-label={tSearch("openSearch")}>
             <Search size={20} strokeWidth={1.5} aria-hidden="true" />
           </ButtonLink>
+
+          <CartButton count={cartCount} view={cartView} />
 
           {user?.kind === "member" && (
             <ButtonLink

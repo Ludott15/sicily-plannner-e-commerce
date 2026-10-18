@@ -10,7 +10,7 @@ const PAGES = [
   "/it",
   "/it/attivita",
   "/it/attivita/demo-zingaro",
-  // Shop (passo 7.1): "Aggiungi al carrello" è in sospeso fino al 7.2.
+  // Shop (passo 7.1): "Aggiungi al carrello" è attivo dal passo 7.2.
   "/it/shop",
   "/it/itinerari/demo-sicilia-orientale",
   "/it/chi-siamo",
@@ -42,9 +42,23 @@ async function collectFrom(page: Page, paths: string[], found: Map<string, strin
   }
 }
 
+// Con il provider di pagamento di prova (CHECKOUT_TEST_PROVIDER=fake) "Paga" è attivo: la voce
+// checkout.pay non è in sospeso e l'elenco atteso la lascia fuori. Senza provider resta in sospeso.
+function expectedPending(): Record<string, string> {
+  const expected: Record<string, string> = { ...PENDING_ACTIONS };
+  if (process.env.CHECKOUT_TEST_PROVIDER === "fake") delete expected["checkout.pay"];
+  return expected;
+}
+
 async function collectPending(page: Page) {
   const found = new Map<string, string>();
   await collectFrom(page, PAGES, found);
+
+  // Il carrello con un articolo: "Paga" è in sospeso solo con righe nel carrello.
+  await page.goto("/it/prodotti/demo-crema-pistacchio");
+  await page.getByRole("button", { name: "Aggiungi al carrello" }).click();
+  await expect(page.getByText("Aggiunto al carrello", { exact: true })).toBeVisible();
+  await collectFrom(page, ["/it/carrello"], found);
 
   await page.goto("/it/login");
   await page.getByRole("button", { name: "Continua senza account" }).click();
@@ -66,7 +80,7 @@ test("le azioni in sospeso nelle pagine sono esattamente quelle dell'elenco", as
   // Quindici pagine in un test: in locale la compilazione a freddo supera i 30 secondi predefiniti.
   test.setTimeout(180_000);
   const found = await collectPending(page);
-  expect(Object.fromEntries([...found].sort())).toEqual(Object.fromEntries(Object.entries(PENDING_ACTIONS).sort()));
+  expect(Object.fromEntries([...found].sort())).toEqual(Object.fromEntries(Object.entries(expectedPending()).sort()));
 });
 
 test("un'azione in sospeso non fa nulla", async ({ page }) => {

@@ -131,6 +131,9 @@ a.is-day { color: var(--lava); }
 .is-tabbar__item { min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--lava-muted); text-decoration: none; }
 a.is-tabbar__item { color: var(--lava-muted); }
 .is-tabbar__item[aria-current="page"], a.is-tabbar__item[aria-current="page"] { color: var(--lava); }
+/* Badge con il numero di articoli del carrello sulla voce (passo 7.2). */
+.is-tabbar__icon { position: relative; display: inline-flex; }
+.is-tabbar__badge { position: absolute; top: -6px; right: -10px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--coccio); color: var(--on-coccio); font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
 
 /* Tappa di itinerario, con la linea del percorso: una sola linea sulla lista */
 .is-route { position: relative; list-style: none; margin: 0; padding: 0; }

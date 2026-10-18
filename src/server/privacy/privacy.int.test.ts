@@ -22,6 +22,11 @@ const TRIP = randomUUID();
 const GROUP = randomUUID();
 const SOLO_TRIP = randomUUID();
 const BADGE_KEY = `int-82-badge-${stamp}`;
+const CHECKOUT = randomUUID();
+const CHECKOUT_TOKEN_HASH = "a".repeat(64);
+// Sessione del membro (non cancellato dal test): per l'export, che gira dopo la cancellazione del proprietario.
+const MEMBER_CHECKOUT = randomUUID();
+const MEMBER_TOKEN_HASH = "b".repeat(64);
 
 // Conteggio delle righe dell'utente in una tabella: ruolo postgres, nessun filtro RLS.
 async function countWhere(table: string, column: string, userId: string): Promise<number> {
@@ -99,6 +104,16 @@ beforeAll(async () => {
     insert into public.orders (user_id, email, subtotal_cents, total_cents, stripe_session_id)
     values (${owner.id}, ${owner.email}, 1000, 1000, ${"cs_int_82_" + stamp})`);
   await dbAdmin.execute(sql`
+    insert into public.checkout_sessions (id, user_id, cart, subtotal_cents, shipping_cents, discount_cents, points_redeemed, status, expires_at, token_hash)
+    values (${CHECKOUT}, ${owner.id},
+      ${JSON.stringify([{ productId: ACTIVITY, title: "int-82 prodotto", quantity: 1, unitPriceCents: 1000, vatRate: 10, otherUserEmail: "altro@example.com" }])}::jsonb,
+      1000, 0, 0, 0, 'open', now() + interval '31 minutes', ${CHECKOUT_TOKEN_HASH})`);
+  await dbAdmin.execute(sql`
+    insert into public.checkout_sessions (id, user_id, cart, subtotal_cents, shipping_cents, discount_cents, points_redeemed, status, expires_at, token_hash)
+    values (${MEMBER_CHECKOUT}, ${member.id},
+      ${JSON.stringify([{ productId: ACTIVITY, title: "int-82 prodotto membro", quantity: 2, unitPriceCents: 500, vatRate: 4, otherUserEmail: "altro@example.com" }])}::jsonb,
+      1000, 690, 0, 0, 'expired', now() + interval '31 minutes', ${MEMBER_TOKEN_HASH})`);
+  await dbAdmin.execute(sql`
     insert into public.admin_audit_log (actor_id, action, entity)
     values (${owner.id}, ${"int82_adjust_" + stamp}, 'points')`);
   await setConsent(owner, "profiling", true);
@@ -132,6 +147,7 @@ describe("eliminazione dell'account, tabella per tabella", () => {
       ["public.reviews", "user_id"],
       ["public.affiliate_clicks", "user_id"],
       ["public.orders", "user_id"],
+      ["public.checkout_sessions", "user_id"],
     ];
     for (const [table, column] of tables) {
       expect(await countWhere(table, column, owner.id), table).toBeGreaterThan(0);
@@ -175,6 +191,10 @@ describe("eliminazione dell'account, tabella per tabella", () => {
       select count(*)::int as n from public.affiliate_clicks where subid = ${"int82sub" + stamp} and user_id is null`);
     expect(Number(click?.n)).toBe(1);
 
+    const [checkout] = await dbAdmin.execute<{ n: number }>(sql`
+      select count(*)::int as n from public.checkout_sessions where id = ${CHECKOUT} and user_id is null`);
+    expect(Number(checkout?.n)).toBe(1);
+
     const [review] = await dbAdmin.execute<{ n: number }>(sql`
       select count(*)::int as n from public.reviews where body = 'int-82 recensione' and user_id is null`);
     expect(Number(review?.n)).toBe(1);
@@ -206,6 +226,21 @@ describe("export: solo i dati dell'utente", () => {
     expect(serialized).not.toContain(other.id);
     expect(data.votes.every((vote) => vote.userId === member.id)).toBe(true);
     expect(data.groups.map((group) => group.groupId)).toContain(GROUP);
+  });
+
+  it("include le sessioni di checkout: stato, importi, punti e righe del carrello, senza hash del token né altri dati", async () => {
+    const data = await buildAccountExport(member);
+    expect(data.checkouts).toHaveLength(1);
+    const [checkout] = data.checkouts;
+    expect(checkout?.status).toBe("expired");
+    expect(checkout?.subtotalCents).toBe(1000);
+    expect(checkout?.shippingCents).toBe(690);
+    expect(checkout?.lines).toEqual([
+      { productId: ACTIVITY, title: "int-82 prodotto membro", quantity: 2, unitPriceCents: 500, vatRate: 4 },
+    ]);
+    const serialized = JSON.stringify(data);
+    expect(serialized).not.toContain(MEMBER_TOKEN_HASH);
+    expect(serialized).not.toContain("otherUserEmail");
   });
 
   it("CSV dei punti: solo le righe del ledger", () => {

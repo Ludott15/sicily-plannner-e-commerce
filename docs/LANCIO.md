@@ -6,13 +6,6 @@ Passi da fare una volta sul progetto Supabase di produzione e su Vercel prima di
 
 Le pagine legali (privacy, cookie, termini, condizioni di vendita, regolamento punti, chi siamo) e il contatto leggono i dati del titolare dall'ambiente di Vercel. Sono pubblici (`NEXT_PUBLIC_`), quindi non vanno messi in nessun segreto. Da compilare prima del lancio.
 
-Prima di impostarli, verificare che il sito faccia davvero quello che i testi descrivono (impostarli rende le pagine indicizzabili):
-- **Condizioni di vendita**: esistono carrello e checkout con accettazione delle condizioni (7.2), email di conferma e di spedizione con tracciamento, pagina "I miei ordini" (7.3), rimborsi e segnalazione dei problemi (7.4). Se lo shop non apre insieme al sito, togliere la voce dal footer o aspettare.
-- **Privacy e cookie**: elenco dei fornitori e conservazione coerenti con docs/PRIVACY-TECNICA.md; regioni di Supabase, Vercel e Cloudflare verificate; durata del cookie NEXT_LOCALE verificata nel browser.
-- **Turnstile del modulo contatti**: in produzione serve TURNSTILE_SECRET_KEY; senza, la verifica fallisce. Sulle preview di Vercel si usa la chiave di prova (accetta ogni invio: resta il limite per IP).
-- Rilettura dei testi da parte di un consulente (trasferimenti verso gli USA, conservazione dei dati fiscali, ADR, età minima).
-- **Messaggi di contatto**: l'informativa promette di conservarli al massimo 12 mesi nella casella dell'assistenza. Non c'è un meccanismo automatico: impostare una regola di archiviazione o cancellazione nella casella, o cancellarli a mano ogni mese.
-
 | Variabile | Valore | Verifica |
 | --- | --- | --- |
 | `NEXT_PUBLIC_LEGAL_NAME` | ragione sociale del titolare | A mano: in `/it/privacy` il nome compare al posto del trattino "—" |
@@ -177,6 +170,31 @@ Il modello è quello di un intermediario (docs/spec.md, sezione E-commerce): il 
 - **Marchi e produttori**: prima di pubblicare una storia o una foto di un produttore serve un accordo scritto con lui (uso del nome, della storia e delle immagini), come previsto dai rischi in docs/spec.md.
 - **Controlli di lancio**: nessun prodotto `[DEMO]` in produzione (il seed non si carica mai, `supabase db push` non esegue il seed); `npm run db:drift` e i test pgTAP `shop_rls` e `shop_catalog_rls` verdi in CI; import del catalogo reale solo dall'admin, con anteprima e nessun errore.
 - **Prima di applicare le migrazioni dello shop in produzione** (`20261016202558_shop_catalog` e seguenti): verificare `select count(*) from products;` e `select count(*) from producers;`. Devono essere 0: le colonne NOT NULL senza default e la rimozione di `producers.lead_time_days` presuppongono tabelle vuote.
+
+## 9b. Pagamenti: Stripe Checkout (passo 7.2)
+
+Il carrello vive in un cookie firmato (`isula_cart`, solo id e quantità): i prezzi li legge il server dal database a ogni richiesta. Il checkout crea una riga in `checkout_sessions`, scala i punti (se richiesti) nella stessa transazione e poi crea la sessione Stripe. Dettagli in `src/server/shop/checkout.ts`.
+
+| Variabile | Valore | Verifica |
+| --- | --- | --- |
+| `STRIPE_SECRET_KEY` | `sk_test_...` nelle anteprime e nei test; `sk_live_...` in produzione, solo dopo la prova end-to-end in modalità test | Senza, il pulsante "Paga" resta in sospeso e il carrello funziona. A mano: il pulsante porta alla pagina di Stripe. |
+| `STRIPE_WEBHOOK_SECRET` | segreto (`whsec_...`) dell'endpoint del webhook dello stesso ambiente: test e live hanno endpoint e segreti separati | Senza, `POST /api/stripe/webhook` risponde 500 `webhook_not_configured`. |
+| `CART_SECRET` | stringa casuale lunga (es. `openssl rand -hex 32`) | In produzione è obbligatoria: senza, il carrello risponde "non disponibile". |
+| `RATE_LIMIT_SECRET` (o `AFFILIATE_LINK_SECRET`) | già richiesta per i click affiliati | Limite dei tentativi di checkout: 10 al giorno per utente e 30 all'ora per IP. Senza chiave il checkout è negato (`rate_limited`). |
+
+**Endpoint del webhook** (Stripe → Developers → Webhooks, una volta in modalità test e una in modalità live):
+- URL: `https://<dominio>/api/stripe/webhook`
+- Eventi da abilitare: `checkout.session.expired` e `checkout.session.completed`. Il secondo si registra e non fa nulla finché non arriva il passo 7.3, che crea l'ordine.
+
+**Prova end-to-end con Stripe CLI** (in locale, con `npm run dev` e `npm run db:start`):
+1. `stripe login`, poi `stripe listen --forward-to localhost:3000/api/stripe/webhook`: la CLI stampa un `whsec_...`; mettilo in `.env.local` come `STRIPE_WEBHOOK_SECRET` e riavvia `npm run dev`.
+2. Con `STRIPE_SECRET_KEY=sk_test_...` nel `.env.local`: aggiungi un prodotto al carrello, scegli "Paga con Stripe" e completa il pagamento con la carta di prova `4242 4242 4242 4242` (qualunque data futura e CVC). Il webhook riceve `checkout.session.completed`: nei log compare `stripe_event_recorded_not_handled`.
+3. Scadenza: con una sessione ancora aperta, `stripe api post /v1/checkout/sessions/<id>/expire` (l'id `cs_test_...` è nell'URL di pagamento, o in `checkout_sessions.stripe_session_id`). Il webhook riceve `checkout.session.expired`.
+4. Controllo nel database locale (sola lettura): `select status from checkout_sessions order by created_at desc limit 1;` deve dare `expired`; `select count(*) from points_ledger where reason = 'redeem_refund' and ref_id = '<checkout_id>';` deve dare `1` se l'account aveva usato punti. Rispedire lo stesso evento dalla CLI (`stripe events resend <evt_id>`) non deve cambiare nulla: `stripe_events` ha una sola riga per evento.
+
+**Cosa non c'è ancora** (passi successivi): l'ordine e le email ai produttori (7.3), i rimborsi (7.4). Prima del lancio dello shop: decidere con il commercialista l'IVA e Stripe Tax (sezione 9); i prezzi sono IVA inclusa (`tax_behavior: inclusive`), senza calcolo automatico dell'imposta.
+
+**Provider finto** (`CHECKOUT_TEST_PROVIDER=fake`): solo e2e e sviluppo, mai in produzione. Attivo solo se `VERCEL_ENV` non è impostata. La sessione punta a `/[locale]/carrello/prova-pagamento`, e la scadenza si simula con `POST /api/stripe/test-expire` (404 fuori dal provider finto).
 
 ## 10. Accessibilità (passo 11.4)
 

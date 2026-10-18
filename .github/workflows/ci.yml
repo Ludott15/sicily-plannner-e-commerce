@@ -63,6 +63,10 @@ jobs:
             # rate limit, che per la chat rifiuta senza chiave (fail closed). Non sono segreti.
             echo "CHAT_TEST_MODEL=scripted"
             echo "RATE_LIMIT_SECRET=ci-only-rate-limit-key-not-a-secret"
+            # Carrello e checkout negli e2e (passo 7.2): pagamento finto (mai su Vercel) e chiave di prova
+            # per firmare il cookie del carrello. Non sono segreti.
+            echo "CHECKOUT_TEST_PROVIDER=fake"
+            echo "CART_SECRET=ci-only-cart-secret-not-a-secret"
           } > .env.local
           echo "MAILPIT_URL=$MAILPIT_URL" >> "$GITHUB_ENV"
 

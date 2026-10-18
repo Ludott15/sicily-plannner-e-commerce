@@ -771,6 +771,182 @@ $$;
 ALTER FUNCTION "public"."check_place_has_active_activities"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."checkout_attach_stripe_session"("p_checkout_id" "uuid", "p_token" "text", "p_stripe_session_id" "text") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_rows integer;
+begin
+  perform public.checkout_check_token(p_checkout_id, p_token);
+  update public.checkout_sessions
+     set stripe_session_id = p_stripe_session_id
+   where id = p_checkout_id and status = 'open' and stripe_session_id is null;
+  get diagnostics v_rows = row_count;
+  return v_rows = 1;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_attach_stripe_session"("p_checkout_id" "uuid", "p_token" "text", "p_stripe_session_id" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."checkout_check_token"("p_checkout_id" "uuid", "p_token" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if p_token is null or not exists (
+    select 1 from public.checkout_sessions cs
+    where cs.id = p_checkout_id
+      and cs.token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex')
+  ) then
+    raise exception 'checkout_token_invalid' using errcode = '42501';
+  end if;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_check_token"("p_checkout_id" "uuid", "p_token" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."checkout_close"("p_checkout_id" "uuid", "p_status" "text") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_user uuid;
+  v_points integer;
+begin
+  if p_status not in ('expired', 'failed') then
+    raise exception 'checkout_status_invalid' using errcode = 'P0001';
+  end if;
+
+  update public.checkout_sessions
+     set status = p_status
+   where id = p_checkout_id and status = 'open'
+   returning user_id, points_redeemed into v_user, v_points;
+  if not found then
+    return false;
+  end if;
+
+  if v_points > 0 and v_user is not null then
+    perform public.award_points(v_user, v_points, 'redeem_refund', 'checkout', p_checkout_id);
+  end if;
+  return true;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_close"("p_checkout_id" "uuid", "p_status" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_points_per_euro" integer, "p_max_points_percent" integer, "p_expires_at" timestamp with time zone, "p_token_hash" "text") RETURNS TABLE("discount_cents" integer, "points_redeemed" integer)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_user uuid := (select auth.uid());
+  v_account boolean := false;
+  v_balance integer := 0;
+  v_euros integer := 0;
+  v_discount integer := 0;
+  v_points integer := 0;
+  v_cart_total integer := 0;
+begin
+  if jsonb_typeof(p_cart) is distinct from 'array' or jsonb_array_length(p_cart) = 0 then
+    raise exception 'checkout_empty' using errcode = 'P0001';
+  end if;
+
+  select coalesce(sum((line->>'unitPriceCents')::integer * (line->>'quantity')::integer), 0)::integer
+    into v_cart_total
+    from jsonb_array_elements(p_cart) as line;
+  if v_cart_total <> p_subtotal_cents then
+    raise exception 'checkout_mismatch' using errcode = 'P0001';
+  end if;
+
+  v_account := v_user is not null
+    and not exists (select 1 from auth.users u where u.id = v_user and u.is_anonymous);
+
+  if p_use_points and v_account then
+    perform pg_advisory_xact_lock(hashtextextended(v_user::text, 0));
+    select coalesce(sum(l.delta), 0)::integer into v_balance
+      from public.points_ledger l where l.user_id = v_user;
+    v_euros := least(
+      greatest(v_balance, 0) / p_points_per_euro,
+      ((p_subtotal_cents::bigint * p_max_points_percent) / 10000)::integer
+    );
+    v_euros := greatest(v_euros, 0);
+    v_discount := v_euros * 100;
+    v_points := v_euros * p_points_per_euro;
+  end if;
+
+  insert into public.checkout_sessions (
+    id, user_id, cart, subtotal_cents, shipping_cents, discount_cents, points_redeemed, status, expires_at,
+    token_hash
+  ) values (
+    p_checkout_id, case when v_account then v_user end, p_cart, p_subtotal_cents, p_shipping_cents,
+    v_discount, v_points, 'open', p_expires_at, p_token_hash
+  );
+
+  if v_points > 0 then
+    if not public.award_points(v_user, -v_points, 'redeem', 'checkout', p_checkout_id) then
+      raise exception 'points_not_recorded' using errcode = 'P0001';
+    end if;
+  end if;
+
+  return query select v_discount, v_points;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_points_per_euro" integer, "p_max_points_percent" integer, "p_expires_at" timestamp with time zone, "p_token_hash" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."checkout_expire_from_stripe"("p_checkout_id" "uuid", "p_stripe_session_id" "text") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_id uuid;
+begin
+  select cs.id into v_id
+    from public.checkout_sessions cs
+   where cs.status = 'open'
+     and (cs.id = p_checkout_id or cs.stripe_session_id = p_stripe_session_id)
+   order by (cs.id = p_checkout_id) desc nulls last
+   limit 1;
+  if v_id is null then
+    return false;
+  end if;
+  return public.checkout_close(v_id, 'expired');
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_expire_from_stripe"("p_checkout_id" "uuid", "p_stripe_session_id" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  perform public.checkout_check_token(p_checkout_id, p_token);
+  if exists (
+    select 1 from public.checkout_sessions cs
+    where cs.id = p_checkout_id and cs.stripe_session_id is not null
+  ) then
+    return false;
+  end if;
+  return public.checkout_close(p_checkout_id, 'failed');
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."claim_onboarding_points"() RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -3733,6 +3909,32 @@ CREATE TABLE IF NOT EXISTS "public"."check_ins" (
 ALTER TABLE "public"."check_ins" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."checkout_sessions" (
+    "id" "uuid" NOT NULL,
+    "stripe_session_id" "text",
+    "user_id" "uuid",
+    "cart" "jsonb" NOT NULL,
+    "subtotal_cents" integer NOT NULL,
+    "shipping_cents" integer NOT NULL,
+    "discount_cents" integer DEFAULT 0 NOT NULL,
+    "points_redeemed" integer DEFAULT 0 NOT NULL,
+    "token_hash" "text" NOT NULL,
+    "status" "text" DEFAULT 'open'::"text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "expires_at" timestamp with time zone NOT NULL,
+    CONSTRAINT "checkout_sessions_amounts_non_negative" CHECK ((("subtotal_cents" >= 0) AND ("shipping_cents" >= 0) AND ("discount_cents" >= 0) AND ("points_redeemed" >= 0))),
+    CONSTRAINT "checkout_sessions_cart_is_array" CHECK (("jsonb_typeof"("cart") = 'array'::"text")),
+    CONSTRAINT "checkout_sessions_discount_max_15_percent" CHECK ((("discount_cents" * 100) <= ("subtotal_cents" * 15))),
+    CONSTRAINT "checkout_sessions_discount_whole_euros" CHECK ((("discount_cents" % 100) = 0)),
+    CONSTRAINT "checkout_sessions_status_valid" CHECK (("status" = ANY (ARRAY['open'::"text", 'completed'::"text", 'expired'::"text", 'failed'::"text"]))),
+    CONSTRAINT "checkout_sessions_stripe_id_format" CHECK ((("stripe_session_id" IS NULL) OR ("stripe_session_id" ~ '^cs_[A-Za-z0-9_]+$'::"text"))),
+    CONSTRAINT "checkout_sessions_token_hash_format" CHECK (("token_hash" ~ '^[0-9a-f]{64}$'::"text"))
+);
+
+
+ALTER TABLE "public"."checkout_sessions" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."group_invites" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "group_id" "uuid" NOT NULL,
@@ -4573,6 +4775,16 @@ CREATE TABLE IF NOT EXISTS "public"."season_awards" (
 ALTER TABLE "public"."season_awards" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."stripe_events" (
+    "id" "text" NOT NULL,
+    "type" "text" NOT NULL,
+    "received_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."stripe_events" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."suppliers" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" "text" NOT NULL,
@@ -4817,6 +5029,16 @@ ALTER TABLE ONLY "public"."check_ins"
 
 ALTER TABLE ONLY "public"."check_ins"
     ADD CONSTRAINT "check_ins_user_place_day_unique" UNIQUE ("user_id", "place_id", "local_date");
+
+
+
+ALTER TABLE ONLY "public"."checkout_sessions"
+    ADD CONSTRAINT "checkout_sessions_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."checkout_sessions"
+    ADD CONSTRAINT "checkout_sessions_stripe_session_id_unique" UNIQUE ("stripe_session_id");
 
 
 
@@ -5075,6 +5297,11 @@ ALTER TABLE ONLY "public"."season_awards"
 
 
 
+ALTER TABLE ONLY "public"."stripe_events"
+    ADD CONSTRAINT "stripe_events_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."suppliers"
     ADD CONSTRAINT "suppliers_pkey" PRIMARY KEY ("id");
 
@@ -5178,6 +5405,14 @@ CREATE INDEX "chat_sessions_user_id_idx" ON "public"."chat_sessions" USING "btre
 
 
 CREATE INDEX "check_ins_user_date_idx" ON "public"."check_ins" USING "btree" ("user_id", "local_date");
+
+
+
+CREATE INDEX "checkout_sessions_status_idx" ON "public"."checkout_sessions" USING "btree" ("status");
+
+
+
+CREATE INDEX "checkout_sessions_user_id_idx" ON "public"."checkout_sessions" USING "btree" ("user_id");
 
 
 
@@ -5656,6 +5891,11 @@ ALTER TABLE ONLY "public"."check_ins"
 
 ALTER TABLE ONLY "public"."check_ins"
     ADD CONSTRAINT "check_ins_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."checkout_sessions"
+    ADD CONSTRAINT "checkout_sessions_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
 
@@ -6283,6 +6523,17 @@ CREATE POLICY "check_ins_select_own" ON "public"."check_ins" FOR SELECT TO "auth
 
 
 
+ALTER TABLE "public"."checkout_sessions" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "checkout_sessions_select_admin" ON "public"."checkout_sessions" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "checkout_sessions_select_own" ON "public"."checkout_sessions" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
 ALTER TABLE "public"."group_invites" ENABLE ROW LEVEL SECURITY;
 
 
@@ -6804,6 +7055,13 @@ CREATE POLICY "season_awards_select_admin" ON "public"."season_awards" FOR SELEC
 
 
 
+ALTER TABLE "public"."stripe_events" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "stripe_events_select_admin" ON "public"."stripe_events" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
 ALTER TABLE "public"."suppliers" ENABLE ROW LEVEL SECURITY;
 
 
@@ -6973,6 +7231,42 @@ GRANT ALL ON FUNCTION "public"."check_activity_place_active"() TO "service_role"
 
 REVOKE ALL ON FUNCTION "public"."check_place_has_active_activities"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."check_place_has_active_activities"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."checkout_attach_stripe_session"("p_checkout_id" "uuid", "p_token" "text", "p_stripe_session_id" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_attach_stripe_session"("p_checkout_id" "uuid", "p_token" "text", "p_stripe_session_id" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."checkout_attach_stripe_session"("p_checkout_id" "uuid", "p_token" "text", "p_stripe_session_id" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."checkout_attach_stripe_session"("p_checkout_id" "uuid", "p_token" "text", "p_stripe_session_id" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."checkout_check_token"("p_checkout_id" "uuid", "p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_check_token"("p_checkout_id" "uuid", "p_token" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."checkout_close"("p_checkout_id" "uuid", "p_status" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_close"("p_checkout_id" "uuid", "p_status" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_points_per_euro" integer, "p_max_points_percent" integer, "p_expires_at" timestamp with time zone, "p_token_hash" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_points_per_euro" integer, "p_max_points_percent" integer, "p_expires_at" timestamp with time zone, "p_token_hash" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_points_per_euro" integer, "p_max_points_percent" integer, "p_expires_at" timestamp with time zone, "p_token_hash" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_points_per_euro" integer, "p_max_points_percent" integer, "p_expires_at" timestamp with time zone, "p_token_hash" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."checkout_expire_from_stripe"("p_checkout_id" "uuid", "p_stripe_session_id" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_expire_from_stripe"("p_checkout_id" "uuid", "p_stripe_session_id" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") TO "service_role";
 
 
 
@@ -7673,6 +7967,54 @@ GRANT INSERT("title"),UPDATE("title") ON TABLE "public"."chat_sessions" TO "auth
 
 GRANT ALL ON TABLE "public"."check_ins" TO "service_role";
 GRANT SELECT ON TABLE "public"."check_ins" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."checkout_sessions" TO "service_role";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("stripe_session_id") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("user_id") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("cart") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("subtotal_cents") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("shipping_cents") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("discount_cents") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("points_redeemed") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("status") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("created_at") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("expires_at") ON TABLE "public"."checkout_sessions" TO "authenticated";
 
 
 
@@ -8580,6 +8922,11 @@ GRANT SELECT ON TABLE "public"."search_misses" TO "authenticated";
 
 GRANT ALL ON TABLE "public"."season_awards" TO "service_role";
 GRANT SELECT ON TABLE "public"."season_awards" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."stripe_events" TO "service_role";
+GRANT SELECT ON TABLE "public"."stripe_events" TO "authenticated";
 
 
 
