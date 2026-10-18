@@ -59,16 +59,20 @@ function writeDraft(answers: OnboardingAnswers | null) {
   }
 }
 
+// nextPath (facoltativo, già validato con safeNextPath dalla pagina) è dove andare a onboarding
+// completato, per esempio l'invito a un gruppo; senza, la pagina dei tre viaggi.
 export function OnboardingFlow({
   locale,
   interests,
   initial,
   needsSession,
+  nextPath,
 }: {
   locale: string;
   interests: Interest[];
   initial: OnboardingAnswers;
   needsSession: boolean;
+  nextPath?: string;
 }) {
   const t = useTranslations("Onboarding");
   const router = useRouter();
@@ -96,13 +100,22 @@ export function OnboardingFlow({
       return next;
     });
 
-  const goTo = (index: number) => router.push({ pathname: "/viaggio/nuovo", query: { domanda: String(index + 1) } });
+  const goTo = (index: number) =>
+    router.push({
+      pathname: "/viaggio/nuovo",
+      query: { domanda: String(index + 1), ...(nextPath ? { next: nextPath } : {}) },
+    });
 
   function submit(final: OnboardingAnswers) {
     setError(null);
     startTransition(async () => {
       writeDraft(final);
-      const result = await submitOnboarding({ locale, ...final, captchaToken: captchaToken ?? undefined });
+      const result = await submitOnboarding({
+        locale,
+        ...final,
+        captchaToken: captchaToken ?? undefined,
+        next: nextPath,
+      });
       // In caso di successo l'azione porta ai tre viaggi, che tolgono la bozza (ClearDraft).
       if (result?.status === "error") {
         setError(result.code);
@@ -146,13 +159,19 @@ export function OnboardingFlow({
   const canGoOn = !(question === "days" && answers.days === null);
 
   return (
-    <section className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 py-8 md:py-12">
+    <section className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-10 px-4 py-8 md:gap-12 md:py-14">
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-4 text-body-s text-lava-muted">
           <span>{t("progress", { step: step + 1, total: TOTAL })}</span>
-          <button type="button" className="font-semibold text-lava underline underline-offset-4" onClick={skip} disabled={pending || (last && needsSession && !captchaToken)}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={skip}
+            disabled={pending || (last && needsSession && !captchaToken)}
+          >
             {t("skip")}
-          </button>
+          </Button>
         </div>
         <div
           className="h-1 w-full overflow-hidden rounded-pill bg-calce-sunk"
@@ -166,8 +185,8 @@ export function OnboardingFlow({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <h1 className="is-display text-display-l">{screen.title}</h1>
+      <div className="flex max-w-[680px] flex-col gap-3">
+        <h1 className="is-display text-display-l text-balance">{screen.title}</h1>
         {screen.hint && <p className="text-body-l text-pretty text-lava-muted">{screen.hint}</p>}
       </div>
 
@@ -182,7 +201,7 @@ export function OnboardingFlow({
         </p>
       )}
 
-      <div className="mt-auto flex flex-col gap-3 pt-4">
+      <div className="mt-auto flex flex-col gap-4 border-t border-divider pt-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {step > 0 ? (
             <Button type="button" variant="ghost" onClick={() => goTo(step - 1)}>

@@ -10,6 +10,15 @@ describe("safeNextPath", () => {
     expect(safeNextPath("/it/profilo?tab=1#x")).toBe("/it/profilo?tab=1#x");
   });
 
+  it("accetta il ritorno a un invito di gruppo con il token", () => {
+    const token = "a".repeat(43);
+    expect(safeNextPath(`/it/invito/${token}`, "/it")).toBe(`/it/invito/${token}`);
+  });
+
+  it("rifiuta un invito con un'origine esterna", () => {
+    expect(safeNextPath("https://evil.com/it/invito/token", "/it")).toBe("/it");
+  });
+
   it.each([
     null,
     undefined,

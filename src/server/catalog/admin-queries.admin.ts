@@ -2,6 +2,7 @@ import "server-only";
 import { asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { requireAdmin } from "@/server/auth";
 import { dbAdmin } from "@/server/db/admin";
+import { DAILY_HOURS } from "@/server/personalization/config";
 import {
   activities,
   activityInterests,
@@ -10,9 +11,9 @@ import {
   areas,
   interests,
   itineraries,
-  itineraryItems,
   places,
 } from "@/server/db/schema";
+import { readTemplateForAdmin } from "./templates.admin";
 
 // Letture dell'admin del catalogo: vedono anche le attività inattive e gli itinerari non
 // pubblicati. Ogni funzione verifica l'admin prima di leggere.
@@ -165,31 +166,10 @@ export async function adminListTemplates() {
     .orderBy(asc(itineraries.title));
 }
 
+// Editor di un itinerario pronto: campi, tappe, notti, controlli di pubblicazione e fatti.
 export async function adminGetTemplate(id: string) {
   await requireAdmin();
-  const [template] = await dbAdmin
-    .select()
-    .from(itineraries)
-    .where(sql`${itineraries.id} = ${id} and ${itineraries.isTemplate}`);
-  if (!template) return null;
-  const items = await dbAdmin
-    .select({
-      id: itineraryItems.id,
-      dayIndex: itineraryItems.dayIndex,
-      position: itineraryItems.position,
-      startTime: itineraryItems.startTime,
-      activityId: itineraryItems.activityId,
-      placeId: itineraryItems.placeId,
-      customTitle: itineraryItems.customTitle,
-      activityTitle: activities.title,
-      placeName: places.name,
-    })
-    .from(itineraryItems)
-    .leftJoin(activities, eq(activities.id, itineraryItems.activityId))
-    .leftJoin(places, eq(places.id, itineraryItems.placeId))
-    .where(eq(itineraryItems.itineraryId, id))
-    .orderBy(asc(itineraryItems.dayIndex), asc(itineraryItems.position));
-  return { ...template, items };
+  return dbAdmin.transaction((tx) => readTemplateForAdmin(tx, id, DAILY_HOURS));
 }
 
 // Opzioni per i selettori dei form (tutte le attività, anche inattive).

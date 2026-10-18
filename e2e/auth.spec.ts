@@ -23,7 +23,8 @@ test("accesso con codice, profilo protetto e logout", async ({ page, request }) 
   const email = await signUpWithCode(page, request);
   await expect(page.getByText(email)).toBeVisible();
 
-  await page.getByRole("button", { name: "Esci" }).click();
+  await page.getByRole("button", { name: "Menu personale" }).click();
+  await page.getByRole("menuitem", { name: "Esci" }).click();
   await expect(page).toHaveURL(/\/it$/);
   await expect(page.getByRole("link", { name: "Accedi" })).toBeVisible();
 
@@ -78,7 +79,10 @@ test("ospite: crea un itinerario, salva l'account con il codice e l'itinerario r
   await page.getByRole("button", { name: "Continua senza account" }).click();
   await expect(page).toHaveURL(/\/it\/profilo$/);
   await expect(page.getByRole("heading", { name: "Stai usando Isula come ospite" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Salva l'account" })).toBeVisible();
+  // Il menu personale dell'ospite propone di creare l'account (porta al profilo, dove si salva con il codice).
+  await page.getByRole("button", { name: "Menu personale" }).click();
+  await expect(page.getByRole("menuitem", { name: "Crea l'account" })).toBeVisible();
+  await page.keyboard.press("Escape");
 
   const guestId = await sessionUserId(page);
   const [guest] = await withDb((sql) => sql`select is_anonymous, email from auth.users where id = ${guestId}`);

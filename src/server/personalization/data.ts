@@ -1,10 +1,22 @@
 import "server-only";
 import { asc, eq, inArray, sql } from "drizzle-orm";
-import { activities, activityInterests, areas, interests, places, preferenceWeights, profiles, userConstraints } from "@/server/db/schema";
+import { alias } from "drizzle-orm/pg-core";
+import {
+  activities,
+  activityInterests,
+  areaDriveTimes,
+  areas,
+  interests,
+  places,
+  preferenceWeights,
+  profiles,
+  userConstraints,
+} from "@/server/db/schema";
 import { dbPublic } from "@/server/db/public";
 import { dbAsUser, type DbUser, type UserTx } from "@/server/db/user";
 import { effectiveWeight, type Airport, type CarAccess, type CatalogActivity, type Pace, type Profile } from "./engine";
 import { NEUTRAL } from "@/lib/onboarding";
+import { pairKey, type DriveTimes } from "@/lib/drive-pairs";
 
 // Dati del motore di personalizzazione. Le risposte dell'onboarding e le preferenze sono dati
 // personali: si leggono e si scrivono solo con dbAsUser (RLS: ognuno le proprie, ospite
@@ -129,12 +141,14 @@ async function writeTrip(tx: UserTx, user: DbUser, trip: TripAnswers) {
 }
 
 // Fine del percorso completo: gusti e viaggio, e i gusti risultano completati
-// (profiles.onboarding_completed_at).
+// (profiles.onboarding_completed_at). Nella stessa transazione si accreditano i punti del
+// profilo completato e quelli dell'invito (claim_onboarding_points, idempotente).
 export async function saveAnswers(user: DbUser, answers: OnboardingAnswers): Promise<void> {
   await dbAsUser(user, async (tx) => {
     await writeTastes(tx, user, answers);
     await writeTrip(tx, user, answers);
     await tx.update(profiles).set({ onboardingCompletedAt: new Date() }).where(eq(profiles.id, user.id));
+    await tx.execute(sql`select public.claim_onboarding_points()`);
   });
 }
 
@@ -234,6 +248,21 @@ export async function engineCatalog(): Promise<CatalogActivity[]> {
       tags: tags.filter((t) => t.activityId === r.id).map((t) => ({ key: t.key, strength: t.strength })),
     }));
   });
+}
+
+// Matrice dei tempi di guida tra aree (M4 parte 4), per chiave di coppia (pairKey). Lettura
+// pubblica: la scrive solo l'admin. Le coppie senza riga non sono componibili.
+export async function driveTimesBySlug(): Promise<DriveTimes> {
+  const first = alias(areas, "drive_area_a");
+  const second = alias(areas, "drive_area_b");
+  const rows = await dbPublic((tx) =>
+    tx
+      .select({ a: first.slug, b: second.slug, minutes: areaDriveTimes.minutes })
+      .from(areaDriveTimes)
+      .innerJoin(first, eq(first.id, areaDriveTimes.areaAId))
+      .innerJoin(second, eq(second.id, areaDriveTimes.areaBId)),
+  );
+  return new Map(rows.map((r) => [pairKey(r.a, r.b), r.minutes]));
 }
 
 // Nomi delle aree nella lingua della pagina, per slug.

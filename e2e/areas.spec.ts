@@ -35,7 +35,8 @@ test("tre viaggi in tre aree diverse, con il perché della zona; Preferenze solo
   await expect(page.getByRole("main").getByRole("link", { name: "Modifica i tuoi gusti" })).toHaveAttribute("href", "/it/preferenze");
   await expect(page.getByRole("main").getByRole("link", { name: "Cambia il viaggio" })).toHaveAttribute("href", "/it/viaggio/nuovo");
   await expect(page.getByRole("main").getByRole("link", { name: "Preferenze", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("banner").getByRole("link", { name: "Preferenze", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Menu personale" }).click();
+  await expect(page.getByRole("menu").getByRole("menuitem", { name: "Preferenze", exact: true })).toBeVisible();
   // Senza dieta nessuna riga "Indicativo".
   await expect(page.getByText("Indicativo: conferma sempre con chi organizza")).toHaveCount(0);
 });

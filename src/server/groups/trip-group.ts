@@ -1,0 +1,280 @@
+import "server-only";
+import { sql } from "drizzle-orm";
+import { groupProfileFrom } from "@/lib/group-profile";
+import { nearbyAlternatives, type AlternativeCandidate } from "@/lib/group-alternatives";
+import { shouldSuggestAlternatives } from "@/lib/group-votes";
+import { dbAsUser, type DbUser, type UserTx } from "@/server/db/user";
+import { score, type CatalogActivity } from "@/server/personalization/engine";
+import { groupPreferencesTx } from "./aggregate";
+
+// Letture di un viaggio di gruppo (passo 4.2) con dbAsUser: la RLS decide chi vede cosa (solo i
+// membri vedono voti, proposte e registro). Le preferenze entrano solo come aggregato del gruppo
+// (passo 4.3), e solo per ordinare le alternative: nessun dato per membro.
+
+export type VoteTally = { up: number; down: number; mine: 1 | -1 | null };
+
+export type TripGroupAlternative = { activityId: string; title: string; placeName: string; distanceKm: number };
+
+export type TripGroupProposal = {
+  id: string;
+  activityId: string;
+  title: string;
+  dayIndex: number;
+  proposedByName: string | null;
+  mine: boolean;
+};
+
+export type TripGroupChange = {
+  id: string;
+  kind: string;
+  actorName: string | null;
+  payload: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type TripGroupState = {
+  members: number;
+  isGroupOwner: boolean;
+  // Una voce per ogni tappa del viaggio (zero voti se nessuno ha votato).
+  votes: Record<string, VoteTally>;
+  // Solo per le tappe con voti contrari sopra soglia (shouldSuggestAlternatives).
+  alternatives: Record<string, TripGroupAlternative[]>;
+  // Solo le proposte in attesa.
+  proposals: TripGroupProposal[];
+  // Ultime 30 voci del registro, più recenti prima.
+  changes: TripGroupChange[];
+};
+
+type StopRow = {
+  id: string;
+  activity_id: string | null;
+  title: string | null;
+  place_name: string | null;
+  area: string | null;
+  lat: number | null;
+  lng: number | null;
+};
+
+type BalanceRow = { itinerary_item_id: string; up_votes: number; down_votes: number };
+type MineRow = { itinerary_item_id: string; value: number };
+type ProposalRow = {
+  id: string;
+  activity_id: string;
+  title: string;
+  day_index: number;
+  proposed_by: string | null;
+  display_name: string | null;
+};
+type ChangeRow = {
+  id: string;
+  kind: string;
+  payload: Record<string, unknown>;
+  created_at: Date | string;
+  display_name: string | null;
+};
+
+function toMine(value: number | undefined): 1 | -1 | null {
+  return value === 1 ? 1 : value === -1 ? -1 : null;
+}
+
+type CatalogRow = {
+  id: string;
+  slug: string;
+  title: string;
+  place_name: string;
+  area: string;
+  lat: number;
+  lng: number;
+  duration_min: number;
+  on_site_price_eur: number | null;
+  season_months: number[];
+  requires_car: boolean;
+  accessible: boolean;
+  diet_friendly: string[];
+  rating: number | null;
+};
+
+type CatalogTagRow = { activity_id: string; interest_key: string; strength: number };
+
+// Catalogo delle attività attive, con area, voto e interessi: serve alle alternative e al
+// punteggio per il profilo del gruppo (due query sole).
+async function catalogTx(tx: UserTx): Promise<CatalogActivity[]> {
+  const rows = await tx.execute<CatalogRow>(sql`
+    select a.id, a.slug, a.title, pl.name as place_name, ar.slug as area, pl.lat, pl.lng,
+      a.duration_min, a.on_site_price_eur::float8 as on_site_price_eur, a.season_months::int[] as season_months,
+      a.requires_car, a.accessible, a.diet_friendly, a.rating::float8 as rating
+    from public.activities a
+    join public.places pl on pl.id = a.place_id
+    join public.areas ar on ar.id = pl.area_id
+    where a.is_active`);
+  const tags = await tx.execute<CatalogTagRow>(sql`
+    select ai.activity_id, ai.interest_key, ai.strength
+    from public.activity_interests ai
+    join public.activities a on a.id = ai.activity_id
+    where a.is_active`);
+  const tagsByActivity = new Map<string, { key: string; strength: number }[]>();
+  for (const tag of tags) {
+    const list = tagsByActivity.get(tag.activity_id) ?? [];
+    list.push({ key: tag.interest_key, strength: Number(tag.strength) });
+    tagsByActivity.set(tag.activity_id, list);
+  }
+  return rows.map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    title: r.title,
+    placeName: r.place_name,
+    area: r.area,
+    lat: Number(r.lat),
+    lng: Number(r.lng),
+    durationMin: Number(r.duration_min),
+    onSitePriceEur: r.on_site_price_eur === null ? null : Number(r.on_site_price_eur),
+    seasonMonths: r.season_months.map(Number),
+    requiresCar: r.requires_car,
+    accessible: r.accessible,
+    dietFriendly: r.diet_friendly,
+    rating: r.rating === null ? null : Number(r.rating),
+    tags: tagsByActivity.get(r.id) ?? [],
+  }));
+}
+
+// Punteggio di ogni attività per il profilo del gruppo (passo 4.3). Undefined se nessun membro ha
+// completato i gusti: le alternative restano ordinate per voto del catalogo.
+async function groupScoresTx(
+  tx: UserTx,
+  groupId: string,
+  itineraryId: string,
+  catalog: readonly CatalogActivity[],
+): Promise<ReadonlyMap<string, number> | undefined> {
+  const prefs = await groupPreferencesTx(tx, groupId);
+  if (prefs.withPreferences === 0) return undefined;
+  const [trip] = await tx.execute<{ days: number; season_months: number[] }>(sql`
+    select days, season_months::int[] as season_months from public.itineraries where id = ${itineraryId}::uuid`);
+  const profile = groupProfileFrom(prefs, Number(trip?.days ?? 3), trip?.season_months ?? []);
+  return new Map(catalog.map((activity) => [activity.id, score(activity, profile)]));
+}
+
+function alternativesFor(
+  stops: readonly StopRow[],
+  votes: Record<string, VoteTally>,
+  members: number,
+  catalog: readonly CatalogActivity[],
+  scores: ReadonlyMap<string, number> | undefined,
+): Record<string, TripGroupAlternative[]> {
+  const candidates: AlternativeCandidate[] = catalog.map((a) => ({
+    activityId: a.id,
+    title: a.title,
+    placeName: a.placeName,
+    area: a.area,
+    lat: a.lat,
+    lng: a.lng,
+    rating: a.rating,
+  }));
+  const inTrip = new Set(stops.flatMap((s) => (s.activity_id ? [s.activity_id] : [])));
+  const result: Record<string, TripGroupAlternative[]> = {};
+  for (const stop of stops) {
+    const tally = votes[stop.id];
+    if (!tally || !stop.activity_id || stop.area === null || stop.lat === null || stop.lng === null) continue;
+    if (!shouldSuggestAlternatives(tally.down, members)) continue;
+    result[stop.id] = nearbyAlternatives(
+      { activityId: stop.activity_id, area: stop.area, lat: stop.lat, lng: stop.lng },
+      candidates,
+      inTrip,
+      scores,
+    );
+  }
+  return result;
+}
+
+// Stato del viaggio di gruppo per chi lo vede. Lancia se il gruppo non è visibile a chi chiama.
+export async function getTripGroupState(user: DbUser, itineraryId: string, groupId: string): Promise<TripGroupState> {
+  return dbAsUser(user, async (tx): Promise<TripGroupState> => {
+    const [group] = await tx.execute<{ owner_id: string }>(sql`
+      select owner_id from public.groups where id = ${groupId}::uuid`);
+    if (!group) throw new Error("group_not_visible");
+
+    const [countRow] = await tx.execute<{ n: number }>(sql`
+      select count(*)::int as n from public.group_members where group_id = ${groupId}::uuid`);
+    const members = Number(countRow?.n ?? 0);
+
+    const stops = await tx.execute<StopRow>(sql`
+      select ii.id, ii.activity_id, a.title, pl.name as place_name, ar.slug as area, pl.lat, pl.lng
+      from public.itinerary_items ii
+      left join public.activities a on a.id = ii.activity_id
+      left join public.places pl on pl.id = coalesce(ii.place_id, a.place_id)
+      left join public.areas ar on ar.id = pl.area_id
+      where ii.itinerary_id = ${itineraryId}::uuid`);
+
+    // Saldo dalla vista (solo voti dei membri attuali) e voto proprio.
+    const balances = await tx.execute<BalanceRow>(sql`
+      select b.itinerary_item_id, b.up_votes, b.down_votes
+      from public.item_vote_balances b
+      where b.itinerary_item_id in (
+        select id from public.itinerary_items where itinerary_id = ${itineraryId}::uuid)`);
+    const mine = await tx.execute<MineRow>(sql`
+      select itinerary_item_id, value from public.item_votes
+      where itinerary_id = ${itineraryId}::uuid and user_id = ${user.id}::uuid`);
+
+    const votes: Record<string, VoteTally> = {};
+    for (const stop of stops) votes[stop.id] = { up: 0, down: 0, mine: null };
+    for (const b of balances) {
+      const current = votes[b.itinerary_item_id] ?? { up: 0, down: 0, mine: null };
+      votes[b.itinerary_item_id] = { ...current, up: Number(b.up_votes), down: Number(b.down_votes) };
+    }
+    for (const m of mine) {
+      const current = votes[m.itinerary_item_id] ?? { up: 0, down: 0, mine: null };
+      votes[m.itinerary_item_id] = { ...current, mine: toMine(Number(m.value)) };
+    }
+
+    const needsCatalog = stops.some((s) => {
+      const tally = votes[s.id];
+      return tally !== undefined && shouldSuggestAlternatives(tally.down, members);
+    });
+    let alternatives: Record<string, TripGroupAlternative[]> = {};
+    if (needsCatalog) {
+      const catalog = await catalogTx(tx);
+      const scores = await groupScoresTx(tx, groupId, itineraryId, catalog);
+      alternatives = alternativesFor(stops, votes, members, catalog, scores);
+    }
+
+    // group_member_profiles: nome dei compagni, filtrato dalla vista sull'appartenenza al gruppo.
+    const proposalRows = await tx.execute<ProposalRow>(sql`
+      select p.id, p.activity_id, a.title, p.day_index, p.proposed_by, gmp.display_name
+      from public.itinerary_proposals p
+      join public.activities a on a.id = p.activity_id
+      left join public.group_member_profiles gmp
+        on gmp.group_id = ${groupId}::uuid and gmp.user_id = p.proposed_by
+      where p.itinerary_id = ${itineraryId}::uuid and p.status = 'pending'
+      order by p.created_at asc, p.id asc`);
+
+    const changeRows = await tx.execute<ChangeRow>(sql`
+      select c.id, c.kind, c.payload, c.created_at, gmp.display_name
+      from public.itinerary_changes c
+      left join public.group_member_profiles gmp
+        on gmp.group_id = ${groupId}::uuid and gmp.user_id = c.actor_id
+      where c.itinerary_id = ${itineraryId}::uuid
+      order by c.id desc
+      limit 30`);
+
+    return {
+      members,
+      isGroupOwner: group.owner_id === user.id,
+      votes,
+      alternatives,
+      proposals: proposalRows.map((p) => ({
+        id: p.id,
+        activityId: p.activity_id,
+        title: p.title,
+        dayIndex: Number(p.day_index),
+        proposedByName: p.display_name,
+        mine: p.proposed_by === user.id,
+      })),
+      changes: changeRows.map((c) => ({
+        id: String(c.id),
+        kind: c.kind,
+        actorName: c.display_name,
+        payload: c.payload,
+        createdAt: new Date(c.created_at).toISOString(),
+      })),
+    };
+  });
+}

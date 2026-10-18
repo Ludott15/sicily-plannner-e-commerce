@@ -303,3 +303,189 @@ from (values
 ) as v(itinerary_slug, day_index, position, activity_slug, start_time)
 join public.itineraries i on i.slug = v.itinerary_slug
 join public.activities a on a.slug = v.activity_slug;
+
+-- Itinerari pronti (template editoriali): sei demo, tutti pubblicati e tutti con i controlli di
+-- pubblicazione ok (src/lib/itinerary-checks.ts): ritmo, tappe attive e nei mesi consigliati,
+-- minuti del giorno entro il ritmo, copertina foto con testo alternativo (prima tappa).
+-- Durate: relaxed 240 min, balanced 360, intense 480 per giorno.
+
+-- 1) I due dell'avvio: campi editoriali, fasce orarie e note.
+update public.itineraries set
+  subtitle = '[DEMO] Mercati, mosaici e mare in tre giorni',
+  description = '[DEMO] Palermo e Monreale nei primi due giorni, poi una giornata a Cefalù. Ritmo intenso: le giornate sono piene.',
+  suitable_for = array['couple', 'friends']::public.travel_party[],
+  season_months = '{}'::smallint[],
+  pace = 'intense',
+  day_intros = array[
+    '[DEMO] Il mercato di Ballarò al mattino, il palazzo dei Normanni nel primo pomeriggio e la vita notturna della Vucciria.',
+    '[DEMO] Monreale e i suoi mosaici al mattino, poi il Teatro Massimo.',
+    '[DEMO] Cefalù: la rocca presto, il mare nel pomeriggio.'
+  ]
+where slug = 'demo-weekend-palermo';
+
+update public.itineraries set
+  subtitle = '[DEMO] Catania, l’Etna, Taormina e Siracusa in cinque giorni',
+  description = '[DEMO] Il giro della costa orientale con l’Etna al centro. Pensato per la bella stagione, da maggio a ottobre, con ritmo intenso.',
+  suitable_for = array['family', 'friends']::public.travel_party[],
+  season_months = array[5, 6, 7, 8, 9, 10]::smallint[],
+  pace = 'intense',
+  day_intros = array[
+    '[DEMO] Mercato del pesce a Catania all’alba, poi la città barocca.',
+    '[DEMO] L’Etna in mattinata, con la guida, e una cantina nel tardo pomeriggio.',
+    '[DEMO] Il teatro di Taormina al mattino, la baia in kayak nel pomeriggio.',
+    '[DEMO] Ortigia a piedi, poi il parco della Neapolis.',
+    '[DEMO] Noto e la riserva di Vendicari: giornata lunga, acqua e cappello.'
+  ]
+where slug = 'demo-sicilia-orientale';
+
+-- Fasce orarie e note delle tappe dei due esistenti (giorno e posizione come nel seed sopra).
+update public.itinerary_items ii set time_slot = v.time_slot::public.time_slot, notes = v.notes
+from public.itineraries i
+join (values
+  ('demo-weekend-palermo', 0, 0, 'morning', '[DEMO] Il mercato è pieno al mattino: conviene arrivare presto.'),
+  ('demo-weekend-palermo', 0, 1, 'afternoon', null),
+  ('demo-weekend-palermo', 0, 2, 'evening', null),
+  ('demo-weekend-palermo', 1, 0, 'morning', '[DEMO] Il chiostro da solo richiede un’ora buona.'),
+  ('demo-weekend-palermo', 1, 1, 'afternoon', null),
+  ('demo-weekend-palermo', 2, 0, 'morning', '[DEMO] Sentiero in salita: meglio le prime ore, quando è fresco.'),
+  ('demo-weekend-palermo', 2, 1, 'afternoon', null),
+  ('demo-sicilia-orientale', 0, 0, 'morning', '[DEMO] Colazione al mercato: il pesce più fresco è nelle prime ore.'),
+  ('demo-sicilia-orientale', 0, 1, 'afternoon', null),
+  ('demo-sicilia-orientale', 1, 0, 'morning', '[DEMO] In quota fa freddo anche d’estate: porta una giacca.'),
+  ('demo-sicilia-orientale', 1, 1, 'evening', '[DEMO] Degustazione dopo il rientro dai crateri.'),
+  ('demo-sicilia-orientale', 2, 0, 'morning', '[DEMO] Il teatro di mattina è meno affollato.'),
+  ('demo-sicilia-orientale', 2, 1, 'afternoon', null),
+  ('demo-sicilia-orientale', 3, 0, 'morning', null),
+  ('demo-sicilia-orientale', 3, 1, 'afternoon', '[DEMO] Il parco apre presto: il caldo arriva a mezzogiorno.'),
+  ('demo-sicilia-orientale', 4, 0, 'morning', null),
+  ('demo-sicilia-orientale', 4, 1, 'afternoon', '[DEMO] La riserva ha poca ombra: acqua e cappello.')
+) as v(itinerary_slug, day_index, position, time_slot, notes)
+  on i.slug = v.itinerary_slug
+where ii.itinerary_id = i.id and ii.day_index = v.day_index and ii.position = v.position;
+
+-- 2) Quattro nuovi. Il titolo dei giorni è facoltativo (come negli esistenti).
+insert into public.itineraries (owner_id, title, slug, is_template, days, status, subtitle, description, season_months, suitable_for, pace, day_titles, day_intros)
+values
+  (null, '[DEMO] Trapani, Erice e Segesta in due giorni', 'demo-trapani-erice', true, 2, 'planned',
+    '[DEMO] Saline, borghi sul monte e il tempio dorico.',
+    '[DEMO] Due giorni nella Sicilia occidentale: il mare delle saline, Erice in cima al monte e il tempio dorico di Segesta. Consigliato da maggio a settembre.',
+    array[5, 6, 7, 8, 9]::smallint[],
+    array['couple', 'friends']::public.travel_party[],
+    'balanced',
+    array['Saline e mare', 'Erice e Segesta'],
+    array[
+      '[DEMO] Le saline al pomeriggio e una serata di cous cous.',
+      '[DEMO] Il tempio di Segesta al mattino, Erice nel primo pomeriggio.'
+    ]),
+  (null, '[DEMO] Agrigento e la Scala dei Turchi in tre giorni', 'demo-agrigento-scala', true, 3, 'planned',
+    '[DEMO] La Valle dei Templi e la scogliera di marna bianca.',
+    '[DEMO] Tre giorni tra i templi dorici, la Scala dei Turchi e le botteghe di Sciacca. Adatto tutto l’anno, con il caldo dell’estate da mettere in conto.',
+    '{}'::smallint[],
+    array['family', 'couple']::public.travel_party[],
+    'balanced',
+    array['Valle dei Templi', 'Scala dei Turchi', 'Eraclea Minoa'],
+    array[
+      '[DEMO] Valle dei Templi al mattino, la Kolymbethra a pranzo, la casa di Pirandello nel pomeriggio.',
+      '[DEMO] La Scala dei Turchi al mattino, poi le botteghe di ceramica di Sciacca.',
+      '[DEMO] Eraclea Minoa: la spiaggia e gli scavi sul mare.'
+    ]),
+  (null, '[DEMO] Madonie e Cefalù in cinque giorni', 'demo-madonie-cefalu', true, 5, 'planned',
+    '[DEMO] Cefalù, le Madonie e i borghi in cima.',
+    '[DEMO] Cinque giorni tra il mare di Cefalù e le Madonie: faggete, borghi e la salita a Pizzo Carbonara. Ritmo bilanciato.',
+    '{}'::smallint[],
+    array['solo', 'couple']::public.travel_party[],
+    'balanced',
+    array['Cefalù', 'Castelbuono', 'Piano Battaglia', 'Polizzi Generosa', 'Cefalù e la costa'],
+    array[
+      '[DEMO] Il duomo di Cefalù al mattino, il santuario di Gibilmanna a pranzo, il lavatoio nel centro.',
+      '[DEMO] Castelbuono e il suo castello, poi il caseificio delle Madonie.',
+      '[DEMO] Le faggete di Piano Battaglia: un anello tra gli alberi.',
+      '[DEMO] La salita a Pizzo Carbonara: giornata lunga, si parte presto.',
+      '[DEMO] Calette in barca al mattino, la rocca di Cefalù nel pomeriggio.'
+    ]),
+  (null, '[DEMO] Entroterra ennese in sette giorni', 'demo-entroterra-enna', true, 7, 'planned',
+    '[DEMO] Enna, Piazza Armerina e Caltagirone con calma.',
+    '[DEMO] Sette giorni nell’entroterra: ville romane, città della ceramica e borghi tra le colline. Ritmo rilassato, adatto a chi viaggia da solo o con gli amici.',
+    '{}'::smallint[],
+    array['solo', 'friends']::public.travel_party[],
+    'relaxed',
+    array['Enna', 'Piazza Armerina', 'Aidone', 'Caltagirone', 'Enna e l’Altesina', 'Calascibetta', 'Masseria e Caltagirone'],
+    array[
+      '[DEMO] Il castello di Lombardia e il duomo di Enna, con vista sull’Etna.',
+      '[DEMO] Villa Romana del Casale al mattino, il centro di Piazza Armerina nel pomeriggio.',
+      '[DEMO] Gli scavi di Morgantina e il museo di Aidone.',
+      '[DEMO] Scalinata di maiolica e laboratorio di ceramica a Caltagirone.',
+      '[DEMO] Il sentiero del monte Altesina, tra bosco e resti antichi.',
+      '[DEMO] Calascibetta e le tombe a grotticella di Realmese.',
+      '[DEMO] Pranzo in masseria e museo della ceramica a Caltagirone.'
+    ]);
+
+-- Tappe dei quattro nuovi. Ogni giorno resta entro il ritmo (ore × 60 minuti).
+insert into public.itinerary_items (itinerary_id, day_index, position, activity_id, time_slot, notes)
+select i.id, v.day_index, v.position, a.id, v.time_slot::public.time_slot, v.notes
+from (values
+  -- Trapani, Erice e Segesta (balanced, 360): giorno 1 = 120 + 180, giorno 2 = 150 + 150.
+  ('demo-trapani-erice', 0, 0, 'demo-saline-trapani', 'afternoon', '[DEMO] Il tramonto sulle saline è il momento migliore.'),
+  ('demo-trapani-erice', 0, 1, 'demo-cous-cous', 'evening', null),
+  ('demo-trapani-erice', 1, 0, 'demo-segesta-tempio', 'morning', '[DEMO] Mettiti in cammino presto: a metà giornata il sole sul colle si sente.'),
+  ('demo-trapani-erice', 1, 1, 'demo-erice-borgo', 'afternoon', null),
+  -- Agrigento (balanced, 360): 180 + 90 + 60 = 330; 150 + 120 = 270; 300.
+  ('demo-agrigento-scala', 0, 0, 'demo-valle-templi', 'morning', '[DEMO] Il tramonto è il momento migliore per i templi.'),
+  ('demo-agrigento-scala', 0, 1, 'demo-kolymbethra', 'lunch', null),
+  ('demo-agrigento-scala', 0, 2, 'demo-casa-pirandello', 'afternoon', null),
+  ('demo-agrigento-scala', 1, 0, 'demo-scala-turchi', 'morning', '[DEMO] Scarpe da scoglio: la marna è scivolosa.'),
+  ('demo-agrigento-scala', 1, 1, 'demo-ceramiche-sciacca', 'afternoon', null),
+  ('demo-agrigento-scala', 2, 0, 'demo-eraclea-spiaggia', 'morning', null),
+  -- Madonie e Cefalù (balanced, 360): 60 + 120 + 60; 150 + 120; 240; 300; 150 + 150.
+  ('demo-madonie-cefalu', 0, 0, 'demo-duomo-cefalu', 'morning', null),
+  ('demo-madonie-cefalu', 0, 1, 'demo-gibilmanna', 'lunch', null),
+  ('demo-madonie-cefalu', 0, 2, 'demo-lavatoio-cefalu', 'afternoon', null),
+  ('demo-madonie-cefalu', 1, 0, 'demo-castelbuono-borgo', 'morning', null),
+  ('demo-madonie-cefalu', 1, 1, 'demo-formaggi-madonie', 'afternoon', null),
+  ('demo-madonie-cefalu', 2, 0, 'demo-madonie-faggete', 'morning', '[DEMO] Porta una giacca: tra i faggi l’aria è più fresca.'),
+  ('demo-madonie-cefalu', 3, 0, 'demo-pizzo-carbonara', 'morning', '[DEMO] Parti presto e porta acqua: la salita è lunga.'),
+  ('demo-madonie-cefalu', 4, 0, 'demo-barca-cefalu', 'morning', null),
+  ('demo-madonie-cefalu', 4, 1, 'demo-rocca-cefalu', 'afternoon', null),
+  -- Entroterra ennese (relaxed, 240): 120 + 90; 150 + 90; 180; 90 + 150; 240; 180; 150 + 90.
+  ('demo-entroterra-enna', 0, 0, 'demo-castello-enna', 'morning', null),
+  ('demo-entroterra-enna', 0, 1, 'demo-duomo-enna', 'afternoon', null),
+  ('demo-entroterra-enna', 1, 0, 'demo-villa-casale', 'morning', '[DEMO] Prenota la visita del mattino: il sito si riempie presto.'),
+  ('demo-entroterra-enna', 1, 1, 'demo-piazza-armerina-borgo', 'afternoon', null),
+  ('demo-entroterra-enna', 2, 0, 'demo-morgantina', 'morning', null),
+  ('demo-entroterra-enna', 3, 0, 'demo-scala-caltagirone', 'morning', null),
+  ('demo-entroterra-enna', 3, 1, 'demo-ceramica-caltagirone', 'afternoon', null),
+  ('demo-entroterra-enna', 4, 0, 'demo-altesina', 'morning', null),
+  ('demo-entroterra-enna', 5, 0, 'demo-calascibetta', 'morning', null),
+  ('demo-entroterra-enna', 6, 0, 'demo-masseria-enna', 'lunch', null),
+  ('demo-entroterra-enna', 6, 1, 'demo-museo-ceramica', 'afternoon', null)
+) as v(itinerary_slug, day_index, position, activity_slug, time_slot, notes)
+join public.itineraries i on i.slug = v.itinerary_slug
+join public.activities a on a.slug = v.activity_slug;
+
+-- 3) Notti: la notte n sta dopo il giorno n (area oppure luogo; uno dei due è obbligatorio).
+insert into public.itinerary_nights (itinerary_id, night_index, area_id, place_id)
+select i.id, v.night_index,
+  (select ar.id from public.areas ar where ar.slug = v.area_slug),
+  (select p.id from public.places p where p.slug = v.place_slug)
+from (values
+  ('demo-weekend-palermo', 1, 'palermo', null::text),
+  ('demo-weekend-palermo', 2, null::text, 'demo-cefalu'),
+  ('demo-sicilia-orientale', 1, null::text, 'demo-catania'),
+  ('demo-sicilia-orientale', 2, 'etna-costa-ionica', null::text),
+  ('demo-sicilia-orientale', 3, null::text, 'demo-taormina'),
+  ('demo-sicilia-orientale', 4, null::text, 'demo-ortigia'),
+  ('demo-trapani-erice', 1, 'ovest', null::text),
+  ('demo-agrigento-scala', 1, 'agrigentino', null::text),
+  ('demo-agrigento-scala', 2, null::text, 'demo-sciacca'),
+  ('demo-madonie-cefalu', 1, null::text, 'demo-cefalu'),
+  ('demo-madonie-cefalu', 2, null::text, 'demo-castelbuono'),
+  ('demo-madonie-cefalu', 3, null::text, 'demo-piano-battaglia'),
+  ('demo-madonie-cefalu', 4, null::text, 'demo-polizzi'),
+  ('demo-entroterra-enna', 1, null::text, 'demo-enna'),
+  ('demo-entroterra-enna', 2, null::text, 'demo-piazza-armerina'),
+  ('demo-entroterra-enna', 3, 'interno', null::text),
+  ('demo-entroterra-enna', 4, null::text, 'demo-caltagirone'),
+  ('demo-entroterra-enna', 5, null::text, 'demo-enna'),
+  ('demo-entroterra-enna', 6, null::text, 'demo-enna')
+) as v(itinerary_slug, night_index, area_slug, place_slug)
+join public.itineraries i on i.slug = v.itinerary_slug;

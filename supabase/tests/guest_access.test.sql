@@ -174,18 +174,19 @@ select throws_ok(
   '42501', null, 'ospite: non modifica una recensione'
 );
 select throws_ok(
-  format($$insert into public.check_ins (user_id, place_id, lat, lng)
-           values (%L, 'dddddddd-0000-0000-0000-000000000001', 37, 15)$$, tests.uid('guest')),
+  format($$insert into public.check_ins (user_id, place_id)
+           values (%L, 'dddddddd-0000-0000-0000-000000000001')$$, tests.uid('guest')),
   '42501', null, 'ospite: non fa check-in'
 );
 reset role;
 delete from public.reviews where user_id = tests.uid('guest');
 
+-- Le recensioni passano da submit_review (passo 5.1): il client non le inserisce.
 select tests.authenticate_as('user');
-select lives_ok(
+select throws_ok(
   format($$insert into public.reviews (user_id, activity_id, rating, body)
            values (%L, 'eeeeeeee-0000-0000-0000-000000000001', 5, 'Bello')$$, tests.uid('user')),
-  'utente: recensisce'
+  '42501', null, 'utente: non recensisce direttamente'
 );
 reset role;
 

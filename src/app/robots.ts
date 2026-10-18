@@ -6,8 +6,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // Area utente, admin e API non vanno indicizzate.
-      disallow: ["/api/", "/*/login", "/*/profilo", "/*/admin", "/*/dev/", "/*/viaggio/", "/*/preferenze"],
+      // Area utente, admin, API e link pubblici dei viaggi (/v/<token>) non vanno indicizzate.
+      disallow: ["/api/", "/*/login", "/*/profilo", "/*/admin", "/*/dev/", "/*/viaggio/", "/*/preferenze", "/*/v/"],
     },
     sitemap: `${publicEnv.NEXT_PUBLIC_SITE_URL}/sitemap.xml`,
   };

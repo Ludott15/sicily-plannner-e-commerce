@@ -363,8 +363,8 @@ Ogni link in uscita verso un partner passa da una route nostra che registra il c
 **Voli**
 
 - Ricerca tramite l'API dati di Travelpayouts (Aviasales): prezzi in cache, non in tempo reale. L'interfaccia mostra sempre "prezzo indicativo, aggiornato il ...".
-- Destinazioni fisse: Catania (CTA), Palermo (PMO), Trapani (TPS), Comiso (CIY).
-- Risultati memorizzati in cache lato server per 6 ore per coppia di aeroporti e date, così si rispettano i limiti dell'API.
+- Destinazioni fisse: Catania (CTA), Palermo (PMO), Trapani (TPS), Comiso (CIY), Lampedusa (LMP), Pantelleria (PNL).
+- Risultati memorizzati in cache lato server per 6 ore per coppia di aeroporti e date (data cache di Next con `revalidate`, nessuna tabella: le richieste anonime non scrivono nel database), così si rispettano i limiti dell'API.
 - La prenotazione avviene sempre sul sito del partner, tramite `/api/go/flight`.
 
 **Import del catalogo attività**

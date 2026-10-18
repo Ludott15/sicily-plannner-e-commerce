@@ -1,4 +1,5 @@
 // Logica pura del builder (M5): nessun accesso al database, usata dal server e dai componenti.
+import { SICILY_AIRPORT_CODES, SICILY_AIRPORTS, type SicilyAirportCode } from "@/lib/flights/airports";
 
 // "Aggiungi al viaggio": il giorno proposto è il primo che ha già tappe nella stessa area
 // dell'attività; altrimenti il primo giorno ancora vuoto; altrimenti il giorno con meno tappe.
@@ -74,4 +75,40 @@ export function moveInDay(ids: string[], id: string, direction: "up" | "down"): 
   const next = [...ids];
   [next[i], next[j]] = [next[j]!, next[i]!];
   return next;
+}
+
+// Data ISO (YYYY-MM-DD) più un numero di giorni, in calendario (nessun fuso orario).
+export function addDays(isoDate: string, days: number): string {
+  const [year = 1970, month = 1, day = 1] = isoDate.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+const EARTH_RADIUS_KM = 6371;
+
+function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+// Aeroporto siciliano più vicino al centro dei punti (le tappe del primo giorno). null senza punti.
+export function nearestSicilyAirport(points: readonly { lat: number; lng: number }[]): SicilyAirportCode | null {
+  if (points.length === 0) return null;
+  const center = {
+    lat: points.reduce((sum, p) => sum + p.lat, 0) / points.length,
+    lng: points.reduce((sum, p) => sum + p.lng, 0) / points.length,
+  };
+  let best: SicilyAirportCode | null = null;
+  let bestDistance = Infinity;
+  for (const code of SICILY_AIRPORT_CODES) {
+    const airport = SICILY_AIRPORTS[code];
+    const d = distanceKm(center, { lat: airport.lat, lng: airport.lng });
+    if (d < bestDistance) {
+      bestDistance = d;
+      best = code;
+    }
+  }
+  return best;
 }

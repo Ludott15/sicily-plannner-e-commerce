@@ -8,6 +8,15 @@ export function formatDuration(minutes: number): string {
   return `${h} h ${m} min`;
 }
 
+// Tempo di guida tra due aree: "1 h 40", "1 h", "45 min", "2 h 05" (i minuti a due cifre).
+export function formatDriveTime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h} h`;
+  return `${h} h ${String(m).padStart(2, "0")}`;
+}
+
 // Drizzle restituisce i numeric come stringa. null = prezzo non indicato. La valuta è EUR
 // salvo le offerte dei partner, che possono averne un'altra.
 export function formatEur(value: string | null, locale: string, currency = "EUR"): string | null {

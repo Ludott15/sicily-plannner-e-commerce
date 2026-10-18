@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { z } from "zod";
+import { ConfirmTagsButton } from "@/components/admin/confirm-tags-button";
 import { Field, Select } from "@/components/admin/fields";
 import { Button, ButtonLink } from "@/components/design";
 import { Link } from "@/lib/i18n/navigation";
@@ -9,6 +10,7 @@ import {
   adminListReviewQueue,
   type ReviewMissing,
 } from "@/server/catalog/review-queries.admin";
+import { confirmProposedTags } from "@/server/partners-import/admin.admin";
 
 // Parametri di URL ammessi per il filtro "manca" e il loro valore nella coda.
 const MISSING_PARAMS = ["tag", "coordinate", "area", "foto"] as const;
@@ -134,10 +136,22 @@ export default async function AdminReviewQueuePage({
                         ))}
                       </ul>
                     )}
+                    {row.proposedTags.length > 0 && (
+                      <div className="mt-3 flex flex-col gap-2">
+                        <span className="text-body-s font-semibold">{t("proposedTagsTitle")}</span>
+                        <ul aria-label={t("proposedTagsLabel")} className="flex flex-wrap gap-2">
+                          {row.proposedTags.map((tag) => (
+                            <li key={tag.key} className="rounded-pill border-[1.5px] border-divider px-3 py-1 text-body-s">
+                              {tag.labelIt} · {tag.strength}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </td>
                   <td className="py-3 pr-4">{row.isActive ? t("active") : t("inactive")}</td>
                   <td className="py-3">
-                    <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex flex-wrap items-start gap-4">
                       <form action={verifyActivity}>
                         <input type="hidden" name="id" value={row.id} />
                         <Button type="submit" variant="secondary" size="sm">
@@ -147,6 +161,9 @@ export default async function AdminReviewQueuePage({
                       <Link href={`/admin/attivita/${row.id}`} className="font-semibold">
                         {t("edit")}
                       </Link>
+                      {row.proposedTags.length > 0 && (
+                        <ConfirmTagsButton activityId={row.id} action={confirmProposedTags} />
+                      )}
                     </div>
                   </td>
                 </tr>

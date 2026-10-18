@@ -225,6 +225,132 @@
       "when": 1791975716202,
       "tag": "20261014110156_catalog_import_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1791981536891,
+      "tag": "20261014123856_itinerari_pronti",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1791981542480,
+      "tag": "20261014123902_itinerari_pronti_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1791994532146,
+      "tag": "20261014161532_builder_viaggi",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1791994535165,
+      "tag": "20261014161535_builder_viaggi_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791996216126,
+      "tag": "20261014164336_voli",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1791996235194,
+      "tag": "20261014164355_voli_click",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791999692577,
+      "tag": "20261014174132_partner_nuovi",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1791999695988,
+      "tag": "20261014174135_affiliati_partner",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1791999699824,
+      "tag": "20261014174139_affiliati_funzioni",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792072993646,
+      "tag": "20261015140313_import_partner",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1792075391021,
+      "tag": "20261015144311_conversioni_affiliate",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792077101209,
+      "tag": "20261015151141_area_drive_times",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1792078631848,
+      "tag": "20261015153711_gruppi_inviti",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1792080945335,
+      "tag": "20261015161545_voti_proposte",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1792084833520,
+      "tag": "20261015172033_preferenze_gruppo",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1792086383497,
+      "tag": "20261015174623_punti_recensioni",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1792088008979,
+      "tag": "20261015181328_badge",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1792089624373,
+      "tag": "20261015184024_classifiche",
+      "breakpoints": true
     }
   ]
 }

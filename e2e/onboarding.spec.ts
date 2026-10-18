@@ -166,7 +166,8 @@ test("Preferenze senza gusti salvati: una frase e \"Crea il tuo viaggio\"", asyn
   await page.goto("/it/login");
   await page.getByRole("button", { name: "Continua senza account" }).click();
   await expect(page).toHaveURL(/\/it\/profilo$/);
-  await page.getByRole("banner").getByRole("link", { name: "Preferenze", exact: true }).click();
+  await page.getByRole("button", { name: "Menu personale" }).click();
+  await page.getByRole("menuitem", { name: "Preferenze", exact: true }).click();
   await expect(page).toHaveURL(/\/it\/preferenze$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("I tuoi gusti");
   await page.getByRole("main").getByRole("link", { name: "Crea il tuo viaggio" }).click();

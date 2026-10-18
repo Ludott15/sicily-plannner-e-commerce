@@ -129,34 +129,33 @@ select throws_ok($$truncate public.points_ledger$$, 'P0001', 'points_ledger_immu
 -- CLASSIFICA STAGIONALE
 ----------------------------------------------------------------------------
 select tests.authenticate_as('carol');
-update public.profiles set leaderboard_opt_out = true where id = tests.uid('carol');
+select throws_ok(
+  format($$update public.profiles set leaderboard_opt_out = true where id = %L$$, tests.uid('carol')),
+  '42501', null, 'profiles: il client non scrive leaderboard_opt_out, passa da set_leaderboard_opt_out'
+);
+select lives_ok($$select public.set_leaderboard_opt_out(true)$$, 'classifica: carol sceglie di non comparire');
 select throws_ok(
   format($$update public.profiles set role = 'admin' where id = %L$$, tests.uid('carol')),
-  '42501', null, 'profiles: con il nuovo grant su leaderboard_opt_out il ruolo resta non modificabile'
+  '42501', null, 'profiles: il ruolo resta non modificabile dal client'
 );
 reset role;
 select public.refresh_leaderboard();
 
 select tests.authenticate_as('alice');
 select results_eq(
-  $$select display_name, total_points, rank, is_me from public.seasonal_leaderboard
-    where season = public.season_for(now()) and display_name in ('alice', 'bob', 'carol', 'dan')
+  $$select public_name, points, rank, is_me from public.seasonal_leaderboard_top(null)
+    where public_name in ('alice', 'bob', 'carol', 'dan')
     order by rank$$,
   $$values ('alice', 70, 1, true), ('dan', 40, 2, false), ('bob', 10, 3, false)$$,
   'classifica: totali senza redeem, is_me per la propria riga, esclusi gli utenti che hanno scelto di non comparire'
-);
-select results_eq(
-  $$select column_name::text collate "default" from information_schema.columns
-    where table_schema = 'public' and table_name = 'seasonal_leaderboard' order by ordinal_position$$,
-  $$values ('season'), ('rank'), ('display_name'), ('avatar_url'), ('total_points'), ('is_me')$$,
-  'classifica: la vista espone solo stagione, posizione, nome, avatar, totale e is_me'
 );
 select throws_ok($$select * from public.leaderboard_season_totals$$, '42501', null, 'classifica: la vista materializzata non è leggibile dal client');
 select throws_ok($$select public.refresh_leaderboard()$$, '42501', null, 'classifica: il client non forza il refresh');
 
 reset role;
 select tests.as_anon();
-select throws_ok($$select * from public.seasonal_leaderboard$$, '42501', null, 'anon: non legge la classifica');
+select isnt_empty($$select 1 from public.seasonal_leaderboard_top(null)$$, 'anon: legge la classifica pubblica');
+select throws_ok($$select * from public.leaderboard_season_totals$$, '42501', null, 'anon: la vista materializzata non è leggibile');
 
 ----------------------------------------------------------------------------
 -- CLASSIFICA DI GRUPPO
@@ -171,15 +170,15 @@ insert into public.group_members (group_id, user_id) values (current_setting('te
 
 select tests.authenticate_as('bob');
 select results_eq(
-  format($$select display_name, total_points, is_me from public.group_leaderboard(%L)$$, current_setting('tests.gid')),
+  format($$select public_name, points, is_me from public.group_leaderboard(%L)$$, current_setting('tests.gid')),
   $$values ('alice', 70, false), ('bob', 10, true)$$,
   'classifica di gruppo: il membro vede i punti del viaggio dei membri'
 );
 reset role;
 select tests.authenticate_as('dan');
-select is_empty(
+select throws_ok(
   format($$select 1 from public.group_leaderboard(%L)$$, current_setting('tests.gid')),
-  'classifica di gruppo: un non membro non riceve righe'
+  'P0001', 'not_group_member', 'classifica di gruppo: un non membro non riceve i dati del gruppo'
 );
 
 ----------------------------------------------------------------------------
@@ -188,7 +187,7 @@ select is_empty(
 reset role;
 select tests.authenticate_as('admin');
 select lives_ok(
-  $$insert into public.badges (key, name_it, name_en, criteria) values ('test_primo_viaggio', 'Primo viaggio', 'First trip', '{"itineraries_completed": 1}')$$,
+  $$insert into public.badges (key, name_it, name_en, criteria) values ('test-primo-viaggio', 'Primo viaggio', 'First trip', '{"type": "itineraries_completed", "min": 1}')$$,
   'admin: crea un badge'
 );
 reset role;
@@ -198,13 +197,13 @@ select throws_ok(
   '42501', null, 'utente: non crea badge'
 );
 select throws_ok(
-  format($$insert into public.user_badges (user_id, badge_key) values (%L, 'test_primo_viaggio')$$, tests.uid('alice')),
+  format($$insert into public.user_badges (user_id, badge_key) values (%L, 'test-primo-viaggio')$$, tests.uid('alice')),
   '42501', null, 'proprietario: non si assegna badge'
 );
 reset role;
-insert into public.user_badges (user_id, badge_key) values (tests.uid('alice'), 'test_primo_viaggio');
+insert into public.user_badges (user_id, badge_key) values (tests.uid('alice'), 'test-primo-viaggio');
 select tests.authenticate_as('alice');
-select results_eq($$select badge_key from public.user_badges$$, $$values ('test_primo_viaggio')$$, 'proprietario: vede i propri badge');
+select results_eq($$select badge_key from public.user_badges$$, $$values ('test-primo-viaggio')$$, 'proprietario: vede i propri badge');
 reset role;
 select tests.authenticate_as('bob');
 select is_empty($$select 1 from public.user_badges$$, 'altro utente: non vede i badge di alice');
@@ -213,7 +212,7 @@ select tests.authenticate_as('admin');
 select is_empty($$select 1 from public.user_badges$$, 'admin: non vede i badge degli altri dal client');
 reset role;
 select tests.as_anon();
-select isnt_empty($$select 1 from public.badges where key = 'test_primo_viaggio'$$, 'anon: legge il catalogo dei badge');
+select isnt_empty($$select 1 from public.badges where key = 'test-primo-viaggio'$$, 'anon: legge il catalogo dei badge');
 select throws_ok($$select * from public.user_badges$$, '42501', null, 'anon: non legge user_badges');
 reset role;
 select throws_ok(
@@ -228,16 +227,16 @@ select throws_ok(
 ----------------------------------------------------------------------------
 -- CHECK_INS
 ----------------------------------------------------------------------------
-insert into public.check_ins (user_id, place_id, lat, lng)
-values (tests.uid('alice'), 'aaaaaaaa-0000-0000-0000-000000000001', 37.79, 14.83);
+insert into public.check_ins (user_id, place_id)
+values (tests.uid('alice'), 'aaaaaaaa-0000-0000-0000-000000000001');
 select throws_ok(
-  format($$insert into public.check_ins (user_id, place_id, lat, lng) values (%L, 'aaaaaaaa-0000-0000-0000-000000000001', 37.79, 14.83)$$, tests.uid('alice')),
+  format($$insert into public.check_ins (user_id, place_id) values (%L, 'aaaaaaaa-0000-0000-0000-000000000001')$$, tests.uid('alice')),
   '23505', null, 'check_ins: un solo check-in per luogo al giorno'
 );
 select tests.authenticate_as('alice');
 select results_eq($$select count(*)::int from public.check_ins$$, $$values (1)$$, 'proprietario: vede i propri check-in');
 select throws_ok(
-  format($$insert into public.check_ins (user_id, place_id, lat, lng) values (%L, 'aaaaaaaa-0000-0000-0000-000000000001', 0, 0)$$, tests.uid('alice')),
+  format($$insert into public.check_ins (user_id, place_id) values (%L, 'aaaaaaaa-0000-0000-0000-000000000001')$$, tests.uid('alice')),
   '42501', null, 'proprietario: non registra check-in direttamente'
 );
 reset role;
@@ -257,22 +256,23 @@ reset role;
 insert into public.reviews (user_id, activity_id, rating, body)
 values (tests.uid('bob'), 'bbbbbbbb-0000-0000-0000-000000000002', 2, 'Attività ora disattivata');
 
+-- Le recensioni passano da submit_review (points_checkins_reviews.test.sql): il client non le scrive.
+reset role;
+insert into public.reviews (user_id, activity_id, rating, body)
+values (tests.uid('alice'), 'bbbbbbbb-0000-0000-0000-000000000001', 5, 'Ottimo');
+
 select tests.authenticate_as('alice');
-select lives_ok(
-  format($$insert into public.reviews (user_id, activity_id, rating, body) values (%L, 'bbbbbbbb-0000-0000-0000-000000000001', 5, 'Ottimo')$$, tests.uid('alice')),
-  'proprietario: scrive una recensione'
-);
-select lives_ok(
-  $$update public.reviews set rating = 4 where activity_id = 'bbbbbbbb-0000-0000-0000-000000000001'$$,
-  'proprietario: modifica la propria recensione'
-);
 select throws_ok(
   format($$insert into public.reviews (user_id, activity_id, rating) values (%L, 'bbbbbbbb-0000-0000-0000-000000000001', 1)$$, tests.uid('bob')),
   '42501', null, 'proprietario: non scrive recensioni a nome di altri'
 );
 select throws_ok(
   format($$insert into public.reviews (user_id, activity_id, rating) values (%L, 'bbbbbbbb-0000-0000-0000-000000000001', 3)$$, tests.uid('alice')),
-  '23505', null, 'proprietario: una sola recensione per attività'
+  '42501', null, 'proprietario: il client non scrive recensioni direttamente'
+);
+select throws_ok(
+  $$update public.reviews set rating = 4 where activity_id = 'bbbbbbbb-0000-0000-0000-000000000001'$$,
+  '42501', null, 'proprietario: il client non modifica le recensioni direttamente'
 );
 
 reset role;
@@ -281,11 +281,14 @@ select is_empty(
   format($$select 1 from public.reviews where user_id = %L$$, tests.uid('alice')),
   'altro utente: non legge la tabella reviews di alice'
 );
-update public.reviews set rating = 1 where activity_id = 'bbbbbbbb-0000-0000-0000-000000000001';
+select throws_ok(
+  $$update public.reviews set rating = 1 where activity_id = 'bbbbbbbb-0000-0000-0000-000000000001'$$,
+  '42501', null, 'altro utente: non modifica la recensione di alice'
+);
 delete from public.reviews where activity_id = 'bbbbbbbb-0000-0000-0000-000000000001';
 select results_eq(
   $$select display_name, rating from public.public_reviews where activity_id::text like 'bbbbbbbb-%'$$,
-  $$values ('alice', 4::smallint)$$,
+  $$values ('alice', 5::smallint)$$,
   'altro utente: legge la recensione di alice tramite public_reviews, non quelle di attività inattive'
 );
 
@@ -306,8 +309,8 @@ select throws_ok($$select * from public.reviews$$, '42501', null, 'anon: non leg
 select results_eq(
   $$select column_name::text collate "default" from information_schema.columns
     where table_schema = 'public' and table_name = 'public_reviews' order by ordinal_position$$,
-  $$values ('id'), ('activity_id'), ('rating'), ('body'), ('created_at'), ('display_name'), ('avatar_url')$$,
-  'public_reviews: espone nome e avatar dell''autore, senza user_id'
+  $$values ('id'), ('activity_id'), ('rating'), ('body'), ('created_at'), ('display_name'), ('avatar_url'), ('rewarded')$$,
+  'public_reviews: espone nome e avatar dell''autore, il premio, senza user_id'
 );
 
 ----------------------------------------------------------------------------

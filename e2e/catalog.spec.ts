@@ -68,8 +68,8 @@ test("scheda attività: offerte dei partner dalla più economica, prezzo in loco
     "href",
     /^\/api\/go\/[0-9a-f-]{36}\?c=page&l=it$/,
   );
-  await expect(offers.first()).toContainText("Prenoti sul sito di GetYourGuide. Riceviamo una commissione");
-  await expect(offers.nth(1)).toContainText("Prenoti sul sito di Viator.");
+  await expect(offers.first()).toContainText("Link affiliato: se prenoti, GetYourGuide ci riconosce una commissione");
+  await expect(offers.nth(1)).toContainText("se prenoti, Viator ci riconosce una commissione");
 });
 
 test("scheda attività senza offerte: nessuna offerta e nessun pulsante del partner", async ({ page }) => {

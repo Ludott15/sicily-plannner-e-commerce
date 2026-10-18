@@ -6,10 +6,10 @@ import { InterestChip, type Domain } from "@/components/design";
 import { activityFiltersQuery, type ActivityFilters as Filters } from "@/lib/activity-filters";
 import { useRouter } from "@/lib/i18n/navigation";
 
-// Filtri della lista attività: interessi con InterestChip (basta uno dei selezionati) e
-// provincia con un select nativo. Lo stato è nell'URL e la lista la renderizza il server:
-// qui si cambia solo l'URL. La selezione si aggiorna subito (useOptimistic) mentre il
-// server prepara la lista.
+// Filtri della lista attività, compatti: interessi con InterestChip (basta uno dei selezionati) e
+// provincia con un select nativo accanto, sulla stessa riga da desktop. Lo stato è nell'URL e la
+// lista la renderizza il server: qui si cambia solo l'URL. La selezione si aggiorna subito
+// (useOptimistic) mentre il server prepara la lista.
 export function ActivityFilters({
   interests,
   provinces,
@@ -39,8 +39,11 @@ export function ActivityFilters({
   }
 
   return (
-    <div className="mt-8 flex flex-col gap-6" aria-busy={pending}>
-      <fieldset>
+    <div
+      className="flex flex-col gap-4 border-y border-divider py-5 md:flex-row md:items-end md:justify-between md:gap-6"
+      aria-busy={pending}
+    >
+      <fieldset className="min-w-0 flex-1">
         <legend className="text-body-s font-semibold">{t("filterInterests")}</legend>
         <div className="mt-3 flex flex-wrap gap-2">
           {interests.map((interest) => (
@@ -55,7 +58,7 @@ export function ActivityFilters({
         </div>
       </fieldset>
 
-      <div className="flex flex-col gap-1.5 sm:max-w-xs">
+      <div className="flex flex-col gap-1.5 md:w-64 md:shrink-0">
         <label htmlFor="filtro-provincia" className="text-body-s font-semibold">
           {t("filterProvince")}
         </label>

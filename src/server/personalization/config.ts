@@ -1,4 +1,5 @@
 import "server-only";
+import { SICILY_AIRPORTS } from "@/lib/flights/airports";
 
 // Coefficienti del motore di personalizzazione (docs/spec.md, "Motore di personalizzazione").
 // Stanno qui e non nel codice dell'algoritmo: si cambiano senza toccare la logica.
@@ -50,16 +51,17 @@ export const AREA_ELIGIBILITY = { minDayFill: 0.5 } as const;
 // ricevono questo vantaggio nel punteggio, così il viaggio cambia carattere.
 export const VARIANT_FOCUS_BOOST = 0.5;
 
-// Aeroporti di arrivo (coordinate delle piste). Bonus piccolo, che rompe la parità tra aree
-// simili e non ribalta la classifica: pieno a distanza 0, nullo oltre rangeKm. Il motivo
-// "vicina all'aeroporto" compare entro nearKm (distanza in linea d'aria dal centro dell'area).
-export const AIRPORTS = {
-  CTA: { lat: 37.4668, lng: 15.0664 },
-  PMO: { lat: 38.176, lng: 13.091 },
-  TPS: { lat: 37.9114, lng: 12.488 },
-  CIY: { lat: 36.9946, lng: 14.6072 },
-} as const;
+// Aeroporti di arrivo (coordinate delle piste), dall'elenco unico src/lib/flights/airports.ts.
+// Bonus piccolo, che rompe la parità tra aree simili e non ribalta la classifica: pieno a
+// distanza 0, nullo oltre rangeKm. Il motivo "vicina all'aeroporto" compare entro nearKm
+// (distanza in linea d'aria dal centro dell'area).
+export const AIRPORTS = SICILY_AIRPORTS;
 export const AIRPORT_BONUS = { max: 0.02, rangeKm: 120, nearKm: 70 } as const;
 
 // Motivi d'area: voto medio delle tappe da cui vale la pena dirlo.
 export const AREA_TOP_RATING = 4.6;
+
+// Viaggi su due aree adiacenti (M4 parte 4). maxDriveMin: guida massima tra le due aree per
+// comporle. maxPairsInProposals: coppie al massimo tra le proposte. minTransferDayMin: minuti
+// minimi per le tappe nel giorno di trasferimento (il resto va alla guida).
+export const TWO_AREAS = { maxDriveMin: 150, maxPairsInProposals: 1, minTransferDayMin: 60 } as const;
