@@ -138,3 +138,22 @@ Dopo il primo deploy di produzione, per il dominio `NEXT_PUBLIC_SITE_URL`:
 - **Dati strutturati**: controllare con il Rich Results Test di Google una scheda di attività, una di luogo, un itinerario pronto, una guida (articolo con autore e data) e la home (organizzazione). Nessun avviso di errore; gli avvisi sui campi facoltativi si valutano caso per caso.
 - **Tag canonical**: le pagine con filtri nell'URL (`/attivita?...`) indicano la versione senza filtri; verificare nell'ispezione URL che Google scelga la pagina canonica attesa.
 - **Bozze e pagine in sospeso**: le guide in bozza e le pagine ancora in sospeso non devono comparire nelle sitemap né essere indicizzate. Le aree senza descrizione restano nella sitemap (la sezione descrizione semplicemente non compare).
+
+## 9. Accessibilità (passo 11.4)
+
+La verifica automatica (axe-core, WCAG 2.2 AA, `e2e/a11y.spec.ts`) copre le pagine principali in tema chiaro e scuro, a 1280 e 390 px. Non copre il resto: la verifica con lettori di schermo è da fare a mano prima del lancio, e non risulta ancora fatta.
+
+Verifica manuale con lettore di schermo (VoiceOver su iOS e macOS, NVDA su Windows), su una build di produzione con un account di prova:
+
+- **Onboarding** (`/it/viaggio/nuovo`): ogni domanda annuncia il titolo e il numero (1 di 7); le radio dei giorni e del periodo si leggono come gruppo con l'etichetta; "Avanti" annuncia lo stato disabilitato finché la risposta manca; il cambio di domanda sposta l'attenzione o l'annuncio.
+- **Builder del viaggio** (`/it/viaggi/<id>`): i giorni sono pulsanti con il loro stato; lo spostamento di una tappa da tastiera annuncia la nuova posizione; i dialog "Togli il giorno" e "Elimina viaggio" annunciano titolo e descrizione e tornano al pulsante che li ha aperti.
+- **Voti del gruppo**: il voto annuncia "Voto salvato: mi piace" (o preferirei altro), il voto tolto e il conteggio; un errore arriva con role="alert".
+- **Salvataggi**: "Viaggio salvato" dopo "Salva il viaggio"; "Tappa aggiunta al giorno N" dopo "Aggiungi al viaggio"; "Impostazioni salvate" nelle impostazioni del viaggio; "Gusti salvati" in Preferenze.
+- **Check-in**: l'esito (con i punti) arriva con role="status".
+- **Chat** (`/it/chat`): il messaggio in corso viene letto mentre arriva, la risposta finale si legge una volta sola, l'errore con "Riprova" è annunciato.
+- **Chat del viaggio**: il pannello si apre come dialog, Esc lo chiude e il focus torna al pulsante "Chiedi all'assistente".
+- **Menu personale e menu delle azioni**: frecce, Home, Fine ed Esc; il focus torna al pulsante.
+- **Dichiarazione di accessibilità e informativa**: il titolo è il primo annuncio della pagina; il segnaposto "Testo in preparazione" non va letto come testo vero.
+- **Checkout**: non esiste ancora (passo 7). Quando arriva, questo elenco va esteso al carrello (aggiunta con annuncio di stato) e al pagamento.
+
+Da chiudere prima del lancio: il testo della dichiarazione è scritto dall'orchestratore su incarico di Ludovico (2026-10-16) e va aggiornato dopo la prova con i lettori di schermo; il contatto per le segnalazioni arriva con i dati del titolare (CONTACT_EMAIL, passo 8.3).

@@ -8,6 +8,7 @@ import { TripGroupSections } from "@/components/groups/trip-group-sections";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { Tabs } from "@/components/layout/tabs";
+import { AnnounceOnLoad } from "@/components/trips/announce-on-load";
 import { TripActions } from "@/components/trips/trip-actions";
 import { TripBuilder, type BuilderBooking, type BuilderDay } from "@/components/trips/trip-builder";
 import { TodayPanel } from "@/components/trips/today-panel";
@@ -248,6 +249,7 @@ export default async function TripPage({ params, searchParams }: Props) {
         {...crumbs}
       />
       <div className="flex flex-col gap-6">
+        <AnnounceOnLoad />
         <div className="is-trip-tools">
           <Tabs idPrefix="trip" label={t("v2.tabsLabel")} tabs={tabs} value={tab} />
         </div>

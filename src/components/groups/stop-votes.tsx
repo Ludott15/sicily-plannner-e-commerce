@@ -52,6 +52,8 @@ export function GroupStopVotes({ itemId, votes, members, alternatives, isGroupOw
   const [optimistic, setOptimistic] = useOptimistic(votes, (_current: StopVoteCounts, next: StopVoteCounts) => next);
   const [pending, startTransition] = useTransition();
   const [voteError, setVoteError] = useState<VoteErrorCode | null>(null);
+  // Esito del voto per il lettore di schermo: aria-live (non role=status, che è di StopVotes).
+  const [announcement, setAnnouncement] = useState("");
   const replace = useGroupAction<{ itemId: string; activityId: string }, ProposalFormState>(replaceStop, IDLE);
 
   // onVote di StopVotes: "up", "down" oppure null (annullamento del voto già dato).
@@ -60,7 +62,12 @@ export function GroupStopVotes({ itemId, votes, members, alternatives, isGroupOw
     startTransition(async () => {
       setOptimistic(applyVote(optimistic, next));
       const result = await setItemVote({ itemId, value: next === null ? null : VALUE[next] });
-      if (result.status === "error") setVoteError(result.code);
+      if (result.status === "error") {
+        setVoteError(result.code);
+        setAnnouncement("");
+      } else {
+        setAnnouncement(next === null ? t("voteRemoved") : t("voteSaved", { vote: t(next === "up" ? "voteLikeWord" : "voteDislikeWord") }));
+      }
     });
   }
 
@@ -110,6 +117,9 @@ export function GroupStopVotes({ itemId, votes, members, alternatives, isGroupOw
         </div>
       )}
 
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
       <FormAlert message={voteError ? t(`voteErrors.${voteError}`) : null} />
       <FormAlert
         message={replace.submitted && replace.state.status === "error" ? t(`proposalErrors.${replace.state.code}`) : null}

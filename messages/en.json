@@ -35,7 +35,8 @@
     "createAccount": "Create your account",
     "personalMenu": "Personal menu",
     "assistant": "Assistant",
-    "guides": "Guides"
+    "guides": "Guides",
+    "accessibility": "Accessibility statement"
   },
   "Home": {
     "title": "Sicily as locals know it, made for you.",
@@ -1039,7 +1040,19 @@
     "eyebrow": "Legal information",
     "privacy": "Privacy",
     "cookie": "Cookies",
-    "terms": "Terms of sale"
+    "terms": "Terms of sale",
+    "accessibility": "Accessibility statement",
+    "accessibilityIntro": "How we make Isula accessible, and what is still missing.",
+    "accessibilityStatusTitle": "Conformance status",
+    "accessibilityStatusText": "The site is being checked against the {standard} standard and is not yet fully conformant.",
+    "accessibilityCheckTitle": "Verification method",
+    "accessibilityCheckText": "Automated checks with {tool} on the main pages, in light and dark themes and at 1280 and 390 px. The last check was on {date}. The tool does not cover everything and does not replace testing with screen readers.",
+    "accessibilityKnownTitle": "Known inaccessible content",
+    "accessibilityKnownMap": "The interactive itinerary map has not yet been tested with screen readers: the list of the day's stops gives the same points as text.",
+    "accessibilityKnownPartners": "Content from external partners (bookings, offers and third-party pages) is not under our control and we have not checked it.",
+    "accessibilityContactTitle": "How to report a problem",
+    "accessibilityContactText": "Write to",
+    "accessibilityContactMissing": "The channel for reporting problems will be given on this page."
   },
   "Cookies": {
     "title": "Cookies",
@@ -1372,7 +1385,9 @@
       "menuRemoveStop": "Remove from trip",
       "dayNoteEdit": "Edit note",
       "dayNoteAdd": "Add a note for the day"
-    }
+    },
+    "stopAddedAnnouncement": "Stop added to day {day}.",
+    "tripSavedAnnouncement": "Trip saved."
   },
   "Media": {
     "photoCredit": "Photo:",
@@ -1756,7 +1771,11 @@
       "practicalNote": "Practical note",
       "seeStops": "See the stops",
       "stopsCount": "{count, plural, one {# stop} other {# stops}}"
-    }
+    },
+    "voteSaved": "Vote saved: {vote}.",
+    "voteRemoved": "Vote removed.",
+    "voteLikeWord": "like",
+    "voteDislikeWord": "prefer something else"
   },
   "GroupInvite": {
     "metaTitle": "Group invite",
