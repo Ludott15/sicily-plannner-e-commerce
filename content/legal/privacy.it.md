@@ -1,6 +1,6 @@
 ---
 updated: 2026-10-18
-version: 1
+version: 2
 ---
 
 ## Chi tratta i tuoi dati
@@ -29,11 +29,11 @@ Questa informativa spiega quali dati raccogliamo quando usi Isula, perché, per 
 
 **Assistente.** Le conversazioni con l'assistente servono a risponderti e restano nel tuo account. Si cancellano dopo 12 mesi senza attività.
 
-**Link verso i partner.** Quando apri un'offerta di un partner (attività, voli, alloggi, noleggi), registriamo il click con un codice casuale, così il partner può riconoscerci una commissione se prenoti. Al partner arriva solo quel codice, non il tuo nome né la tua email. Base giuridica: l'esecuzione del servizio e il nostro legittimo interesse a essere remunerati dai partner.
+**Link verso i partner.** Quando apri un'offerta di un partner (attività, voli, alloggi, noleggi), registriamo il click con un codice casuale, così il partner può riconoscerci una commissione se prenoti. Al partner arrivano solo quel codice e, per la ricerca di voli, gli aeroporti e le date che hai scelto: non il tuo nome né la tua email. Base giuridica: l'esecuzione del servizio e il nostro legittimo interesse a essere remunerati dai partner.
 
 **Ordini.** Quando acquisti nello shop trattiamo i dati necessari all'ordine: nome, indirizzo di consegna, email, telefono, prodotti e importi. Li conserviamo anche dopo l'eventuale cancellazione dell'account, per il tempo richiesto dagli obblighi fiscali. Il pagamento avviene su Stripe: noi non vediamo né conserviamo i dati della carta.
 
-**Sicurezza e statistiche anonime.** Per proteggere il sito da abusi registriamo per pochi minuti un'impronta cifrata della richiesta, senza indirizzo IP in chiaro. Le ricerche che non trovano risultati sono salvate senza alcun dato su chi le ha fatte, per capire cosa manca nel catalogo.
+**Sicurezza e statistiche anonime.** Per proteggere il sito da abusi registriamo per al massimo un giorno un'impronta cifrata della richiesta, senza indirizzo IP in chiaro. Le ricerche che non trovano risultati sono salvate senza alcun dato su chi le ha fatte, per capire cosa manca nel catalogo.
 
 ## Per quanto tempo
 
@@ -44,7 +44,8 @@ Questa informativa spiega quali dati raccogliamo quando usi Isula, perché, per 
 - Click verso i partner: dopo 26 mesi togliamo ogni collegamento con te e restano solo statistiche.
 - Notifiche lette: 6 mesi.
 - Inviti di gruppo scaduti: 30 giorni.
-- Ordini: per il tempo previsto dalla legge per i documenti fiscali (di regola 10 anni).
+- Ordini: per il tempo previsto dalla legge per i documenti fiscali (10 anni); poi togliamo email e indirizzo di consegna.
+- Messaggi del modulo di contatto: nella casella dell'assistenza per il tempo necessario a risponderti, e comunque non oltre 12 mesi.
 
 ## Con chi condividiamo i dati
 
@@ -52,13 +53,14 @@ Non vendiamo i tuoi dati. Li condividiamo solo con i fornitori che ci servono pe
 
 - **Supabase**: database, accesso e archiviazione dei file.
 - **Vercel**: ospitalità del sito.
-- **Anthropic**: il modello dell'assistente. Riceve i messaggi che scrivi e, per risponderti, il riepilogo delle tue preferenze; mobilità e dieta solo se hai dato il consenso.
-- **Resend**: invio delle email (codici di accesso, inviti, ordini).
+- **Anthropic**: il modello dell'assistente. Riceve i messaggi che scrivi e, per risponderti, il riepilogo delle tue preferenze, il titolo del viaggio su cui stai lavorando e, nei viaggi di gruppo, solo dati aggregati del gruppo; mobilità e dieta solo se hai dato il consenso.
+- **Resend**: invio delle email (codici di accesso, inviti, ordini e messaggi del modulo di contatto).
 - **Cloudflare Turnstile**: protezione dei moduli dai programmi automatici.
 - **Google**: accesso con Google, solo se lo scegli.
 - **Stripe**: pagamenti dello shop.
 - **Il nostro fornitore dello shop**: riceve nome, indirizzo e telefono di consegna e i prodotti dell'ordine, per prepararlo e spedirtelo.
-- **OpenFreeMap**: le mappe; il tuo browser scarica le immagini della mappa dai loro server.
+- **Partner di viaggio** (Travelpayouts/Aviasales, Viator, GetYourGuide, Civitatis, Booking.com, DiscoverCars): quando apri una loro offerta ricevono il codice del click e, per i voli, aeroporti e date della ricerca. Da quel momento trattano i dati secondo la propria informativa.
+- **OpenFreeMap**: le mappe; il tuo browser scarica le immagini della mappa dai loro server, che ricevono quindi il tuo indirizzo IP.
 
 Alcuni di questi fornitori hanno sede negli Stati Uniti o vi trattano dati. I trasferimenti avvengono sulla base delle garanzie previste dal Regolamento (UE) 2016/679, come la decisione di adeguatezza UE-USA per le aziende aderenti o le clausole contrattuali tipo della Commissione europea.
 
@@ -76,7 +78,7 @@ Se ritieni che i tuoi dati siano trattati in modo non corretto puoi presentare u
 
 ## Età
 
-Per creare un account devi avere almeno 14 anni. Per acquistare nello shop devi essere maggiorenne.
+Per creare un account devi avere almeno 14 anni; per acquistare nello shop devi essere maggiorenne. Non chiediamo una verifica dell'età al momento della registrazione.
 
 ## Modifiche
 

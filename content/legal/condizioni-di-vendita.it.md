@@ -1,6 +1,6 @@
 ---
 updated: 2026-10-18
-version: 1
+version: 2
 ---
 
 ## Chi vende
@@ -41,11 +41,11 @@ Il recesso **non si applica** ai prodotti deperibili o che rischiano di deterior
 
 ## Garanzia e prodotti difettosi
 
-Per i prodotti non conformi vale la garanzia legale prevista dal Codice del consumo (articoli 128 e seguenti). Se ricevi un prodotto difettoso o diverso da quello ordinato scrivici appena te ne accorgi, anche dalla pagina "I miei ordini", con una foto: ti proponiamo la sostituzione o il rimborso senza costi. Per i danni da trasporto vale quanto indicato nella sezione Spedizione.
+Per i prodotti non conformi vale la garanzia legale prevista dal Codice del consumo (articoli 128 e seguenti). Se ricevi un prodotto difettoso o diverso da quello ordinato scrivici appena te ne accorgi, anche dalla pagina "I miei ordini", con una foto. Puoi scegliere la riparazione o la sostituzione, senza costi, come prevede il Codice del consumo; se non è possibile, o è sproporzionata, ti rimborsiamo o riduciamo il prezzo. Per i danni da trasporto vale quanto indicato nella sezione Spedizione.
 
 ## Reclami e controversie
 
-Per qualunque reclamo scrivi a {{email_assistenza}}: rispondiamo entro 7 giorni lavorativi. Puoi anche rivolgerti a un organismo di risoluzione alternativa delle controversie (ADR) iscritto negli elenchi previsti dal Codice del consumo. Per le controversie con i consumatori è competente il giudice del luogo di residenza del consumatore. Si applica la legge italiana.
+Per qualunque reclamo scrivi a {{email_assistenza}}: rispondiamo entro 7 giorni lavorativi. Puoi anche rivolgerti a un organismo di risoluzione alternativa delle controversie (ADR) iscritto negli elenchi previsti dal Codice del consumo; Isula non è obbligata a ricorrere a un organismo ADR e al momento non aderisce a nessuno. Per le controversie con i consumatori è competente il giudice del luogo di residenza del consumatore. Si applica la legge italiana.
 
 ## Modifiche
 
