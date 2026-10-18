@@ -1923,5 +1923,29 @@
     "errorInvalid": "Controlla i dati e riprova.",
     "errorFailed": "Non siamo riusciti a salvare. Riprova.",
     "deletedAccount": "Account eliminato"
+  },
+  "Map": {
+    "showMap": "Mostra la mappa",
+    "dayMap": "Mappa del giorno {n}",
+    "markerLabel": "Tappa {n}: {label}",
+    "listLabel": "Punti sulla mappa",
+    "unavailable": "La mappa non si carica adesso. Qui sotto ci sono gli stessi punti.",
+    "loading": "Caricamento della mappa…",
+    "zoomIn": "Ingrandisci",
+    "zoomOut": "Riduci",
+    "gestureTouch": "Usa due dita per spostare la mappa",
+    "gestureMouse": "Usa Ctrl e la rotella per ingrandire la mappa",
+    "gestureMac": "Usa Cmd e la rotella per ingrandire la mappa",
+    "attribution": "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors",
+    "placeTitle": "Sulla mappa",
+    "placeIntro": "Luoghi vicini entro 15 km, con la distanza. Le attività di questo luogo sono sopra.",
+    "placeMapLabel": "Attività vicine a {place}",
+    "placeListLabel": "Attività vicine",
+    "placeDistance": "a {km} km",
+    "viewLabel": "Vista",
+    "viewList": "Elenco",
+    "viewMap": "Mappa",
+    "activitiesMapLabel": "Mappa dei luoghi delle attività",
+    "canvasTitle": "Mappa"
   }
 }

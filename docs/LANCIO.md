@@ -88,6 +88,15 @@ I viaggi di gruppo si aggiornano con un canale broadcast privato `itinerary:<id>
 | --- | --- | --- |
 | Realtime, canali privati | Dashboard → Realtime → Settings: lasciare i canali privati consentiti (impostazione predefinita) | A mano, con due account nello stesso gruppo: il voto di uno compare all'altro entro 2 secondi senza ricaricare. Un terzo account, fuori dal gruppo, non riceve nulla (DevTools → WS: la sottoscrizione a `itinerary:<id>` è rifiutata). |
 
+## 6b. Mappe (OpenFreeMap)
+
+Le mappe (itinerari, viaggi, luoghi, lista delle attività) usano lo stile base di OpenFreeMap (`https://tiles.openfreemap.org/styles/liberty`): nessuna chiave, nessun cookie. Il servizio non dà garanzie di disponibilità né un accordo commerciale: prima del lancio controllarne i termini d'uso e il traffico previsto. Se non bastano, l'alternativa è MapTiler (con chiave e quota), cambiando `MAP_STYLE_URL` in `src/components/design/map/map-style.ts`; i colori restano quelli dei token.
+
+| Voce | Valore | Verifica |
+| --- | --- | --- |
+| Tile | Richieste a `tiles.openfreemap.org` solo quando la mappa entra nello schermo | A mano: itinerario pronto con la mappa, DevTools → Rete: la prima richiesta ai tile parte dopo lo scroll, e lo stato è 200. |
+| Attribuzione | "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors" leggibile in ogni mappa | A mano su 390 e 1280, nei due temi. |
+
 ## Verifica automatica
 
 ```bash

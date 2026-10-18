@@ -20,6 +20,7 @@ import {
   StopVotes,
   TabBar,
   TransferStop,
+  TripMap,
   interestDomain,
   type BookingItem,
 } from "@/components/design";
@@ -317,6 +318,28 @@ export function DesignShowcase({ themeId, themeLabel }: { themeId: string; theme
       <Block title="TabBar" readme="TabBar">
         <div className="max-w-[390px]">
           <TabBar current="trips" />
+        </div>
+      </Block>
+
+      <Block title="Map" readme="Map">
+        <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
+          <TripMap
+            points={[
+              { id: "mappa-1", lat: 38.0274, lng: 12.5105, label: "Saline di Trapani", number: 1 },
+              { id: "mappa-2", lat: 38.0425, lng: 12.3978, label: "Erice", number: 2 },
+              { id: "mappa-3", lat: 38.0382, lng: 12.6244, label: "Marsala", number: 3 },
+            ]}
+            route
+            ariaLabel="Mappa del giorno di esempio"
+          />
+          <TripMap
+            points={[
+              { id: "luogo-1", lat: 36.9247, lng: 14.7329, label: "Vendicari" },
+              { id: "luogo-2", lat: 36.8839, lng: 14.7114, label: "Noto" },
+            ]}
+            ariaLabel="Punti senza numero"
+            listed={false}
+          />
         </div>
       </Block>
     </div>

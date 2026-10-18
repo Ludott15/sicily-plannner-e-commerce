@@ -71,6 +71,9 @@ export default async function TripPage({ params, searchParams }: Props) {
         notes: s.notes,
         // "Sono qui" (passo 5.1): solo tappe con un luogo, mai per gli ospiti.
         checkIn: s.placeId !== null && !user.is_anonymous ? { checkedInToday: s.checkedInToday } : null,
+        // Coordinate del luogo, per la mappa del giorno (6.2).
+        lat: s.lat,
+        lng: s.lng,
       })),
     };
   });

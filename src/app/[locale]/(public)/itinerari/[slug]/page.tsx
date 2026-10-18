@@ -87,6 +87,9 @@ export default async function ItineraryPage({ params }: Props) {
       note: item.notes,
       thumbUrl: stopThumb(item.placeCover),
       durationMin: item.activityDurationMin,
+      // Coordinate del luogo della tappa, per la mappa del giorno (6.2).
+      lat: item.lat,
+      lng: item.lng,
       tip: item === tipItem ? tipFor(item) : null,
     }));
     return {
