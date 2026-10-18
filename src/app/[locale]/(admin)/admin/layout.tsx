@@ -75,6 +75,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <Link href="/admin/ai" className="text-body font-semibold text-lava">
           {tAi("nav")}
         </Link>
+        <Link href="/admin/ricerche" className="text-body font-semibold text-lava">
+          {t("searchMisses.nav")}
+        </Link>
       </nav>
       {alertPartners.length > 0 && (
         <div className="mt-6 flex flex-col gap-1 rounded-sm border-[1.5px] border-danger bg-calce-raised px-4 py-3 text-body">

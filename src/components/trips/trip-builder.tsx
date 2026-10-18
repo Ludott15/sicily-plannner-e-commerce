@@ -73,6 +73,8 @@ export type TripBuilderProps = {
   tab: TripTab;
   /** Contenuto della scheda Gruppo, reso dalla pagina (pannello del gruppo e sezioni). */
   groupTab: ReactNode;
+  /** "Oggi" (passo 11.3), reso dalla pagina solo se oggi cade nel viaggio: va in cima all'itinerario. */
+  today?: ReactNode;
 };
 
 const OK: TripFormState = { status: "ok" };
@@ -81,7 +83,7 @@ const NO_ALTERNATIVES: TripGroupState["alternatives"][string] = [];
 
 type Outcome = { status: "ok" } | TripActionError;
 
-export function TripBuilder({ tripId, days, warnings, initialDay, bookings, group, tab, groupTab }: TripBuilderProps) {
+export function TripBuilder({ tripId, days, warnings, initialDay, bookings, group, tab, groupTab, today }: TripBuilderProps) {
   const t = useTranslations("Trips");
   const tMap = useTranslations("Map");
   const router = useRouter();
@@ -270,6 +272,7 @@ export function TripBuilder({ tripId, days, warnings, initialDay, bookings, grou
         </div>
         <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,360px)] md:items-start">
           <div className="flex min-w-0 flex-col gap-8">
+            {today}
             {/* Mobile: la mappa del giorno sta sotto le pillole, chiusa finché non la si apre. */}
             <details className="is-map-details is-trip-tools md:hidden">
               <summary>{tMap("showMap")}</summary>
