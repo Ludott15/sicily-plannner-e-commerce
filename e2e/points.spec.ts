@@ -51,11 +51,14 @@ test("la home mostra i punti e porta a /punti con saldo e regole", async ({ page
   await expect(page.getByRole("region", { name: "Come si guadagnano" }).getByText("Profilo completato")).toBeVisible();
 });
 
-test("il regolamento dei punti è in sospeso e non si apre", async ({ page, request }) => {
+test("il regolamento dei punti si apre dal link in /punti", async ({ page, request }) => {
+  // Compilazione a freddo di /punti e del regolamento in locale: più dei 30 secondi predefiniti.
+  test.setTimeout(120_000);
   await registeredUserWithPoints(page, request);
   await page.goto("/it/punti");
-  const rules = page.locator('[data-pending-id="points.rules"]');
-  await expect(rules).toHaveAttribute("aria-disabled", "true");
+  await page.getByRole("link", { name: "Regolamento dei punti" }).click();
+  await expect(page).toHaveURL(/\/it\/punti\/regolamento$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Regolamento dei punti");
 });
 
 test("recensione da 80 caratteri: etichetta Recensione con premio", async ({ page, request }) => {

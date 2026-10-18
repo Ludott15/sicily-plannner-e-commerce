@@ -2,6 +2,29 @@
 
 Passi da fare una volta sul progetto Supabase di produzione e su Vercel prima di aprire il sito, più il modo di verificarli. Il controllo automatico è l'e2e `e2e/launch.spec.ts`, che parte con `PRE_LAUNCH=1` (vedi "Verifica automatica" in fondo).
 
+## 0. Dati del titolare e testi legali
+
+Le pagine legali (privacy, cookie, termini, condizioni di vendita, regolamento punti, chi siamo) e il contatto leggono i dati del titolare dall'ambiente di Vercel. Sono pubblici (`NEXT_PUBLIC_`), quindi non vanno messi in nessun segreto. Da compilare prima del lancio.
+
+Prima di impostarli, verificare che il sito faccia davvero quello che i testi descrivono (impostarli rende le pagine indicizzabili):
+- **Condizioni di vendita**: esistono carrello e checkout con accettazione delle condizioni (7.2), email di conferma e di spedizione con tracciamento, pagina "I miei ordini" (7.3), rimborsi e segnalazione dei problemi (7.4). Se lo shop non apre insieme al sito, togliere la voce dal footer o aspettare.
+- **Privacy e cookie**: elenco dei fornitori e conservazione coerenti con docs/PRIVACY-TECNICA.md; regioni di Supabase, Vercel e Cloudflare verificate; durata del cookie NEXT_LOCALE verificata nel browser.
+- **Turnstile del modulo contatti**: in produzione serve TURNSTILE_SECRET_KEY; senza, la verifica fallisce. Sulle preview di Vercel si usa la chiave di prova (accetta ogni invio: resta il limite per IP).
+- Rilettura dei testi da parte di un consulente (trasferimenti verso gli USA, conservazione dei dati fiscali, ADR, età minima).
+- **Messaggi di contatto**: l'informativa promette di conservarli al massimo 12 mesi nella casella dell'assistenza. Non c'è un meccanismo automatico: impostare una regola di archiviazione o cancellazione nella casella, o cancellarli a mano ogni mese.
+
+| Variabile | Valore | Verifica |
+| --- | --- | --- |
+| `NEXT_PUBLIC_LEGAL_NAME` | ragione sociale del titolare | A mano: in `/it/privacy` il nome compare al posto del trattino "—" |
+| `NEXT_PUBLIC_LEGAL_ADDRESS` | sede legale | A mano: in `/it/privacy` la sede compare al posto del trattino |
+| `NEXT_PUBLIC_LEGAL_VAT_NUMBER` | partita IVA, 11 cifre | Un valore con altre cifre blocca il caricamento del sito: il messaggio d'errore lo dice |
+| `NEXT_PUBLIC_PRIVACY_EMAIL` | indirizzo per l'esercizio dei diritti privacy | A mano: l'indirizzo compare in `/it/privacy` |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | assistenza: mostrata nel sito (`/it/contatti`, dichiarazione di accessibilità) e destinataria dei messaggi del modulo di contatto | A mano: `/it/contatti` mostra l'indirizzo; dopo un invio di prova arriva l'email con "Rispondi a" sul mittente |
+
+Finché anche una sola delle cinque variabili manca, le pagine legali restano in preparazione: mostrano l'avviso "Pagina in preparazione: mancano ancora i dati del titolare.", non sono indicizzate e non stanno nella sitemap. Il controllo `isLegalReady()` (`src/lib/legal-entity.ts`) è la stessa verifica.
+
+I testi stanno in `content/legal/*.md`, senza variabili scritte a mano: `{{titolare}}`, `{{sede}}`, `{{partita_iva}}`, `{{email_privacy}}`, `{{email_assistenza}}`, `{{spedizione_testo}}` (la tariffa viene da `src/lib/shop/config.ts`). Dopo ogni modifica di un testo: aumentare `version` e aggiornare `updated` nell'intestazione, poi `npm run content:legal` e commit di `generated/content/legal.ts`. In CI `npm run design:check` verifica che il file generato sia aggiornato. Le versioni in inglese vanno in `content/legal/<id>.en.md`; senza, la pagina inglese mostra il testo italiano con l'avviso "Disponibile in italiano".
+
 ## 1. Configurazione di Supabase Auth con `supabase config push`
 
 `supabase config push` invia al progetto collegato le proprietà dichiarate in `supabase/config.toml`. L'ho verificato nel sorgente della CLI (`apps/cli-go/pkg/config/auth.go` e `config.go`). Le proprietà inviate sono:
@@ -43,6 +66,8 @@ Restano manuali solo i segreti (passo 2 e sezione 2) e l'SMTP di produzione, se 
 | Variabile | Valore | Verifica |
 | --- | --- | --- |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | site key del widget Turnstile del dominio | Se manca, la build di produzione si ferma (`src/lib/env.ts`). A mano: il widget non mostra l'avviso "testing only". |
+| `TURNSTILE_SECRET_KEY` | chiave segreta di Turnstile, la stessa di `SUPABASE_AUTH_CAPTCHA_SECRET` (solo lato server) | Senza, il modulo di contatto risponde sempre "verifica non riuscita": in produzione la verifica fallisce chiusa. A mano: un messaggio di prova da `/it/contatti` arriva all'assistenza. |
+| `NEXT_PUBLIC_LEGAL_NAME`, `NEXT_PUBLIC_LEGAL_ADDRESS`, `NEXT_PUBLIC_LEGAL_VAT_NUMBER`, `NEXT_PUBLIC_PRIVACY_EMAIL`, `NEXT_PUBLIC_SUPPORT_EMAIL` | dati del titolare, vedi la sezione 0 | Senza, le pagine legali restano in preparazione e il contatto non ha un destinatario. |
 | `WIKIMEDIA_CONTACT` | email di contatto per Wikimedia (es. l'email della redazione) | Serve a Foto da Commons: senza, Wikimedia limita le richieste (429). La pagina admin avvisa se manca. |
 | `CRON_SECRET` | stringa casuale lunga (es. `openssl rand -hex 32`) | `GET https://<dominio>/api/cron/cleanup-guests` senza header risponde 401. Nei log di Vercel il cron delle 3:00 UTC risponde 200 con `{"deleted": n}`. |
 | Classifica stagionale: refresh | job `refresh-leaderboard` di pg_cron ogni 15 minuti, creato dalla migrazione `20261015184024_classifiche.sql` (indipendente dal piano Vercel). `GET /api/cron/refresh-leaderboard` con `CRON_SECRET` serve per un refresh manuale | Nel SQL editor di Supabase: `select jobname, schedule from cron.job` mostra `refresh-leaderboard` con `*/15 * * * *`; `select * from cron.job_run_details order by start_time desc limit 3` mostra esecuzioni riuscite. |
@@ -171,3 +196,14 @@ Verifica manuale con lettore di schermo (VoiceOver su iOS e macOS, NVDA su Windo
 - **Checkout**: non esiste ancora (passo 7). Quando arriva, questo elenco va esteso al carrello (aggiunta con annuncio di stato) e al pagamento.
 
 Da chiudere prima del lancio: il testo della dichiarazione è scritto dall'orchestratore su incarico di Ludovico (2026-10-16) e va aggiornato dopo la prova con i lettori di schermo; il contatto per le segnalazioni arriva con i dati del titolare (CONTACT_EMAIL, passo 8.3).
+
+## 11. Guide (contenuti da file, passo 8.3)
+
+Le guide di `content/guide/*.md` si caricano nel database con `scripts/content/import-guides.mjs`, non con l'admin. Ogni file ha `slug` (uguale al nome del file), `title`, `summary`, `author` e `links` (`- place: <slug>`). Il comando fa upsert per slug, pubblica le guide, sostituisce i loro luoghi collegati e salta con un avviso i luoghi che non esistono.
+
+| Voce | Valore | Verifica |
+| --- | --- | --- |
+| Migrazioni | applicate prima (`supabase db push`), altrimenti la tabella `guides` non c'è | `npm run content:guides -- --dry-run` mostra il piano e non scrive |
+| Import in produzione | `DATABASE_URL` della produzione esportata nella shell (mai in `.env.local`), poi `npm run content:guides`; con host non locale il comando chiede conferma (`--yes` per saltarla) | Le guide compaiono in `/it/guide`; la sitemap `guide` elenca le otto guide. Un luogo mancante è nell'output come avviso "saltato". |
+
+Una modifica al file si rilancia con lo stesso comando: aggiorna la guida con lo stesso slug.

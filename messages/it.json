@@ -38,7 +38,9 @@
     "guides": "Guide",
     "shop": "Shop",
     "shopProducts": "Prodotti",
-    "accessibility": "Dichiarazione di accessibilità"
+    "accessibility": "Dichiarazione di accessibilità",
+    "termsOfUse": "Termini d'uso",
+    "contact": "Contatti"
   },
   "Home": {
     "title": "La Sicilia di chi ci vive, su misura per te.",
@@ -92,7 +94,8 @@
       "email_taken": "Questa email ha già un account. Per usarlo esci e accedi con il codice: i viaggi creati da ospite non passano a quell'account.",
       "not_guest": "Il tuo account ha già un'email.",
       "failed": "Qualcosa non ha funzionato. Riprova."
-    }
+    },
+    "legalNotice": "Continuando accetti i <terms>Termini d'uso</terms> e l’<privacy>Informativa privacy</privacy>."
   },
   "Guest": {
     "title": "Stai usando Isula come ospite",
@@ -1179,7 +1182,11 @@
     "accessibilityKnownPartners": "I contenuti dei partner esterni (prenotazioni, offerte e pagine di terzi) non dipendono da noi e non li abbiamo verificati.",
     "accessibilityContactTitle": "Come segnalare un problema",
     "accessibilityContactText": "Scrivi a",
-    "accessibilityContactMissing": "Il canale per le segnalazioni sarà indicato in questa pagina."
+    "accessibilityContactMissing": "Il canale per le segnalazioni sarà indicato in questa pagina.",
+    "termsOfUse": "Termini d'uso",
+    "preparing": "Pagina in preparazione: mancano ancora i dati del titolare.",
+    "updatedOn": "Aggiornato il {date} · versione {version}",
+    "onlyItalian": "Disponibile in italiano"
   },
   "Cookies": {
     "title": "Cookie",
@@ -1295,7 +1302,8 @@
     "profilingTitle": "Vuoi che Isula impari dai tuoi click, aggiunte e voti per migliorare le proposte?",
     "profilingHint": "Se sì, usiamo quello che fai nell'app per capire meglio cosa ti piace. Se no, le proposte si basano solo sui gusti che hai scelto qui. Puoi cambiare idea in ogni momento, nella pagina Privacy del tuo profilo.",
     "profilingYes": "Sì, impara dai miei click",
-    "profilingNo": "No, grazie"
+    "profilingNo": "No, grazie",
+    "privacyNote": "Le risposte servono solo a proporti viaggi su misura. Come trattiamo i dati: <privacy>Informativa privacy</privacy>."
   },
   "Proposals": {
     "title": "Ecco tre viaggi pensati per te",
@@ -2012,7 +2020,8 @@
       "savedRewarded": "Recensione salvata: hai guadagnato {points} punti.",
       "submit": "Pubblica recensione",
       "update": "Salva le modifiche",
-      "submitting": "Salvataggio in corso"
+      "submitting": "Salvataggio in corso",
+      "termsNotice": "Scrivendo una recensione accetti le <terms>regole sulle recensioni</terms> dei Termini d'uso."
     },
     "errors": {
       "invalid": "La recensione non è valida. Controlla i campi.",
@@ -2305,6 +2314,22 @@
         "hint": "Scrivilo nella pagina da cui l’hai chiesto. Vale un’ora. I viaggi che hai creato restano tuoi.",
         "ignore": "Se non l’hai chiesto tu, ignora questa email."
       }
+    },
+    "contactMessage": {
+      "subject": "Messaggio dal modulo contatti: {topic}",
+      "preheader": "Nuovo messaggio dal modulo contatti di Isula",
+      "heading": "Nuovo messaggio dal sito",
+      "topic": "Argomento: {topic}",
+      "from": "Da: {name} ({email})",
+      "unnamed": "nome non indicato",
+      "footer": "Per rispondere, scrivi all'indirizzo nel campo Rispondi a: arriva direttamente a chi ha scritto.",
+      "topics": {
+        "trip": "Viaggio e itinerari",
+        "shop": "Shop e ordini",
+        "privacy": "Privacy e dati personali",
+        "content_report": "Segnalazione di un contenuto",
+        "other": "Altro"
+      }
     }
   },
   "AdminContent": {
@@ -2562,7 +2587,7 @@
     "producerProducts": "Prodotti",
     "producerEmpty": "Nessun prodotto disponibile da questo produttore per ora.",
     "noAllergens": "Nessuno dei 14 allergeni del Reg. UE 1169/2011",
-    "withdrawalNotice": "Hai 14 giorni dalla consegna per recedere dall'acquisto senza indicare il motivo."
+    "withdrawalNotice": "Hai 14 giorni dalla consegna per recedere dall'acquisto senza indicare il motivo. Come fare è spiegato nelle <link>condizioni di vendita</link>."
   },
   "Privacy": {
     "title": "Privacy e dati",
@@ -2620,5 +2645,33 @@
     "title": "Account eliminato",
     "text": "Abbiamo eliminato i tuoi dati e sei uscito da questo dispositivo. Gli ordini restano per gli obblighi fiscali, le recensioni restano senza il tuo nome.",
     "home": "Torna alla home"
+  },
+  "Contact": {
+    "title": "Contatti",
+    "intro": "Scrivici per un viaggio, un ordine, i tuoi dati o un contenuto da segnalare. Ti rispondiamo all'indirizzo che indichi.",
+    "supportLine": "Puoi scrivere anche a",
+    "nameLabel": "Nome (facoltativo)",
+    "emailLabel": "Email",
+    "topicLabel": "Di cosa si tratta",
+    "topics": {
+      "trip": "Un viaggio o un itinerario",
+      "shop": "Shop e ordini",
+      "privacy": "Privacy e dati personali",
+      "content_report": "Segnalare un contenuto",
+      "other": "Altro"
+    },
+    "messageLabel": "Messaggio",
+    "messageHint": "Da 20 a 3000 caratteri. Ne hai scritti {count}.",
+    "privacyNote": "Usiamo il messaggio solo per risponderti. Non lo salviamo nel sito. Come trattiamo i dati: <privacy>Informativa privacy</privacy>.",
+    "submit": "Invia il messaggio",
+    "submitting": "Invio in corso…",
+    "sent": "Messaggio inviato. Ti rispondiamo all'indirizzo che hai scritto.",
+    "errors": {
+      "invalid": "Controlla i campi evidenziati: serve un'email valida e un messaggio tra 20 e 3000 caratteri.",
+      "captcha_failed": "Non siamo riusciti a verificare che sei una persona. Riprova.",
+      "rate_limited": "Hai inviato troppi messaggi ravvicinati. Riprova più tardi.",
+      "email_unavailable": "L'invio dei messaggi non è disponibile in questo momento. Riprova più tardi.",
+      "failed": "Il messaggio non è partito. Riprova."
+    }
   }
 }

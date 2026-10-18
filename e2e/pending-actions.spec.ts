@@ -21,7 +21,7 @@ const PAGES = [
   // Verticali del passo 3.1: "in arrivo" finché manca l'ID del partner (vertical.lodging, vertical.car).
   "/it/dove-dormire",
   "/it/noleggio-auto",
-  // Classifica (passo 5.3): pubblica, con il regolamento in sospeso (points.rules).
+  // Classifica (passo 5.3): pubblica, con il link al regolamento dei punti.
   "/it/classifica",
 ];
 
@@ -63,14 +63,16 @@ async function collectPending(page: Page) {
 }
 
 test("le azioni in sospeso nelle pagine sono esattamente quelle dell'elenco", async ({ page }) => {
+  // Quindici pagine in un test: in locale la compilazione a freddo supera i 30 secondi predefiniti.
+  test.setTimeout(180_000);
   const found = await collectPending(page);
   expect(Object.fromEntries([...found].sort())).toEqual(Object.fromEntries(Object.entries(PENDING_ACTIONS).sort()));
 });
 
 test("un'azione in sospeso non fa nulla", async ({ page }) => {
-  await page.goto("/it/privacy");
+  await page.goto("/it/dove-dormire");
   const url = page.url();
-  await page.locator('[data-pending-id="legal.privacy"]').first().click({ force: true });
+  await page.locator('[data-pending-id="vertical.lodging"]').first().click({ force: true });
   await expect(page).toHaveURL(url);
 });
 
@@ -82,7 +84,15 @@ test("\"Disponibile a breve\" solo in sviluppo", async ({ page }) => {
 
 // Controllo di lancio: prima di andare in produzione nessuna azione può restare in sospeso.
 test("prima del lancio l'elenco delle azioni in sospeso è vuoto", async ({ page }) => {
+  test.setTimeout(180_000);
   test.skip(process.env.PRE_LAUNCH !== "1", "attivo solo con PRE_LAUNCH=1 sulla build di produzione");
   expect(Object.keys(PENDING_ACTIONS)).toEqual([]);
   expect([...(await collectPending(page)).keys()]).toEqual([]);
+  // Testi legali e Chi siamo: con i dati del titolare nessuna pagina mostra l'avviso di preparazione
+  // (e le pagine sono indicizzabili, vedi isLegalReady).
+  for (const path of ["/it/privacy", "/it/cookie", "/it/condizioni-di-vendita", "/it/termini", "/it/punti/regolamento", "/it/chi-siamo"]) {
+    await page.goto(path);
+    await expect(page.locator('[data-legal-entity="missing"]'), path).toHaveCount(0);
+    await expect(page.locator('meta[name="robots"][content*="noindex"]'), path).toHaveCount(0);
+  }
 });

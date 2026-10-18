@@ -96,8 +96,10 @@ export async function SiteFooter() {
                 [
                   ["/privacy", "privacy"],
                   ["/cookie", "cookie"],
+                  ["/termini", "termsOfUse"],
                   ["/condizioni-di-vendita", "terms"],
                   ["/accessibilita", "accessibility"],
+                  ["/contatti", "contact"],
                 ] as const
               ).map(([href, key]) => (
                 <li key={href}>

@@ -38,7 +38,9 @@
     "guides": "Guides",
     "shop": "Shop",
     "shopProducts": "Products",
-    "accessibility": "Accessibility statement"
+    "accessibility": "Accessibility statement",
+    "termsOfUse": "Terms of use",
+    "contact": "Contact"
   },
   "Home": {
     "title": "Sicily as locals know it, made for you.",
@@ -92,7 +94,8 @@
       "email_taken": "This email already has an account. To use it, sign out and sign in with the code: trips created as a guest don't move to that account.",
       "not_guest": "Your account already has an email.",
       "failed": "Something went wrong. Please try again."
-    }
+    },
+    "legalNotice": "By continuing you accept the <terms>Terms of use</terms> and the <privacy>Privacy notice</privacy>."
   },
   "Guest": {
     "title": "You're using Isula as a guest",
@@ -1179,7 +1182,11 @@
     "accessibilityKnownPartners": "Content from external partners (bookings, offers and third-party pages) is not under our control and we have not checked it.",
     "accessibilityContactTitle": "How to report a problem",
     "accessibilityContactText": "Write to",
-    "accessibilityContactMissing": "The channel for reporting problems will be given on this page."
+    "accessibilityContactMissing": "The channel for reporting problems will be given on this page.",
+    "termsOfUse": "Terms of use",
+    "preparing": "Page in preparation: the business details are still missing.",
+    "updatedOn": "Updated on {date} · version {version}",
+    "onlyItalian": "Available in Italian only."
   },
   "Cookies": {
     "title": "Cookies",
@@ -1295,7 +1302,8 @@
     "profilingTitle": "Should Isula learn from your clicks, additions and votes to improve the suggestions?",
     "profilingHint": "If yes, we use what you do in the app to better understand what you like. If no, the suggestions are based only on the tastes you chose here. You can change your mind at any time, on the Privacy page of your profile.",
     "profilingYes": "Yes, learn from my clicks",
-    "profilingNo": "No, thanks"
+    "profilingNo": "No, thanks",
+    "privacyNote": "Your answers are only used to suggest trips made for you. How we handle data: <privacy>Privacy notice</privacy>."
   },
   "Proposals": {
     "title": "Here are three trips for you",
@@ -2012,7 +2020,8 @@
       "savedRewarded": "Review saved: you earned {points} points.",
       "submit": "Publish review",
       "update": "Save changes",
-      "submitting": "Saving"
+      "submitting": "Saving",
+      "termsNotice": "By writing a review you accept the <terms>review rules</terms> in the Terms of use."
     },
     "errors": {
       "invalid": "The review is not valid. Check the fields.",
@@ -2305,6 +2314,22 @@
         "hint": "Type it on the page where you asked for it. It is valid for one hour. The trips you created stay yours.",
         "ignore": "If you did not ask for it, ignore this email."
       }
+    },
+    "contactMessage": {
+      "subject": "Message from the contact form: {topic}",
+      "preheader": "New message from the Isula contact form",
+      "heading": "New message from the site",
+      "topic": "Topic: {topic}",
+      "from": "From: {name} ({email})",
+      "unnamed": "name not given",
+      "footer": "To reply, write to the address in the Reply-to field: it goes straight to the sender.",
+      "topics": {
+        "trip": "Trip and itineraries",
+        "shop": "Shop and orders",
+        "privacy": "Privacy and personal data",
+        "content_report": "Report a piece of content",
+        "other": "Other"
+      }
     }
   },
   "AdminContent": {
@@ -2562,7 +2587,7 @@
     "producerProducts": "Products",
     "producerEmpty": "No products from this producer for now.",
     "noAllergens": "None of the 14 allergens of EU Reg. 1169/2011",
-    "withdrawalNotice": "You have 14 days from delivery to withdraw from the purchase without giving a reason."
+    "withdrawalNotice": "You have 14 days from delivery to withdraw from the purchase without giving a reason. How to do it is explained in the <link>terms of sale</link>."
   },
   "Privacy": {
     "title": "Privacy and data",
@@ -2620,5 +2645,33 @@
     "title": "Account deleted",
     "text": "We deleted your data and you signed out of this device. Orders stay, for tax obligations; reviews stay, without your name.",
     "home": "Back to the home page"
+  },
+  "Contact": {
+    "title": "Contact",
+    "intro": "Write to us about a trip, an order, your data or content to report. We reply to the address you give.",
+    "supportLine": "You can also write to",
+    "nameLabel": "Name (optional)",
+    "emailLabel": "Email",
+    "topicLabel": "What is it about",
+    "topics": {
+      "trip": "A trip or an itinerary",
+      "shop": "Shop and orders",
+      "privacy": "Privacy and personal data",
+      "content_report": "Reporting content",
+      "other": "Other"
+    },
+    "messageLabel": "Message",
+    "messageHint": "From 20 to 3000 characters. You have written {count}.",
+    "privacyNote": "We use the message only to reply to you. We do not store it on the site. How we handle data: <privacy>Privacy notice</privacy>.",
+    "submit": "Send the message",
+    "submitting": "Sending…",
+    "sent": "Message sent. We reply to the address you wrote.",
+    "errors": {
+      "invalid": "Check the highlighted fields: you need a valid email and a message between 20 and 3000 characters.",
+      "captcha_failed": "We could not verify that you are a person. Try again.",
+      "rate_limited": "You have sent too many messages in a short time. Try again later.",
+      "email_unavailable": "Sending messages is not available right now. Try again later.",
+      "failed": "The message was not sent. Try again."
+    }
   }
 }

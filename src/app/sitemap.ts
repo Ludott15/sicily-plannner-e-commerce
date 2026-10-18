@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { publicEnv } from "@/lib/env";
 import { POPULAR_ROUTES } from "@/lib/flights/routes";
 import { routing } from "@/lib/i18n/routing";
-import { isPending } from "@/lib/pending-actions";
+import { isLegalReady } from "@/lib/legal-entity";
 import { isSitemapType, SITEMAP_TYPES, type SitemapType } from "@/lib/sitemap-types";
 import { listAreaSlugs } from "@/server/catalog/area-queries";
 import { listPublicSlugs } from "@/server/catalog/queries";
@@ -18,6 +18,15 @@ export const dynamic = "force-dynamic";
 export async function generateSitemaps() {
   return SITEMAP_TYPES.map((id) => ({ id }));
 }
+
+const LEGAL_PATHS = [
+  "/chi-siamo",
+  "/privacy",
+  "/cookie",
+  "/condizioni-di-vendita",
+  "/termini",
+  "/punti/regolamento",
+];
 
 // Percorsi di un tipo, senza lingua. Ogni percorso entra in tutte le lingue (con hreflang).
 async function pathsFor(type: SitemapType): Promise<string[]> {
@@ -39,11 +48,9 @@ async function pathsFor(type: SitemapType): Promise<string[]> {
         ...(carReady ? ["/noleggio-auto"] : []),
         "/crediti-foto",
         "/accessibilita",
-        // Pagine con testi ancora in sospeso: fuori dalla sitemap (e noindex) finché non sono scritte.
-        ...(isPending("about.editorial", "about.founder") ? [] : ["/chi-siamo"]),
-        ...(isPending("legal.privacy") ? [] : ["/privacy"]),
-        ...(isPending("legal.cookie") ? [] : ["/cookie"]),
-        ...(isPending("legal.terms") ? [] : ["/condizioni-di-vendita"]),
+        "/contatti",
+        // Testi legali e Chi siamo: nella sitemap (e indicizzabili) solo con i dati del titolare.
+        ...(isLegalReady() ? LEGAL_PATHS : []),
       ];
     }
     case "luoghi":

@@ -23,8 +23,7 @@ async function answerAll(page: Page) {
   // 1: giorni e mesi. Avanti solo dopo aver scelto i giorni; informativa sotto i pulsanti.
   await expect(page.getByText("Domanda 1 di 7")).toBeVisible();
   await expect(next(page)).toBeDisabled();
-  await expect(page.locator('[data-pending-id="onboarding.privacy"]')).toHaveAttribute("data-pending", "testi");
-  await expect(page.getByRole("link", { name: "Informativa sulla privacy" })).toHaveAttribute("href", "/it/privacy");
+  await expect(page.getByRole("link", { name: "Informativa privacy" }).first()).toHaveAttribute("href", "/it/privacy");
   await page.getByRole("radio", { name: "3 giorni" }).check({ force: true });
   await page.getByRole("button", { name: "giu", exact: true }).click();
   await next(page).click();

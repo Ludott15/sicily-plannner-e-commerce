@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
+import { Link } from "@/lib/i18n/navigation";
 import { FREE_SHIPPING_THRESHOLD_CENTS, SHIPPING_FLAT_CENTS } from "@/lib/shop/config";
 import { formatCents } from "@/lib/shop/present";
 import type { ShopProduct } from "@/server/shop/queries";
@@ -69,8 +70,13 @@ export function ProductFacts({ product, locale }: { product: ShopProduct; locale
         </p>
       ) : (
         <p role="note" className="rounded-md border border-border-control bg-calce-raised px-4 py-3 text-body">
-          {/* Il rimando alle condizioni di vendita arriva con il loro testo (passo 8.3). */}
-          {t("withdrawalNotice")}
+          {t.rich("withdrawalNotice", {
+            link: (chunks) => (
+              <Link href="/condizioni-di-vendita" className="font-semibold text-coccio-text underline underline-offset-4">
+                {chunks}
+              </Link>
+            ),
+          })}
         </p>
       )}
 

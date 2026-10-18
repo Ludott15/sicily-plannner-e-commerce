@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
-import { ButtonLink, PendingButton } from "@/components/design";
+import { ButtonLink } from "@/components/design";
 import { SectionSkeleton } from "@/components/groups/section-skeleton";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
@@ -13,8 +13,8 @@ import { getLeaderboardSettings } from "@/server/gamification/leaderboard";
 
 // Classifica stagionale (passo 5.3). La lista è pubblica: primi 50 senza chi ha scelto di non
 // comparire, e il server non manda mai email, id o storico. Chi ha l'account vede anche la propria
-// posizione, anche se è fuori dalla lista. Il regolamento è in sospeso (marcatore points.rules,
-// come in /punti). Non si indicizza: mostra nomi di persone.
+// posizione, anche se è fuori dalla lista. Il regolamento è in /punti/regolamento. Non si
+// indicizza: mostra nomi di persone.
 // Le stagioni sono in una riga di pulsanti sotto l'intestazione; la posizione personale è una riga
 // con divider, non una card.
 
@@ -152,9 +152,9 @@ export default async function LeaderboardPage({ params, searchParams }: Props) {
       )}
 
       <div>
-        <PendingButton id="points.rules" variant="secondary">
+        <ButtonLink href="/punti/regolamento" variant="secondary">
           {t("rulesLink")}
-        </PendingButton>
+        </ButtonLink>
       </div>
     </PageContainer>
   );

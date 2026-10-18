@@ -4,7 +4,7 @@ import { useEffect, useId, useState, useTransition, type ReactNode } from "react
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Turnstile } from "@/components/auth/turnstile";
-import { Button, PendingText } from "@/components/design";
+import { Button } from "@/components/design";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { NEUTRAL, QUESTIONS, type Question } from "@/lib/onboarding";
 import { submitOnboarding, type ActionError } from "@/server/personalization/actions";
@@ -226,10 +226,11 @@ export function OnboardingFlow({
           </Button>
         </div>
         {step === 0 && (
-          // Informativa sotto i pulsanti della prima domanda: il testo lo scrive Ludovico.
+          // Informativa sotto i pulsanti della prima domanda.
           <p className="text-caption text-lava-muted">
-            <PendingText id="onboarding.privacy" inline />{" "}
-            <Link href="/privacy">{t("privacyLink")}</Link>
+            {t.rich("privacyNote", {
+              privacy: (chunks) => <Link href="/privacy">{chunks}</Link>,
+            })}
           </p>
         )}
       </div>
