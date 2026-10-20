@@ -2709,8 +2709,8 @@
     }
   },
   "Checkout": {
-    "successTitle": "Payment received",
-    "successBody": "Thank you for your purchase. We will email you when the order is confirmed and when it ships.",
+    "successTitle": "Thank you",
+    "successBody": "If you completed the payment, the cart has been emptied. Order details will follow with the confirmation.",
     "summary": "Summary",
     "backToShop": "Back to the shop",
     "payWithStripe": "Pay with Stripe",

@@ -101,7 +101,7 @@ test.describe("checkout con il provider di prova", () => {
 
     await page.getByRole("link", { name: "Paga", exact: true }).click();
     await expect(page).toHaveURL(/\/it\/carrello\/esito\?sessione=cs_fake_/);
-    await expect(page.getByRole("heading", { level: 1, name: "Pagamento ricevuto" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Grazie" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Carrello vuoto" })).toBeVisible();
   });
 

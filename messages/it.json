@@ -2709,8 +2709,8 @@
     }
   },
   "Checkout": {
-    "successTitle": "Pagamento ricevuto",
-    "successBody": "Grazie per l’acquisto. Ti scriveremo per email quando l'ordine è confermato e quando parte.",
+    "successTitle": "Grazie",
+    "successBody": "Se hai completato il pagamento, il carrello è stato svuotato. Il dettaglio dell’ordine arriverà con la conferma.",
     "summary": "Riepilogo",
     "backToShop": "Torna allo shop",
     "payWithStripe": "Paga con Stripe",
