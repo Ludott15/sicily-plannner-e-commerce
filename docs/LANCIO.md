@@ -173,28 +173,37 @@ Il modello è quello di un intermediario (docs/spec.md, sezione E-commerce): il 
 
 ## 9b. Pagamenti: Stripe Checkout (passo 7.2)
 
-Il carrello vive in un cookie firmato (`isula_cart`, solo id e quantità): i prezzi li legge il server dal database a ogni richiesta. Il checkout crea una riga in `checkout_sessions`, scala i punti (se richiesti) nella stessa transazione e poi crea la sessione Stripe. Dettagli in `src/server/shop/checkout.ts`.
+Il carrello vive in un cookie firmato (`isula_cart`, solo id e quantità): i prezzi li legge il server dal database a ogni richiesta. Il checkout crea una riga in `checkout_sessions`, scala i punti (se richiesti) nella stessa transazione e poi crea la sessione Stripe. Se la sessione non si crea o non si collega, il server la annulla e restituisce i punti. Dettagli in `src/server/shop/checkout.ts`.
+
+**Cron di riconciliazione** (`/api/cron/checkout-sweep`, ogni ora in `vercel.json`): chiude i checkout rimasti senza sessione Stripe più vecchi di 15 minuti (un crash tra la creazione della riga e la sessione) e restituisce i punti una sola volta. Verifica: `GET /api/cron/checkout-sweep` senza `Authorization` risponde 401.
+
+**Limiti dei tentativi**: 10 checkout al giorno per utente e 30 all'ora per IP (`RATE_LIMIT_SECRET`, sopra).
+
+**Rischi accettati**:
+- Spam anonimo di righe: un visitatore senza account può creare righe in `checkout_sessions` senza sessione. Il rischio è accettato: lo limitano il rate limit per IP (30 all'ora) e il cron, che chiude le righe senza sessione dopo 15 minuti.
+- Doppio guasto: se la sessione Stripe creata non si collega alla riga, e nemmeno il suo annullamento riesce, il cron può chiudere la riga (e restituire i punti) prima che Stripe scada la sessione (31 minuti). In quella finestra una sessione pagata darebbe lo sconto con i punti già restituiti. È una sessione per ogni doppio guasto; da chiudere con il passo 7.3, che potrà usare la scadenza come unica fonte.
 
 | Variabile | Valore | Verifica |
 | --- | --- | --- |
-| `STRIPE_SECRET_KEY` | `sk_test_...` nelle anteprime e nei test; `sk_live_...` in produzione, solo dopo la prova end-to-end in modalità test | Senza, il pulsante "Paga" resta in sospeso e il carrello funziona. A mano: il pulsante porta alla pagina di Stripe. |
+| `STRIPE_SECRET_KEY` | `sk_test_...` nelle anteprime e nei test; `sk_live_...` in produzione, solo dopo la prova end-to-end in modalità test | Senza, il pulsante "Paga" resta in sospeso e il carrello funziona. Il webhook rifiuta gli eventi in modalità diversa dalla chiave (`sk_live_` contro eventi di test, e viceversa). |
+| `CHECKOUT_STRIPE_ENABLED` | `1` per accendere Stripe Checkout; altrimenti il pagamento resta spento anche con la chiave | Si imposta solo dal passo 7.3, quando il pagamento crea l'ordine. Con la chiave e senza il flag il pulsante resta in sospeso. |
 | `STRIPE_WEBHOOK_SECRET` | segreto (`whsec_...`) dell'endpoint del webhook dello stesso ambiente: test e live hanno endpoint e segreti separati | Senza, `POST /api/stripe/webhook` risponde 500 `webhook_not_configured`. |
 | `CART_SECRET` | stringa casuale lunga (es. `openssl rand -hex 32`) | In produzione è obbligatoria: senza, il carrello risponde "non disponibile". |
 | `RATE_LIMIT_SECRET` (o `AFFILIATE_LINK_SECRET`) | già richiesta per i click affiliati | Limite dei tentativi di checkout: 10 al giorno per utente e 30 all'ora per IP. Senza chiave il checkout è negato (`rate_limited`). |
 
-**Endpoint del webhook** (Stripe → Developers → Webhooks, una volta in modalità test e una in modalità live):
+**Endpoint del webhook** (Stripe → Developers → Webhooks, una volta in modalità test e una in modalità live). Il webhook risponde 400 `livemode_mismatch` agli eventi in modalità diversa dalla chiave configurata:
 - URL: `https://<dominio>/api/stripe/webhook`
 - Eventi da abilitare: `checkout.session.expired` e `checkout.session.completed`. Il secondo si registra e non fa nulla finché non arriva il passo 7.3, che crea l'ordine.
 
 **Prova end-to-end con Stripe CLI** (in locale, con `npm run dev` e `npm run db:start`):
 1. `stripe login`, poi `stripe listen --forward-to localhost:3000/api/stripe/webhook`: la CLI stampa un `whsec_...`; mettilo in `.env.local` come `STRIPE_WEBHOOK_SECRET` e riavvia `npm run dev`.
-2. Con `STRIPE_SECRET_KEY=sk_test_...` nel `.env.local`: aggiungi un prodotto al carrello, scegli "Paga con Stripe" e completa il pagamento con la carta di prova `4242 4242 4242 4242` (qualunque data futura e CVC). Il webhook riceve `checkout.session.completed`: nei log compare `stripe_event_recorded_not_handled`.
+2. Con `STRIPE_SECRET_KEY=sk_test_...` e `CHECKOUT_STRIPE_ENABLED=1` nel `.env.local`: aggiungi un prodotto al carrello, scegli "Paga con Stripe" e completa il pagamento con la carta di prova `4242 4242 4242 4242` (qualunque data futura e CVC). Il webhook riceve `checkout.session.completed`: nei log compare `stripe_event_recorded_not_handled`.
 3. Scadenza: con una sessione ancora aperta, `stripe api post /v1/checkout/sessions/<id>/expire` (l'id `cs_test_...` è nell'URL di pagamento, o in `checkout_sessions.stripe_session_id`). Il webhook riceve `checkout.session.expired`.
 4. Controllo nel database locale (sola lettura): `select status from checkout_sessions order by created_at desc limit 1;` deve dare `expired`; `select count(*) from points_ledger where reason = 'redeem_refund' and ref_id = '<checkout_id>';` deve dare `1` se l'account aveva usato punti. Rispedire lo stesso evento dalla CLI (`stripe events resend <evt_id>`) non deve cambiare nulla: `stripe_events` ha una sola riga per evento.
 
 **Cosa non c'è ancora** (passi successivi): l'ordine e le email ai produttori (7.3), i rimborsi (7.4). Prima del lancio dello shop: decidere con il commercialista l'IVA e Stripe Tax (sezione 9); i prezzi sono IVA inclusa (`tax_behavior: inclusive`), senza calcolo automatico dell'imposta.
 
-**Provider finto** (`CHECKOUT_TEST_PROVIDER=fake`): solo e2e e sviluppo, mai in produzione. Attivo solo se `VERCEL_ENV` non è impostata. La sessione punta a `/[locale]/carrello/prova-pagamento`, e la scadenza si simula con `POST /api/stripe/test-expire` (404 fuori dal provider finto).
+**Provider finto** (`CHECKOUT_TEST_PROVIDER=fake`): solo e2e e sviluppo, mai in produzione. Attivo solo se `VERCEL_ENV` non è impostata e se `NODE_ENV` non è `production`, oppure se `CI=true` (il job e2e di GitHub imposta `CI`, anche con `NODE_ENV=production`). Vince sulla chiave Stripe. La sessione punta a `/[locale]/carrello/prova-pagamento`, e la scadenza si simula con `POST /api/stripe/test-expire` (404 fuori dal provider finto).
 
 ## 10. Accessibilità (passo 11.4)
 

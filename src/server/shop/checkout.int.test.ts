@@ -49,6 +49,7 @@ function expiredEvent(eventId: string, checkoutId: string): string {
   return JSON.stringify({
     id: eventId,
     object: "event",
+    livemode: false,
     type: "checkout.session.expired",
     data: {
       object: {
@@ -266,6 +267,7 @@ describe("scadenza e webhook", () => {
     const payload = JSON.stringify({
       id: eventId,
       object: "event",
+      livemode: false,
       type: "checkout.session.completed",
       data: { object: { id: `cs_test_int_${tag}`, object: "checkout.session", metadata: {} } },
     });
@@ -297,5 +299,30 @@ describe("scadenza e webhook", () => {
       sql`select count(*)::int as n from public.stripe_events where id = ${eventId}`,
     );
     expect(count?.n).toBe(1);
+  });
+
+  it("route del webhook: evento live con chiave di test → 400 e nessuna registrazione", async () => {
+    const eventId = `evt_int_${tag}_live`;
+    createdEventIds.push(eventId);
+    const payload = JSON.stringify({
+      id: eventId,
+      object: "event",
+      livemode: true,
+      type: "checkout.session.completed",
+      data: { object: { id: `cs_live_int_${tag}`, object: "checkout.session", metadata: {} } },
+    });
+    const header = Stripe.webhooks.generateTestHeaderString({ payload, secret: WEBHOOK_SECRET });
+    const response = await webhookPost(
+      new Request("http://localhost/api/stripe/webhook", {
+        method: "POST",
+        headers: { "stripe-signature": header },
+        body: payload,
+      }),
+    );
+    expect(response.status).toBe(400);
+    const [count] = await dbAdmin.execute<{ n: number }>(
+      sql`select count(*)::int as n from public.stripe_events where id = ${eventId}`,
+    );
+    expect(count?.n).toBe(0);
   });
 });

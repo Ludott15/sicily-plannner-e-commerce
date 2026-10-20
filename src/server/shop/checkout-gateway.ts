@@ -13,6 +13,8 @@ export type CheckoutGateway = {
   createCoupon(input: { checkoutId: string; amountOffCents: number }): Promise<string>;
   // Sessione di pagamento. Restituisce id e URL a cui mandare il cliente.
   createSession(input: CheckoutSessionInput): Promise<{ id: string; url: string }>;
+  // Annulla una sessione aperta (best effort dal server, quando il collegamento alla riga non è riuscito).
+  expireSession(stripeSessionId: string): Promise<void>;
 };
 
 export function stripeGateway(secretKey: string): CheckoutGateway {
@@ -39,6 +41,9 @@ export function stripeGateway(secretKey: string): CheckoutGateway {
       if (!session.url) throw new Error("stripe_session_without_url");
       return { id: session.id, url: session.url };
     },
+    async expireSession(stripeSessionId) {
+      await stripe.checkout.sessions.expire(stripeSessionId);
+    },
   };
 }
 
@@ -47,6 +52,9 @@ export function fakeGateway(): CheckoutGateway {
   return {
     async createCoupon({ checkoutId }) {
       return `fake_coupon_${checkoutId}`;
+    },
+    async expireSession() {
+      // Nessuna sessione reale da annullare: la scadenza simulata passa dall'endpoint di test.
     },
     async createSession({ checkoutId, locale, siteUrl }) {
       const id = fakeSessionId(checkoutId);

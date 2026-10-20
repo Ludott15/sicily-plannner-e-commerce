@@ -5,7 +5,8 @@ import { profiles } from "./profiles";
 // Sessioni di checkout (passo 7.2). Una riga per ogni tentativo di pagamento: contiene lo snapshot del
 // carrello calcolato dal server e i punti scalati. Il webhook (checkout.session.completed, passo 7.3)
 // la chiude o la fa scadere. Scritta solo da funzioni SQL SECURITY DEFINER e dal webhook (dbAdmin);
-// il cliente legge solo le sue (RLS in supabase/custom-checkout.sql).
+// il cliente legge solo le sue. Migrazioni: 20261018202104_checkout (tabelle, generata da Drizzle) e
+// 20261018202120_checkout_rls (RLS, grant, funzioni SQL).
 export const checkoutSessions = pgTable(
   "checkout_sessions",
   {

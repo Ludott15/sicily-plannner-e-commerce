@@ -2,7 +2,6 @@ import "server-only";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import type { Locale } from "@/lib/i18n/routing";
-import { POINTS_PER_EURO, MAX_POINTS_DISCOUNT_PERCENT } from "@/lib/shop/config";
 import { CHECKOUT_EXPIRY_SECONDS, cartTotals, pointsDiscount } from "@/lib/shop/checkout-math";
 import { dbPublic } from "@/server/db/public";
 import { pointsLedger } from "@/server/db/schema";
@@ -18,8 +17,13 @@ import type { CheckoutGateway } from "./checkout-gateway";
 //   2. coupon monouso su Stripe (solo con sconto), poi sessione di pagamento con metadati checkout_id;
 //   3. collegamento dell'id di sessione alla riga.
 // Se 2 fallisce, la riga si chiude e i punti tornano (checkout_release). Se 3 fallisce, la sessione
-// resta valida ma senza id: alla sua scadenza il webhook chiude la riga per checkout_id (metadati) e
-// restituisce i punti. Un crash tra 1 e 2 lascia la riga aperta senza sessione: il punto è in docs/LANCIO.md.
+// creata si annulla su Stripe (best effort) e solo se l'annullamento riesce la riga si chiude e i punti
+// tornano (checkout_release). Se l'annullamento non riesce, la sessione resta valida senza id: alla sua
+// scadenza il webhook chiude la riga per checkout_id (metadati) e restituisce i punti.
+// Un crash tra 1 e 2 lascia la riga aperta senza sessione: la chiude checkout_sweep_stale (cron orario,
+// righe più vecchie di 15 minuti). Rischio residuo: se 3 fallisce E l'annullamento fallisce, lo sweep può
+// chiudere la riga prima della scadenza di Stripe (31 minuti); in quella finestra la sessione, se pagata,
+// darebbe sconto con i punti già restituiti. Il rischio è di una sessione per doppio guasto; docs/LANCIO.md.
 // Il token monouso (32 byte casuali) lo genera il server per ogni checkout: nel database entra solo il
 // suo SHA-256, e attach e release lo richiedono. Non è derivato da CART_SECRET né dall'uuid.
 
@@ -113,8 +117,8 @@ export async function runCheckout(input: RunCheckoutInput): Promise<CheckoutOutc
     const attached = await attachSession(checkoutId, token, session.id);
     if (!attached) throw new Error("checkout_attach_rejected");
   } catch (error) {
-    // Sessione creata ma non collegata: la scadenza la chiude e restituisce i punti (webhook).
     logFailure("checkout_attach", error);
+    await cancelUnattachedSession(input.gateway, session.id, checkoutId, token);
     return { status: "error", code: "failed" };
   }
 
@@ -147,8 +151,6 @@ async function createCheckoutRow(input: {
         ${input.subtotalCents}::integer,
         ${input.shippingCents}::integer,
         ${input.usePoints}::boolean,
-        ${POINTS_PER_EURO}::integer,
-        ${MAX_POINTS_DISCOUNT_PERCENT}::integer,
         ${input.expiresAt.toISOString()}::timestamptz,
         ${input.tokenHash}::text
       )`);
@@ -156,6 +158,23 @@ async function createCheckoutRow(input: {
   const row = rows[0];
   if (!row) throw new Error("checkout_create_no_row");
   return row;
+}
+
+// Sessione creata ma non collegata: prima si annulla su Stripe, poi si chiude la riga e si restituiscono
+// i punti. Se l'annullamento fallisce, la riga resta com'è: la scadenza della sessione (webhook) la chiude.
+async function cancelUnattachedSession(
+  gateway: CheckoutGateway,
+  stripeSessionId: string,
+  checkoutId: string,
+  token: string,
+): Promise<void> {
+  try {
+    await gateway.expireSession(stripeSessionId);
+  } catch (error) {
+    logFailure("stripe_expire", error);
+    return;
+  }
+  await releaseCheckout(checkoutId, token);
 }
 
 async function attachSession(checkoutId: string, token: string, stripeSessionId: string): Promise<boolean> {

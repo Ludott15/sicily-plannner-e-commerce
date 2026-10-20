@@ -3,10 +3,12 @@ import "server-only";
 // Configurazione dei pagamenti (passo 7.2), letta solo qui. Le funzioni ricevono l'ambiente come
 // parametro, così i test non toccano process.env.
 //
-// - STRIPE_SECRET_KEY: accende Stripe Checkout (modalità "stripe").
-// - CHECKOUT_TEST_PROVIDER=fake: provider finto per e2e e sviluppo. Attivo solo se VERCEL_ENV è assente:
-//   la sessione punta a una pagina locale di prova, e la scadenza si simula con un endpoint di test.
-// - Senza nessuno dei due, la modalità è "off": il carrello funziona, il pagamento resta in sospeso.
+// - STRIPE_SECRET_KEY + CHECKOUT_STRIPE_ENABLED=1: Stripe Checkout reale (modalità "stripe"). La chiave da
+//   sola non basta: CHECKOUT_STRIPE_ENABLED=1 si imposta solo dal passo 7.3, quando il pagamento crea l'ordine.
+// - CHECKOUT_TEST_PROVIDER=fake: provider finto per e2e e sviluppo. Attivo solo se VERCEL_ENV è assente e
+//   NODE_ENV non è production, oppure se CI=true (il job e2e gira con NODE_ENV=production): la sessione
+//   punta a una pagina locale di prova, e la scadenza si simula con un endpoint di test.
+// - Senza nulla di questo, la modalità è "off": il carrello funziona, il pagamento resta in sospeso.
 // - STRIPE_WEBHOOK_SECRET: firma del webhook. Con il provider finto, senza questa variabile, si usa un
 //   segreto di prova costante (mai valido fuori dal provider finto).
 // - CART_SECRET: chiave HMAC del cookie del carrello. Senza, fuori da produzione si usa una chiave di
@@ -25,12 +27,23 @@ function read(env: Env, name: string): string | undefined {
 }
 
 export function fakeProviderActive(env: Env = process.env): boolean {
-  return read(env, "CHECKOUT_TEST_PROVIDER") === "fake" && read(env, "VERCEL_ENV") === undefined;
+  if (read(env, "CHECKOUT_TEST_PROVIDER") !== "fake") return false;
+  if (read(env, "VERCEL_ENV") !== undefined) return false;
+  return read(env, "NODE_ENV") !== "production" || read(env, "CI") === "true";
 }
 
 export function checkoutMode(env: Env = process.env): CheckoutMode {
   if (fakeProviderActive(env)) return "fake";
-  return read(env, "STRIPE_SECRET_KEY") ? "stripe" : "off";
+  const stripeEnabled = read(env, "CHECKOUT_STRIPE_ENABLED") === "1";
+  return stripeEnabled && read(env, "STRIPE_SECRET_KEY") ? "stripe" : "off";
+}
+
+// Un evento è live se e solo se la chiave configurata è sk_live_. Senza chiave (provider finto o spento)
+// gli eventi attesi sono di test. Un evento con modalità diversa si rifiuta nel webhook.
+export function livemodeMatches(eventLivemode: boolean, env: Env = process.env): boolean {
+  const key = stripeSecretKey(env);
+  const expected = key ? key.startsWith("sk_live_") : false;
+  return eventLivemode === expected;
 }
 
 // Chiave segreta di Stripe (solo modalità "stripe").

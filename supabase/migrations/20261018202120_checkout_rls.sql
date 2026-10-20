@@ -47,8 +47,9 @@ create policy stripe_events_select_admin on public.stripe_events
 -- checkout_create: crea la sessione di checkout e, se richiesto, scala i punti in un'unica transazione.
 -- Ospiti e visitatori senza account: nessun punto, user_id null. Account: il saldo è letto sotto lock
 -- per utente, così due checkout in parallelo non spendono due volte gli stessi punti.
--- Lo sconto è in euro interi: min(saldo / 100, 15% del subtotale / 100). Un punto vale un centesimo
--- con p_points_per_euro = 100 (src/lib/shop/checkout-math.ts applica la stessa regola).
+-- Lo sconto è in euro interi: min(saldo / 100, 15% del subtotale / 100). Le regole sono costanti della
+-- funzione (100 punti per euro, 15% massimo): src/lib/shop/config.ts le ha uguali, e il test
+-- src/lib/shop/checkout-sql.test.ts controlla che lo restino.
 ----------------------------------------------------------------------------
 create or replace function public.checkout_create(
   p_checkout_id uuid,
@@ -56,8 +57,6 @@ create or replace function public.checkout_create(
   p_subtotal_cents integer,
   p_shipping_cents integer,
   p_use_points boolean,
-  p_points_per_euro integer,
-  p_max_points_percent integer,
   p_expires_at timestamptz,
   p_token_hash text
 )
@@ -67,6 +66,8 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
+  c_points_per_euro constant integer := 100;
+  c_max_points_percent constant integer := 15;
   v_user uuid := (select auth.uid());
   v_account boolean := false;
   v_balance integer := 0;
@@ -94,12 +95,12 @@ begin
     select coalesce(sum(l.delta), 0)::integer into v_balance
       from public.points_ledger l where l.user_id = v_user;
     v_euros := least(
-      greatest(v_balance, 0) / p_points_per_euro,
-      ((p_subtotal_cents::bigint * p_max_points_percent) / 10000)::integer
+      greatest(v_balance, 0) / c_points_per_euro,
+      ((p_subtotal_cents::bigint * c_max_points_percent) / 10000)::integer
     );
     v_euros := greatest(v_euros, 0);
     v_discount := v_euros * 100;
-    v_points := v_euros * p_points_per_euro;
+    v_points := v_euros * c_points_per_euro;
   end if;
 
   insert into public.checkout_sessions (
@@ -120,8 +121,8 @@ begin
 end;
 $$;
 
-revoke all on function public.checkout_create(uuid, jsonb, integer, integer, boolean, integer, integer, timestamptz, text) from public;
-grant execute on function public.checkout_create(uuid, jsonb, integer, integer, boolean, integer, integer, timestamptz, text) to anon, authenticated;
+revoke all on function public.checkout_create(uuid, jsonb, integer, integer, boolean, timestamptz, text) from public;
+grant execute on function public.checkout_create(uuid, jsonb, integer, integer, boolean, timestamptz, text) to anon, authenticated;
 
 ----------------------------------------------------------------------------
 -- checkout_check_token (interna): il token monouso della riga (quello generato dal server in
@@ -258,3 +259,40 @@ end;
 $$;
 
 revoke all on function public.checkout_expire_from_stripe(uuid, text) from public, anon, authenticated;
+
+----------------------------------------------------------------------------
+-- checkout_sweep_stale: chiude le righe 'open' senza sessione Stripe più vecchie di p_older_than
+-- (crash o errore tra la transazione di creazione e la sessione) e restituisce i punti, una volta sola.
+-- Le righe si bloccano con FOR UPDATE SKIP LOCKED: un collegamento della sessione in corso aspetta,
+-- e poi non trova più la riga aperta. Non è concessa a nessun ruolo applicativo: la chiama il cron
+-- (src/server/shop/checkout-sweep.admin.ts) con dbAdmin. Per ogni esecuzione chiude al massimo 500 righe.
+----------------------------------------------------------------------------
+create or replace function public.checkout_sweep_stale(p_older_than interval default interval '15 minutes')
+returns integer
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_id uuid;
+  v_count integer := 0;
+begin
+  for v_id in
+    select cs.id
+      from public.checkout_sessions cs
+     where cs.status = 'open'
+       and cs.stripe_session_id is null
+       and cs.created_at < now() - p_older_than
+     order by cs.created_at
+     limit 500
+       for update skip locked
+  loop
+    if public.checkout_close(v_id, 'failed') then
+      v_count := v_count + 1;
+    end if;
+  end loop;
+  return v_count;
+end;
+$$;
+
+revoke all on function public.checkout_sweep_stale(interval) from public, anon, authenticated;

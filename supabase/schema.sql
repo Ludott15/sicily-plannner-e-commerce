@@ -841,11 +841,13 @@ $$;
 ALTER FUNCTION "public"."checkout_close"("p_checkout_id" "uuid", "p_status" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_points_per_euro" integer, "p_max_points_percent" integer, "p_expires_at" timestamp with time zone, "p_token_hash" "text") RETURNS TABLE("discount_cents" integer, "points_redeemed" integer)
+CREATE OR REPLACE FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_expires_at" timestamp with time zone, "p_token_hash" "text") RETURNS TABLE("discount_cents" integer, "points_redeemed" integer)
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
     AS $$
 declare
+  c_points_per_euro constant integer := 100;
+  c_max_points_percent constant integer := 15;
   v_user uuid := (select auth.uid());
   v_account boolean := false;
   v_balance integer := 0;
@@ -873,12 +875,12 @@ begin
     select coalesce(sum(l.delta), 0)::integer into v_balance
       from public.points_ledger l where l.user_id = v_user;
     v_euros := least(
-      greatest(v_balance, 0) / p_points_per_euro,
-      ((p_subtotal_cents::bigint * p_max_points_percent) / 10000)::integer
+      greatest(v_balance, 0) / c_points_per_euro,
+      ((p_subtotal_cents::bigint * c_max_points_percent) / 10000)::integer
     );
     v_euros := greatest(v_euros, 0);
     v_discount := v_euros * 100;
-    v_points := v_euros * p_points_per_euro;
+    v_points := v_euros * c_points_per_euro;
   end if;
 
   insert into public.checkout_sessions (
@@ -900,7 +902,7 @@ end;
 $$;
 
 
-ALTER FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_points_per_euro" integer, "p_max_points_percent" integer, "p_expires_at" timestamp with time zone, "p_token_hash" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_expires_at" timestamp with time zone, "p_token_hash" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."checkout_expire_from_stripe"("p_checkout_id" "uuid", "p_stripe_session_id" "text") RETURNS boolean
@@ -945,6 +947,36 @@ $$;
 
 
 ALTER FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."checkout_sweep_stale"("p_older_than" interval DEFAULT '00:15:00'::interval) RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_id uuid;
+  v_count integer := 0;
+begin
+  for v_id in
+    select cs.id
+      from public.checkout_sessions cs
+     where cs.status = 'open'
+       and cs.stripe_session_id is null
+       and cs.created_at < now() - p_older_than
+     order by cs.created_at
+     limit 500
+       for update skip locked
+  loop
+    if public.checkout_close(v_id, 'failed') then
+      v_count := v_count + 1;
+    end if;
+  end loop;
+  return v_count;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_sweep_stale"("p_older_than" interval) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."claim_onboarding_points"() RETURNS "void"
@@ -7251,10 +7283,10 @@ GRANT ALL ON FUNCTION "public"."checkout_close"("p_checkout_id" "uuid", "p_statu
 
 
 
-REVOKE ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_points_per_euro" integer, "p_max_points_percent" integer, "p_expires_at" timestamp with time zone, "p_token_hash" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_points_per_euro" integer, "p_max_points_percent" integer, "p_expires_at" timestamp with time zone, "p_token_hash" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_points_per_euro" integer, "p_max_points_percent" integer, "p_expires_at" timestamp with time zone, "p_token_hash" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_points_per_euro" integer, "p_max_points_percent" integer, "p_expires_at" timestamp with time zone, "p_token_hash" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_expires_at" timestamp with time zone, "p_token_hash" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_expires_at" timestamp with time zone, "p_token_hash" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_expires_at" timestamp with time zone, "p_token_hash" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_expires_at" timestamp with time zone, "p_token_hash" "text") TO "service_role";
 
 
 
@@ -7267,6 +7299,11 @@ REVOKE ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_to
 GRANT ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."checkout_sweep_stale"("p_older_than" interval) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_sweep_stale"("p_older_than" interval) TO "service_role";
 
 
 
