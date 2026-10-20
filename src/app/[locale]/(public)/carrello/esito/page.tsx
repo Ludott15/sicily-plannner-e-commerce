@@ -4,23 +4,33 @@ import { ButtonLink } from "@/components/design";
 import { ClearCart } from "@/components/cart/clear-cart";
 import { CartSummary } from "@/components/cart/cart-summary";
 import { PageContainer } from "@/components/layout/page-container";
+import { redirect } from "@/lib/i18n/navigation";
 import { formatCents } from "@/lib/shop/present";
 import { readCart } from "@/server/shop/cart";
 
-// Esito del pagamento (passo 7.2). Il riepilogo mostra il carrello com'è prima dello svuotamento:
-// il numero d'ordine non c'è ancora (arriva con il passo 7.3), quindi il testo non ne promette uno.
-// ClearCart svuota il carrello al primo montaggio.
-type Props = { params: Promise<{ locale: string }> };
+// Esito del pagamento (passo 7.2). Vale solo con una sessione di pagamento dal provider (cs_test_…,
+// cs_live_… o la sessione di prova cs_fake_<32 hex>): senza parametro, o con un formato non valido,
+// si torna al carrello senza svuotarlo. Il messaggio non dichiara l'ordine: quello arriva con il 7.3.
+// Solo con una sessione valida il riepilogo mostra il carrello prima dello svuotamento (ClearCart).
+const SESSION_ID = /^(?:cs_(?:test|live)_[A-Za-z0-9]{8,}|cs_fake_[0-9a-f]{32})$/;
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+type Props = {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ sessione?: string | string[] }>;
+};
+
+export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Checkout" });
   return { title: t("successTitle"), robots: { index: false, follow: false } };
 }
 
-export default async function CheckoutSuccessPage({ params }: Props) {
+export default async function CheckoutSuccessPage({ params, searchParams }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const { sessione } = await searchParams;
+  if (typeof sessione !== "string" || !SESSION_ID.test(sessione)) redirect({ href: "/carrello", locale });
+
   const [t, view] = await Promise.all([getTranslations("Checkout"), readCart()]);
 
   return (

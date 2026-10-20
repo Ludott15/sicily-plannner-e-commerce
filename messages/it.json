@@ -2709,8 +2709,8 @@
     }
   },
   "Checkout": {
-    "successTitle": "Ordine ricevuto",
-    "successBody": "Grazie per l'acquisto dai produttori siciliani. Il carrello è stato svuotato.",
+    "successTitle": "Pagamento ricevuto",
+    "successBody": "Grazie per l’acquisto. Ti scriveremo per email quando l'ordine è confermato e quando parte.",
     "summary": "Riepilogo",
     "backToShop": "Torna allo shop",
     "payWithStripe": "Paga con Stripe",

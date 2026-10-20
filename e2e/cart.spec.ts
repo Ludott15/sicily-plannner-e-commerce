@@ -69,6 +69,20 @@ test("su mobile l'icona del carrello porta alla pagina, senza drawer", async ({ 
   await expect(page.getByRole("heading", { level: 1, name: "Carrello" })).toBeVisible();
 });
 
+test("esito senza sessione: torna al carrello e non lo svuota", async ({ page }) => {
+  await addFromProduct(page, "demo-crema-pistacchio");
+  await page.goto("/it/carrello/esito");
+  await expect(page).toHaveURL(/\/it\/carrello$/);
+  await expect(page.getByRole("button", { name: "Carrello, 1 articolo" })).toBeVisible();
+});
+
+test("esito con un identificativo non valido: torna al carrello e non lo svuota", async ({ page }) => {
+  await addFromProduct(page, "demo-crema-pistacchio");
+  await page.goto("/it/carrello/esito?sessione=non_valido");
+  await expect(page).toHaveURL(/\/it\/carrello$/);
+  await expect(page.getByRole("button", { name: "Carrello, 1 articolo" })).toBeVisible();
+});
+
 test("senza provider di pagamento il pulsante Paga è in sospeso", async ({ page }) => {
   test.skip(fakeProvider, "con il provider di prova il pulsante è attivo");
   await addFromProduct(page, "demo-crema-pistacchio");
@@ -87,7 +101,7 @@ test.describe("checkout con il provider di prova", () => {
 
     await page.getByRole("link", { name: "Paga", exact: true }).click();
     await expect(page).toHaveURL(/\/it\/carrello\/esito\?sessione=cs_fake_/);
-    await expect(page.getByRole("heading", { level: 1, name: "Ordine ricevuto" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Pagamento ricevuto" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Carrello vuoto" })).toBeVisible();
   });
 
