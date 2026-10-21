@@ -93,10 +93,10 @@ async function resolveLinks(tx: UserTx, rows: RawLink[]): Promise<GuideLink[]> {
   });
 }
 
-// Elenco delle guide pubblicate, dalla più recente.
-export const listGuides = cache((locale: string) =>
+// Elenco delle guide pubblicate, dalla più recente. Con limit il tetto va in SQL (la home ne chiede tre).
+export const listGuides = cache((locale: string, limit?: number) =>
   dbPublic(async (tx): Promise<GuideSummary[]> => {
-    const rows = await tx
+    const query = tx
       .select({
         slug: guides.slug,
         titleIt: guides.titleIt,
@@ -111,6 +111,7 @@ export const listGuides = cache((locale: string) =>
       .from(guides)
       .where(eq(guides.status, "published"))
       .orderBy(desc(guides.publishedAt), asc(guides.slug));
+    const rows = await (limit === undefined ? query : query.limit(limit));
 
     return rows.map((row) => ({
       slug: row.slug,

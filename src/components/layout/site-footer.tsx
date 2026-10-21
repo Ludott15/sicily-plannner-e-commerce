@@ -24,6 +24,7 @@ export async function SiteFooter() {
   ];
   const legalLinks = [
     { href: "/privacy", label: tNav("privacy") },
+    { href: "/cookie", label: tNav("cookie") },
     { href: "/termini", label: tNav("termsOfUse") },
     { href: "/condizioni-di-vendita", label: tNav("terms") },
     { href: "/accessibilita", label: tNav("accessibility") },
@@ -34,12 +35,12 @@ export async function SiteFooter() {
       <div className="mx-auto flex max-w-[1200px] flex-col gap-10 px-4 py-12 md:px-16 md:py-14">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="flex flex-col gap-2.5">
-            <Logo className="text-[36px]" />
+            <Logo className="text-heading-1" />
             <span className="text-body-s text-on-ink-muted">{tMeta("tagline")}</span>
           </div>
           <nav aria-label={tNav("footer")} className="grid grid-cols-2 gap-x-10 gap-y-8 text-body-s sm:grid-cols-4">
             <div>
-              <p className="font-semibold">{tNav("travel")}</p>
+              <h2 className="font-semibold">{tNav("travel")}</h2>
               <ul className="mt-1 flex flex-col leading-7">
                 {travelLinks.map((item) => (
                   <li key={item.href}>
@@ -51,7 +52,7 @@ export async function SiteFooter() {
               </ul>
             </div>
             <div>
-              <p className="font-semibold">{tNav("navServices")}</p>
+              <h2 className="font-semibold">{tNav("navServices")}</h2>
               <ul className="mt-1 flex flex-col leading-7">
                 {serviceLinks.map((item) => (
                   <li key={item.href}>
@@ -63,7 +64,7 @@ export async function SiteFooter() {
               </ul>
             </div>
             <div>
-              <p className="font-semibold">{BRAND_NAME}</p>
+              <h2 className="font-semibold">{BRAND_NAME}</h2>
               <ul className="mt-1 flex flex-col leading-7">
                 {isulaLinks.map((item) => (
                   <li key={item.href}>
@@ -75,7 +76,7 @@ export async function SiteFooter() {
               </ul>
             </div>
             <div>
-              <p className="font-semibold">{tNav("legal")}</p>
+              <h2 className="font-semibold">{tNav("legal")}</h2>
               <ul className="mt-1 flex flex-col leading-7">
                 {legalLinks.map((item) => (
                   <li key={item.href}>
