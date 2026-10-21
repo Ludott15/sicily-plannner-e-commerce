@@ -6,11 +6,13 @@ import { itineraries, itineraryItems, placeLegFailures, placeLegs, places } from
 import { getLegs } from "./legs";
 import { computeMissingLegs, findMissingPairs } from "./legs.admin";
 
-// Tratte stradali su Postgres locale (npm run test:int). Il router è simulato con fetch: ogni
-// richiesta restituisce una linea retta tra i due punti, tranne quelle che toccano il luogo "broken",
-// che rispondono 500. Luoghi e itinerari sono di prova (int-…). Le tratte calcolate durante la suite
-// si tolgono con il loro computed_at, perché computeMissingLegs guarda tutto il catalogo.
+// Tratte stradali su Postgres locale (npm run test:int). Il database locale ha dati veri: per non
+// dipendere da loro, ogni calcolo e ogni ricerca di coppie è limitato ai luoghi di prova (onlyPlaceIds),
+// con pausa 0 e un fetch simulato immediato: una linea retta tra i due punti, 500 se tocca il luogo
+// "broken". Luoghi e itinerari sono di prova (int-…) e si cancellano alla fine; le tratte calcolate
+// durante la suite si tolgono con il loro computed_at.
 
+const TEST_TIMEOUT_MS = 15_000;
 const s = Date.now();
 const startedAt = new Date(Date.now() - 1000);
 const slug = (name: string) => `int-leg-${s}-${name}`;
@@ -29,12 +31,13 @@ let broken = "";
 let other = "";
 let far = "";
 let farAway = "";
+let scope: string[] = [];
 let userId = "";
 const templateSlug = slug("modello");
 const tripSlug = slug("viaggio-utente");
 
-// Un fetch simulato: linea retta, distanza 1000 m, 120 s. Le richieste che toccano il luogo "broken"
-// rispondono 500.
+// Un fetch simulato, senza attese: linea retta, distanza 1000 m, 120 s. Le richieste che toccano il
+// luogo "broken" rispondono 500.
 function fakeRouter(brokenLng: number, brokenLat: number) {
   return vi.fn(async (input: string | URL | Request) => {
     const { from, to } = coordinatesOf(String(input));
@@ -70,6 +73,7 @@ beforeAll(async () => {
   other = id("other");
   far = id("far");
   farAway = id("farAway");
+  scope = rows.map((row) => row.id);
 
   // Modello di prova: A, B nel primo giorno; C nel secondo. Una tappa senza luogo in mezzo.
   const [template] = await dbAdmin
@@ -96,7 +100,7 @@ beforeAll(async () => {
     { itineraryId: trip!.id, dayIndex: 0, position: 0, placeId: far },
     { itineraryId: trip!.id, dayIndex: 0, position: 1, placeId: farAway },
   ]);
-});
+}, TEST_TIMEOUT_MS);
 
 afterAll(async () => {
   vi.unstubAllGlobals();
@@ -105,90 +109,118 @@ afterAll(async () => {
   await dbAdmin.delete(placeLegFailures).where(gte(placeLegFailures.failedAt, startedAt));
   await dbAdmin.delete(places).where(sql`${places.slug} like ${`int-leg-${s}-%`}`);
   if (userId) await dbAdmin.execute(sql`delete from auth.users where id = ${userId}`);
-});
+}, TEST_TIMEOUT_MS);
 
 describe("tratte stradali su Postgres locale", () => {
-  it("calcola le coppie consecutive dei modelli, anche a cavallo dei giorni", async () => {
-    vi.stubGlobal("fetch", fakeRouter(13.5, 38.25));
+  it(
+    "calcola le coppie consecutive dei modelli, anche a cavallo dei giorni",
+    async () => {
+      vi.stubGlobal("fetch", fakeRouter(13.5, 38.25));
 
-    await computeMissingLegs(1000, { pauseMs: 0 });
-    const legs = await getLegs([
-      { from: a, to: b },
-      { from: b, to: c },
-    ]);
+      await computeMissingLegs(1000, { pauseMs: 0, onlyPlaceIds: scope });
+      const legs = await getLegs([
+        { from: a, to: b },
+        { from: b, to: c },
+      ]);
 
-    expect(legs.map((leg) => [leg.fromPlaceId, leg.toPlaceId])).toEqual([
-      [a, b],
-      [b, c],
-    ]);
-    expect(legs[0]).toMatchObject({ distanceM: 1000, durationS: 120 });
-    expect(legs[0]!.coordinates).toHaveLength(2);
-  });
+      expect(legs.map((leg) => [leg.fromPlaceId, leg.toPlaceId])).toEqual([
+        [a, b],
+        [b, c],
+      ]);
+      expect(legs[0]).toMatchObject({ distanceM: 1000, durationS: 120 });
+      expect(legs[0]!.coordinates).toHaveLength(2);
+    },
+    TEST_TIMEOUT_MS,
+  );
 
-  it("include le coppie del catalogo entro 150 km, anche se non sono in un modello", async () => {
-    const legs = await getLegs([
-      { from: a, to: c },
-      { from: c, to: a },
-    ]);
-    expect(legs).toHaveLength(2);
-  });
+  it(
+    "include le coppie del catalogo entro 150 km, anche se non sono in un modello",
+    async () => {
+      const legs = await getLegs([
+        { from: a, to: c },
+        { from: c, to: a },
+      ]);
+      expect(legs).toHaveLength(2);
+    },
+    TEST_TIMEOUT_MS,
+  );
 
-  it("non calcola le coppie oltre 150 km né i viaggi degli utenti", async () => {
-    const pairs = await findMissingPairs(1000);
-    expect(pairs).not.toContainEqual({ from: far, to: farAway });
-    expect(pairs).not.toContainEqual({ from: farAway, to: far });
-    expect(await getLegs([{ from: far, to: farAway }])).toEqual([]);
-  });
+  it(
+    "non calcola le coppie oltre 150 km né i viaggi degli utenti",
+    async () => {
+      const pairs = await findMissingPairs(1000, { onlyPlaceIds: scope });
+      expect(pairs).not.toContainEqual({ from: far, to: farAway });
+      expect(pairs).not.toContainEqual({ from: farAway, to: far });
+      expect(await getLegs([{ from: far, to: farAway }])).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
 
-  it("è idempotente: una coppia salvata non si richiede di nuovo e non si duplica", async () => {
-    const fetchMock = fakeRouter(13.5, 38.25);
-    vi.stubGlobal("fetch", fetchMock);
+  it(
+    "è idempotente: una coppia salvata non si richiede di nuovo e non si duplica",
+    async () => {
+      const fetchMock = fakeRouter(13.5, 38.25);
+      vi.stubGlobal("fetch", fetchMock);
 
-    expect(await findMissingPairs(1000)).not.toContainEqual({ from: a, to: b });
-    await computeMissingLegs(1000, { pauseMs: 0 });
+      expect(await findMissingPairs(1000, { onlyPlaceIds: scope })).not.toContainEqual({ from: a, to: b });
+      await computeMissingLegs(1000, { pauseMs: 0, onlyPlaceIds: scope });
 
-    const rows = await dbAdmin
-      .select({ id: placeLegs.fromPlaceId })
-      .from(placeLegs)
-      .where(and(eq(placeLegs.fromPlaceId, a), eq(placeLegs.toPlaceId, b)));
-    expect(rows).toHaveLength(1);
-    const requestedAB = fetchMock.mock.calls.filter((call) => {
-      const { from, to } = coordinatesOf(String(call[0]));
-      return from[0] === 13.3 && from[1] === 38.1 && to[0] === 13.4 && to[1] === 38.2;
-    });
-    expect(requestedAB).toHaveLength(0);
-  });
+      const rows = await dbAdmin
+        .select({ id: placeLegs.fromPlaceId })
+        .from(placeLegs)
+        .where(and(eq(placeLegs.fromPlaceId, a), eq(placeLegs.toPlaceId, b)));
+      expect(rows).toHaveLength(1);
+      const requestedAB = fetchMock.mock.calls.filter((call) => {
+        const { from, to } = coordinatesOf(String(call[0]));
+        return from[0] === 13.3 && from[1] === 38.1 && to[0] === 13.4 && to[1] === 38.2;
+      });
+      expect(requestedAB).toHaveLength(0);
+    },
+    TEST_TIMEOUT_MS,
+  );
 
-  it("registra il fallimento, lo salta per sette giorni e lo riprova dopo", async () => {
-    vi.stubGlobal("fetch", fakeRouter(13.5, 38.25));
+  it(
+    "registra il fallimento, lo salta per sette giorni e lo riprova dopo",
+    async () => {
+      vi.stubGlobal("fetch", fakeRouter(13.5, 38.25));
+      // I fallimenti dei luoghi di prova registrati dalle prove precedenti si azzerano: qui si parte da zero.
+      await dbAdmin
+        .delete(placeLegFailures)
+        .where(sql`${placeLegFailures.fromPlaceId} in (${sql.join(scope.map((id) => sql`${id}::uuid`), sql`, `)})`);
 
-    const result = await computeMissingLegs(1000, { pauseMs: 0 });
-    expect(result.failed).toBeGreaterThanOrEqual(1);
-    expect(await getLegs([{ from: other, to: broken }])).toEqual([]);
+      const result = await computeMissingLegs(1000, { pauseMs: 0, onlyPlaceIds: scope });
+      expect(result.failed).toBeGreaterThanOrEqual(1);
+      expect(await getLegs([{ from: other, to: broken }])).toEqual([]);
 
-    const failure = await dbAdmin
-      .select({ failedAt: placeLegFailures.failedAt })
-      .from(placeLegFailures)
-      .where(and(eq(placeLegFailures.fromPlaceId, other), eq(placeLegFailures.toPlaceId, broken)));
-    expect(failure).toHaveLength(1);
+      const failure = await dbAdmin
+        .select({ failedAt: placeLegFailures.failedAt })
+        .from(placeLegFailures)
+        .where(and(eq(placeLegFailures.fromPlaceId, other), eq(placeLegFailures.toPlaceId, broken)));
+      expect(failure).toHaveLength(1);
 
-    // Entro sette giorni la coppia non si richiede di nuovo.
-    expect(await findMissingPairs(1000)).not.toContainEqual({ from: other, to: broken });
+      // Entro sette giorni la coppia non si richiede di nuovo.
+      expect(await findMissingPairs(1000, { onlyPlaceIds: scope })).not.toContainEqual({ from: other, to: broken });
 
-    // Dopo sette giorni torna nella lista delle coppie da calcolare.
-    await dbAdmin
-      .update(placeLegFailures)
-      .set({ failedAt: sql`now() - interval '8 days'` })
-      .where(and(eq(placeLegFailures.fromPlaceId, other), eq(placeLegFailures.toPlaceId, broken)));
-    expect(await findMissingPairs(1000)).toContainEqual({ from: other, to: broken });
-  });
+      // Dopo sette giorni torna nella lista delle coppie da calcolare.
+      await dbAdmin
+        .update(placeLegFailures)
+        .set({ failedAt: sql`now() - interval '8 days'` })
+        .where(and(eq(placeLegFailures.fromPlaceId, other), eq(placeLegFailures.toPlaceId, broken)));
+      expect(await findMissingPairs(1000, { onlyPlaceIds: scope })).toContainEqual({ from: other, to: broken });
+    },
+    TEST_TIMEOUT_MS,
+  );
 
-  it("con una coppia che manca dalla tabella getLegs la omette senza errori", async () => {
-    const legs = await getLegs([
-      { from: a, to: broken },
-      { from: "not-a-uuid", to: b },
-      { from: a, to: a },
-    ]);
-    expect(legs).toEqual([]);
-  });
+  it(
+    "con una coppia che manca dalla tabella getLegs la omette senza errori",
+    async () => {
+      const legs = await getLegs([
+        { from: a, to: broken },
+        { from: "not-a-uuid", to: b },
+        { from: a, to: a },
+      ]);
+      expect(legs).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
 });

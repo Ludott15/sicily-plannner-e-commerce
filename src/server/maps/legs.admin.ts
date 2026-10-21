@@ -27,13 +27,29 @@ export type ComputeLegsResult = { computed: number; failed: number };
 
 // budgetMs: tempo massimo entro cui iniziare nuove richieste (il cron lo tiene sotto maxDuration).
 // Di default nessun limite di tempo: lo script a riga di comando non lo imposta.
-export type ComputeOptions = { pauseMs?: number; budgetMs?: number };
+// onlyPlaceIds: limita le coppie ai luoghi indicati. Serve ai test (il database locale ha dati veri) e
+// allo script; il cron non lo passa mai.
+export type ComputeOptions = { pauseMs?: number; budgetMs?: number; onlyPlaceIds?: string[] };
+export type FindPairsOptions = { onlyPlaceIds?: string[] };
+
+function idList(ids: readonly string[]): SQL {
+  return sql.join(
+    ids.map((id) => sql`${id}::uuid`),
+    sql`, `,
+  );
+}
 
 // Coppie ancora da calcolare: prima quelle dei modelli, poi quelle del catalogo entro la distanza
 // massima. Esclude le coppie già salvate e quelle fallite da meno di FAILURE_RETRY_DAYS giorni.
-export async function findMissingPairs(limit: number): Promise<LegPair[]> {
+export async function findMissingPairs(limit: number, options: FindPairsOptions = {}): Promise<LegPair[]> {
   const size = clampLimit(limit);
   const retryWindow = sql`make_interval(days => ${FAILURE_RETRY_DAYS})`;
+  const only = options.onlyPlaceIds;
+  if (only && only.length === 0) return [];
+  const templateScope: SQL = only
+    ? sql`and pf.id in (${idList(only)}) and pt.id in (${idList(only)})`
+    : sql``;
+  const catalogScope: SQL = only ? sql`and a.id in (${idList(only)}) and b.id in (${idList(only)})` : sql``;
 
   const templateRows = await dbAdmin.execute<{ from_place_id: string; to_place_id: string }>(sql`
     with stops as (
@@ -58,7 +74,8 @@ export async function findMissingPairs(limit: number): Promise<LegPair[]> {
     from pairs p
     join public.places pf on pf.id = p.from_place_id and pf.is_active
     join public.places pt on pt.id = p.to_place_id and pt.is_active
-    where not exists (
+    where true ${templateScope}
+    and not exists (
       select 1 from public.place_legs l
       where l.from_place_id = p.from_place_id and l.to_place_id = p.to_place_id
     )
@@ -84,6 +101,7 @@ export async function findMissingPairs(limit: number): Promise<LegPair[]> {
     from public.places a
     join public.places b on b.id <> a.id and b.is_active
     where a.is_active
+      ${catalogScope}
       and 2 * 6371 * asin(sqrt(
             power(sin(radians(b.lat - a.lat) / 2), 2)
             + cos(radians(a.lat)) * cos(radians(b.lat)) * power(sin(radians(b.lng - a.lng) / 2), 2)
@@ -126,7 +144,7 @@ export async function computeMissingLegs(
   const budgetMs = options.budgetMs ?? Number.POSITIVE_INFINITY;
   const started = Date.now();
 
-  const pairs = await findMissingPairs(clampLimit(limit));
+  const pairs = await findMissingPairs(clampLimit(limit), { onlyPlaceIds: options.onlyPlaceIds });
   if (pairs.length === 0) return { computed: 0, failed: 0 };
 
   const placeIds = [...new Set(pairs.flatMap((pair) => [pair.from, pair.to]))];
