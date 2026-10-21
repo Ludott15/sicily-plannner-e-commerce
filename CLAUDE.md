@@ -29,6 +29,8 @@ Design system, manuale del brand ("Isula", nome di lavoro), schemi e mockup: [do
 - `npm run db:test` — test RLS in pgTAP (`supabase/tests/*.test.sql`); gli helper (`tests.create_user`, `tests.authenticate_as`, `tests.as_anon`) si includono con `\ir helpers/setup.psql` dopo `begin;`
 - `npm run db:snapshot` — aggiorna `supabase/schema.sql` dopo ogni migrazione
 - `npm run media:demo` — immagini demo nello storage locale (dopo `db:reset`: il seed non carica file); regole delle immagini in [docs/IMMAGINI.md](docs/IMMAGINI.md)
+- `npm run content:catalog` — importa i testi di `content/catalog/` nelle righe esistenti (luoghi, attività, itinerari, consigli); `-- --dry-run` per il piano senza scrivere, `-- --slug-prefix=demo-` solo verso un database locale
+- `npm run content:guides` — importa le guide di `content/guide/`; `-- --slug-prefix=demo-` solo verso un database locale (come `content:catalog`)
 - `npm run db:drift` — lo stesso controllo della CI
 
 ## Design system

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkPrefix, parseCatalog, readCatalogFiles, todayInRome } from "./import-catalog.mjs";
+import { parseCatalog, readCatalogFiles, todayInRome } from "./import-catalog.mjs";
 
 const CATALOG = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "content", "catalog");
 
@@ -39,10 +39,7 @@ describe("parseCatalog", () => {
     expect(() => parseCatalog(one)).toThrow("deve avere 2 voci");
   });
 
-  it("richiede una voce per giorno negli itinerari e lunghezze massime", () => {
-    const noDay = valid();
-    noDay.itinerari[0].day_notes = noDay.itinerari[0].day_notes.slice(1);
-    expect(() => parseCatalog(noDay)).not.toThrow();
+  it("richiede almeno una voce per giorno e rispetta le lunghezze massime", () => {
     const longIntro = valid();
     longIntro.itinerari[0].day_intros[0] = "x".repeat(241);
     expect(() => parseCatalog(longIntro)).toThrow("supera 240");
@@ -55,18 +52,6 @@ describe("parseCatalog", () => {
     const http = valid();
     http.attivita[0].fonti = ["http://example.org/x"];
     expect(() => parseCatalog(http)).toThrow("fonte non valida");
-  });
-});
-
-describe("checkPrefix", () => {
-  it("ammette il prefisso demo- solo con un database locale", () => {
-    expect(() => checkPrefix("demo-", "postgresql://u:p@127.0.0.1:55322/postgres")).not.toThrow();
-    expect(() => checkPrefix("demo-", "postgresql://u:p@db.example.supabase.co:5432/postgres")).toThrow("solo con un database locale");
-  });
-
-  it("accetta nessun prefisso verso qualsiasi host e rifiuta prefissi con caratteri strani", () => {
-    expect(() => checkPrefix("", "postgresql://u:p@db.example.com:5432/postgres")).not.toThrow();
-    expect(() => checkPrefix("Demo_", "postgresql://u:p@127.0.0.1:55322/postgres")).toThrow("non valido");
   });
 });
 

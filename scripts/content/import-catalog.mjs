@@ -23,10 +23,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
-import { isLocalDatabase } from "./import-guides.mjs";
+import { checkPrefix, isLocalDatabase } from "./import-guides.mjs";
 
 export const AUTHOR_NAME = "Redazione di Isula";
-export const DEMO_PREFIX = "demo-";
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const ITALIAN_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -137,13 +136,6 @@ export function parseCatalog(files) {
   return { places, activities, itineraries };
 }
 
-// Il prefisso demo- è solo per un database locale. Pura.
-export function checkPrefix(prefix, url) {
-  if (prefix && !/^[a-z0-9-]+$/.test(prefix)) throw new Error(`prefisso "${prefix}" non valido`);
-  if (prefix === DEMO_PREFIX && !isLocalDatabase(url)) {
-    throw new Error("il prefisso demo- è ammesso solo con un database locale: i dati demo non vanno in produzione");
-  }
-}
 
 // Data di verifica di default: oggi, a Roma. Pura nell'argomento.
 export function todayInRome(now = new Date()) {
@@ -165,6 +157,8 @@ async function editorialAuthorId(tx) {
 
 // Allinea i consigli editoriali di un target (luogo o attività) al file. Restituisce i conteggi.
 async function syncTips(tx, authorId, target, bodies, verifiedAt) {
+  // Lo stesso consiglio due volte sullo stesso target non si può riconoscere: errore, niente import parziale.
+  if (new Set(bodies).size !== bodies.length) throw new Error("consiglio ripetuto per lo stesso luogo o attività");
   const counts = { inserted: 0, reactivated: 0, deactivated: 0 };
   const existing = target.activityId
     ? await tx`select id, body, is_active from public.local_tips
