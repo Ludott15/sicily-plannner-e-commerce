@@ -87,13 +87,13 @@ async function main() {
   const items: FillItem[] = [];
   let remaining = Infinity;
   // Pagine scelte nei passi precedenti: in simulazione non sono nel database, ma non vanno riproposte.
-  const chosenPages = new Set<string>();
+  const chosenFiles = new Set<string>();
   while (remaining > 0) {
     // Passi di CHOSEN_BATCH_SIZE voci (come chosenPages), con lo stesso insieme skip tra i passi:
     // un'entità elaborata non torna in un passo successivo, anche in simulazione.
     const room = args.limit === null ? CHOSEN_BATCH_SIZE : Math.min(CHOSEN_BATCH_SIZE, args.limit - items.length);
     if (room <= 0) break;
-    const step = await fillCommonsPhotos({ skip, limit: room, allowSa: args.allowSa, userId: args.userId, chosenPages });
+    const step = await fillCommonsPhotos({ skip, limit: room, allowSa: args.allowSa, userId: args.userId, chosenPages: chosenFiles });
     if (step.items.length === 0) break;
     for (const item of step.items) {
       skip.add(item.key);
