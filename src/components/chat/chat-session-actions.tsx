@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, useTransition, type FormEvent } from "react";
+import { useId, useRef, useState, useTransition, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Menu as BaseMenu } from "@base-ui/react/menu";
 import { Ellipsis, Pencil, Trash2 } from "lucide-react";
@@ -63,13 +63,20 @@ export function ChatSessionActions({ sessionId, title }: { sessionId: string; ti
     });
   }
 
+  // Nello sheet mobile (dialog nativo nel top layer) il menu va nel dialog, non in body: altrimenti resta sotto.
+  const menuContainer = useRef<HTMLElement | null>(null);
+
   return (
     <>
       <BaseMenu.Root>
-        <BaseMenu.Trigger aria-label={t("menu")} className={buttonClass("ghost", "sm", "shrink-0 px-2 text-lava-muted")}>
+        <BaseMenu.Trigger
+          ref={(node: HTMLButtonElement | null) => {
+            menuContainer.current = node?.closest("dialog") ?? null;
+          }}
+          aria-label={t("menu")} className={buttonClass("ghost", "sm", "shrink-0 px-2 text-lava-muted")}>
           <Ellipsis size={20} strokeWidth={1.5} aria-hidden="true" />
         </BaseMenu.Trigger>
-        <BaseMenu.Portal>
+        <BaseMenu.Portal container={menuContainer}>
           <BaseMenu.Positioner side="bottom" align="end" sideOffset={6} collisionPadding={12} className="is-overlay">
             <BaseMenu.Popup aria-label={t("menu")} className="is-panel is-chat-menu">
               <BaseMenu.Item
