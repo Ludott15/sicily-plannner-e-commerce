@@ -46,6 +46,8 @@ export type CommonsError =
   | "too_small"
   | "unsupported_type"
   | "metadata_unavailable"
+  | "personality"
+  | "cultural_heritage"
   | `fetch_${FetchErrorCode}`;
 
 export type CommonsFile = {
@@ -122,3 +124,12 @@ export type AutoAssignItem = {
 };
 
 export type AutoAssignStep = { ok: true; items: AutoAssignItem[]; remaining: number } | { ok: false; error: "invalid" };
+
+// Avvisi Commons che bloccano l'importazione (docs/IMMAGINI.md). Persone riconoscibili: sempre. Beni culturali:
+// solo se la redazione non li ha dichiarati; se li ha dichiarati il media si importa bloccato (heritage_asset,
+// senza autorizzazione) e compare solo quando Ludovico registra l'autorizzazione.
+export function blockingWarning(file: { warnings: readonly string[] }, options: { heritageDeclared?: boolean } = {}): "personality" | "cultural_heritage" | null {
+  if (file.warnings.includes("personality")) return "personality";
+  if (file.warnings.includes("cultural-heritage") && options.heritageDeclared !== true) return "cultural_heritage";
+  return null;
+}
