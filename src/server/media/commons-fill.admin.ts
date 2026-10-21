@@ -31,6 +31,8 @@ export type FillOptions = {
   allowSa: boolean;
   // Autore dei media importati. Null: simulazione, nessuna scrittura.
   userId: string | null;
+  // Pagine già scelte in questa esecuzione (simulazione): escluse anche se non sono ancora nel database.
+  chosenPages?: Set<string>;
 };
 
 export type FillStep = { items: FillItem[]; remaining: number; dryRun: boolean };
@@ -182,8 +184,9 @@ async function decide(need: PhotoNeed, state: { exclude: Set<string>; allowSa: b
 export async function fillCommonsPhotos(options: FillOptions): Promise<FillStep> {
   const pending = (await listPhotoNeeds()).filter((need) => !options.skip.has(`${need.type}:${need.id}`));
   const batch = pending.slice(0, options.limit);
-  const exclude = await listImportedCommonsPages();
-  const state = { exclude: new Set(exclude), allowSa: options.allowSa, userId: options.userId };
+  const exclude = options.chosenPages ?? new Set<string>();
+  for (const page of await listImportedCommonsPages()) exclude.add(page);
+  const state = { exclude, allowSa: options.allowSa, userId: options.userId };
   const items: FillItem[] = [];
   for (const need of batch) items.push(await decide(need, state));
   return { items, remaining: Math.max(0, pending.length - batch.length), dryRun: options.userId === null };
