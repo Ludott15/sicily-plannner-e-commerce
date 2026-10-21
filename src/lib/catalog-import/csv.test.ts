@@ -101,7 +101,7 @@ describe("catalogImportTemplate con due righe di esempio", () => {
 
     expect(first.row.slug).toBe("demo-esempio-passeggiata");
     expect(first.row.slug.startsWith("demo-esempio-")).toBe(true);
-    expect(first.row.title).toMatch(/esempio/i);
+    expect(first.row.title.startsWith("[DEMO] ")).toBe(true);
     expect(first.row.place.slug.startsWith("demo-")).toBe(true);
     expect(first.row.onSitePriceEur).toBe("12.50");
     expect(first.row.seasonMonths).toEqual([4, 5, 6, 7, 8, 9, 10]);
@@ -112,7 +112,7 @@ describe("catalogImportTemplate con due righe di esempio", () => {
     ]);
 
     expect(second.row.slug).toBe("demo-esempio-degustazione");
-    expect(second.row.title).toMatch(/esempio/i);
+    expect(second.row.title.startsWith("[DEMO] ")).toBe(true);
     expect(second.row.place.slug.startsWith("demo-")).toBe(true);
     expect(second.row.tags).toEqual([
       { key: "food_wine", strength: 3 },

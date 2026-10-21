@@ -36,7 +36,24 @@ test("attività: titolo, descrizione, canonical, hreflang e dati strutturati", a
 });
 
 test("nessun testo tra parentesi quadre dei mockup nelle pagine", async ({ request }) => {
-  for (const path of ["/it", "/it/attivita", "/it/attivita/demo-zingaro", "/it/itinerari", "/it/itinerari/demo-sicilia-orientale", "/it/luoghi/demo-trapani", "/it/luoghi/demo-siracusa", "/it/itinerari/demo-agrigento-scala"]) {
+  // Home, elenchi principali e una scheda per ogni tipo di pagina pubblica.
+  const pages = [
+    "/it",
+    "/it/itinerari",
+    "/it/attivita",
+    "/it/luoghi",
+    "/it/guide",
+    "/it/shop",
+    "/it/attivita/demo-zingaro",
+    "/it/luoghi/demo-trapani",
+    "/it/luoghi/demo-siracusa",
+    "/it/itinerari/demo-sicilia-orientale",
+    "/it/itinerari/demo-agrigento-scala",
+    "/it/guide/demo-guida-prima-volta",
+    "/it/prodotti/demo-crema-pistacchio",
+    "/it/produttori/demo-pistacchi-bronte",
+  ];
+  for (const path of pages) {
     const html = await (await request.get(path)).text();
     const body = html.slice(html.indexOf("<body"));
     // Nessun [DEMO] nelle pagine pubbliche: il seed ha testi del catalogo, non segnaposto.
@@ -226,7 +243,8 @@ test("itinerario pronto giorno per giorno, con i titoli dei giorni", async ({ pa
 
   await days.nth(1).click();
   await expect(days.nth(1)).toHaveAttribute("aria-current", "true");
-  await expect(page.getByRole("link", { name: "Escursione ai crateri sommitali dell'Etna" })).toBeVisible();
+  // Il titolo ha l'apostrofo tipografico ’ (catalogo): la regex accetta anche quello dritto.
+  await expect(page.getByRole("link", { name: /Escursione ai crateri sommitali dell[’']Etna/ })).toBeVisible();
 });
 
 test("versione inglese: lang, interfaccia e canonical", async ({ page }) => {

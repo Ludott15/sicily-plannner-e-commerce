@@ -91,6 +91,20 @@ describe("import dei contenuti", () => {
     expect(third.active).toBe(first.active - 1);
   });
 
+  it("rifiuta un consiglio ripetuto sullo stesso luogo, senza scrivere nulla", async () => {
+    const catalog = testCatalog();
+    const duplicated = structuredClone(catalog);
+    const [first] = duplicated.places[0].consigli;
+    duplicated.places[0].consigli = [first, first];
+    await expect(
+      sql.begin(async (tx) => {
+        await seedTestRows(tx, duplicated);
+        await applyCatalog(tx, duplicated, { prefix: "int-", verifiedAt: TODAY });
+        throw new Rollback("non dovrebbe arrivare qui");
+      }),
+    ).rejects.toThrow("consiglio ripetuto");
+  });
+
   it("rifiuta un itinerario con un numero di giorni diverso dal database", async () => {
     const catalog = testCatalog();
     await expect(
