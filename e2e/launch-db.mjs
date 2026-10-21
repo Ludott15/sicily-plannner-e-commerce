@@ -24,7 +24,15 @@ export async function demoRowCounts(databaseUrl) {
         (select count(*)::int from public.activity_offers
           where partner_product_id like any(${PREFIXES}) or title like any(${PREFIXES})) as activity_offers,
         (select count(*)::int from public.media
-          where original_filename like any(${PREFIXES}) or alt_it like any(${PREFIXES}) or author like any(${PREFIXES})) as media`;
+          where original_filename like any(${PREFIXES}) or alt_it like any(${PREFIXES}) or author like any(${PREFIXES})) as media,
+        (select count(*)::int from public.products
+          where slug like any(${PREFIXES}) or title like any(${PREFIXES})) as products,
+        (select count(*)::int from public.producers
+          where slug like any(${PREFIXES}) or name like any(${PREFIXES})) as producers,
+        (select count(*)::int from public.suppliers
+          where name like any(${PREFIXES}) or contact_email like any(${PREFIXES})) as suppliers,
+        (select count(*)::int from public.guides
+          where slug like any(${PREFIXES}) or title_it like any(${PREFIXES})) as guides`;
     return row;
   } finally {
     await sql.end();

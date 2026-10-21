@@ -51,7 +51,11 @@ export function ChatSessionList({
                     <Link href={href} className="is-chat-row__link" aria-current={active ? "page" : undefined} onClick={onNavigate}>
                       {session.title ?? t("untitled")}
                     </Link>
-                    <ChatSessionActions sessionId={session.id} title={session.title ?? ""} />
+                    {/* Su desktop le azioni stanno nell'intestazione della conversazione aperta: la colonna non le ripete.
+                        Dove c'è lo sheet (mobile) la riga le mostra. */}
+                    <div className="md:hidden">
+                      <ChatSessionActions sessionId={session.id} title={session.title ?? ""} />
+                    </div>
                   </div>
                 </li>
               );

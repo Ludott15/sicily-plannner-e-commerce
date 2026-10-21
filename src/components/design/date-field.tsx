@@ -77,6 +77,13 @@ export function DateField({
   const [today, setToday] = useState<string>("");
   const gridRef = useRef<HTMLDivElement>(null);
   const pendingFocus = useRef<boolean>(false);
+  // Il calendario va nel dialog nativo che contiene il campo (sotto il top layer resterebbe invisibile).
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLElement | null>(null);
+  function trackTrigger(node: HTMLButtonElement | null) {
+    triggerRef.current = node;
+    dialogRef.current = node?.closest("dialog") ?? null;
+  }
 
   // Dopo una mossa da tastiera la cella nuova prende il focus (dopo il render del mese).
   useEffect(() => {
@@ -175,6 +182,7 @@ export function DateField({
     <div className={cn("is-date", className)}>
       <BasePopover.Root open={open} onOpenChange={onOpenChange} modal="trap-focus">
         <BasePopover.Trigger
+          ref={trackTrigger}
           id={fieldId}
           aria-label={label}
           aria-invalid={ariaInvalid}
@@ -190,7 +198,7 @@ export function DateField({
           </span>
         </BasePopover.Trigger>
 
-        <BasePopover.Portal>
+        <BasePopover.Portal container={dialogRef}>
           <BasePopover.Positioner
             className="is-overlay is-popover__positioner"
             side="bottom"
@@ -303,11 +311,11 @@ export function DateField({
           name={name}
           value={current}
           required
-          readOnly
           tabIndex={-1}
           aria-hidden="true"
           className="is-date__required"
-          onFocus={() => document.getElementById(fieldId)?.focus()}
+          onChange={noop}
+          onFocus={() => triggerRef.current?.focus()}
         />
       ) : (
         <input type="hidden" name={name} value={current} />
@@ -315,6 +323,8 @@ export function DateField({
     </div>
   );
 }
+
+function noop(): void {}
 
 function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);

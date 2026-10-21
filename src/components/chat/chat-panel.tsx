@@ -315,7 +315,7 @@ export function ChatPanel({
 
         {enabled && messages.length === 0 && (
           <section aria-labelledby={`${inputId}-examples`} className="flex flex-col gap-8 pt-2 md:pt-6">
-            <p className="is-display text-heading-2 text-lava">
+            <p className={isSheet ? "is-display text-heading-3 text-lava" : "is-display text-heading-2 text-lava"}>
               {t("greeting")}
             </p>
             <div className="flex flex-col gap-3">

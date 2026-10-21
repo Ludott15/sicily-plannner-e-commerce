@@ -42,7 +42,7 @@ export type MenuIcon = keyof typeof ICONS;
 type ItemBase = { label: string; icon?: MenuIcon; danger?: boolean };
 
 export type ActionMenuItem =
-  | (ItemBase & { kind: "link"; href: string; current?: boolean })
+  | (ItemBase & { kind: "link"; href: string; current?: boolean; className?: string })
   | (ItemBase & { kind: "form"; action: (formData: FormData) => void | Promise<void>; fields?: Record<string, string> })
   | (ItemBase & { kind: "button"; onSelect: () => void; disabled?: boolean })
   | { kind: "separator" };
@@ -138,7 +138,7 @@ export function ActionMenu(props: ActionMenuProps) {
           href={item.href}
           role="menuitem"
           aria-current={item.current ? "page" : undefined}
-          className={cn(ITEM_CLASS, tone)}
+          className={cn(ITEM_CLASS, tone, item.className)}
           onClick={() => setOpen(false)}
         >
           {content}
@@ -200,7 +200,7 @@ export function ActionMenu(props: ActionMenuProps) {
 
   const triggerClass = cn(
     "inline-flex items-center justify-center gap-1 rounded-pill text-lava transition-colors hover:bg-calce-sunk focus-visible:outline-2 focus-visible:outline-focus",
-    props.variant === "text" ? "min-h-11 px-3 text-[15px] font-medium" : "size-11",
+    props.variant === "text" ? "min-h-11 px-3 text-body font-medium" : "size-11",
     props.variant === "text" && props.active && "underline underline-offset-[6px]",
   );
 
@@ -211,6 +211,7 @@ export function ActionMenu(props: ActionMenuProps) {
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-current={props.variant === "text" && props.active ? "true" : undefined}
         aria-controls={open ? menuId : undefined}
         aria-label={props.variant === "text" ? undefined : props.label}
         onClick={() => setOpen((current) => !current)}
