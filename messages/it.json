@@ -1181,7 +1181,13 @@
       "productAllergensDeclaredHint": "Spunta solo dopo aver controllato l'elenco. Senza questa spunta il prodotto non si può attivare.",
       "activeNeedsAllergens": "Non salvato: un prodotto attivo richiede la casella «Allergeni verificati».",
       "activeNeedsIngredientsAndFormat": "Non salvato: un prodotto attivo richiede ingredienti e formato."
-    }
+    },
+    "photoChosenTitle": "Foto scelte dalla redazione",
+    "photoChosenIntro": "Importa le foto scelte per luoghi e attività (file content/media/commons-scelte.json). Ogni foto ha autore e licenza, e le entità già coperte non vengono toccate.",
+    "photoChosenButton": "Importa le foto scelte dalla redazione",
+    "photoChosenProgress": "Elaborate {done} di {total} voci…",
+    "photoChosenDone": "Importazione completata: {assigned} assegnate, {already} già presenti, {rejected} rifiutate, {notNeeded} non più necessarie.",
+    "photoChosenFailed": "L'importazione si è interrotta. Riprova: le voci già fatte non si ripetono."
   },
   "Og": {
     "activity": "Attività · {province}",

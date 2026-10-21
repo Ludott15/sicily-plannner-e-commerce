@@ -51,8 +51,23 @@ function useStablePoints(points: MapPoint[]): MapPoint[] {
   return useMemo(() => points, [key]);
 }
 
+// FNV-1a a 32 bit: firma breve delle coordinate, così la chiave cambia quando cambia il percorso.
+function fnv1a(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(36);
+}
+
 function useStableLegs(legs: RouteLeg[]): RouteLeg[] {
-  const key = legs.map((l) => `${l.fromPlaceId}>${l.toPlaceId}:${l.distanceM}:${l.durationS}:${l.coordinates.length}`).join("\n");
+  const key = legs
+    .map((l) => {
+      const shape = l.coordinates.map((c) => `${c[0]},${c[1]}`).join(";");
+      return `${l.fromPlaceId}>${l.toPlaceId}:${l.distanceM}:${l.durationS}:${fnv1a(shape)}`;
+    })
+    .join("\n");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => legs, [key]);
 }
@@ -134,9 +149,24 @@ export function TripMap({
           ? t("sameSpot")
           : t("routePending");
 
+  // Ai bordi il pulsante dell'estremo si disabilita: il focus passa all'altro pulsante.
+  const prevButton = useRef<HTMLButtonElement>(null);
+  const nextButton = useRef<HTMLButtonElement>(null);
+  const focusAfter = useRef<"prev" | "next" | null>(null);
+
+  useEffect(() => {
+    const which = focusAfter.current;
+    if (!which) return;
+    focusAfter.current = null;
+    (which === "prev" ? prevButton : nextButton).current?.focus();
+  }, [index]);
+
   const go = (delta: -1 | 1) => {
     const target = stable[index + delta];
-    if (target) select(target.id);
+    if (!target) return;
+    const atEdge = delta === -1 ? index - 1 === 0 : index + 1 === stable.length - 1;
+    focusAfter.current = atEdge ? (delta === -1 ? "next" : "prev") : null;
+    select(target.id);
   };
 
   const onNavKey = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -193,14 +223,14 @@ export function TripMap({
       {showNav && current && (
         <div className="is-map-nav" role="group" aria-label={t("navLabel")} tabIndex={0} onKeyDown={onNavKey}>
           <div className="is-map-nav__row">
-            <button type="button" className="is-map-nav__btn" onClick={() => go(-1)} disabled={index === 0}>
+            <button ref={prevButton} type="button" className="is-map-nav__btn" onClick={() => go(-1)} disabled={index === 0}>
               <span aria-hidden="true">‹ </span>
               {t("prevStop")}
             </button>
             <p className="is-map-nav__current" aria-live="polite">
               {t("stopOf", { n: index + 1, total: stable.length, name: current.label })}
             </p>
-            <button type="button" className="is-map-nav__btn" onClick={() => go(1)} disabled={index >= stable.length - 1}>
+            <button ref={nextButton} type="button" className="is-map-nav__btn" onClick={() => go(1)} disabled={index >= stable.length - 1}>
               {t("nextStop")}
               <span aria-hidden="true"> ›</span>
             </button>

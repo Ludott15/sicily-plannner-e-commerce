@@ -39,6 +39,16 @@ export async function removeObjects(paths: string[]) {
   if (error) throw new StorageError("remove", error);
 }
 
+// Scrittura nello storage passata da fuori. L'app usa sessionStorage (sessione dell'admin, policy su
+// storage.objects). Lo script di importazione locale fornisce il proprio writer con la chiave del Supabase
+// locale: nessuna chiave di servizio entra nell'app.
+export type StorageWriter = {
+  upload(path: string, body: Buffer, contentType: string): Promise<void>;
+  remove(paths: string[]): Promise<void>;
+};
+
+export const sessionStorage: StorageWriter = { upload: uploadObject, remove: removeObjects };
+
 // Nomi dei file sotto un prefisso (una cartella, non ricorsivo).
 export async function listObjects(prefix: string): Promise<string[]> {
   const { data, error } = await (await bucket()).list(prefix, { limit: 1000 });

@@ -166,14 +166,19 @@ export type RouteSegment = {
 export function bezierArc(from: LngLat, to: LngLat, steps = 32): LngLat[] {
   const [x0, y0] = from;
   const [x1, y1] = to;
-  const cx = (x0 + x1) / 2 - (y1 - y0) * 0.2;
-  const cy = (y0 + y1) / 2 + (x1 - x0) * 0.2;
-  const out: LngLat[] = [];
-  for (let i = 0; i <= steps; i++) {
+  // La longitudine si scala con cos(lat): un grado di longitudine è più corto alle latitudini alte.
+  const k = Math.max(Math.cos((((y0 + y1) / 2) * Math.PI) / 180), 1e-6);
+  const X0 = x0 * k;
+  const X1 = x1 * k;
+  const cX = (X0 + X1) / 2 - (y1 - y0) * 0.2;
+  const cY = (y0 + y1) / 2 + (X1 - X0) * 0.2;
+  const out: LngLat[] = [from];
+  for (let i = 1; i < steps; i++) {
     const t = i / steps;
     const u = 1 - t;
-    out.push([u * u * x0 + 2 * u * t * cx + t * t * x1, u * u * y0 + 2 * u * t * cy + t * t * y1]);
+    out.push([(u * u * X0 + 2 * u * t * cX + t * t * X1) / k, u * u * y0 + 2 * u * t * cY + t * t * y1]);
   }
+  out.push(to);
   return out;
 }
 
