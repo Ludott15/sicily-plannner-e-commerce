@@ -19,6 +19,7 @@ export function ItineraryStop({
   meta,
   thumbUrl,
   now = false,
+  active = false,
   why,
   votes,
   children,
@@ -29,12 +30,18 @@ export function ItineraryStop({
   meta?: string;
   thumbUrl?: string | null;
   now?: boolean;
+  /** Tappa attiva sulla mappa (navigazione): la scheda si evidenzia. */
+  active?: boolean;
   why?: Why;
   votes?: ReactNode;
   children?: ReactNode;
 }) {
   return (
-    <li className={cn("is-stop", now && "is-stop--now")} aria-current={now ? "step" : undefined}>
+    <li
+      className={cn("is-stop", now && "is-stop--now", active && "is-stop--active")}
+      aria-current={now ? "step" : undefined}
+      data-active={active ? "true" : undefined}
+    >
       <div className="is-stop__time">{time}</div>
       <div>
         <span className="is-stop__dot" />

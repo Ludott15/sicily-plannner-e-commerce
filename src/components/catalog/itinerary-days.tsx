@@ -3,9 +3,10 @@
 import { Fragment, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { CatalogLocalTip } from "@/components/catalog/catalog-local-tip";
-import { DayTabs, ItineraryStop, Route, TripMap } from "@/components/design";
+import { Button, DayTabs, ItineraryStop, Route, TripMap } from "@/components/design";
 import type { MapPoint } from "@/components/design/map/map-style";
 import { formatDuration } from "@/lib/format";
+import type { RouteLeg } from "@/lib/maps/legs";
 import { cn } from "@/lib/utils";
 import type { PublicTip } from "@/server/catalog/tips";
 
@@ -28,6 +29,8 @@ export type DayStop = {
   // Coordinate del luogo della tappa: senza, la tappa non ha un punto sulla mappa.
   lat: number | null;
   lng: number | null;
+  // Luogo della tappa: con due luoghi consecutivi cerca la tratta stradale (place_legs).
+  placeId: string | null;
   // Consiglio locale da mostrare accanto alla tappa (al massimo uno per giorno).
   tip?: PublicTip | null;
 };
@@ -40,11 +43,14 @@ export type Day = {
   stops: DayStop[];
 };
 
-export function ItineraryDays({ days }: { days: Day[] }) {
+// legs: tratte stradali tra i luoghi di tappe consecutive (tutti i giorni; ogni mappa usa le sue).
+export function ItineraryDays({ days, legs = [] }: { days: Day[]; legs?: RouteLeg[] }) {
   const t = useTranslations("Catalog");
   const locale = useLocale();
   const [current, setCurrent] = useState(0);
   const [firstOpen, setFirstOpen] = useState(true);
+  // Tappa attiva sulla mappa: la condividono la mappa e l'elenco (la scheda si evidenzia).
+  const [activeStop, setActiveStop] = useState<string | null>(null);
   const tMap = useTranslations("Map");
 
   return (
@@ -61,7 +67,9 @@ export function ItineraryDays({ days }: { days: Day[] }) {
         const minutes = day.stops.reduce((sum, s) => sum + (s.durationMin ?? 0), 0);
         // Punti della mappa: tappe con coordinate, numerate come nell'elenco del giorno.
         const points: MapPoint[] = day.stops.flatMap((stop, i) =>
-          stop.lat === null || stop.lng === null ? [] : [{ id: stop.id, lat: stop.lat, lng: stop.lng, label: stop.title, number: i + 1 }],
+          stop.lat === null || stop.lng === null
+            ? []
+            : [{ id: stop.id, lat: stop.lat, lng: stop.lng, label: stop.title, number: i + 1, placeId: stop.placeId }],
         );
         const mapLabel = tMap("dayMap", { n: index + 1 });
         return (
@@ -74,7 +82,14 @@ export function ItineraryDays({ days }: { days: Day[] }) {
               {points.length > 0 && (
                 <details className="is-map-details is-map-printable md:hidden">
                   <summary>{tMap("showMap")}</summary>
-                  <TripMap points={points} route ariaLabel={mapLabel} />
+                  <TripMap
+                    points={points}
+                    legs={legs}
+                    route
+                    ariaLabel={mapLabel}
+                    activeId={activeStop}
+                    onActiveChange={setActiveStop}
+                  />
                 </details>
               )}
               {day.intro && <p className="text-body-l">{day.intro}</p>}
@@ -90,8 +105,14 @@ export function ItineraryDays({ days }: { days: Day[] }) {
                         href={stop.href ?? undefined}
                         meta={stop.meta ?? undefined}
                         thumbUrl={stop.thumbUrl}
+                        active={stop.id === activeStop}
                       >
                         {stop.note && <p className="text-body text-lava">{stop.note}</p>}
+                        {stop.lat !== null && stop.lng !== null && (
+                          <Button variant="ghost" size="sm" className="mt-2" onClick={() => setActiveStop(stop.id)}>
+                            {tMap("showOnMap")}
+                          </Button>
+                        )}
                       </ItineraryStop>
                       {stop.tip && (
                         // Accanto alla tappa, nella colonna del contenuto: sulla linea del percorso
@@ -119,7 +140,14 @@ export function ItineraryDays({ days }: { days: Day[] }) {
               <div className="sticky top-6 flex flex-col gap-6 border-l border-divider pl-8">
                 {points.length > 0 && (
                   <div className="is-map-desktop">
-                    <TripMap points={points} route ariaLabel={mapLabel} />
+                    <TripMap
+                      points={points}
+                      legs={legs}
+                      route
+                      ariaLabel={mapLabel}
+                      activeId={activeStop}
+                      onActiveChange={setActiveStop}
+                    />
                   </div>
                 )}
                 <h2 className="text-heading-3">{t("dayInBrief")}</h2>

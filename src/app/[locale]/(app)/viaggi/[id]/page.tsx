@@ -19,6 +19,7 @@ import { TRIP_TABS, type TripTab } from "@/lib/trip-tabs";
 import { tripDayIndex } from "@/lib/trip-today";
 import { formatDuration } from "@/lib/format";
 import { flightSearchPath, MAX_PASSENGERS } from "@/lib/flights/search-params";
+import { consecutiveLegPairs } from "@/lib/maps/legs";
 import { activeTab } from "@/lib/tabs";
 import { bookingEntries } from "@/lib/trips";
 import { partnerName, type Partner } from "@/server/affiliates/links";
@@ -27,6 +28,7 @@ import { requireUser } from "@/server/auth";
 import { getGroup } from "@/server/groups/queries";
 import { getTripGroupState } from "@/server/groups/trip-group";
 import { chatStatus } from "@/server/chat/queries";
+import { getLegs } from "@/server/maps/legs";
 import { getTrip, getTripVerticalChips, type VerticalChip } from "@/server/trips/queries";
 
 // Pagina del viaggio (M5, 1.4; riprogettata in 6.1). Solo il proprietario o i membri del gruppo la aprono:
@@ -122,11 +124,14 @@ export default async function TripPage({ params, searchParams }: Props) {
         // Coordinate del luogo, per la mappa del giorno (6.2).
         lat: s.lat,
         lng: s.lng,
+        placeId: s.placeId,
         // Miniatura della foto assegnata alla tappa (vedi sopra).
         thumbUrl: thumbFor(s.id),
       })),
     };
   });
+  // Tratte stradali tra le tappe consecutive di ogni giorno (place_legs; le mancanti sono "in calcolo").
+  const legs = await getLegs(days.flatMap((day) => consecutiveLegPairs(day.stops.map((stop) => stop.placeId))));
 
   // Voli (passo 2.1): la ricerca parte con date e persone del viaggio; l'arrivo è quello del profilo.
   const travelers = trip.travelers !== null && trip.travelers >= 1 && trip.travelers <= MAX_PASSENGERS ? trip.travelers : 1;
@@ -277,6 +282,7 @@ export default async function TripPage({ params, searchParams }: Props) {
         <TripBuilder
           tripId={trip.id}
           days={days}
+          legs={legs}
           warnings={trip.warnings}
           initialDay={(Number(giorno) || 1) - 1}
           bookings={bookings}

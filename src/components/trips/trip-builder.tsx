@@ -8,6 +8,7 @@ import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrate
 import { BookingList, Button, DayTabs, Route, TripMap, type BookingItem } from "@/components/design";
 import type { MapPoint } from "@/components/design/map/map-style";
 import type { TimeSlot } from "@/lib/itinerary-checks";
+import type { RouteLeg } from "@/lib/maps/legs";
 import { useRouter } from "@/lib/i18n/navigation";
 import { MAX_TRIP_DAYS } from "@/lib/trip-days";
 import { dayFromZoneId, dayZoneId, dropOn, locate, placements, stepInDay, type DayOrder } from "@/lib/trip-order";
@@ -57,6 +58,8 @@ export type BuilderStop = {
   lng: number | null;
   /** Miniatura della foto della tappa (src/lib/itinerary-photos.ts): null se la catena è esaurita. */
   thumbUrl: string | null;
+  /** Luogo della tappa: con due luoghi consecutivi cerca la tratta stradale (place_legs). */
+  placeId: string | null;
 };
 
 export type BuilderDay = { name: string; note: string; stops: BuilderStop[] };
@@ -77,6 +80,8 @@ export type TripBuilderProps = {
   groupTab: ReactNode;
   /** "Oggi" (passo 11.3), reso dalla pagina solo se oggi cade nel viaggio: va in cima all'itinerario. */
   today?: ReactNode;
+  /** Tratte stradali tra le tappe consecutive (place_legs), per la mappa del giorno. */
+  legs?: RouteLeg[];
 };
 
 const OK: TripFormState = { status: "ok" };
@@ -85,11 +90,13 @@ const NO_ALTERNATIVES: TripGroupState["alternatives"][string] = [];
 
 type Outcome = { status: "ok" } | TripActionError;
 
-export function TripBuilder({ tripId, days, warnings, initialDay, bookings, group, tab, groupTab, today }: TripBuilderProps) {
+export function TripBuilder({ tripId, days, warnings, initialDay, bookings, group, tab, groupTab, today, legs = [] }: TripBuilderProps) {
   const t = useTranslations("Trips");
   const tMap = useTranslations("Map");
   const router = useRouter();
   const [picked, setPicked] = useState(initialDay);
+  // Tappa attiva sulla mappa del giorno: la condividono le due mappe e la lista (la scheda si evidenzia).
+  const [activeStop, setActiveStop] = useState<string | null>(null);
   const [error, setError] = useState<TripActionError["code"] | null>(null);
   const [notice, setNotice] = useState("");
   const [printing, setPrinting] = useState(false);
@@ -256,7 +263,18 @@ export function TripBuilder({ tripId, days, warnings, initialDay, bookings, grou
   const mapPoints: MapPoint[] = (order[activeDay] ?? []).flatMap((id, index) => {
     const stop = stopById.get(id);
     if (!stop || stop.lat === null || stop.lng === null) return [];
-    return [{ id: stop.id, lat: stop.lat, lng: stop.lng, label: stop.title, number: index + 1 }];
+    return [
+      {
+        id: stop.id,
+        lat: stop.lat,
+        lng: stop.lng,
+        label: stop.title,
+        number: index + 1,
+        placeId: stop.placeId,
+        // Tappa con il check-in di oggi: marker attenuato.
+        visited: stop.checkIn?.checkedInToday ?? false,
+      },
+    ];
   });
   const mapLabel = tMap("dayMap", { n: activeDay + 1 });
   const ids = tabIds("trip", tab);
@@ -278,7 +296,14 @@ export function TripBuilder({ tripId, days, warnings, initialDay, bookings, grou
             {/* Mobile: la mappa del giorno sta sotto le pillole, chiusa finché non la si apre. */}
             <details className="is-map-details is-trip-tools md:hidden">
               <summary>{tMap("showMap")}</summary>
-              <TripMap points={mapPoints} route ariaLabel={mapLabel} />
+              <TripMap
+                points={mapPoints}
+                legs={legs}
+                route
+                ariaLabel={mapLabel}
+                activeId={activeStop}
+                onActiveChange={setActiveStop}
+              />
             </details>
             <FormAlert message={error ? t(`errors.${error}`) : null} />
             <p aria-live="polite" className="text-body-s text-lava-muted">
@@ -332,6 +357,8 @@ export function TripBuilder({ tripId, days, warnings, initialDay, bookings, grou
                                 onStep={(direction) => step(stop.id, direction)}
                                 onMoveToDay={(target) => moveToDay(stop.id, target)}
                                 onRemove={() => removeStopFromTrip(stop.id)}
+                                active={stop.id === activeStop}
+                                onShowOnMap={stop.lat !== null && stop.lng !== null ? () => setActiveStop(stop.id) : undefined}
                                 checkIn={
                                   stop.checkIn ? <CheckInButton itemId={stop.id} checkedInToday={stop.checkIn.checkedInToday} /> : undefined
                                 }
@@ -408,7 +435,14 @@ export function TripBuilder({ tripId, days, warnings, initialDay, bookings, grou
           </div>
         {/* Desktop: colonna laterale, che resta in vista mentre si scorre l'elenco. */}
         <div className="is-trip-aside hidden md:sticky md:top-6 md:block">
-          <TripMap points={mapPoints} route ariaLabel={mapLabel} />
+          <TripMap
+            points={mapPoints}
+            legs={legs}
+            route
+            ariaLabel={mapLabel}
+            activeId={activeStop}
+            onActiveChange={setActiveStop}
+          />
         </div>
         </div>
 

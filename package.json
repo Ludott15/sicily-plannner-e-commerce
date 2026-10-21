@@ -27,6 +27,7 @@
     "email:templates": "node scripts/email/build-supabase-templates.mjs",
     "db:clean": "node scripts/db/clean-test-data.mjs",
     "supabase:push-production": "node scripts/supabase/push-production.mjs",
+    "maps:legs": "tsx --conditions=react-server scripts/maps/compute-legs.ts",
     "media:demo": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON scripts/media/demo-images.mjs",
     "media:commons-fill": "tsx --tsconfig scripts/media/tsconfig.json scripts/media/commons-fill.ts",
     "data:airports": "node scripts/data/airports.mjs",
@@ -73,6 +74,7 @@
     "eslint-config-next": "16.3.6",
     "supabase": "^2.118.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.2"
   }

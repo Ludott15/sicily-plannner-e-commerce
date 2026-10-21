@@ -256,6 +256,24 @@ a.is-tabbar__item { color: var(--lava-muted); }
 .is-map-details > summary { display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; font-weight: 600; color: var(--coccio-text); }
 .is-map-details > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
 .is-map-details[open] > summary { margin-bottom: var(--space-3); }
+/* Mappa con tappe numerate per tappa: marker attenuato se visitata, marker attivo più grande con anello. */
+.is-map__marker--visited { opacity: 0.55; }
+.is-map__marker--active { transform: scale(1.25); box-shadow: 0 0 0 3px var(--calce-raised), 0 0 0 5px var(--coccio), var(--shadow-card); }
+.is-map__arrow { display: inline-grid; place-items: center; color: var(--lava); pointer-events: none; }
+.is-map__legend { margin: 0; font-size: 13px; line-height: 18px; color: var(--lava-muted); }
+/* Barra di navigazione sotto la mappa: tappa precedente e successiva, tempo e distanza verso la successiva. */
+.is-map-nav { display: grid; gap: var(--space-2); margin-top: var(--space-3); padding: var(--space-3); border: 1px solid var(--card-edge); border-radius: var(--radius-lg); background: var(--calce-raised); color: var(--lava); }
+.is-map-nav:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.is-map-nav__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.is-map-nav__current { flex: 1 1 160px; min-width: 0; margin: 0; text-align: center; font-size: 15px; line-height: 22px; font-weight: 600; }
+.is-map-nav__btn, .is-map-nav__all { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 var(--space-3); border: 1px solid var(--border-control); border-radius: var(--radius-pill); background: transparent; color: var(--lava); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.is-map-nav__btn:hover:not(:disabled), .is-map-nav__all:hover { background: var(--calce-sunk); }
+.is-map-nav__btn:disabled { opacity: 0.45; cursor: default; }
+.is-map-nav__btn:focus-visible, .is-map-nav__all:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.is-map-nav__eta { margin: 0; font-size: 14px; line-height: 20px; color: var(--lava-muted); }
+/* Tappa attiva sulla mappa: la scheda si evidenzia nell'elenco. */
+.is-stop--active .is-stop__body { border-color: var(--lava); box-shadow: var(--shadow-lift); }
+.is-stop--active .is-stop__dot { box-shadow: 0 0 0 4px var(--calce), 0 0 0 6px var(--coccio); }
 
 @media (prefers-reduced-motion: reduce) {
   .is-btn, .is-chip, .is-card, .is-card__ph, .is-card__media img, .is-place__media img, .is-product, .is-scale__pip, .is-points { transition: opacity var(--dur-fast) linear; transition-delay: 0ms; }

@@ -456,6 +456,20 @@
       "when": 1792532269297,
       "tag": "20261020213749_itinerary_tips",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1792594844226,
+      "tag": "20261021150044_place_legs",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1792594854487,
+      "tag": "20261021150054_place_legs_rls",
+      "breakpoints": true
     }
   ]
 }

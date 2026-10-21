@@ -13,6 +13,7 @@ export * from "./audit";
 export * from "./local-tips";
 export * from "./media";
 export * from "./drive-times";
+export * from "./place-legs";
 export * from "./guides";
 export * from "./notifications";
 export * from "./search";

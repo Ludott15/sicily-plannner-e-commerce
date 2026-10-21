@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useDndContext, useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { GripVertical } from "lucide-react";
-import { ItineraryStop } from "@/components/design";
+import { Button, ItineraryStop } from "@/components/design";
 import { ActionMenu, type ActionMenuItem } from "@/components/layout/action-menu";
 import type { TimeSlot } from "@/lib/itinerary-checks";
 import { cn } from "@/lib/utils";
@@ -50,6 +50,10 @@ export type StopItemProps = {
   onRemove: () => void;
   /** Voti del gruppo sulla tappa (solo nei viaggi di gruppo), sotto il luogo. */
   votes?: ReactNode;
+  /** Tappa attiva sulla mappa del giorno: la scheda si evidenzia. */
+  active?: boolean;
+  /** Mostra la tappa sulla mappa (solo tappe con coordinate). */
+  onShowOnMap?: () => void;
   /** "Sono qui" con il check-in (passo 5.1): azione secondaria, solo se la tappa ha un luogo e chi guarda non è ospite. */
   checkIn?: ReactNode;
 };
@@ -68,8 +72,11 @@ export function StopItem({
   onRemove,
   votes,
   checkIn,
+  active = false,
+  onShowOnMap,
 }: StopItemProps) {
   const t = useTranslations("Trips");
+  const tMap = useTranslations("Map");
   const { attributes, listeners, setNodeRef } = useSortable({ id: stop.id });
   const [noteOpen, setNoteOpen] = useState(false);
   const slotLabel = stop.timeSlot ? t(`timeSlot.${stop.timeSlot}`) : undefined;
@@ -93,8 +100,21 @@ export function StopItem({
   ];
 
   return (
-    <ItineraryStop time={slotLabel} title={stop.title} href={stop.href ?? undefined} meta={stop.meta} thumbUrl={stop.thumbUrl} votes={votes}>
+    <ItineraryStop
+      time={slotLabel}
+      title={stop.title}
+      href={stop.href ?? undefined}
+      meta={stop.meta}
+      thumbUrl={stop.thumbUrl}
+      active={active}
+      votes={votes}
+    >
       {stop.notes && <p className="is-trip-print-note mt-2 text-body-s text-lava-muted">{stop.notes}</p>}
+      {onShowOnMap && (
+        <Button variant="ghost" size="sm" className="is-trip-tools mt-2" onClick={onShowOnMap}>
+          {tMap("showOnMap")}
+        </Button>
+      )}
       <div ref={setNodeRef} className="mt-3 flex flex-wrap items-center justify-between gap-2" aria-busy={pending}>
         <div className="min-w-0">{checkIn}</div>
         <div className="is-trip-tools ml-auto flex shrink-0 items-center">

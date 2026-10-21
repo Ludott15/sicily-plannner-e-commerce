@@ -7,12 +7,14 @@ import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
 import { ActionBar, ButtonLink } from "@/components/design";
 import { formatDuration } from "@/lib/format";
+import { consecutiveLegPairs } from "@/lib/maps/legs";
 import { assignStopPhotos } from "@/lib/itinerary-photos";
 import { coverThumbUrl, type CoverMedia } from "@/lib/media";
 import { canonicalFor } from "@/lib/seo";
 import { breadcrumbList, touristTrip } from "@/lib/structured-data";
 import { getTemplate } from "@/server/catalog/queries";
 import { listTipsFor } from "@/server/catalog/tips";
+import { getLegs } from "@/server/maps/legs";
 
 // Itinerario pronto (mockup ItinerarioProntoMobile.html; su desktop la foto sta accanto al testo).
 // Hero: eyebrow, titolo, sottotitolo, autore, "Usa questo itinerario" e Condividi. Sotto, i fatti
@@ -105,6 +107,7 @@ export default async function ItineraryPage({ params }: Props) {
       // Coordinate del luogo della tappa, per la mappa del giorno (6.2).
       lat: item.lat,
       lng: item.lng,
+      placeId: item.placeId,
       tip: item === tipItem ? tipFor(item) : null,
     }));
     return {
@@ -114,6 +117,9 @@ export default async function ItineraryPage({ params }: Props) {
       stops,
     };
   });
+
+  // Tratte stradali tra le tappe consecutive di ogni giorno (place_legs; le mancanti sono "in calcolo").
+  const legs = await getLegs(days.flatMap((day) => consecutiveLegPairs(day.stops.map((stop) => stop.placeId))));
 
   const areaNames = itinerary.facts.areas.map(areaName);
   const firstPlace = itinerary.items.find((i) => i.placeName);
@@ -195,7 +201,7 @@ export default async function ItineraryPage({ params }: Props) {
           <p className="max-w-[680px] whitespace-pre-line text-body">{itinerary.description}</p>
         )}
 
-        <ItineraryDays days={days} />
+        <ItineraryDays days={days} legs={legs} />
 
         {itinerary.tips.length > 0 && (
           <section aria-labelledby="itinerary-tips-title" className="flex max-w-[680px] flex-col gap-5 border-t border-divider pt-10">
