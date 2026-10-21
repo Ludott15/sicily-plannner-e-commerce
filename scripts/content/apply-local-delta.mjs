@@ -1,7 +1,8 @@
 // Applica scripts/content/local-delta.sql al database locale: porta le righe demo esistenti allo stato
 // del seed nuovo senza db:reset. Idempotente. Rifiuta ogni host che non sia locale.
 //
-//   node scripts/content/apply-local-delta.mjs
+//   node scripts/content/apply-local-delta.mjs                              (local-delta.sql, prima dell import)
+//   node scripts/content/apply-local-delta.mjs scripts/content/local-fix.sql  (correzioni dopo l import)
 //
 // Connessione: DATABASE_URL da .env.local. Eseguire dopo la migrazione (supabase migration up --local).
 
@@ -21,8 +22,9 @@ async function main() {
   if (!isLocalDatabase(url)) throw new Error("il delta locale si applica solo a un database locale");
   const sql = postgres(url, { prepare: false, max: 1, onnotice: () => {} });
   try {
-    await sql.unsafe(readFileSync(join(ROOT, "scripts", "content", "local-delta.sql"), "utf8"));
-    console.log("delta locale applicato");
+    const file = process.argv[2] ?? join("scripts", "content", "local-delta.sql");
+    await sql.unsafe(readFileSync(join(ROOT, file), "utf8"));
+    console.log(`applicato ${file}`);
   } finally {
     await sql.end();
   }

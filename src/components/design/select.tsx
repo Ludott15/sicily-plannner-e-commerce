@@ -1,6 +1,7 @@
 "use client";
 
 import { Select as BaseSelect } from "@base-ui/react/select";
+import { useRef } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +54,11 @@ export function Select({
 }: SelectProps) {
   const items = options.map((option) => ({ label: option.label, value: option.value }));
   const controlled = value !== undefined;
+  // Il popup va nel dialog nativo che contiene il campo: un portale nel body starebbe sotto il top layer.
+  const dialogRef = useRef<HTMLElement | null>(null);
+  function trackDialog(node: HTMLButtonElement | null) {
+    dialogRef.current = node?.closest("dialog") ?? null;
+  }
 
   return (
     <BaseSelect.Root<string>
@@ -67,6 +73,7 @@ export function Select({
       }}
     >
       <BaseSelect.Trigger
+        ref={trackDialog}
         aria-label={label}
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedBy}
@@ -78,7 +85,7 @@ export function Select({
         </BaseSelect.Icon>
       </BaseSelect.Trigger>
 
-      <BaseSelect.Portal>
+      <BaseSelect.Portal container={dialogRef}>
         <BaseSelect.Positioner
           className="is-overlay"
           side="bottom"
@@ -94,6 +101,7 @@ export function Select({
                   key={option.value}
                   value={option.value}
                   label={option.label}
+                  aria-label={option.label}
                   disabled={option.disabled}
                   className="is-select__item"
                 >

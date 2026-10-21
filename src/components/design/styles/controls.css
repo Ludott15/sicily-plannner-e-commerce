@@ -75,10 +75,10 @@
   display: flex; flex-direction: column; width: min(400px, calc(100vw - 24px));
   max-height: min(72vh, 640px); overflow: hidden;
 }
-.is-popover__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-4) var(--space-3) 0 var(--space-5); }
+.is-popover__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-4) var(--space-3) 0 var(--space-6); }
 .is-popover__title { margin: 0; font-family: var(--font-display); font-size: 20px; line-height: 28px; font-weight: 600; font-optical-sizing: auto; font-variation-settings: "SOFT" 50; }
-.is-popover__body { flex: 1; min-height: 0; overflow-y: auto; padding: var(--space-4) var(--space-5); }
-.is-popover__foot { display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-4) var(--space-5) var(--space-5); border-top: 1px solid var(--divider); }
+.is-popover__body { flex: 1; min-height: 0; overflow-y: auto; padding: var(--space-4) var(--space-6); }
+.is-popover__foot { display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-4) var(--space-6) var(--space-6); border-top: 1px solid var(--divider); }
 .is-popover__foot .is-btn { flex: 1 1 auto; }
 .is-sheet-handle { display: none; }
 .is-icon-btn {

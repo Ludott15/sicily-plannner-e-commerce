@@ -105,6 +105,16 @@ export function isLocalDatabase(url) {
   return LOCAL_HOSTS.has(host);
 }
 
+// Prefissi degli slug dei dati di prova: ammessi solo verso un database locale (content:guides e
+// content:catalog). Pura.
+export const LOCAL_ONLY_PREFIXES = ["demo-", "e2e-", "int-"];
+export function checkPrefix(prefix, url) {
+  if (prefix && !/^[a-z0-9-]+$/.test(prefix)) throw new Error(`prefisso "${prefix}" non valido`);
+  if (LOCAL_ONLY_PREFIXES.includes(prefix) && !isLocalDatabase(url)) {
+    throw new Error(`il prefisso ${prefix} è ammesso solo con un database locale: i dati di prova non vanno in produzione`);
+  }
+}
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const GUIDE_DIR = join(ROOT, "content", "guide");
 
@@ -131,6 +141,7 @@ async function main() {
     // --slug-prefix=demo-: in locale e in CI i luoghi del seed hanno il prefisso (come content:catalog).
     const prefixArg = process.argv.slice(2).find((arg) => arg.startsWith("--slug-prefix="));
     const prefix = prefixArg ? prefixArg.slice("--slug-prefix=".length) : "";
+    checkPrefix(prefix, url);
     const slugs = [...new Set(guides.flatMap((guide) => guide.places))].map((slug) => prefix + slug);
     const places = await sql`select id, slug from public.places where slug = any(${slugs}::text[])`;
     const placeIds = new Map(places.map((row) => [row.slug.slice(prefix.length), row.id]));

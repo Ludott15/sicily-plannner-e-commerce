@@ -2773,7 +2773,9 @@
       "limit": "Non puoi aggiungere altro: hai raggiunto il limite di quantità o di prodotti.",
       "invalid": "Scegli una quantità tra 1 e 10.",
       "unavailable": "Il carrello non è disponibile in questo momento."
-    }
+    },
+    "quantityTimes": "{quantity} ×",
+    "editInCart": "Modifica nel carrello"
   },
   "Checkout": {
     "successTitle": "Grazie",
