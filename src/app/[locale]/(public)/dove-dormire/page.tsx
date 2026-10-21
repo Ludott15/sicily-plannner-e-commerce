@@ -21,7 +21,13 @@ import {
 } from "@/lib/verticals/search-params";
 import { activePartners, publishedGuides, searchOutcome } from "@/server/affiliates/vertical-page-data";
 import { getLodgingPageData } from "@/server/affiliates/verticals";
-import { LODGING_KINDS, type LodgingKind, VERTICAL_PAGE, VERTICAL_PARTNERS } from "@/server/affiliates/vertical-links";
+import {
+  kindFilterValue,
+  LODGING_KINDS,
+  type LodgingKind,
+  VERTICAL_PAGE,
+  VERTICAL_PARTNERS,
+} from "@/server/affiliates/vertical-links";
 import { VERTICAL_PARTNER } from "@/server/affiliates/partners";
 
 // Dove dormire (verticale lodging): zona o città, date, persone e tipo di alloggio. Il link firmato va
@@ -75,8 +81,11 @@ export default async function LodgingPage({ params, searchParams }: Props) {
   const checkin = isoParam(query.checkin);
   const checkout = isoParam(query.checkout);
   const adults = countParam(query.persone, DEFAULT_ADULTS, MAX_ADULTS);
-  const kind = oneOfParam(query.tipo, LODGING_KINDS);
   const partner = oneOfParam(query.partner, VERTICAL_PARTNERS.lodging) || VERTICAL_PARTNER.lodging;
+  // Il filtro sul tipo passa dalla mappa chiusa del server (kindFilterValue). Dove il partner non ha un
+  // filtro per nessun tipo, il tipo non arriva al partner: non si mostra né tra i chip né nel riepilogo.
+  const kindSupported = LODGING_KINDS.some((k) => kindFilterValue(partner, k) !== "");
+  const kind = kindSupported ? oneOfParam(query.tipo, LODGING_KINDS) : "";
   const datesOk = rangeOk(checkin, checkout);
 
   const outcome =
@@ -138,6 +147,7 @@ export default async function LodgingPage({ params, searchParams }: Props) {
 
       <VerticalNotices avviso={paramOf(query.avviso)} />
 
+      {kindSupported && (
       <nav aria-label={t("kindLabel")} className="flex flex-wrap gap-2">
         {[{ value: "" as const, label: tVert("kindAll") }, ...LODGING_KINDS.map((value) => ({ value, label: tVert(KIND_KEYS[value]) }))].map(
           (chip) => {
@@ -158,6 +168,7 @@ export default async function LodgingPage({ params, searchParams }: Props) {
           },
         )}
       </nav>
+      )}
 
       <VerticalForm
         submitLabel={t("submit")}

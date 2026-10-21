@@ -45,7 +45,7 @@ test("traghetti: la ricerca compilata produce un link firmato o un avviso onesto
   await expect(signed.or(unavailable)).toHaveCount(1);
   if (await signed.count()) {
     await expect(signed.first()).toHaveAttribute("rel", /sponsored/);
-    await expect(signed.first()).toHaveAttribute("href", /sig=/);
+    await expect(signed.first()).toHaveAttribute("href", /[?&]s=/);
   }
 });
 
@@ -55,10 +55,12 @@ test("traghetti: partenza uguale all'arrivo non produce link", async ({ page }) 
   await expect(page.getByText("Partenza e arrivo non possono coincidere.")).toBeVisible();
 });
 
-test("dove-dormire: il tipo di alloggio resta nel link del chip e nel form", async ({ page }) => {
+test("dove-dormire: senza filtro per tipo nel partner, niente chip e il tipo non compare nel riepilogo", async ({ page }) => {
+  // Booking non ha una mappa di filtri per tipo (KIND_FILTER vuota): il tipo non arriva al partner.
   await page.goto("/it/dove-dormire?tipo=ostello");
-  await expect(page.locator('nav a[aria-current="true"]')).toHaveCount(1);
-  await expect(page.locator("form[method='get'] input[name='tipo']")).toHaveValue("ostello");
+  await expect(page.locator('nav a[aria-current="true"]')).toHaveCount(0);
+  await expect(page.locator("form[method='get'] input[name='tipo']")).toHaveCount(0);
+  await expect(page.getByText("Ostello", { exact: true })).toHaveCount(0);
 });
 
 test("con il partner attivo il redirect di /api/go/v va verso l'host del partner", async ({ page, request }) => {
