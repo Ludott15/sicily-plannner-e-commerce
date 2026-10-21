@@ -15,14 +15,14 @@ describe("isNavCurrent", () => {
   });
 
   it("ignora l'ancora del percorso", () => {
-    expect(isNavCurrent("/servizi", "/traghetti")).toBe(true);
+    expect(isNavCurrent("/servizi", "/servizi#tutti")).toBe(true);
     expect(isNavCurrent("/servizi", "/servizi")).toBe(true);
-    expect(isNavCurrent("/voli", "/traghetti")).toBe(false);
+    expect(isNavCurrent("/voli", "/servizi#tutti")).toBe(false);
   });
 
   it("le voci del menu Servizi puntano solo alle pagine previste", () => {
     const hrefs = SERVICE_NAV.map((item) => item.href.split("#")[0]);
-    expect(hrefs).toEqual(["/voli", "/dove-dormire", "/noleggio-auto", "/servizi", "/servizi"]);
+    expect(hrefs).toEqual(["/voli", "/dove-dormire", "/noleggio-auto", "/traghetti", "/servizi"]);
     expect(PRIMARY_NAV.map((item) => item.href)).toEqual(["/itinerari", "/attivita", "/guide"]);
   });
 });
