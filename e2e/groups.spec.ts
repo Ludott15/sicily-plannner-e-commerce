@@ -63,7 +63,7 @@ test("gruppo dal viaggio: anteprima senza account, accesso con codice, ingresso 
   await invitee.getByRole("link", { name: "Accedi con il codice" }).click();
   await expect(invitee).toHaveURL(/\/it\/login\?next=/);
   const inviteeEmail = testEmail();
-  await invitee.getByLabel("Email").fill(inviteeEmail);
+  await invitee.getByLabel("Email", { exact: true }).fill(inviteeEmail);
   await invitee.getByRole("button", { name: "Mandami il codice" }).click();
   await expect(invitee.getByRole("status")).toContainText(inviteeEmail);
   await invitee.getByLabel("Codice di 6 cifre").fill(await waitForCode(request, inviteeEmail));

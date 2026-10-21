@@ -7,7 +7,7 @@ import { dbAdmin } from "@/server/db/admin";
 import { activities, areas, itineraries, media, places } from "@/server/db/schema";
 import type { UploadRejection } from "@/lib/media-admin";
 import { blurDataUrl, cleanMaster, inspectPhoto, inspectSvg, renderVariants } from "./images";
-import { downloadObject, listObjects, removeObjects, uploadObject } from "./storage.admin";
+import { downloadObject, listObjects, removeObjects, sessionStorage, uploadObject, type StorageWriter } from "./storage.admin";
 
 // Acquisizione delle immagini (caricamento admin e importatore Commons). Ogni funzione qui
 // è chiamata solo da azioni che hanno già fatto requireAdmin; i file vanno nello storage con
@@ -22,6 +22,8 @@ const CONTENT_TYPE = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" }
 // compilano nella tabella; per Commons arrivano dall'API.
 export type MediaSource = {
   sourceType: "own" | "licensed" | "partner";
+  // Bene culturale in consegna a un ente pubblico: il media resta bloccato finché non c'è un'autorizzazione.
+  heritageAsset?: boolean;
   altIt?: string | null;
   author?: string | null;
   authorUrl?: string | null;
@@ -34,18 +36,25 @@ export type MediaSource = {
 
 export type IngestResult = { ok: true; mediaId: string } | { ok: false; error: UploadRejection | { code: "storage_failed" } };
 
-async function writeVariants(id: string, version: number, master: Buffer, width: number, height: number, fx: number, fy: number) {
+async function writeVariants(id: string, version: number, master: Buffer, width: number, height: number, fx: number, fy: number, storage: StorageWriter = sessionStorage) {
   const variants = await renderVariants(master, width, height, fx, fy);
   const paths: string[] = [];
   for (const v of variants) {
     const path = variantPath(id, version, v.ratio, v.width, v.format);
-    await uploadObject(path, v.buffer, v.format === "avif" ? "image/avif" : "image/webp");
+    await storage.upload(path, v.buffer, v.format === "avif" ? "image/avif" : "image/webp");
     paths.push(path);
   }
   return paths;
 }
 
-export async function ingestPhoto(input: Buffer, filename: string, source: MediaSource, createdBy: string): Promise<IngestResult> {
+// storage: dove scrivere i file (default: sessione dell'admin). Il comportamento non cambia.
+export async function ingestPhoto(
+  input: Buffer,
+  filename: string,
+  source: MediaSource,
+  createdBy: string,
+  storage: StorageWriter = sessionStorage,
+): Promise<IngestResult> {
   const inspected = await inspectPhoto(input);
   if (!inspected.ok) return inspected;
   const { buffer: master, width, height } = await cleanMaster(input, inspected.photo.format);
@@ -54,9 +63,9 @@ export async function ingestPhoto(input: Buffer, filename: string, source: Media
   const storagePath = `${id}/master.${inspected.photo.ext}`;
   const written: string[] = [];
   try {
-    await uploadObject(storagePath, master, CONTENT_TYPE[inspected.photo.ext]);
+    await storage.upload(storagePath, master, CONTENT_TYPE[inspected.photo.ext]);
     written.push(storagePath);
-    written.push(...(await writeVariants(id, 1, master, width, height, 0.5, 0.5)));
+    written.push(...(await writeVariants(id, 1, master, width, height, 0.5, 0.5, storage)));
     await dbAdmin.insert(media).values({
       id,
       storagePath,
@@ -75,13 +84,14 @@ export async function ingestPhoto(input: Buffer, filename: string, source: Media
       modified: source.sourceType === "licensed" ? true : (source.modified ?? false),
       blurDataUrl: await blurDataUrl(master),
       variantsVersion: 1,
+      heritageAsset: source.heritageAsset === true,
       originalFilename: filename.slice(0, 200),
       createdBy,
     });
     return { ok: true, mediaId: id };
   } catch (error) {
     console.error("ingestPhoto", error);
-    await removeObjects(written).catch(() => {});
+    await storage.remove(written).catch(() => {});
     return { ok: false, error: { code: "storage_failed" } };
   }
 }

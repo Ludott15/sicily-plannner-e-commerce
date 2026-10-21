@@ -30,6 +30,22 @@ export function consecutiveLegPairs(placeIds: readonly (string | null | undefine
   return pairs;
 }
 
+// Le tratte richieste, nell'ordine delle coppie, senza duplicati e senza le coppie non calcolate.
+// Serve alla pagina: legsForPairs(tutte le tratte caricate, coppie del giorno mostrato).
+export function legsForPairs(legs: readonly RouteLeg[], pairs: readonly LegPair[]): RouteLeg[] {
+  const byKey = new Map<string, RouteLeg>(legs.map((leg) => [`${leg.fromPlaceId}>${leg.toPlaceId}`, leg]));
+  const seen = new Set<string>();
+  const result: RouteLeg[] = [];
+  for (const pair of pairs) {
+    const key = `${pair.from}>${pair.to}`;
+    const leg = byKey.get(key);
+    if (!leg || seen.has(key)) continue;
+    seen.add(key);
+    result.push(leg);
+  }
+  return result;
+}
+
 // "≈ 1 h 20 min", "≈ 25 min", "≈ 1 h". Sotto il minuto si arrotonda al minuto.
 export function formatDuration(seconds: number, locale: "it" | "en"): string {
   const numbers = new Intl.NumberFormat(locale === "it" ? "it-IT" : "en-GB");

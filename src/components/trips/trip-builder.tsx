@@ -97,6 +97,8 @@ export function TripBuilder({ tripId, days, warnings, initialDay, bookings, grou
   const [picked, setPicked] = useState(initialDay);
   // Tappa attiva sulla mappa del giorno: la condividono le due mappe e la lista (la scheda si evidenzia).
   const [activeStop, setActiveStop] = useState<string | null>(null);
+  // Mobile: il <details> della mappa del giorno, aperto da "Mostra sulla mappa" o dall'utente.
+  const [mapOpen, setMapOpen] = useState(false);
   const [error, setError] = useState<TripActionError["code"] | null>(null);
   const [notice, setNotice] = useState("");
   const [printing, setPrinting] = useState(false);
@@ -190,6 +192,12 @@ export function TripBuilder({ tripId, days, warnings, initialDay, bookings, grou
     commit(order, () => setBookingDone({ itineraryId: tripId, kind: item.kind, activityId: item.activityId, done }));
   }
 
+  // Cambio di giorno: la tappa attiva sulla mappa si azzera (la mappa torna al primo punto del giorno).
+  function pickDay(day: number) {
+    setPicked(day);
+    setActiveStop(null);
+  }
+
   function handleDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id));
   }
@@ -202,7 +210,7 @@ export function TripBuilder({ tripId, days, warnings, initialDay, bookings, grou
     const next = dropOn(order, stopId, overId);
     if (!next) return;
     const zone = dayFromZoneId(overId);
-    if (zone !== null) setPicked(zone);
+    if (zone !== null) pickDay(zone);
     saveOrder(next, stopId);
   }
 
@@ -288,13 +296,17 @@ export function TripBuilder({ tripId, days, warnings, initialDay, bookings, grou
     content = (
       <>
         <div className="is-trip-tools">
-          <DayTabs days={dayNames} current={activeDay} onSelect={setPicked} />
+          <DayTabs days={dayNames} current={activeDay} onSelect={pickDay} />
         </div>
         <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,360px)] md:items-start">
           <div className="flex min-w-0 flex-col gap-8">
             {today}
             {/* Mobile: la mappa del giorno sta sotto le pillole, chiusa finché non la si apre. */}
-            <details className="is-map-details is-trip-tools md:hidden">
+            <details
+              className="is-map-details is-trip-tools md:hidden"
+              open={mapOpen}
+              onToggle={(event) => setMapOpen(event.currentTarget.open)}
+            >
               <summary>{tMap("showMap")}</summary>
               <TripMap
                 points={mapPoints}
@@ -358,7 +370,14 @@ export function TripBuilder({ tripId, days, warnings, initialDay, bookings, grou
                                 onMoveToDay={(target) => moveToDay(stop.id, target)}
                                 onRemove={() => removeStopFromTrip(stop.id)}
                                 active={stop.id === activeStop}
-                                onShowOnMap={stop.lat !== null && stop.lng !== null ? () => setActiveStop(stop.id) : undefined}
+                                onShowOnMap={
+                                  stop.lat !== null && stop.lng !== null
+                                    ? () => {
+                                        setActiveStop(stop.id);
+                                        setMapOpen(true);
+                                      }
+                                    : undefined
+                                }
                                 checkIn={
                                   stop.checkIn ? <CheckInButton itemId={stop.id} checkedInToday={stop.checkIn.checkedInToday} /> : undefined
                                 }
