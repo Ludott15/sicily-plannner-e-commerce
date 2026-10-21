@@ -60,8 +60,15 @@ export default async function TripPage({ params, searchParams }: Props) {
     chatStatus(user),
   ]);
   if (!trip) notFound();
-  // Gruppo del viaggio (4.1): il nome serve al link. Il viaggio è di chi lo apre, o di un membro.
-  const group = trip.groupId ? await getGroup(user, trip.groupId) : null;
+  // Gruppo del viaggio (4.1) e tratte stradali delle tappe consecutive (place_legs), in parallelo: le
+  // tratte mancanti non compaiono e la mappa le disegna come arco "in calcolo".
+  const legPairs = Array.from({ length: trip.days }, (_, d) =>
+    consecutiveLegPairs(trip.stops.filter((s) => s.dayIndex === d).map((s) => s.placeId)),
+  );
+  const [group, legs] = await Promise.all([
+    trip.groupId ? getGroup(user, trip.groupId) : null,
+    getLegs(legPairs.flat()),
+  ]);
   // Stato del gruppo (4.2): voti, alternative, proposte e modifiche di questo viaggio.
   const groupState = group ? await getTripGroupState(user, id, group.id) : null;
 
@@ -130,8 +137,6 @@ export default async function TripPage({ params, searchParams }: Props) {
       })),
     };
   });
-  // Tratte stradali tra le tappe consecutive di ogni giorno (place_legs; le mancanti sono "in calcolo").
-  const legs = await getLegs(days.flatMap((day) => consecutiveLegPairs(day.stops.map((stop) => stop.placeId))));
 
   // Voli (passo 2.1): la ricerca parte con date e persone del viaggio; l'arrivo è quello del profilo.
   const travelers = trip.travelers !== null && trip.travelers >= 1 && trip.travelers <= MAX_PASSENGERS ? trip.travelers : 1;

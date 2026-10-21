@@ -1,14 +1,15 @@
+import { randomUUID } from "node:crypto";
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { dbAdmin } from "@/server/db/admin";
-import { itineraries, itineraryItems, placeLegs, places } from "@/server/db/schema";
+import { itineraries, itineraryItems, placeLegFailures, placeLegs, places } from "@/server/db/schema";
 import { getLegs } from "./legs";
 import { computeMissingLegs, findMissingPairs } from "./legs.admin";
 
 // Tratte stradali su Postgres locale (npm run test:int). Il router è simulato con fetch: ogni
-// richiesta restituisce una linea retta tra i due punti, tranne quelle dirette al luogo "guasto".
-// Luoghi e itinerari sono di prova (int-…) e si cancellano alla fine; le tratte calcolate durante la
-// suite si tolgono con il loro computed_at, perché computeMissingLegs guarda tutti gli itinerari.
+// richiesta restituisce una linea retta tra i due punti, tranne quelle che toccano il luogo "broken",
+// che rispondono 500. Luoghi e itinerari sono di prova (int-…). Le tratte calcolate durante la suite
+// si tolgono con il loro computed_at, perché computeMissingLegs guarda tutto il catalogo.
 
 const s = Date.now();
 const startedAt = new Date(Date.now() - 1000);
@@ -26,13 +27,19 @@ let b = "";
 let c = "";
 let broken = "";
 let other = "";
-const itinerarySlugs = [slug("viaggio"), slug("guasto")];
+let far = "";
+let farAway = "";
+let userId = "";
+const templateSlug = slug("modello");
+const tripSlug = slug("viaggio-utente");
 
-// Un fetch simulato: linea retta, distanza 1000 m, 120 s. Il luogo "broken" risponde 500.
+// Un fetch simulato: linea retta, distanza 1000 m, 120 s. Le richieste che toccano il luogo "broken"
+// rispondono 500.
 function fakeRouter(brokenLng: number, brokenLat: number) {
   return vi.fn(async (input: string | URL | Request) => {
     const { from, to } = coordinatesOf(String(input));
-    const touchesBroken = (from[0] === brokenLng && from[1] === brokenLat) || (to[0] === brokenLng && to[1] === brokenLat);
+    const touchesBroken =
+      (from[0] === brokenLng && from[1] === brokenLat) || (to[0] === brokenLng && to[1] === brokenLat);
     if (touchesBroken) return new Response("internal", { status: 500 });
     return Response.json({
       code: "Ok",
@@ -50,6 +57,9 @@ beforeAll(async () => {
       { slug: slug("c"), name: "int C", ...place(13.35, 38.15) },
       { slug: slug("broken"), name: "int guasto", ...place(13.5, 38.25) },
       { slug: slug("other"), name: "int D", ...place(13.6, 38.3) },
+      // Palermo e Siracusa: oltre 150 km in linea d'aria, quindi mai nel catalogo.
+      { slug: slug("far"), name: "int Palermo", ...place(13.36, 38.12) },
+      { slug: slug("farAway"), name: "int Siracusa", ...place(15.29, 37.07) },
     ])
     .returning({ id: places.id, slug: places.slug });
   const id = (name: string) => rows.find((row) => row.slug === slug(name))!.id;
@@ -58,46 +68,53 @@ beforeAll(async () => {
   c = id("c");
   broken = id("broken");
   other = id("other");
+  far = id("far");
+  farAway = id("farAway");
 
   // Modello di prova: A, B nel primo giorno; C nel secondo. Una tappa senza luogo in mezzo.
-  const [trip] = await dbAdmin
+  const [template] = await dbAdmin
     .insert(itineraries)
-    .values({ title: slug("viaggio"), slug: slug("viaggio"), days: 2, isTemplate: true, ownerId: null })
+    .values({ title: templateSlug, slug: templateSlug, days: 2, isTemplate: true, ownerId: null })
     .returning({ id: itineraries.id });
   await dbAdmin.insert(itineraryItems).values([
-    { itineraryId: trip!.id, dayIndex: 0, position: 0, placeId: a },
-    { itineraryId: trip!.id, dayIndex: 0, position: 1, placeId: b },
-    { itineraryId: trip!.id, dayIndex: 0, position: 2, customTitle: "Pausa" },
-    { itineraryId: trip!.id, dayIndex: 1, position: 0, placeId: c },
+    { itineraryId: template!.id, dayIndex: 0, position: 0, placeId: a },
+    { itineraryId: template!.id, dayIndex: 0, position: 1, placeId: b },
+    { itineraryId: template!.id, dayIndex: 0, position: 2, customTitle: "Pausa" },
+    { itineraryId: template!.id, dayIndex: 1, position: 0, placeId: c },
   ]);
 
-  // Secondo itinerario: una tratta verso il luogo guasto, che il router non riesce a calcolare.
-  const [guasto] = await dbAdmin
+  // Viaggio di un utente: Palermo e Siracusa. Non è un modello, quindi la sua tratta non va calcolata.
+  userId = randomUUID();
+  await dbAdmin.execute(
+    sql`insert into auth.users (id, email, raw_user_meta_data) values (${userId}, ${`int-leg-${s}@example.com`}, '{"full_name": "Tratte int"}')`,
+  );
+  const [trip] = await dbAdmin
     .insert(itineraries)
-    .values({ title: slug("guasto"), slug: slug("guasto"), days: 1, isTemplate: true, ownerId: null })
+    .values({ title: tripSlug, slug: tripSlug, days: 1, isTemplate: false, ownerId: userId })
     .returning({ id: itineraries.id });
   await dbAdmin.insert(itineraryItems).values([
-    { itineraryId: guasto!.id, dayIndex: 0, position: 0, placeId: other },
-    { itineraryId: guasto!.id, dayIndex: 0, position: 1, placeId: broken },
+    { itineraryId: trip!.id, dayIndex: 0, position: 0, placeId: far },
+    { itineraryId: trip!.id, dayIndex: 0, position: 1, placeId: farAway },
   ]);
 });
 
 afterAll(async () => {
   vi.unstubAllGlobals();
-  await dbAdmin.delete(itineraries).where(inArray(itineraries.slug, itinerarySlugs));
+  await dbAdmin.delete(itineraries).where(inArray(itineraries.slug, [templateSlug, tripSlug]));
   await dbAdmin.delete(placeLegs).where(gte(placeLegs.computedAt, startedAt));
+  await dbAdmin.delete(placeLegFailures).where(gte(placeLegFailures.failedAt, startedAt));
   await dbAdmin.delete(places).where(sql`${places.slug} like ${`int-leg-${s}-%`}`);
+  if (userId) await dbAdmin.execute(sql`delete from auth.users where id = ${userId}`);
 });
 
 describe("tratte stradali su Postgres locale", () => {
-  it("calcola le coppie consecutive dei luoghi diversi, anche a cavallo dei giorni", async () => {
+  it("calcola le coppie consecutive dei modelli, anche a cavallo dei giorni", async () => {
     vi.stubGlobal("fetch", fakeRouter(13.5, 38.25));
 
     await computeMissingLegs(1000, { pauseMs: 0 });
     const legs = await getLegs([
       { from: a, to: b },
       { from: b, to: c },
-      { from: a, to: c },
     ]);
 
     expect(legs.map((leg) => [leg.fromPlaceId, leg.toPlaceId])).toEqual([
@@ -106,6 +123,21 @@ describe("tratte stradali su Postgres locale", () => {
     ]);
     expect(legs[0]).toMatchObject({ distanceM: 1000, durationS: 120 });
     expect(legs[0]!.coordinates).toHaveLength(2);
+  });
+
+  it("include le coppie del catalogo entro 150 km, anche se non sono in un modello", async () => {
+    const legs = await getLegs([
+      { from: a, to: c },
+      { from: c, to: a },
+    ]);
+    expect(legs).toHaveLength(2);
+  });
+
+  it("non calcola le coppie oltre 150 km né i viaggi degli utenti", async () => {
+    const pairs = await findMissingPairs(1000);
+    expect(pairs).not.toContainEqual({ from: far, to: farAway });
+    expect(pairs).not.toContainEqual({ from: farAway, to: far });
+    expect(await getLegs([{ from: far, to: farAway }])).toEqual([]);
   });
 
   it("è idempotente: una coppia salvata non si richiede di nuovo e non si duplica", async () => {
@@ -127,14 +159,28 @@ describe("tratte stradali su Postgres locale", () => {
     expect(requestedAB).toHaveLength(0);
   });
 
-  it("conta il fallimento del router e non salva nulla per quella coppia", async () => {
+  it("registra il fallimento, lo salta per sette giorni e lo riprova dopo", async () => {
     vi.stubGlobal("fetch", fakeRouter(13.5, 38.25));
 
     const result = await computeMissingLegs(1000, { pauseMs: 0 });
-
     expect(result.failed).toBeGreaterThanOrEqual(1);
-    const legs = await getLegs([{ from: other, to: broken }]);
-    expect(legs).toEqual([]);
+    expect(await getLegs([{ from: other, to: broken }])).toEqual([]);
+
+    const failure = await dbAdmin
+      .select({ failedAt: placeLegFailures.failedAt })
+      .from(placeLegFailures)
+      .where(and(eq(placeLegFailures.fromPlaceId, other), eq(placeLegFailures.toPlaceId, broken)));
+    expect(failure).toHaveLength(1);
+
+    // Entro sette giorni la coppia non si richiede di nuovo.
+    expect(await findMissingPairs(1000)).not.toContainEqual({ from: other, to: broken });
+
+    // Dopo sette giorni torna nella lista delle coppie da calcolare.
+    await dbAdmin
+      .update(placeLegFailures)
+      .set({ failedAt: sql`now() - interval '8 days'` })
+      .where(and(eq(placeLegFailures.fromPlaceId, other), eq(placeLegFailures.toPlaceId, broken)));
+    expect(await findMissingPairs(1000)).toContainEqual({ from: other, to: broken });
   });
 
   it("con una coppia che manca dalla tabella getLegs la omette senza errori", async () => {

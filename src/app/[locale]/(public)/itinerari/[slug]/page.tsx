@@ -7,7 +7,7 @@ import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
 import { ActionBar, ButtonLink } from "@/components/design";
 import { formatDuration } from "@/lib/format";
-import { consecutiveLegPairs } from "@/lib/maps/legs";
+import { consecutiveLegPairs, legsForPairs } from "@/lib/maps/legs";
 import { assignStopPhotos } from "@/lib/itinerary-photos";
 import { coverThumbUrl, type CoverMedia } from "@/lib/media";
 import { canonicalFor } from "@/lib/seo";
@@ -87,7 +87,7 @@ export default async function ItineraryPage({ params }: Props) {
   };
 
   // Nome del giorno: il titolo editoriale; senza titolo, i luoghi delle tappe di quel giorno.
-  const days: Day[] = Array.from({ length: itinerary.days }, (_, day) => {
+  const outline: Omit<Day, "legs">[] = Array.from({ length: itinerary.days }, (_, day) => {
     const items = itinerary.items.filter((item) => item.dayIndex === day);
     const places = [...new Set(items.flatMap((i) => (i.placeName ? [i.placeName] : [])))];
     const tipItem = items.find((i) => tipFor(i));
@@ -118,8 +118,11 @@ export default async function ItineraryPage({ params }: Props) {
     };
   });
 
-  // Tratte stradali tra le tappe consecutive di ogni giorno (place_legs; le mancanti sono "in calcolo").
-  const legs = await getLegs(days.flatMap((day) => consecutiveLegPairs(day.stops.map((stop) => stop.placeId))));
+  // Tratte stradali: una sola lettura per tutti i giorni, poi ogni giorno prende solo le sue coppie
+  // consecutive (le mancanti non compaiono e la mappa le disegna come arco "in calcolo").
+  const pairsByDay = outline.map((day) => consecutiveLegPairs(day.stops.map((stop) => stop.placeId)));
+  const allLegs = await getLegs(pairsByDay.flat());
+  const days: Day[] = outline.map((day, index) => ({ ...day, legs: legsForPairs(allLegs, pairsByDay[index] ?? []) }));
 
   const areaNames = itinerary.facts.areas.map(areaName);
   const firstPlace = itinerary.items.find((i) => i.placeName);
@@ -201,7 +204,7 @@ export default async function ItineraryPage({ params }: Props) {
           <p className="max-w-[680px] whitespace-pre-line text-body">{itinerary.description}</p>
         )}
 
-        <ItineraryDays days={days} legs={legs} />
+        <ItineraryDays days={days} />
 
         {itinerary.tips.length > 0 && (
           // Stessa superficie di LocalTip (is-localtip): decisione del 2026-10-21, vedi docs/design/components/LocalTip/README.md.

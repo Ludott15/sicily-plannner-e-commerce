@@ -4528,6 +4528,40 @@ CREATE TABLE IF NOT EXISTS "public"."partner_import_runs" (
 ALTER TABLE "public"."partner_import_runs" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."place_leg_failures" (
+    "from_place_id" "uuid" NOT NULL,
+    "to_place_id" "uuid" NOT NULL,
+    "failed_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "place_leg_failures_distinct_places" CHECK (("from_place_id" <> "to_place_id"))
+);
+
+
+ALTER TABLE "public"."place_leg_failures" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."place_legs" (
+    "from_place_id" "uuid" NOT NULL,
+    "to_place_id" "uuid" NOT NULL,
+    "distance_m" integer NOT NULL,
+    "duration_s" integer NOT NULL,
+    "geometry" "jsonb" NOT NULL,
+    "source" "text" DEFAULT 'osrm'::"text" NOT NULL,
+    "computed_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "place_legs_distance_non_negative" CHECK (("distance_m" >= 0)),
+    CONSTRAINT "place_legs_distinct_places" CHECK (("from_place_id" <> "to_place_id")),
+    CONSTRAINT "place_legs_duration_non_negative" CHECK (("duration_s" >= 0)),
+    CONSTRAINT "place_legs_geometry_size" CHECK (
+CASE
+    WHEN ("jsonb_typeof"("geometry") = 'array'::"text") THEN (("jsonb_array_length"("geometry") >= 2) AND ("jsonb_array_length"("geometry") <= 400))
+    ELSE false
+END),
+    CONSTRAINT "place_legs_source_osrm" CHECK (("source" = 'osrm'::"text"))
+);
+
+
+ALTER TABLE "public"."place_legs" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."places" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "slug" "text" NOT NULL,
@@ -5232,6 +5266,16 @@ ALTER TABLE ONLY "public"."partner_import_runs"
 
 
 
+ALTER TABLE ONLY "public"."place_leg_failures"
+    ADD CONSTRAINT "place_leg_failures_from_place_id_to_place_id_pk" PRIMARY KEY ("from_place_id", "to_place_id");
+
+
+
+ALTER TABLE ONLY "public"."place_legs"
+    ADD CONSTRAINT "place_legs_from_place_id_to_place_id_pk" PRIMARY KEY ("from_place_id", "to_place_id");
+
+
+
 ALTER TABLE ONLY "public"."places"
     ADD CONSTRAINT "places_pkey" PRIMARY KEY ("id");
 
@@ -5584,6 +5628,10 @@ CREATE INDEX "orders_user_id_idx" ON "public"."orders" USING "btree" ("user_id")
 
 
 CREATE INDEX "partner_import_runs_partner_started_at_idx" ON "public"."partner_import_runs" USING "btree" ("partner", "started_at");
+
+
+
+CREATE INDEX "place_legs_to_place_id_idx" ON "public"."place_legs" USING "btree" ("to_place_id");
 
 
 
@@ -6161,6 +6209,26 @@ ALTER TABLE ONLY "public"."order_shipments"
 
 ALTER TABLE ONLY "public"."orders"
     ADD CONSTRAINT "orders_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."place_leg_failures"
+    ADD CONSTRAINT "place_leg_failures_from_place_id_places_id_fk" FOREIGN KEY ("from_place_id") REFERENCES "public"."places"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."place_leg_failures"
+    ADD CONSTRAINT "place_leg_failures_to_place_id_places_id_fk" FOREIGN KEY ("to_place_id") REFERENCES "public"."places"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."place_legs"
+    ADD CONSTRAINT "place_legs_from_place_id_places_id_fk" FOREIGN KEY ("from_place_id") REFERENCES "public"."places"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."place_legs"
+    ADD CONSTRAINT "place_legs_to_place_id_places_id_fk" FOREIGN KEY ("to_place_id") REFERENCES "public"."places"("id") ON DELETE CASCADE;
 
 
 
@@ -6913,6 +6981,16 @@ ALTER TABLE "public"."partner_import_runs" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "partner_import_runs_select_admin" ON "public"."partner_import_runs" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."place_leg_failures" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."place_legs" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "place_legs_select_all" ON "public"."place_legs" FOR SELECT TO "authenticated", "anon" USING (true);
 
 
 
@@ -8670,6 +8748,49 @@ GRANT SELECT ON TABLE "public"."orders" TO "authenticated";
 
 GRANT ALL ON TABLE "public"."partner_import_runs" TO "service_role";
 GRANT SELECT ON TABLE "public"."partner_import_runs" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."place_leg_failures" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."place_legs" TO "service_role";
+
+
+
+GRANT SELECT("from_place_id") ON TABLE "public"."place_legs" TO "anon";
+GRANT SELECT("from_place_id") ON TABLE "public"."place_legs" TO "authenticated";
+
+
+
+GRANT SELECT("to_place_id") ON TABLE "public"."place_legs" TO "anon";
+GRANT SELECT("to_place_id") ON TABLE "public"."place_legs" TO "authenticated";
+
+
+
+GRANT SELECT("distance_m") ON TABLE "public"."place_legs" TO "anon";
+GRANT SELECT("distance_m") ON TABLE "public"."place_legs" TO "authenticated";
+
+
+
+GRANT SELECT("duration_s") ON TABLE "public"."place_legs" TO "anon";
+GRANT SELECT("duration_s") ON TABLE "public"."place_legs" TO "authenticated";
+
+
+
+GRANT SELECT("geometry") ON TABLE "public"."place_legs" TO "anon";
+GRANT SELECT("geometry") ON TABLE "public"."place_legs" TO "authenticated";
+
+
+
+GRANT SELECT("source") ON TABLE "public"."place_legs" TO "anon";
+GRANT SELECT("source") ON TABLE "public"."place_legs" TO "authenticated";
+
+
+
+GRANT SELECT("computed_at") ON TABLE "public"."place_legs" TO "anon";
+GRANT SELECT("computed_at") ON TABLE "public"."place_legs" TO "authenticated";
 
 
 

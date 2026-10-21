@@ -258,7 +258,7 @@ a.is-tabbar__item { color: var(--lava-muted); }
 .is-map-details[open] > summary { margin-bottom: var(--space-3); }
 /* Mappa con tappe numerate per tappa: marker attenuato se visitata, marker attivo più grande con anello. */
 .is-map__marker--visited { opacity: 0.55; }
-.is-map__marker--active { transform: scale(1.25); box-shadow: 0 0 0 3px var(--calce-raised), 0 0 0 5px var(--coccio), var(--shadow-card); }
+.is-map__marker--active { min-width: 36px; height: 36px; font-size: 15px; box-shadow: 0 0 0 3px var(--calce-raised), 0 0 0 5px var(--coccio), var(--shadow-card); }
 .is-map__arrow { display: inline-grid; place-items: center; color: var(--lava); pointer-events: none; }
 .is-map__legend { margin: 0; font-size: 13px; line-height: 18px; color: var(--lava-muted); }
 /* Barra di navigazione sotto la mappa: tappa precedente e successiva, tempo e distanza verso la successiva. */

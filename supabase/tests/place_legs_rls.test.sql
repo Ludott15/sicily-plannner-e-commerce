@@ -164,5 +164,91 @@ select throws_ok(
 select throws_ok($$update public.place_legs set distance_m = 1$$, '42501', null, 'admin via client: non modifica');
 select throws_ok($$delete from public.place_legs$$, '42501', null, 'admin via client: non cancella');
 
+----------------------------------------------------------------------------
+-- RLS ATTIVA, INDICE E TABELLA DEI FALLIMENTI (solo admin, via dbAdmin)
+----------------------------------------------------------------------------
+reset role;
+
+select ok(
+  (select relrowsecurity from pg_class where oid = 'public.place_legs'::regclass),
+  'place_legs: RLS attiva'
+);
+select ok(
+  (select relrowsecurity from pg_class where oid = 'public.place_leg_failures'::regclass),
+  'place_leg_failures: RLS attiva'
+);
+select has_index(
+  'public', 'place_legs', 'place_legs_to_place_id_idx', array['to_place_id'],
+  'place_legs: indice su to_place_id'
+);
+
+insert into public.places (id, slug, name, province, lat, lng) values
+  ('dddddddd-0000-0000-0000-0000000000a4', 'int-leg-d', 'Int D', 'PA', 38.12, 13.32);
+insert into public.place_leg_failures (from_place_id, to_place_id) values
+  ('dddddddd-0000-0000-0000-0000000000a2', 'dddddddd-0000-0000-0000-0000000000a1'),
+  ('dddddddd-0000-0000-0000-0000000000a4', 'dddddddd-0000-0000-0000-0000000000a1');
+
+select lives_ok(
+  $$delete from public.places where slug = 'int-leg-d'$$,
+  'cancellazione di un luogo con un fallimento registrato'
+);
+select is(
+  (select count(*)::int from public.place_leg_failures where from_place_id = 'dddddddd-0000-0000-0000-0000000000a4'),
+  0,
+  'cascata: il fallimento del luogo cancellato va via'
+);
+select is(
+  (select count(*)::int from public.place_leg_failures),
+  1,
+  'cascata: il fallimento dell''altro luogo resta'
+);
+select ok(
+  not has_table_privilege('anon', 'public.place_leg_failures', 'select, insert, update, delete'),
+  'anon: nessun grant sulla tabella dei fallimenti'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.place_leg_failures', 'select, insert, update, delete'),
+  'authenticated: nessun grant sulla tabella dei fallimenti'
+);
+
+select tests.as_anon();
+select throws_ok(
+  $$select 1 from public.place_leg_failures$$,
+  '42501', null,
+  'anon: non legge i fallimenti'
+);
+select throws_ok(
+  $$insert into public.place_leg_failures (from_place_id, to_place_id) values ('dddddddd-0000-0000-0000-0000000000a1', 'dddddddd-0000-0000-0000-0000000000a2')$$,
+  '42501', null,
+  'anon: non scrive un fallimento'
+);
+select throws_ok($$delete from public.place_leg_failures$$, '42501', null, 'anon: non cancella i fallimenti');
+
+select tests.authenticate_as('user');
+select throws_ok(
+  $$select 1 from public.place_leg_failures$$,
+  '42501', null,
+  'utente: non legge i fallimenti'
+);
+select throws_ok(
+  $$insert into public.place_leg_failures (from_place_id, to_place_id) values ('dddddddd-0000-0000-0000-0000000000a1', 'dddddddd-0000-0000-0000-0000000000a2')$$,
+  '42501', null,
+  'utente: non scrive un fallimento'
+);
+select throws_ok($$delete from public.place_leg_failures$$, '42501', null, 'utente: non cancella i fallimenti');
+
+select tests.authenticate_as('admin');
+select throws_ok(
+  $$select 1 from public.place_leg_failures$$,
+  '42501', null,
+  'admin via client: non legge i fallimenti (passa da dbAdmin)'
+);
+select throws_ok(
+  $$insert into public.place_leg_failures (from_place_id, to_place_id) values ('dddddddd-0000-0000-0000-0000000000a1', 'dddddddd-0000-0000-0000-0000000000a2')$$,
+  '42501', null,
+  'admin via client: non scrive un fallimento'
+);
+select throws_ok($$delete from public.place_leg_failures$$, '42501', null, 'admin via client: non cancella i fallimenti');
+
 select * from finish();
 rollback;

@@ -1,5 +1,55 @@
 import { describe, expect, it } from "vitest";
-import { consecutiveLegPairs, formatDistance, formatDuration } from "./legs";
+import { consecutiveLegPairs, formatDistance, formatDuration, legsForPairs, type RouteLeg } from "./legs";
+
+const leg = (from: string, to: string, distanceM = 1000): RouteLeg => ({
+  fromPlaceId: from,
+  toPlaceId: to,
+  distanceM,
+  durationS: 60,
+  coordinates: [
+    [14, 37.5],
+    [14.1, 37.6],
+  ],
+});
+
+describe("legsForPairs", () => {
+  it("restituisce le tratte nell'ordine delle coppie richieste", () => {
+    const legs = [leg("a", "b"), leg("b", "c"), leg("c", "a")];
+    expect(
+      legsForPairs(legs, [
+        { from: "b", to: "c" },
+        { from: "a", to: "b" },
+      ]),
+    ).toEqual([leg("b", "c"), leg("a", "b")]);
+  });
+
+  it("omette le coppie senza tratta calcolata, senza errori", () => {
+    const legs = [leg("a", "b")];
+    expect(
+      legsForPairs(legs, [
+        { from: "a", to: "c" },
+        { from: "a", to: "b" },
+      ]),
+    ).toEqual([leg("a", "b")]);
+  });
+
+  it("distingue la direzione: A→B non dà B→A", () => {
+    expect(legsForPairs([leg("a", "b")], [{ from: "b", to: "a" }])).toEqual([]);
+  });
+
+  it("non ripete una tratta richiesta due volte", () => {
+    expect(
+      legsForPairs([leg("a", "b")], [
+        { from: "a", to: "b" },
+        { from: "a", to: "b" },
+      ]),
+    ).toEqual([leg("a", "b")]);
+  });
+
+  it("restituisce un elenco vuoto senza coppie", () => {
+    expect(legsForPairs([leg("a", "b")], [])).toEqual([]);
+  });
+});
 
 describe("formatDuration", () => {
   it("scrive ore e minuti", () => {
