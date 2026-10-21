@@ -132,6 +132,12 @@ describe("parseCommonsResponse", () => {
       }),
     });
   });
+  it("ita-mibac (monumento censito) è un avviso di bene culturale, come cultural-heritage", () => {
+    const withMibac = parseCommonsResponse(apiResponse({ ...meta, Restrictions: "ita-mibac" }));
+    expect(withMibac).toEqual({ ok: true, file: expect.objectContaining({ warnings: ["cultural-heritage"] }) });
+    const both = parseCommonsResponse(apiResponse({ ...meta, Restrictions: "ita-mibac|cultural-heritage|personality" }));
+    expect(both).toEqual({ ok: true, file: expect.objectContaining({ warnings: ["cultural-heritage", "personality"] }) });
+  });
   it("rifiuta licenza SA o NC, file piccoli e download fuori allowlist", () => {
     expect(parseCommonsResponse(apiResponse({ ...meta, License: "cc-by-sa-4.0", LicenseShortName: "CC BY-SA 4.0" }))).toMatchObject({
       ok: false,

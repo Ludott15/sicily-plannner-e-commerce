@@ -100,9 +100,9 @@
   {
     "type": "activity",
     "slug": "erice-borgo",
-    "file": "File:Church of Saint Albert in Erice.jpg",
-    "motivo": "Chiesa di Sant'Alberto nel borgo di Erice (CC0). Una chiesa, non un bene statale",
-    "alt_it": "Chiesa di Sant'Alberto nel borgo di Erice",
+    "file": "File:Streets of Erice, Sicilia, Italy , july 2023, KP477.jpg",
+    "motivo": "Strade del borgo di Erice (CC BY 4.0): al posto della chiesa di Sant'Alberto, di cui non è verificata la proprietà pubblica",
+    "alt_it": "Strada del borgo di Erice",
     "allow_sa": false
   },
   {
@@ -222,9 +222,9 @@
   {
     "type": "activity",
     "slug": "ortigia-tour",
-    "file": "File:Cathedral of Syracuse.jpg",
-    "motivo": "Duomo di Siracusa, nel cuore di Ortigia (CC0)",
-    "alt_it": "Facciata barocca del duomo di Siracusa, in Ortigia",
+    "file": "File:Ortigia, vicolo terzo alla giudecca.JPG",
+    "motivo": "Vicolo di Ortigia, Siracusa (CC BY 2.5): al posto del duomo, che è un bene culturale ita-mibac",
+    "alt_it": "Vicolo di Ortigia, a Siracusa",
     "allow_sa": false
   },
   {
@@ -279,9 +279,10 @@
     "type": "activity",
     "slug": "morgantina",
     "file": "File:Aidone - Castellaccio - 2023-09-03 09-09-30 002.JPG",
-    "motivo": "Campagna di Aidone vista dal Castellaccio, paesaggio intorno al sito di Morgantina (CC BY-SA 4.0)",
-    "alt_it": "Campagna di Aidone vista dal Castellaccio, tra i fichi e le colline",
-    "allow_sa": true
+    "motivo": "Castellaccio di Aidone, monumento censito (Commons, categoria beni culturali): bene culturale in attesa di autorizzazione",
+    "alt_it": "Il Castellaccio di Aidone, con il paesaggio della campagna",
+    "allow_sa": true,
+    "bene_culturale": true
   },
   {
     "type": "activity",
@@ -294,9 +295,9 @@
   {
     "type": "activity",
     "slug": "mercato-ballaro",
-    "file": "File:Ballarò, pez espada, Palermo, Sicilia, Italia, 2015.JPG",
-    "motivo": "Banco del pesce spada nel mercato di Ballarò, Palermo (CC BY-SA 4.0). Un uomo di profilo, non riconoscibile",
-    "alt_it": "Pesce spada esposto in un banco del mercato di Ballarò",
+    "file": "File:Ballarò - Palermo, Italia - 28 Aprile 2023.jpg",
+    "motivo": "Facciata e banchi del mercato di Ballarò, Palermo (CC BY-SA 4.0). Nessuna persona riconoscibile",
+    "alt_it": "Facciata di un palazzo del mercato di Ballarò a Palermo, con i banchi in basso",
     "allow_sa": true
   }
 ]

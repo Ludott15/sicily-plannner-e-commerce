@@ -16,7 +16,7 @@
 import { config } from "dotenv";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
-import { chosenPages, chosenPhotosSchema } from "../../src/lib/media-chosen";
+import { CHOSEN_BATCH_SIZE, chosenPages, chosenPhotosSchema } from "../../src/lib/media-chosen";
 import { isLocalDatabase, localStorageWriter, readLocalSupabase } from "./local-storage";
 import type { FillItem } from "../../src/server/media/commons-fill.admin";
 
@@ -87,7 +87,9 @@ async function main() {
   const items: FillItem[] = [];
   let remaining = Infinity;
   while (remaining > 0) {
-    const room = args.limit === null ? 5 : Math.min(5, args.limit - items.length);
+    // Passi di CHOSEN_BATCH_SIZE voci (come chosenPages), con lo stesso insieme skip tra i passi:
+    // un'entità elaborata non torna in un passo successivo, anche in simulazione.
+    const room = args.limit === null ? CHOSEN_BATCH_SIZE : Math.min(CHOSEN_BATCH_SIZE, args.limit - items.length);
     if (room <= 0) break;
     const step = await fillCommonsPhotos({ skip, limit: room, allowSa: args.allowSa, userId: args.userId });
     if (step.items.length === 0) break;
