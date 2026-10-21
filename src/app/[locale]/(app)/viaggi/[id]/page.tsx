@@ -11,6 +11,8 @@ import { Tabs } from "@/components/layout/tabs";
 import { AnnounceOnLoad } from "@/components/trips/announce-on-load";
 import { TripActions } from "@/components/trips/trip-actions";
 import { TripBuilder, type BuilderBooking, type BuilderDay } from "@/components/trips/trip-builder";
+import { assignStopPhotos } from "@/lib/itinerary-photos";
+import { coverThumbUrl, type CoverMedia } from "@/lib/media";
 import { TodayPanel } from "@/components/trips/today-panel";
 import { romeToday } from "@/lib/trip-days";
 import { TRIP_TABS, type TripTab } from "@/lib/trip-tabs";
@@ -85,6 +87,23 @@ export default async function TripPage({ params, searchParams }: Props) {
     />
   );
 
+  // Una foto per tappa, senza ripetizioni in tutto il viaggio (docs/IMMAGINI.md): copertina propria
+  // dell'attività → del luogo → dell'area. Le tappe arrivano già in ordine di giorno e posizione.
+  const stopPhotos = assignStopPhotos(
+    trip.stops.map((s) => ({ key: s.id, chain: [s.activityCover?.id ?? null, s.placeCover?.id ?? null, s.areaCover?.id ?? null] })),
+  );
+  const mediaById = new Map<string, CoverMedia>();
+  for (const s of trip.stops) {
+    for (const cover of [s.activityCover, s.placeCover, s.areaCover]) {
+      if (cover) mediaById.set(cover.id, cover);
+    }
+  }
+  const thumbFor = (stopId: string): string | null => {
+    const id = stopPhotos.get(stopId) ?? null;
+    const cover = id === null ? undefined : mediaById.get(id);
+    return cover ? coverThumbUrl(cover) : null;
+  };
+
   const days: BuilderDay[] = Array.from({ length: trip.days }, (_, d) => {
     const stops = trip.stops.filter((s) => s.dayIndex === d);
     const places = [...new Set(stops.flatMap((s) => (s.placeName ? [s.placeName] : [])))];
@@ -103,6 +122,8 @@ export default async function TripPage({ params, searchParams }: Props) {
         // Coordinate del luogo, per la mappa del giorno (6.2).
         lat: s.lat,
         lng: s.lng,
+        // Miniatura della foto assegnata alla tappa (vedi sopra).
+        thumbUrl: thumbFor(s.id),
       })),
     };
   });

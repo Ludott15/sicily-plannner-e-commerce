@@ -86,7 +86,7 @@ export default async function FlightsPage({ params, searchParams }: Props) {
       <FlightSearch
         variant="full"
         initial={{
-          origin,
+          origin: origin === null ? null : getDeparture(origin),
           destination,
           departure: query.departure,
           returnDate: query.returnDate,

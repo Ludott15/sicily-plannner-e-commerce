@@ -1610,6 +1610,8 @@
     "originHint": "Scrivi una città, un nome o un codice, per esempio Milano o MXP.",
     "originListLabel": "Aeroporti di partenza",
     "originNoResults": "Nessun aeroporto trovato. Prova con la città o il codice IATA.",
+    "originSearching": "Cerco gli aeroporti…",
+    "originSearchError": "Non riusciamo a cercare gli aeroporti in questo momento. Riprova tra poco.",
     "originSicily": "Sei già in Sicilia: scegli un aeroporto di partenza fuori dall'isola.",
     "originRequired": "Scegli un aeroporto di partenza dalla lista.",
     "destination": "Arrivo in Sicilia",

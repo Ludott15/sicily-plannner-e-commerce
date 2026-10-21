@@ -1,0 +1,298 @@
+[
+  {
+    "type": "place",
+    "slug": "bronte",
+    "file": "File:95034 Bronte CT, Italy - panoramio.jpg",
+    "motivo": "Veduta di Bronte (CC BY). Da verificare a mano: mostra l'Etna sopra le case",
+    "alt_it": "Veduta di Bronte con l'Etna innevato sopra le case",
+    "allow_sa": false
+  },
+  {
+    "type": "place",
+    "slug": "etna",
+    "file": "File:2012 july Etna central crater eruption 3322 meters - panoramio (12).jpg",
+    "motivo": "Cratere centrale dell'Etna in attività (CC BY)",
+    "alt_it": "Eruzione al cratere centrale dell'Etna",
+    "allow_sa": false
+  },
+  {
+    "type": "place",
+    "slug": "riserva-dello-zingaro",
+    "file": "File:Riserva dello zingaro 2 - panoramio.jpg",
+    "motivo": "Costa rocciosa della riserva dello Zingaro (CC BY). Sostituisce la scelta automatica, che mostrava un pendio innevato di montagna",
+    "alt_it": "Costa rocciosa e mare della Riserva dello Zingaro",
+    "allow_sa": false
+  },
+  {
+    "type": "place",
+    "slug": "valle-dei-templi",
+    "file": "File:La valle dei templi Agrigento - panoramio.jpg",
+    "motivo": "Tempio di Giunone nella Valle dei Templi (CC BY)",
+    "alt_it": "Tempio di Giunone nella Valle dei Templi di Agrigento",
+    "allow_sa": false
+  },
+  {
+    "type": "place",
+    "slug": "calascibetta",
+    "file": "File:Calascibetta EN, Sicily, Italy - panoramio.jpg",
+    "motivo": "Calascibetta vista dalla valle (CC BY-SA 3.0)",
+    "alt_it": "Calascibetta sulla collina, vista dalla valle",
+    "allow_sa": true
+  },
+  {
+    "type": "place",
+    "slug": "siracusa",
+    "file": "File:Neapolis Archaelogical Park, with the The Basilica of the Madonna delle Lacrime in the Background, Syracuse, Sicily.jpg",
+    "motivo": "Parco archeologico della Neapolis con la basilica della Madonna delle Lacrime (CC0)",
+    "alt_it": "Parco archeologico della Neapolis a Siracusa, con la basilica della Madonna delle Lacrime sullo sfondo",
+    "allow_sa": false
+  },
+  {
+    "type": "place",
+    "slug": "sperlinga",
+    "file": "File:Castello sperlinga.JPG",
+    "motivo": "Castello di Sperlinga (pubblico dominio)",
+    "alt_it": "Il castello di Sperlinga, sulla roccia",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "cantina-entroterra",
+    "file": "File:Etna Wine Agriturismo, Passopisciaro, Sicily, Italy.jpg",
+    "motivo": "Vigneti dell'Etna, rappresentativi della cantina (CC BY 2.0)",
+    "alt_it": "Vigneto sull'Etna, con grappoli bianchi",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "casa-pirandello",
+    "file": "File:IMG 6572 - Agrigento - caos la casa natale di Luigi Pirandello - 2 di 2 -.jpg",
+    "motivo": "Caos di Agrigento, casa natale di Pirandello (CC BY-SA 2.0)",
+    "alt_it": "Il Caos di Agrigento, casa natale di Luigi Pirandello",
+    "allow_sa": true
+  },
+  {
+    "type": "activity",
+    "slug": "pescheria-catania",
+    "file": "File:Pescheria (Catania) 08 11 2025 08.jpg",
+    "motivo": "Bancarelle della pescheria di Catania (CC0)",
+    "alt_it": "Bancarelle di pesce alla pescheria di Catania",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "cous-cous",
+    "file": "File:Cous cous con pesce.jpg",
+    "motivo": "Cous cous con pesce, Cous Cous Fest di San Vito Lo Capo (CC BY-SA 4.0)",
+    "alt_it": "Piatto di cous cous con pesce",
+    "allow_sa": true
+  },
+  {
+    "type": "activity",
+    "slug": "barca-cefalu",
+    "file": "File:Cefalu isle.JPG",
+    "motivo": "Porto e costa di Cefalù con barche (CC0)",
+    "alt_it": "Porto di Cefalù con barche e costa rocciosa",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "erice-borgo",
+    "file": "File:Castle of Balio, Torretta Pepoli, Erice, Trapani province, Italy, july 2023.jpg",
+    "motivo": "Castello di Venere e torri di Balio, Erice (CC BY 4.0)",
+    "alt_it": "Il castello di Erice, sulla rupe",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "madonie-faggete",
+    "file": "File:IMG 7198 pianobattaglia.JPG",
+    "motivo": "Piano Battaglia e monte Mufara, Madonie (pubblico dominio)",
+    "alt_it": "Piano Battaglia innevato con la faggeta sul monte Mufara",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "egadi-barca",
+    "file": "File:Levanzo Tp.JPG",
+    "motivo": "Porticciolo di Levanzo, dal mare (CC BY-SA 3.0)",
+    "alt_it": "Porticciolo di Levanzo con barche",
+    "allow_sa": true
+  },
+  {
+    "type": "activity",
+    "slug": "kolymbethra",
+    "file": "File:Giardino della Kolymbetra Agrigento.JPG",
+    "motivo": "Giardino della Kolymbetra nella Valle dei Templi (CC BY-SA 4.0)",
+    "alt_it": "Giardino della Kolymbetra ad Agrigento, con agrumeti",
+    "allow_sa": true
+  },
+  {
+    "type": "activity",
+    "slug": "san-vito-relax",
+    "file": "File:San Vito Lo Capo view.jpg",
+    "motivo": "Marina di San Vito Lo Capo, con il monte Monaco (CC BY 3.0)",
+    "alt_it": "Marina di San Vito Lo Capo con il monte alle spalle",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "grotta-etna",
+    "file": "File:Grotta di scorrimento.jpg",
+    "motivo": "Ingresso di una grotta di scorrimento lavico sull'Etna (CC BY-SA 4.0)",
+    "alt_it": "Ingresso di una grotta di scorrimento lavico",
+    "allow_sa": true
+  },
+  {
+    "type": "activity",
+    "slug": "ceramica-caltagirone",
+    "file": "File:ScalaCaltagirone(b&n)daDavideRagusa.jpg",
+    "motivo": "Scalinata di Caltagirone rivestita di maiolica (CC0)",
+    "alt_it": "Scalinata di Caltagirone rivestita di piastrelle in maiolica",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "lavatoio-cefalu",
+    "file": "File:Lavatoio Medievale Cefalù 01.jpg",
+    "motivo": "Lavatoio medievale di Cefalù (CC BY 4.0)",
+    "alt_it": "Lavatoio medievale di Cefalù, con vasche di pietra",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "manna-castelbuono",
+    "file": "File:Maria Santissima Annunziata, Castelbuono 01.jpg",
+    "motivo": "Chiesa di Maria Santissima Annunziata a Castelbuono, nel paese della manna (CC BY 4.0). La manna non è ritratta; il castello è già la copertina di un luogo",
+    "alt_it": "Chiesa di Maria Santissima Annunziata a Castelbuono",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "fontane-bianche",
+    "file": "File:Fontane bianche - Alba sul mare - panoramio.jpg",
+    "motivo": "Alba sulla costa di Fontane Bianche (CC BY 3.0)",
+    "alt_it": "Alba sul mare a Fontane Bianche",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "spiaggia-cefalu",
+    "file": "File:Cefalu beach.JPG",
+    "motivo": "Spiaggia di Cefalù (CC0)",
+    "alt_it": "La spiaggia di Cefalù",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "modica-barocca",
+    "file": "File:Modica StGeorgeCathedral 0215.jpg",
+    "motivo": "Duomo di San Giorgio, Modica (CC BY-SA 4.0)",
+    "alt_it": "Duomo di San Giorgio a Modica",
+    "allow_sa": true
+  },
+  {
+    "type": "activity",
+    "slug": "museo-ceramica",
+    "file": "File:Gela, scodella in protomaiolica di tipo gela 2, 1233-1275 ca., da mus. reg. ceramica di caltagirone.JPG",
+    "motivo": "Scodella in protomaiolica esposta nel Museo regionale della ceramica di Caltagirone (CC BY-SA 3.0)",
+    "alt_it": "Scodella in protomaiolica esposta nel Museo regionale della ceramica di Caltagirone",
+    "allow_sa": true
+  },
+  {
+    "type": "activity",
+    "slug": "pantalica-trekking",
+    "file": "File:Anfore dalla necropoli nord-ovest di Pantalica, età del Bronzo Recente -FG1.jpg",
+    "motivo": "Anfore del corredo funerario della necropoli di Pantalica, reperti senza persone (CC0)",
+    "alt_it": "Anfore dell'età del Bronzo dalla necropoli di Pantalica",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "noto-barocco",
+    "file": "File:Noto Cathedral-pjt5.jpg",
+    "motivo": "Cattedrale di Noto (CC BY-SA 3.0); la granita non è ritratta",
+    "alt_it": "Cattedrale barocca di Noto",
+    "allow_sa": true
+  },
+  {
+    "type": "activity",
+    "slug": "ortigia-tour",
+    "file": "File:Cathedral of Syracuse.jpg",
+    "motivo": "Duomo di Siracusa, nel cuore di Ortigia (CC0)",
+    "alt_it": "Facciata barocca del duomo di Siracusa, in Ortigia",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "barca-ortigia",
+    "file": "File:Calafatari Siracusa.jpg",
+    "motivo": "Barche tirate in secca nel porto di Ortigia, mestiere della zona (CC0)",
+    "alt_it": "Barche tirate in secca nel porto di Ortigia a Siracusa",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "pistacchio-bronte",
+    "file": "File:Pistacchio di Bronte.jpg",
+    "motivo": "Pistacchi sull'albero, prodotto di Bronte (CC BY-SA 3.0)",
+    "alt_it": "Pistacchi maturi sull'albero",
+    "allow_sa": true
+  },
+  {
+    "type": "activity",
+    "slug": "masseria-enna",
+    "file": "File:Pecorino siciliano DOP.jpg",
+    "motivo": "Pecorino siciliano DOP, prodotto tipico delle masserie dell'ennese; foto del prodotto, non di una masseria (CC BY 4.0)",
+    "alt_it": "Pecorino siciliano DOP stagionato",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "pizzo-carbonara",
+    "file": "File:Scree slope at the Pizzo Carbonara, Sicily, Italy.jpg",
+    "motivo": "Pendio del Pizzo Carbonara, Madonie (CC BY-SA 4.0)",
+    "alt_it": "Pendio roccioso del Pizzo Carbonara, con la neve",
+    "allow_sa": true
+  },
+  {
+    "type": "activity",
+    "slug": "rocca-cefalu",
+    "file": "File:Cefalu 2015.jpg",
+    "motivo": "Cefalù vista dalla Rocca (CC0)",
+    "alt_it": "Cefalù vista dalla Rocca, tra case e mare",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "scala-turchi",
+    "file": "File:Scala dei Turchi.jpg",
+    "motivo": "La Scala dei Turchi (pubblico dominio)",
+    "alt_it": "La Scala dei Turchi, rocce bianche sul mare",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "morgantina",
+    "file": "File:Morgantina pan teatro.JPG",
+    "motivo": "Teatro di Morgantina (pubblico dominio)",
+    "alt_it": "Teatro dell'antica Morgantina",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "mondello-spiaggia",
+    "file": "File:Mondello Beach in Spring.jpg",
+    "motivo": "Spiaggia di Mondello con Monte Pellegrino (CC BY 4.0)",
+    "alt_it": "Spiaggia di Mondello con Monte Pellegrino sullo sfondo",
+    "allow_sa": false
+  },
+  {
+    "type": "activity",
+    "slug": "mercato-ballaro",
+    "file": "File:Ballarò Palermo.JPG",
+    "motivo": "Mercato di Ballarò, Palermo (CC BY-SA 3.0)",
+    "alt_it": "Mercato di Ballarò a Palermo, con banchi di frutta e verdura",
+    "allow_sa": true
+  }
+]

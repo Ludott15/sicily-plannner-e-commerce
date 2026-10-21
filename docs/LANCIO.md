@@ -79,6 +79,22 @@ Il bucket `media` e le sue policy arrivano con le migrazioni (`supabase db push`
 
 Regole complete in [IMMAGINI.md](IMMAGINI.md).
 
+Foto per tutto il catalogo, in locale o sul database di produzione con il suo script:
+
+- `npm run media:commons-fill -- --dry-run` stampa la foto scelta per ogni luogo, attività e area senza foto vera, senza scrivere; `--limit N` ne elabora al massimo N;
+- `npm run media:commons-fill -- --user <uuid-admin>` importa le foto scelte e le assegna come copertina. Stessa logica di Immagini → Foto da Commons, con la pertinenza automatica per le attività (titolo e luogo, mai il solo luogo);
+- un'attività senza foto propria mostra la foto del luogo: nessuna foto si ripete nello stesso itinerario o nel viaggio (`src/lib/itinerary-photos.ts`).
+
+## 3b. Voli: aeroporti di partenza nel mondo
+
+Fonte: [OurAirports](https://ourairports.com/data/) (dati pubblici, pubblico dominio), file `airports.csv` e `countries.csv`. Lo script filtra gli aeroporti grandi e medi con servizio di linea e codice IATA, esclude quelli siciliani (sono gli arrivi) e riscrive `src/data/departure-airports.json`, che si committa:
+
+- aggiornamento: `npm run data:airports` (scarica i CSV); oppure `npm run data:airports -- --input <cartella>` con i CSV già scaricati;
+- la città in italiano viene da una tabella di traduzioni per le città principali; le altre usano il nome locale. Il paese nella lingua della pagina viene da `Intl.DisplayNames`;
+- le partenze si cercano dalla route `GET /api/flights/airports?q=` (il file pesa oltre 60 KB compressi, quindi non entra nel bundle del browser).
+
+Da rifare a ogni aggiornamento dei dati: controllare le città in italiano e i casi di comuni vicini (`CITY_BY_IATA` in `scripts/data/airports.mjs`).
+
 ## 4. Partner affiliati
 
 | Voce | Valore | Verifica |

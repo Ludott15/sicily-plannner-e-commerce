@@ -1,13 +1,14 @@
 "use client";
 
-import { useId, useMemo, useState, useTransition, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useId, useState, useTransition, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/design/button";
 import { DateField } from "@/components/design/date-field";
 import { Select } from "@/components/design/select";
 import { isSicilyAirport, SICILY_AIRPORT_CODES, SICILY_AIRPORTS, type SicilyAirportCode } from "@/lib/flights/airports";
-import { getDeparture, normalizeSearchText, searchDepartures, type DepartureAirport } from "@/lib/flights/departures";
+import { airportsResponseSchema, countryName, type DepartureAirport } from "@/lib/flights/airport-api";
 import { MAX_PASSENGERS, serializeFlightSearchParams } from "@/lib/flights/search-params";
+import { normalizeSearchText } from "@/lib/flights/search-text";
 import { useRouter } from "@/lib/i18n/navigation";
 import { cn } from "@/lib/utils";
 
@@ -19,9 +20,11 @@ import { cn } from "@/lib/utils";
 // - Arrivo: uno dei sei aeroporti siciliani. Predefinito CTA.
 // - "Scambia" è visibile ma disabilitato: l'arrivo è sempre in Sicilia.
 // - variant "compact" sta sotto l'hero della home e nella barra delle proposte; "full" è /voli.
+// - Le partenze arrivano dalla route GET /api/flights/airports (elenco mondiale, lato server), con
+//   un breve ritardo dopo la digitazione. La partenza iniziale la risolve la pagina e la passa intera.
 
 export type FlightSearchInitial = {
-  origin: string | null;
+  origin: DepartureAirport | null;
   destination: SicilyAirportCode | null;
   departure: string | null;
   returnDate: string | null;
@@ -40,12 +43,16 @@ type FieldError = "origin" | "departure" | "return";
 const DEFAULT_DESTINATION: SicilyAirportCode = "CTA";
 const PASSENGER_OPTIONS = Array.from({ length: MAX_PASSENGERS }, (_, i) => i + 1);
 const MIN_SICILY_QUERY = 3;
+const SEARCH_DEBOUNCE_MS = 150;
 const control =
   "min-h-11 w-full rounded-sm border-[1.5px] border-border-control bg-calce-raised px-3 text-body text-lava placeholder:text-lava-muted focus-visible:outline-2 focus-visible:outline-focus";
 
 function cityLabel(airport: DepartureAirport, lang: Lang): string {
   return `${lang === "en" ? airport.city_en : airport.city_it} (${airport.iata})`;
 }
+
+// Risultato dell'ultima ricerca: vale solo per il testo `text` che l'ha chiesta.
+type OriginSearch = { text: string; airports: DepartureAirport[]; failed: boolean };
 
 // La ricerca corrisponde a un aeroporto siciliano (codice, città o nome) da tre lettere in su.
 function isSicilianQuery(query: string): boolean {
@@ -78,9 +85,10 @@ export function FlightSearch({ variant, initial }: FlightSearchProps) {
   const dateErrorId = `${id}-date-error`;
   const full = variant === "full";
 
-  const initialOrigin = initial.origin ? getDeparture(initial.origin) : null;
+  const initialOrigin = initial.origin;
   const [origin, setOrigin] = useState<DepartureAirport | null>(initialOrigin);
   const [query, setQuery] = useState(initialOrigin ? cityLabel(initialOrigin, lang) : "");
+  const [search, setSearch] = useState<OriginSearch>({ text: "", airports: [], failed: false });
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [destination, setDestination] = useState<SicilyAirportCode>(initial.destination ?? DEFAULT_DESTINATION);
@@ -90,11 +98,41 @@ export function FlightSearch({ variant, initial }: FlightSearchProps) {
   const [passengers, setPassengers] = useState(initial.passengers);
   const [error, setError] = useState<FieldError | null>(null);
 
-  const matches = useMemo(() => searchDepartures(query), [query]);
+  const trimmed = query.trim();
+  // I risultati valgono solo per il testo che li ha chiesti: mentre si digita non si mostra un elenco vecchio.
+  const answered = search.text === trimmed;
+  const matches = origin === null && answered && !search.failed ? search.airports : [];
+  const searching = origin === null && trimmed !== "" && !answered;
+  const failed = origin === null && answered && search.failed;
   const sicilian = origin === null && isSicilianQuery(query);
   const showList = open && origin === null && matches.length > 0;
-  const showEmpty = open && origin === null && query.trim() !== "" && matches.length === 0 && !sicilian;
+  const showSearching = open && searching;
+  const showFailed = open && failed;
+  const showEmpty = open && origin === null && answered && !failed && matches.length === 0 && trimmed !== "" && !sicilian;
   const optionId = (index: number) => `${listId}-option-${index}`;
+
+  useEffect(() => {
+    if (origin !== null || trimmed === "") return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams({ q: trimmed });
+      fetch(`/api/flights/airports?${params.toString()}`, { signal: controller.signal, headers: { Accept: "application/json" } })
+        .then(async (res) => {
+          if (!res.ok) throw new Error(`status ${res.status}`);
+          const parsed = airportsResponseSchema.safeParse(await res.json());
+          if (!parsed.success) throw new Error("invalid_response");
+          setSearch({ text: trimmed, airports: parsed.data.airports, failed: false });
+        })
+        .catch(() => {
+          if (controller.signal.aborted) return;
+          setSearch({ text: trimmed, airports: [], failed: true });
+        });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [trimmed, origin]);
 
   function choose(airport: DepartureAirport) {
     setOrigin(airport);
@@ -244,6 +282,16 @@ export function FlightSearch({ variant, initial }: FlightSearchProps) {
               {t("originNoResults")}
             </p>
           )}
+          {showSearching && (
+            <p role="status" className="text-body-s text-lava-muted">
+              {t("originSearching")}
+            </p>
+          )}
+          {showFailed && (
+            <p role="status" className="text-body-s text-danger">
+              {t("originSearchError")}
+            </p>
+          )}
           <ul
             id={listId}
             role="listbox"
@@ -261,10 +309,10 @@ export function FlightSearch({ variant, initial }: FlightSearchProps) {
                 onClick={() => choose(airport)}
                 className="flex min-h-11 cursor-pointer flex-col justify-center px-3 py-1.5 aria-selected:bg-coccio-tint"
               >
-                <span className="text-body font-semibold">{cityLabel(airport, lang)}</span>
-                <span className="text-caption text-lava-muted">
-                  {airport.name} · {airport.country}
+                <span className="text-body font-semibold">
+                  {`${lang === "en" ? airport.city_en : airport.city_it} · ${airport.iata} · ${countryName(airport.country, lang)}`}
                 </span>
+                <span className="text-caption text-lava-muted">{airport.name}</span>
               </li>
             ))}
           </ul>

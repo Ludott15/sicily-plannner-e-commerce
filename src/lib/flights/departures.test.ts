@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { countryName } from "./airport-api";
 import { SICILY_AIRPORT_CODES } from "./airports";
 import { DEPARTURE_AIRPORTS, getDeparture, normalizeSearchText, searchDepartures } from "./departures";
 
@@ -13,14 +14,20 @@ describe("elenco partenze", () => {
     }
   });
 
-  it("circa 120 aeroporti", () => {
-    expect(DEPARTURE_AIRPORTS.length).toBeGreaterThanOrEqual(110);
-    expect(DEPARTURE_AIRPORTS.length).toBeLessThanOrEqual(130);
+  it("elenco mondiale: centinaia di aeroporti in più paesi, non solo in Europa", () => {
+    expect(DEPARTURE_AIRPORTS.length).toBeGreaterThan(2500);
+    const countries = new Set(DEPARTURE_AIRPORTS.map((a) => a.country));
+    expect(countries.size).toBeGreaterThan(150);
+    expect(countries.has("US")).toBe(true);
+    expect(countries.has("JP")).toBe(true);
+    expect(countries.has("BR")).toBe(true);
   });
 
-  it("getDeparture accetta il codice in qualsiasi maiuscola", () => {
+  it("getDeparture accetta il codice in qualsiasi maiuscola, anche fuori dall'Europa", () => {
     expect(getDeparture("fco")?.city_it).toBe("Roma");
+    expect(getDeparture("jfk")?.city_it).toBe("Nuova York");
     expect(getDeparture("XXX")).toBeNull();
+    expect(getDeparture("CTA")).toBeNull();
   });
 });
 
@@ -29,6 +36,14 @@ describe("normalizeSearchText", () => {
     expect(normalizeSearchText("  Düsseldorf ")).toBe("dusseldorf");
     expect(normalizeSearchText("Reggio-Calabria")).toBe("reggio calabria");
     expect(normalizeSearchText("Forlì")).toBe("forli");
+  });
+});
+
+describe("countryName", () => {
+  it("nome del paese nella lingua richiesta", () => {
+    expect(countryName("US", "it")).toBe("Stati Uniti");
+    expect(countryName("US", "en")).toBe("United States");
+    expect(countryName("XX", "it")).toBe("XX");
   });
 });
 
@@ -42,6 +57,7 @@ describe("searchDepartures", () => {
   it("trova per codice IATA esatto come primo risultato", () => {
     expect(searchDepartures("FCO")[0]?.iata).toBe("FCO");
     expect(searchDepartures("fco")[0]?.iata).toBe("FCO");
+    expect(searchDepartures("JFK")[0]?.iata).toBe("JFK");
   });
 
   it("trova per città senza accenti e maiuscole", () => {
@@ -55,15 +71,28 @@ describe("searchDepartures", () => {
     expect(searchDepartures("gatwick")[0]?.iata).toBe("LGW");
   });
 
+  it("trova New York, anche in inglese, e i suoi aeroporti", () => {
+    const codes = searchDepartures("New York", 12).map((a) => a.iata);
+    expect(codes).toContain("JFK");
+    expect(searchDepartures("nuova york", 12).map((a) => a.iata)).toContain("JFK");
+  });
+
   it("per città restituisce tutti gli aeroporti della città", () => {
     const codes = searchDepartures("milano", 10).map((a) => a.iata);
     expect(codes).toEqual(expect.arrayContaining(["MXP", "LIN"]));
   });
 
-  it("i prefissi dei codici e delle città contano più delle parole interne", () => {
-    const results = searchDepartures("lon", 10);
+  it("trova per paese nella lingua della ricerca", () => {
+    const results = searchDepartures("stati uniti", 12);
     expect(results.length).toBeGreaterThan(0);
-    expect(results.every((a) => a.city_en === "London" || a.iata.startsWith("LON"))).toBe(true);
+    expect(results.every((a) => a.country === "US")).toBe(true);
+    expect(searchDepartures("united states", 12).every((a) => a.country === "US")).toBe(true);
+  });
+
+  it("i prefissi dei codici e delle città contano più delle parole interne", () => {
+    const results = searchDepartures("london", 10);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.slice(0, 2).every((a) => a.city_en === "London")).toBe(true);
   });
 
   it("nessuna corrispondenza restituisce un elenco vuoto", () => {

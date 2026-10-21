@@ -62,7 +62,7 @@ export default async function FlightRoutePage({ params }: Props) {
       <FlightSearch
         variant="compact"
         initial={{
-          origin: route.origin,
+          origin: getDeparture(route.origin),
           destination: route.destination,
           departure: null,
           returnDate: null,

@@ -471,6 +471,7 @@ export const getTemplate = cache((slug: string) =>
         placeAreaId: places.areaId,
         areaNameIt: areas.nameIt,
         areaNameEn: areas.nameEn,
+        activityCover: coverJson(activities.coverMediaId),
         placeCover: coverJson(places.coverMediaId),
         areaCover: areaCoverJson(places.areaId),
       })

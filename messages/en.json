@@ -1610,6 +1610,8 @@
     "originHint": "Type a city, a name or a code, for example Milan or MXP.",
     "originListLabel": "Departure airports",
     "originNoResults": "No airport found. Try the city or the IATA code.",
+    "originSearching": "Searching airports…",
+    "originSearchError": "We cannot search airports right now. Try again shortly.",
     "originSicily": "You are already in Sicily: pick a departure airport outside the island.",
     "originRequired": "Pick a departure airport from the list.",
     "destination": "Arrival in Sicily",

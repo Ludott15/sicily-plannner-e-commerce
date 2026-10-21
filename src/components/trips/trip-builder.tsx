@@ -55,6 +55,8 @@ export type BuilderStop = {
   /** Coordinate del luogo della tappa (6.2): null se il luogo non ha un punto sulla mappa. */
   lat: number | null;
   lng: number | null;
+  /** Miniatura della foto della tappa (src/lib/itinerary-photos.ts): null se la catena è esaurita. */
+  thumbUrl: string | null;
 };
 
 export type BuilderDay = { name: string; note: string; stops: BuilderStop[] };

@@ -36,8 +36,23 @@ test("la partenza si sceglie dalla tastiera", async ({ page }) => {
   await origin.press("ArrowDown");
   await expect(origin).toHaveAttribute("aria-activedescendant", /.+/);
   await origin.press("Enter");
-  await expect(origin).toHaveValue("Milano (MXP)");
+  // Milano ha due aeroporti (MXP, LIN): la prima voce dipende dall'ordine per codice.
+  await expect(origin).toHaveValue(/^Milano ((MXP|LIN))$/);
   await expect(list).toBeHidden();
+});
+
+test("la partenza si cerca in tutto il mondo: per città e per codice", async ({ page }) => {
+  await page.goto("/it/voli");
+  const origin = page.getByRole("combobox", { name: "Partenza" });
+  const list = page.getByRole("listbox", { name: "Aeroporti di partenza" });
+
+  await origin.fill("New York");
+  await expect(list).toBeVisible();
+  await expect(list.getByRole("option", { name: /JFK/ })).toBeVisible();
+
+  await origin.fill("JFK");
+  await expect(list.getByRole("option").first()).toContainText("JFK");
+  await expect(list.getByRole("option").first()).toContainText("Stati Uniti");
 });
 
 test("Esc chiude l'elenco delle partenze", async ({ page }) => {

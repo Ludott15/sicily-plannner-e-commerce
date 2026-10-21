@@ -7,7 +7,8 @@ import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
 import { ActionBar, ButtonLink } from "@/components/design";
 import { formatDuration } from "@/lib/format";
-import { mediaUrl, variantPath, type CoverMedia } from "@/lib/media";
+import { assignStopPhotos } from "@/lib/itinerary-photos";
+import { coverThumbUrl, type CoverMedia } from "@/lib/media";
 import { canonicalFor } from "@/lib/seo";
 import { breadcrumbList, touristTrip } from "@/lib/structured-data";
 import { getTemplate } from "@/server/catalog/queries";
@@ -38,13 +39,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-// Miniatura quadrata della tappa, dalla foto del luogo (o dall'illustrazione, che è un SVG).
-function stopThumb(cover: CoverMedia | null): string | null {
-  if (!cover) return null;
-  if (cover.kind === "illustration" || cover.variantsVersion === 0) return mediaUrl(cover.storagePath);
-  return mediaUrl(variantPath(cover.id, cover.variantsVersion, "1x1", 480, "webp"));
-}
-
 export default async function ItineraryPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
@@ -69,6 +63,27 @@ export default async function ItineraryPage({ params }: Props) {
   const nightName = (night: { placeName: string | null; areaNameIt: string | null; areaNameEn: string | null }) =>
     night.placeName ?? (locale === "en" ? night.areaNameEn : night.areaNameIt) ?? null;
 
+  // Una foto per tappa, senza ripetizioni in tutto l'itinerario (docs/IMMAGINI.md): copertina propria
+  // dell'attività → del luogo → dell'area. La copertina in cima alla pagina è riservata: non compare anche su una tappa.
+  const stopPhotos = assignStopPhotos(
+    itinerary.items.map((item) => ({
+      key: item.id,
+      chain: [item.activityCover?.id ?? null, item.placeCover?.id ?? null, item.areaCover?.id ?? null],
+    })),
+    new Set(itinerary.cover ? [itinerary.cover.media.id] : []),
+  );
+  const mediaById = new Map<string, CoverMedia>();
+  for (const item of itinerary.items) {
+    for (const cover of [item.activityCover, item.placeCover, item.areaCover]) {
+      if (cover) mediaById.set(cover.id, cover);
+    }
+  }
+  const thumbFor = (itemId: string): string | null => {
+    const id = stopPhotos.get(itemId) ?? null;
+    const cover = id === null ? undefined : mediaById.get(id);
+    return cover ? coverThumbUrl(cover) : null;
+  };
+
   // Nome del giorno: il titolo editoriale; senza titolo, i luoghi delle tappe di quel giorno.
   const days: Day[] = Array.from({ length: itinerary.days }, (_, day) => {
     const items = itinerary.items.filter((item) => item.dayIndex === day);
@@ -85,7 +100,7 @@ export default async function ItineraryPage({ params }: Props) {
           .filter(Boolean)
           .join(" · ") || null,
       note: item.notes,
-      thumbUrl: stopThumb(item.placeCover),
+      thumbUrl: thumbFor(item.id),
       durationMin: item.activityDurationMin,
       // Coordinate del luogo della tappa, per la mappa del giorno (6.2).
       lat: item.lat,
