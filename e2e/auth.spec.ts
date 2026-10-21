@@ -95,7 +95,7 @@ test("ospite: crea un itinerario, salva l'account con il codice e l'itinerario r
 
   const email = testEmail();
   const before = await lastMessageId(request, email);
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Mandami il codice" }).click();
   await expect(page.getByRole("status")).toContainText(email);
   await page.getByLabel("Codice di 6 cifre").fill(await waitForCode(request, email, before));
@@ -120,10 +120,10 @@ test("ospite con l'email di un account esistente: errore, resta ospite", async (
   await page.goto("/it/login");
   await page.getByRole("button", { name: "Continua senza account" }).click();
   await expect(page).toHaveURL(/\/it\/profilo$/);
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Mandami il codice" }).click();
   await expect(page.locator("main").getByRole("alert")).toContainText("Questa email ha già un account.");
-  await expect(page.getByLabel("Email")).toHaveValue(email);
+  await expect(page.getByLabel("Email", { exact: true })).toHaveValue(email);
   await expect(page.getByRole("heading", { name: "Stai usando Isula come ospite" })).toBeVisible();
 
   // Nel database: l'ospite resta senza email, l'account dell'altro utente non cambia.
@@ -146,7 +146,7 @@ test("ospite: senza il codice giusto l'email non è sua", async ({ page, request
 
   // Chiede il codice per un'email nuova ma non lo verifica: l'email resta in attesa, non sua.
   const email = testEmail();
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Mandami il codice" }).click();
   await expect(page.getByRole("status")).toContainText(email);
   const code = await waitForCode(request, email);

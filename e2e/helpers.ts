@@ -59,7 +59,7 @@ export async function waitForMagicLink(request: APIRequestContext, email: string
 // Chiede il codice dalla pagina di accesso (il bottone si attiva quando Turnstile ha dato il token).
 export async function requestLoginCode(page: Page, email: string) {
   await page.goto("/it/login");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Mandami il codice" }).click();
   await expect(page.getByRole("status")).toContainText(email);
 }
