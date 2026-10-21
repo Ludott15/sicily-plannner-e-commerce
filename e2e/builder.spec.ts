@@ -49,7 +49,7 @@ test("criterio M5: ospite, usa un itinerario pronto, registrazione con codice, i
   // Registrazione con il codice dal profilo: stesso user id, ora con email.
   const email = testEmail();
   await page.goto("/it/profilo");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Mandami il codice" }).click();
   await page.getByLabel("Codice di 6 cifre").fill(await waitForCode(request, email));
   await page.getByRole("button", { name: "Salva il mio account" }).click();

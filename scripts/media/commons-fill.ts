@@ -16,6 +16,8 @@
 import { config } from "dotenv";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
+import { CHOSEN_BATCH_SIZE, chosenPages, chosenPhotosSchema } from "../../src/lib/media-chosen";
+import { isLocalDatabase, localStorageWriter, readLocalSupabase } from "./local-storage";
 import type { FillItem } from "../../src/server/media/commons-fill.admin";
 
 type Args = { dryRun: boolean; userId: string | null; limit: number | null; allowSa: boolean; fromFile: string | null; slugPrefix: string };
@@ -24,9 +26,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function parseArgs(argv: readonly string[]): Args | { error: string } {
   const args: Args = { dryRun: true, userId: null, limit: null, allowSa: false, fromFile: null, slugPrefix: "" };
+  let dryFlag = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--dry-run") args.dryRun = true;
+    if (arg === "--dry-run") {
+      args.dryRun = true;
+      dryFlag = true;
+    }
     else if (arg === "--allow-sa") args.allowSa = true;
     else if (arg === "--from-file") {
       const value = argv[++i] ?? "";
@@ -46,6 +52,7 @@ function parseArgs(argv: readonly string[]): Args | { error: string } {
       return { error: `opzione sconosciuta: ${arg ?? ""}` };
     }
   }
+  if (dryFlag && args.userId !== null) return { error: "--dry-run e --user non possono stare insieme: la simulazione non scrive" };
   if (!args.dryRun && args.userId === null) return { error: "per scrivere serve --user <uuid>; senza, c'è solo --dry-run" };
   return args;
 }
@@ -61,7 +68,12 @@ async function main() {
   }
   const args = parsed;
   if (args.fromFile !== null) {
-    await runFromFile(args.fromFile, args.slugPrefix, args.userId);
+    await runFromFile(args.fromFile, args.slugPrefix, args.dryRun ? null : args.userId);
+    return;
+  }
+  if (args.userId !== null) {
+    console.error("Con --user l'assegnazione automatica non si esegue da script: usa --from-file (scelte della redazione) o il pulsante admin.");
+    process.exitCode = 1;
     return;
   }
   const { fillCommonsPhotos } = await import("../../src/server/media/commons-fill.admin");
@@ -74,10 +86,14 @@ async function main() {
   const skip = new Set<string>();
   const items: FillItem[] = [];
   let remaining = Infinity;
+  // Pagine scelte nei passi precedenti: in simulazione non sono nel database, ma non vanno riproposte.
+  const chosenFiles = new Set<string>();
   while (remaining > 0) {
-    const room = args.limit === null ? 5 : Math.min(5, args.limit - items.length);
+    // Passi di CHOSEN_BATCH_SIZE voci (come chosenPages), con lo stesso insieme skip tra i passi:
+    // un'entità elaborata non torna in un passo successivo, anche in simulazione.
+    const room = args.limit === null ? CHOSEN_BATCH_SIZE : Math.min(CHOSEN_BATCH_SIZE, args.limit - items.length);
     if (room <= 0) break;
-    const step = await fillCommonsPhotos({ skip, limit: room, allowSa: args.allowSa, userId: args.userId });
+    const step = await fillCommonsPhotos({ skip, limit: room, allowSa: args.allowSa, userId: args.userId, chosenPages: chosenFiles });
     if (step.items.length === 0) break;
     for (const item of step.items) {
       skip.add(item.key);
@@ -91,25 +107,54 @@ async function main() {
   process.exit(0);
 }
 
-type Chosen = { type: "activity" | "place"; slug: string; file: string; motivo: string; alt_it: string; allow_sa: boolean };
-
-function readChosen(raw: unknown): Chosen[] {
-  if (!Array.isArray(raw)) throw new Error("il file delle scelte deve essere un array");
-  return raw.map((entry: unknown, index) => {
-    const e = entry as Record<string, unknown>;
-    const ok = (e.type === "activity" || e.type === "place") && typeof e.slug === "string" && typeof e.file === "string" && e.file.startsWith("File:") && typeof e.motivo === "string" && typeof e.alt_it === "string" && e.alt_it.trim() !== "";
-    if (!ok) throw new Error(`voce ${index + 1} non valida: servono type (activity|place), slug, file "File:…", motivo, alt_it`);
-    if (e.allow_sa !== undefined && typeof e.allow_sa !== "boolean") throw new Error(`voce ${index + 1}: allow_sa deve essere true o false`);
-    return { type: e.type as Chosen["type"], slug: e.slug as string, file: e.file as string, motivo: e.motivo as string, alt_it: e.alt_it as string, allow_sa: e.allow_sa === true };
-  });
-}
-
 async function runFromFile(file: string, slugPrefix: string, userId: string | null) {
-  const chosen = readChosen(JSON.parse(await readFile(path.join(process.cwd(), file), "utf8")) as unknown);
+  const root = process.cwd();
+  const parsed = chosenPhotosSchema.safeParse(JSON.parse(await readFile(path.join(root, file), "utf8")) as unknown);
+  if (!parsed.success) {
+    console.error(`File delle scelte non valido: ${parsed.error.issues.slice(0, 3).map((i) => `${i.path.join(".") || "voce"} ${i.message}`).join("; ")}`);
+    process.exitCode = 1;
+    return;
+  }
+  const chosen = parsed.data;
+  let storage: ReturnType<typeof localStorageWriter> | undefined;
+  if (userId !== null) {
+    // Scrittura da script solo sul Supabase locale: database e API devono essere su localhost.
+    if (!isLocalDatabase(process.env.DATABASE_URL ?? "")) {
+      console.error("La scrittura da script è solo sul database locale. In produzione usa il pulsante «Importa le foto scelte dalla redazione» nella pagina admin delle immagini.");
+      process.exitCode = 1;
+      return;
+    }
+    const local = readLocalSupabase(root);
+    if (!isLocalDatabase(local.apiUrl)) {
+      console.error(`L'API di storage (${local.apiUrl}) non è locale: scrittura annullata.`);
+      process.exitCode = 1;
+      return;
+    }
+    storage = localStorageWriter(local.apiUrl, local.secretKey);
+  }
+  if (userId !== null) {
+    // L'utente che scrive deve essere admin (stessa regola di requireAdmin nell'app).
+    const { dbAdmin } = await import("../../src/server/db/admin");
+    const { sql } = await import("drizzle-orm");
+    const rows = [...(await dbAdmin.execute<{ role: string }>(sql`select role from public.profiles where id = ${userId}`))];
+    if (rows[0]?.role !== "admin") {
+      console.error(`L'utente ${userId} non è admin (profiles.role): scrittura annullata.`);
+      process.exitCode = 1;
+      return;
+    }
+  }
   const { importChosenFiles } = await import("../../src/server/media/commons-fill.admin");
   const dryRun = userId === null;
-  console.log(`${dryRun ? "SIMULAZIONE (nessuna scrittura)" : "SCRITTURA"}: ${chosen.length} file scelti da ${file}, prefisso slug "${slugPrefix}".`);
-  const { results, remaining } = await importChosenFiles(chosen, { slugPrefix, userId });
+  console.log(`${dryRun ? "SIMULAZIONE (nessuna scrittura)" : "SCRITTURA LOCALE"}: ${chosen.length} file scelti da ${file}, prefisso slug "${slugPrefix}".`);
+  // Passi di chosenPages con lo stesso insieme done: un'entità elaborata non torna in un passo successivo.
+  const done = new Set<string>();
+  const results: Awaited<ReturnType<typeof importChosenFiles>>["results"] = [];
+  let remaining: Awaited<ReturnType<typeof importChosenFiles>>["remaining"] = [];
+  for (const page of chosenPages(chosen)) {
+    const step = await importChosenFiles(page, { slugPrefix, userId, storage, done });
+    results.push(...step.results);
+    remaining = step.remaining;
+  }
   for (const r of results) {
     const tail = [r.license ? `licenza ${r.license}` : null, r.reason ? `${r.reason}` : null].filter(Boolean).join(" · ");
     console.log(`  ${r.outcome.padEnd(16)} ${r.type.padEnd(9)} ${r.slug}  ← ${r.file}${tail ? `  (${tail})` : ""}`);
