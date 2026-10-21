@@ -86,9 +86,15 @@ export function planGuideImport(guides, placeIds) {
   return { upserts, skipped };
 }
 
+// Solo i file con nome in minuscolo (lo slug della guida): FONTI.md e gli altri file in maiuscolo
+// non sono guide. Pura.
+export function isGuideFile(file) {
+  return /^[a-z0-9]+(-[a-z0-9]+)*\.md$/.test(file);
+}
+
 export function readGuides(dir) {
   return readdirSync(dir)
-    .filter((file) => file.endsWith(".md"))
+    .filter(isGuideFile)
     .sort()
     .map((file) => parseGuideSource(readFileSync(join(dir, file), "utf8"), file));
 }
@@ -122,9 +128,12 @@ async function main() {
   const guides = readGuides(GUIDE_DIR);
   const sql = postgres(url, { prepare: false, max: 1, onnotice: () => {} });
   try {
-    const slugs = [...new Set(guides.flatMap((guide) => guide.places))];
+    // --slug-prefix=demo-: in locale e in CI i luoghi del seed hanno il prefisso (come content:catalog).
+    const prefixArg = process.argv.slice(2).find((arg) => arg.startsWith("--slug-prefix="));
+    const prefix = prefixArg ? prefixArg.slice("--slug-prefix=".length) : "";
+    const slugs = [...new Set(guides.flatMap((guide) => guide.places))].map((slug) => prefix + slug);
     const places = await sql`select id, slug from public.places where slug = any(${slugs}::text[])`;
-    const placeIds = new Map(places.map((row) => [row.slug, row.id]));
+    const placeIds = new Map(places.map((row) => [row.slug.slice(prefix.length), row.id]));
     const plan = planGuideImport(guides, placeIds);
 
     for (const skip of plan.skipped) console.warn(`saltato il luogo "${skip.place}" in ${skip.guide}: non esiste`);

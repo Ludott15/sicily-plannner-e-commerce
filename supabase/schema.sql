@@ -4156,6 +4156,7 @@ CREATE TABLE IF NOT EXISTS "public"."itineraries" (
     "pace" "public"."trip_pace",
     "day_intros" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
     "day_notes" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "tips" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
     CONSTRAINT "itineraries_day_intros_length" CHECK (("public"."text_array_max_length"("day_intros") <= 280)),
     CONSTRAINT "itineraries_day_intros_within_days" CHECK (("cardinality"("day_intros") <= "days")),
     CONSTRAINT "itineraries_day_notes_length" CHECK (("public"."text_array_max_length"("day_notes") <= 500)),
@@ -4166,6 +4167,8 @@ CREATE TABLE IF NOT EXISTS "public"."itineraries" (
     CONSTRAINT "itineraries_season_months_range" CHECK (("season_months" <@ ARRAY[(1)::smallint, (2)::smallint, (3)::smallint, (4)::smallint, (5)::smallint, (6)::smallint, (7)::smallint, (8)::smallint, (9)::smallint, (10)::smallint, (11)::smallint, (12)::smallint])),
     CONSTRAINT "itineraries_subtitle_length" CHECK (("char_length"("subtitle") <= 140)),
     CONSTRAINT "itineraries_template_iff_editorial" CHECK ((("owner_id" IS NULL) = "is_template")),
+    CONSTRAINT "itineraries_tips_count" CHECK (("cardinality"("tips") <= 3)),
+    CONSTRAINT "itineraries_tips_length" CHECK (("public"."text_array_max_length"("tips") <= 260)),
     CONSTRAINT "itineraries_title_length" CHECK ((("char_length"("btrim"("title")) >= 1) AND ("char_length"("btrim"("title")) <= 200))),
     CONSTRAINT "itineraries_travelers_range" CHECK ((("travelers" >= 1) AND ("travelers" <= 30)))
 );

@@ -182,6 +182,27 @@ export default async function ItineraryPage({ params }: Props) {
 
         <ItineraryDays days={days} />
 
+        {itinerary.tips.length > 0 && (
+          <section aria-labelledby="itinerary-tips-title" className="flex max-w-[680px] flex-col gap-5 border-t border-divider pt-10">
+            <h2 id="itinerary-tips-title" className="is-display text-heading-3">
+              {t("tipsTitle")}
+            </h2>
+            <ul className="flex flex-col gap-4">
+              {itinerary.tips.map((tip) => (
+                <li key={tip} className="text-body text-lava">
+                  {tip}
+                </li>
+              ))}
+            </ul>
+            <div className="is-byline">
+              <span className="is-byline__photo bg-ink text-on-ink" aria-hidden="true">
+                {tDesign("editorialMonogram")}
+              </span>
+              <span className="text-body-s text-lava-muted">{tDesign("editorial")}</span>
+            </div>
+          </section>
+        )}
+
         <JsonLd
           data={breadcrumbList(
             [

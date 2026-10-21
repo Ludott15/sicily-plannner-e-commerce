@@ -5,7 +5,7 @@ import { expect, test, type Page } from "@playwright/test";
 // (contesto nuovo). Il pagamento di prova richiede CHECKOUT_TEST_PROVIDER=fake: in quel caso il
 // pulsante "Paga con Stripe" porta alla pagina di prova invece che a Stripe.
 
-const PISTACCHIO = "[DEMO] Crema di pistacchio";
+const PISTACCHIO = "Crema di pistacchio";
 const fakeProvider = process.env.CHECKOUT_TEST_PROVIDER === "fake";
 
 async function addFromProduct(page: Page, slug: string, quantity = 1) {

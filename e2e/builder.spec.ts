@@ -26,7 +26,7 @@ test("criterio M5: ospite, usa un itinerario pronto, registrazione con codice, i
   const tripId = await useTemplate(page);
   const guestId = await sessionUserId(page);
   // Titoli dei giorni ereditati, date e persone.
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("[DEMO] Weekend a Palermo e dintorni");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Weekend a Palermo e dintorni");
   await expect(page.getByText("Dal 12 maggio 2027 · 4 persone · 3 giorni")).toBeVisible();
   await expect(page.getByRole("button", { name: "Giorno 2 · Monreale e Palermo" })).toBeVisible();
 
@@ -60,7 +60,7 @@ test("criterio M5: ospite, usa un itinerario pronto, registrazione con codice, i
   );
   expect(after).toMatchObject({ owner_id: guestId, email, is_anonymous: false });
   await page.goto("/it/viaggi");
-  await page.getByRole("link", { name: "[DEMO] Weekend a Palermo e dintorni" }).click();
+  await page.getByRole("link", { name: "Weekend a Palermo e dintorni" }).click();
   await expect(page).toHaveURL(new RegExp(`/it/viaggi/${tripId}$`));
 });
 

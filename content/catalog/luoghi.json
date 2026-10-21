@@ -1,0 +1,542 @@
+[
+  {
+    "slug": "agrigento",
+    "tagline_it": "Città dei templi dorici su un altopiano affacciato sul mare",
+    "description_it": "Agrigento sorge su un altopiano affacciato sul mare, a circa 230 metri di quota. Fu fondata da coloni di Gela intorno al 581 a.C. con il nome di Akragas, ed è detta città dei templi per i suoi templi dorici. La Valle dei Templi, nella lista UNESCO dal 1997, conserva il tempio di Zeus Olimpio e i templi della Concordia e di Giunone. In contrada Caos, a pochi chilometri dal centro, si trova la casa natale di Luigi Pirandello, e le sue ceneri riposano sotto un pino nel giardino.",
+    "consigli": [
+      "Per la Valle dei Templi il caldo estivo è la difficoltà principale: visita al mattino presto o nel tardo pomeriggio, porta acqua e un cappello, perché gran parte del percorso è all’aperto.",
+      "Agrigento è una buona base per la costa: Scala dei Turchi, Eraclea Minoa e Sciacca si raggiungono in auto. Con più luoghi in programma, l’auto rende la giornata molto più semplice."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Agrigento",
+      "https://it.wikipedia.org/wiki/Valle_dei_Templi",
+      "https://www.balarm.it/news/pirandello-e-le-sue-ceneri-vicino-al-pino-solitario-riapre-al-pubblico-la-casa-del-poeta-127104"
+    ],
+    "note": "Nel seed la scheda Valle dei Templi è collegata sia a questo luogo sia alla scheda luogo valle-dei-templi, che non ha attività. Le attività della valle sono qui."
+  },
+  {
+    "slug": "aidone",
+    "tagline_it": "Il museo e gli scavi di Morgantina, una città greca nell’entroterra",
+    "description_it": "Aidone è un paese dell’entroterra ennese, vicino agli scavi di Morgantina, città di origine sicula poi colonizzata dai greci. Il sito conserva l’agorà, un teatro di età ellenistica e case con pavimenti a mosaico, in parte ancora da scavare. Il Museo archeologico regionale, nell’ex convento dei cappuccini poco distante, custodisce la Dea di Morgantina e il tesoro d’argento ellenistico. Per la visita bastano mezza giornata e scarpe comode, perché il parco si percorre a piedi.",
+    "consigli": [
+      "Visita prima il museo e poi il parco: le sale spiegano la città che vedrai tra gli scavi, dalle case con mosaici all’agorà e al teatro, e rendono più leggibili i resti.",
+      "Verifica orari e biglietti sul sito dei parchi archeologici della Regione Siciliana prima di partire: le fonti consultate non concordano e le informazioni cambiano spesso."
+    ],
+    "fonti": [
+      "https://www.visitsicily.info/en/attrazione/parco-archeologico-di-morgantina/",
+      "https://www.isprambiente.gov.it/it/attivita/museo/regioni/musei/museo-archeologico-di-aidone"
+    ],
+    "note": "Il luogo nel seed è corretto. Orari e tariffe non inseriti: le fonti non concordano."
+  },
+  {
+    "slug": "bronte",
+    "tagline_it": "Il paese del pistacchio verde, alle pendici dell’Etna.",
+    "description_it": "Bronte è il paese del pistacchio verde, coltivato su terreni di origine vulcanica alle pendici dell’Etna. Il pistacchio ha la denominazione DOP e la raccolta si fa a mano, tra fine agosto e inizio ottobre, su terreni spesso in pendenza. Il castello di Maniace, a circa otto chilometri a nord del paese, è legato al ducato che la corona borbonica assegnò all’ammiraglio Nelson, che comprendeva anche pistacchieti.",
+    "consigli": [
+      "Il pistacchio di Bronte è in raccolta da fine agosto a inizio ottobre: è il periodo in cui si vedono i pistacchieti al lavoro. Fuori stagione il pistacchio si trova già sgusciato o tostato: sulla confezione cerca la dicitura DOP e la provenienza precisa.",
+      "Il castello di Maniace si raggiunge in auto, a circa otto chilometri dal centro. Chi non guida può organizzare la visita con un noleggio o un’escursione; conviene verificare prima gli orari di apertura, che cambiano nel corso dell’anno."
+    ],
+    "fonti": [
+      "https://www.greenme.it/salute-e-alimentazione/mangiare-sostenibile/pistacchio-di-bronte/",
+      "https://www.linkiesta.it/2025/02/pistacchio-bronte-dop-oro-verde-world-pistachio-day/",
+      "https://en.wikipedia.org/wiki/Castello_di_Maniace"
+    ],
+    "note": "Fonti discordanti sulla produzione annua (da circa 1.270 a circa 3.000 tonnellate): nel testo non compaiono cifre. Il castello è anche chiamato Castello Nelson."
+  },
+  {
+    "slug": "calascibetta",
+    "tagline_it": "Borgo sulle alture di Enna, con la necropoli di Realmese",
+    "description_it": "Calascibetta è un borgo medievale sulle alture a ridosso di Enna. A circa tre chilometri dal paese, la necropoli di Realmese scende lungo i pendii del Cozzo San Giuseppe, con un gruppo fitto di tombe a grotticella scavate nella roccia. Le campagne di scavo degli anni 1949 e 1950 hanno portato alla luce 288 tombe. Le fonti datano l’uso del sito tra il IX e il VI secolo a.C., con qualche divergenza, e non hanno ancora individuato l’abitato a cui apparteneva. Nella vicina valle del Canalotto c’è un villaggio rupestre bizantino.",
+    "consigli": [
+      "Il borgo è sulle alture e le strade sono in salita: l’auto è la scelta più pratica per raggiungere la necropoli, che è a qualche chilometro dal paese.",
+      "Prima della visita chiedi all’ufficio turistico di Enna se la necropoli è aperta e se servono accompagnatori: le informazioni online non sono sempre aggiornate."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Calascibetta",
+      "https://fondoambiente.it/luoghi/necropoli-di-realmese"
+    ],
+    "note": "Luogo creato: la necropoli di Realmese è nel territorio di Calascibetta, comune autonomo a circa tre chilometri da Enna. Coordinate da it.wikipedia.org/wiki/Calascibetta (37.583333, 14.266667)."
+  },
+  {
+    "slug": "caltagirone",
+    "tagline_it": "La città della ceramica, con la scalinata di maiolica.",
+    "description_it": "Caltagirone è una delle otto città del Val di Noto riconosciute dall’UNESCO nel 2002, ricostruite in stile barocco dopo il terremoto del 1693. La sua tradizione è la ceramica: nel centro ci sono ancora botteghe di ceramisti che lavorano e vendono i propri pezzi. La scalinata di Santa Maria del Monte collega la parte bassa della città alla chiesa in alto, con i suoi gradini rivestiti di maioliche. Il Museo regionale della ceramica raccoglie la storia della produzione siciliana.",
+    "consigli": [
+      "Per la scalinata, la luce migliore è al mattino presto o nel tardo pomeriggio, quando i gradini sono meno esposti al sole. Guarda le maioliche da vicino: i disegni cambiano da un gradino all’altro, e si colgono meglio fermandosi a metà salita.",
+      "Per comprare ceramica, chiedi se il pezzo è dipinto a mano e dove è stato prodotto. La differenza tra un pezzo artigianale e uno stampato si vede anche dal retro e dai bordi, più che dal colore."
+    ],
+    "fonti": [
+      "https://www.greenme.it/?p=524077",
+      "https://travel.thewom.it/italia/sicilia/scalinata-santa-maria-del-monte-caltagirone.html",
+      "https://it.wikivoyage.org/wiki/Caltagirone"
+    ],
+    "note": "Le fonti non concordano sulla data di unificazione della scalinata (1844 in una fonte, seconda metà dell’Ottocento in un’altra): la data non è riportata. Il museo ha nome ufficiale Museo regionale della ceramica."
+  },
+  {
+    "slug": "castelbuono",
+    "tagline_it": "Borgo delle Madonie con castello, manna e dolci",
+    "description_it": "Castelbuono sorge a circa 420 metri di quota, sulle pendici del colle Milocca, nel Parco delle Madonie. Il centro è dominato dal castello dei Ventimiglia, la cui costruzione risale al 1317, e la cappella di Sant’Anna, con le decorazioni dei Serpotta, è collegata al Museo civico. Il paese è legato alla manna, la linfa dolce dei frassini raccolta tra Castelbuono e Pollina, che si usa in pasticceria e in cucina. È un buon punto d’appoggio per visitare le Madonie, con la costa e i borghi in quota raggiungibili in auto.",
+    "consigli": [
+      "Per la manna cerca i prodotti della raccolta estiva: la linfa si raccoglie in estate, quando i frassini vengono incisi, e si ritrova in dolci e prodotti di pasticceria. Chiedi da dove arriva, perché la qualità varia con la lavorazione.",
+      "Castelbuono è un buon punto di appoggio per le Madonie: da qui si raggiungono Cefalù, Piano Battaglia e Polizzi Generosa in auto, su strade di montagna con curve che vanno percorse con calma."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Castelbuono",
+      "https://www.fondazioneslowfood.com/it/presidi-slow-food/manna-delle-madonie/"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "catania",
+    "tagline_it": "Città barocca ai piedi dell’Etna, con il mercato del pesce.",
+    "description_it": "Catania fa parte delle città tardo barocche del Val di Noto, riconosciute dall’UNESCO nel 2002. Dopo il terremoto del 1693 fu ricostruita sullo stesso sito in forme barocche, e via dei Crociferi, con le sue chiese e i conventi, è uno degli esempi più riconoscibili. In piazza Duomo si trova la fontana dell’Elefante, in pietra lavica, con un obelisco egizio sul dorso. La pietra lavica dà agli edifici il loro grigio scuro, e il vulcano è alle spalle della città.",
+    "consigli": [
+      "Il centro storico si visita bene a piedi: le distanze tra piazza Duomo, via dei Crociferi e la pescheria sono brevi. Conviene partire presto, quando le strade sono ancora poco trafficate e la luce illumina le facciate da est.",
+      "Le scarpe comode sono il consiglio più utile: le strade del centro sono pavimentate con pietra lavica, che in caso di umidità diventa scivolosa. In estate porta anche una bottiglia d’acqua, perché il centro è esposto al sole nelle ore centrali."
+    ],
+    "fonti": [
+      "https://www.eroicafenice.com/viaggi/cosa-vedere-a-catania/",
+      "https://worldcitytrail.com/2025/07/14/via-dei-crociferi-in-catania/",
+      "https://www.visititaly.eu/it/unesco/sicilia-le-citta-tardo-barocche-del-val-di-noto-unesco-dal-2002"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "cefalu",
+    "tagline_it": "Borgo sul mare sotto la rocca e la cattedrale normanna",
+    "description_it": "Cefalù è un comune di circa 13mila abitanti sulla costa settentrionale della Sicilia, ai piedi di un promontorio roccioso, a circa 70 chilometri da Palermo. Il nucleo medievale si stende sotto la rocca, che insieme al duomo domina il profilo del paese. La cattedrale fu avviata nel 1131 per volere di Ruggero II, e nell’abside i mosaici eseguiti da maestranze bizantine mostrano il Cristo Pantocratore. Sulla rocca si trova il Tempio di Diana, un santuario megalitico di età preellenica, e dal 2015 il duomo fa parte del sito UNESCO arabo-normanno.",
+    "consigli": [
+      "Per la rocca sali nelle prime ore: il sentiero è esposto al sole e in estate il pomeriggio è faticoso. Porta acqua e scarpe chiuse con suola da trekking, perché il fondo è irregolare e la discesa richiede attenzione.",
+      "Il duomo, il lavatoio medievale e la rocca sono nel centro storico e si possono unire nella stessa mattinata. In alta stagione il centro si riempie nelle ore centrali, quindi conviene partire presto."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Cefal%C3%B9",
+      "https://it.wikipedia.org/wiki/Duomo_di_Cefal%C3%B9"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "enna",
+    "tagline_it": "Capoluogo sulla cima di un colle, con castello e vista sull’Etna",
+    "description_it": "Enna è il capoluogo di provincia dell’entroterra siciliano, a circa 930 metri, spesso indicato come il capoluogo più alto d’Italia. Il centro sorge sul colle: il Castello di Lombardia occupa il punto più alto, a circa 990 metri, e la Rocca di Cerere conserva i resti di un santuario dedicato alla dea Cerere. Dalle torri si vede la campagna intorno e, con il cielo limpido, l’Etna. Il centro è in salita: è una città da percorrere a piedi, con calma.",
+    "consigli": [
+      "Il centro storico è in salita e in parte lastricato: scarpe comode e tempo per le soste. Sali al castello nelle ore più fresche dell’estate, perché la quota rende l’aria più fresca anche di sera.",
+      "La Rocca di Cerere, sotto il castello, ha ingresso gratuito e offre un panorama ampio sulla campagna intorno e sul paese di Calascibetta, che si vede da lì."
+    ],
+    "fonti": [
+      "https://it.wikivoyage.org/wiki/Enna",
+      "https://www.italia.it/it/sicilia/enna"
+    ],
+    "note": "Il seed dice ‘Città più alta della Sicilia’: le fonti parlano di capoluogo di provincia tra i più alti d’Italia, quindi la frase del seed va rivista. Orari del castello non inseriti: fonti discordanti."
+  },
+  {
+    "slug": "eraclea-minoa",
+    "tagline_it": "Antica città greca sul promontorio di Capo Bianco",
+    "description_it": "Eraclea Minoa era un’antica città greca della costa sud-occidentale della Sicilia, nel territorio di Cattolica Eraclea. Fu fondata dai Selinuntini e nel III secolo a.C. divenne colonia romana. Il teatro, costruito alla fine del V secolo a.C., ha la cavea divisa in nove settori e si affaccia sul mare. Gli scavi sistematici iniziarono nel 1950, e il sito si trova su un promontorio di marne bianche, Capo Bianco, vicino al fiume Platani.",
+    "consigli": [
+      "Per arrivare l’auto è praticamente necessaria: la fermata del bus più vicina è a diversi chilometri. Organizza il trasporto prima di partire, e porta acqua e cappello per il percorso tra i resti, che è all’aperto.",
+      "Il sito è vicino alla Scala dei Turchi, e le due visite si possono unire nella stessa giornata. Controlla vento e mare prima di un bagno, perché la costa è aperta."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Eraclea_Minoa",
+      "https://www.balarm.it/luoghi/teatro-greco-di-eraclea-minoa-cattolica-eraclea-2414"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "erice",
+    "tagline_it": "Borgo medievale sulla vetta, sopra Trapani e le Egadi",
+    "description_it": "Erice sorge sulla vetta del Monte Erice, a circa 750 metri di quota, mentre gran parte dei residenti vive a valle, nella frazione di Casa Santa, accanto a Trapani. Il centro conserva l’aspetto di un borgo medievale, con le mura ciclopiche di epoca elimo-fenicio-punica, il Castello di Venere, costruito in età normanna sui resti del tempio di Venere Ericina, e la Chiesa Madre. Un tempo la città era nota come città delle cento chiese, con molti conventi di clausura. Dal monte si vede l’arcipelago delle Egadi, con la costa trapanese sotto.",
+    "consigli": [
+      "Per i dolci cerca le pasticcerie del centro: i bocconcini di pasta reale con cedro, la genovese alla crema e i dolci di badia sono le specialità della tradizione conventuale. Chiedi quali sono preparati in giornata.",
+      "Erice è in quota e la strada per il centro è stretta e in salita. Valuta di lasciare l’auto fuori dal borgo e prosegui a piedi, e porta un capo leggero, perché in cima fa più fresco che a valle."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Erice",
+      "https://travel.thewom.it/italia/sicilia/erice.html"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "etna",
+    "tagline_it": "Il vulcano attivo più alto d’Europa, con crateri e colate.",
+    "description_it": "L’Etna è il vulcano attivo più alto d’Europa, e il suo territorio è protetto dal Parco dell’Etna, istituito dalla Regione Siciliana nel 1987. Il monte è iscritto nella lista del Patrimonio mondiale UNESCO dal 2013. L’attività del vulcano cambia nel tempo, e l’accesso alle quote più alte è deciso dalle autorità in base alla situazione del momento. Oltre un certo punto la salita è consentita solo con una guida abilitata.",
+    "consigli": [
+      "Prima di salire, controlla l’ordinanza in vigore: l’accesso alle quote più alte dipende dall’attività del vulcano e può essere limitato o chiuso. Le regole cambiano con il livello di allerta, quindi verifica presso l’Ente Parco.",
+      "In quota la temperatura è molto più bassa che a valle, anche in estate, e il vento può essere forte. Porta una giacca, acqua e scarpe da trekking chiuse."
+    ],
+    "fonti": [
+      "https://documenti.camera.it/leg19/pdl/pdf/leg.19.pdl.camera.2166.19PDL0120240.pdf",
+      "https://www.touringclub.it/destinazioni/nicolosi/fare/287274-parco-delletna",
+      "https://www.etnatracking.com/images/attachments/etna-fruizione-quote-sommitali.pdf"
+    ],
+    "note": "Iscrizione UNESCO: una fonte parla del 2013 per l’intero monte, un’altra solo per la zona A del parco. Il testo dice solo 'dal 2013': verificare il perimetro sul sito UNESCO. Nessuna attività del seed è collegata a questo luogo."
+  },
+  {
+    "slug": "etna-sud",
+    "tagline_it": "Il versante sud dell’Etna, punto di partenza per i crateri.",
+    "description_it": "Il versante sud è accessibile in auto fino al Rifugio Sapienza, a circa 1.900 metri, che è l’ultimo punto raggiungibile su strada. Da lì una funivia sale verso la quota dei crateri, e il resto del percorso si fa a piedi o con mezzi autorizzati. Il paesaggio cambia rapidamente con la quota, dalle pendici coltivate a vigneti alle colate di lava nere. Da questo versante partono le escursioni ai crateri sommitali e le visite alle grotte di scorrimento lavico.",
+    "consigli": [
+      "Per la funivia dal Rifugio Sapienza controlla in anticipo orari e tariffe sul sito del gestore: cambiano con le condizioni del vulcano e della stagione. L’ultima corsa è anche il limite per il rientro, quindi calcola il tempo di discesa.",
+      "Le escursioni verso i crateri richiedono scarpe da trekking, giacca e acqua. In quota le condizioni cambiano in fretta, anche con il cielo sereno a valle, e il terreno è di cenere e roccia vulcanica."
+    ],
+    "fonti": [
+      "https://in3giorni.com/faq/come-si-arriva-in-cima-alletna",
+      "https://www.balarm.it/news/trekking-jeep-o-mountain-bike-tutti-i-modi-per-arrivare-alla-piu-alta-bocca-dell-etna-20840",
+      "https://www.winetourism.com/it/denominazione-vino/etna/"
+    ],
+    "note": "Tariffe della funivia discordanti tra fonti (da 15 € per i residenti a 50 € per persona): nessun prezzo riportato. Quota del Rifugio Sapienza: fonti tra 1.900 e 1.923 m, nel testo circa 1.900."
+  },
+  {
+    "slug": "fontane-bianche",
+    "tagline_it": "Sabbia chiara e fondale basso, a sud di Siracusa.",
+    "description_it": "Fontane Bianche è una spiaggia di sabbia chiara a sud di Siracusa, in una baia naturale con acqua bassa. Il fondale resta basso per un lungo tratto, e questo la rende adatta anche ai bambini piccoli. Sul lungomare ci sono stabilimenti attrezzati e tratti di spiaggia libera. Il nome è legato alle sorgenti d’acqua dolce che affiorano lungo la costa, secondo una delle spiegazioni più diffuse.",
+    "consigli": [
+      "Con i bambini piccoli scegli il tratto con il fondale più basso e tieni d’occhio la riva. La sabbia chiara riflette il sole, quindi porta un ombrellone o un telo anche se non vuoi affittarlo in stabilimento.",
+      "In alta stagione conviene arrivare presto per trovare posto all’ombra. Verifica in loco se il parcheggio è custodito e quali servizi sono disponibili nel tratto che scegli, perché non tutta la spiaggia è attrezzata."
+    ],
+    "fonti": [
+      "https://www.spiagge.it/stabilimenti-balneari/15744-lido-fontane-bianche/",
+      "https://travel.thewom.it/italia/sicilia/siracusa/spiaggia-fontane-bianche.html"
+    ],
+    "note": "Storia del lido non verificata: nessuna fonte trovata. Lunghezza della spiaggia discordante tra fonti (meno di 2 km o circa 3 km): non riportata."
+  },
+  {
+    "slug": "marina-ragusa",
+    "tagline_it": "Mare e lungomare sulla costa sud della provincia di Ragusa.",
+    "description_it": "Marina di Ragusa è la località balneare della costa meridionale della provincia di Ragusa. Nasce come porto da cui si esportava l’asfalto estratto nell’entroterra, a partire dagli anni Settanta dell’Ottocento, e diventa meta di villeggiatura agli inizi del Novecento. Oggi vive soprattutto di turismo e di spiaggia. Il lungomare è il punto di partenza per una passeggiata, e la costa verso Punta Secca e Punta Braccetto offre tratti più tranquilli.",
+    "consigli": [
+      "Porta un ombrellone o un telo: non tutti i tratti di spiaggia sono attrezzati. Nei mesi estivi il mattino è il momento migliore per trovare posto.",
+      "Scicli, Modica e Ragusa Ibla si raggiungono in auto dalla costa: puoi abbinare una giornata di mare a una di barocco. Lascia l’auto ai margini del centro storico, perché i borghi si visitano meglio a piedi."
+    ],
+    "fonti": [
+      "https://en.wikipedia.org/wiki/Marina_di_Ragusa",
+      "https://www.balarm.it/news/il-piccolo-porto-delle-meraviglie-e-in-sicilia-sei-nel-borgo-dalle-spiagge-pazzesche-157565"
+    ],
+    "note": "Nome del porto prima del 1928 discordante tra fonti: non riportato. Date di costruzione della torre di Punta Braccetto non verificate."
+  },
+  {
+    "slug": "marzamemi",
+    "tagline_it": "Il borgo dei pescatori, con la piazza della tonnara.",
+    "description_it": "Marzamemi è un borgo di pescatori sulla costa sud della provincia di Siracusa. La sua storia è legata alla tonnara, la trappola per il tonno che per secoli ha dato lavoro al paese. Oggi la tonnara non è più in attività: restano il palazzo del principe di Villadorata e la chiesa della tonnara, ormai sconsacrata. Piazza Regina Margherita è il centro del borgo, con le case dei pescatori trasformate in negozi e ristoranti.",
+    "consigli": [
+      "Il borgo è piccolo: si gira a piedi in un’ora e mezza circa. La piazza è il punto di partenza, e i locali che si affacciano sulla piazza sono il cuore del paese nelle ore serali, quando la luce sulle facciate è più calda.",
+      "Il tonno resta nella tradizione del borgo, ma la tonnara non è più in attività: chiedi al ristoratore da dove arriva il pesce che ti propone. Per il resto, il borgo è tranquillo e si presta a una passeggiata breve, senza impegno."
+    ],
+    "fonti": [
+      "https://siviaggia.it/wanderlust/marzamemi-ti-fa-innamorare/362344/",
+      "https://www.balarm.it/news/se-ci-vai-ti-lascia-a-bocca-aperta-cosa-fare-e-vedere-nell-antico-borgo-di-marzamemi-120788"
+    ],
+    "note": "Date di fondazione della tonnara discordanti (1642 o epoca araba): non riportate. Etimologia araba del nome non riportata."
+  },
+  {
+    "slug": "modica",
+    "tagline_it": "Città barocca su due versanti, patria del cioccolato IGP.",
+    "description_it": "Modica è una delle città tardo barocche della Val di Noto, riconosciute dall’UNESCO nel 2002. La città si divide in due parti, divise da una valle e collegate da scalinate: la città alta, la più antica, con vicoli stretti, e la città bassa. Il Duomo di San Giorgio, progettato in gran parte da Rosario Gagliardi, si raggiunge da una lunga scalinata. Modica è anche la città del cioccolato di Modica, lavorato a freddo, che ha il marchio IGP.",
+    "consigli": [
+      "Il cioccolato di Modica si riconosce dalla grana, che resta granulosa perché lo zucchero non viene sciolto. Cerca la dicitura IGP sulla confezione e chiedi come è stato lavorato: un assaggio in negozio è il modo più semplice per capire la differenza.",
+      "Per salire al Duomo di San Giorgio, la scalinata richiede tempo e più di una pausa in estate: meglio la mattina o il tardo pomeriggio. Il numero dei gradini cambia da una fonte all’altra, quindi non fidarti di una cifra precisa."
+    ],
+    "fonti": [
+      "https://it.wikivoyage.org/wiki/Modica",
+      "https://siviaggia.it/idee-di-viaggio/modica-cosa-vedere/532298/",
+      "https://www.dissapore.com/notizie/cioccolato-di-modica-igp-polemiche/"
+    ],
+    "note": "Il numero di gradini della scalinata del Duomo varia tra fonti (164, 181, circa 250): non riportato. La data del riconoscimento IGP è discordante (2018 o pratica aperta dal 2010): nel testo non compare."
+  },
+  {
+    "slug": "mondello",
+    "tagline_it": "Spiaggia di sabbia chiara e villini liberty sul golfo di Palermo",
+    "description_it": "Mondello è una frazione di Palermo a circa sette chilometri dal centro, su una baia semicircolare delimitata da Monte Pellegrino e Monte Gallo. La spiaggia di sabbia fine e chiara è la più celebre del capoluogo, e dagli anni Sessanta è quella dei palermitani. Lungo il lungomare si trovano ville e stabilimenti in stile liberty, legati in gran parte alla scuola di Ernesto Basile. Il borgo nasce come villaggio di pescatori e di tonnara, e la bonifica della fine dell’Ottocento ne cambiò il volto.",
+    "consigli": [
+      "Nei weekend d’estate la spiaggia si riempie presto: se vuoi trovare posto, arriva al mattino. Il lungomare ha stabilimenti e tratti liberi, quindi scegli in base a come vuoi passare la giornata.",
+      "Per vedere i villini liberty, cammina lungo il lungomare e nelle vie alle spalle. Sono case private e non tutte sono aperte: guarda le facciate dalla strada e rispetta le proprietà."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Mondello"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "monreale",
+    "tagline_it": "Il duomo dei mosaici dorati sulle pendici del Monte Caputo",
+    "description_it": "Monreale sorge a circa 310 metri di quota, sulle pendici del Monte Caputo, a circa quattro chilometri da Palermo. Il duomo fu voluto da Guglielmo II nella seconda metà del XII secolo, e i suoi mosaici ricoprono l’intero interno, con il Cristo Pantocratore nel catino absidale. Accanto alla chiesa c’è il chiostro benedettino, con 228 colonnine gemine, ciascuna con decorazioni diverse. Anche Monreale fa parte del sito UNESCO arabo-normanno, riconosciuto nel 2015 insieme a Palermo e Cefalù.",
+    "consigli": [
+      "Il chiostro da solo richiede un’ora buona: prenditi il tempo per guardare le colonnine una per una, perché le decorazioni cambiano da un pezzo all’altro.",
+      "Per entrare nel duomo copri spalle e ginocchia, perché è un luogo di culto e le regole valgono anche per i visitatori. Da Palermo si arriva in auto o con i mezzi pubblici, e nei giorni di festa gli orari possono cambiare."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Monreale",
+      "https://it.wikipedia.org/wiki/Palermo"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "noto",
+    "tagline_it": "Pietra e palazzi barocchi, nella Val di Noto.",
+    "description_it": "Noto è una delle città tardo barocche della Val di Noto, riconosciute dall’UNESCO nel 2002. Dopo il terremoto del 1693 la città fu ricostruita in un sito diverso dal precedente, con palazzi e chiese in stile barocco. La cattedrale di San Nicolò, costruita tra il 1694 e il 1703, crollò nel 1996 e fu riaperta nel 2007 dopo un lungo restauro. È il monumento più legato all’identità della città.",
+    "consigli": [
+      "Per fotografare i palazzi, la luce del mattino e quella del tardo pomeriggio sono le più adatte, con il sole basso sulle facciate. Il centro è piccolo e si gira a piedi in poche ore.",
+      "Noto è un buon punto d’appoggio per la costa: la riserva di Vendicari e il mare del Lido di Noto si raggiungono in auto. Lascia l’auto ai margini del centro storico e gira a piedi."
+    ],
+    "fonti": [
+      "https://www.vatican.va/content/benedict-xvi/it/letters/2007/documents/hf_ben-xvi_let_20070615_cattedrale-noto.html",
+      "https://www.visititaly.eu/it/unesco/sicilia-le-citta-tardo-barocche-del-val-di-noto-unesco-dal-2002"
+    ],
+    "note": "Il titolo 'capitale del barocco' non è stato verificato in nessuna fonte, quindi non compare nel testo. Date della cattedrale da fonti ufficiali; cause del crollo discordanti."
+  },
+  {
+    "slug": "ortigia",
+    "tagline_it": "Centro antico di Siracusa su un’isola, tra templi e mare.",
+    "description_it": "Ortigia è il centro antico di Siracusa, un’isola collegata alla terraferma da ponti. Il Duomo sorge sul tempio dorico di Atena, costruito intorno al 480 avanti Cristo e ancora leggibile nelle colonne dei fianchi; la facciata barocca è stata ricostruita dopo il terremoto del 1693. Poco lontano c’è la Fonte Aretusa, acqua dolce che affiora a pochi metri dal mare, con il papiro che cresce spontaneo. Il tempio di Apollo è tra i più antichi templi dorici dell’isola.",
+    "consigli": [
+      "Il centro di Ortigia si gira a piedi in mezza giornata. Nelle ore centrali le piazze sono esposte al sole: conviene partire presto o nel tardo pomeriggio, e portare scarpe con suola antiscivolo.",
+      "Il Parco archeologico della Neapolis è sulla terraferma, non sull’isola: dal centro di Ortigia si raggiunge in auto o con un tragitto a piedi più lungo. Controlla orari e biglietti sul sito del parco prima di partire."
+    ],
+    "fonti": [
+      "https://www.finestresullarte.info/viaggi/ortigia-cosa-vedere-10-luoghi-nel-cuore-di-siracusa",
+      "https://travel.thewom.it/italia/sicilia/ortigia.html"
+    ],
+    "note": "Il Parco della Neapolis, citato nell’attività collegata, è sulla terraferma e non su Ortigia: il luogo è mantenuto per vicinanza, da verificare. Data del tempio di Apollo discordante tra fonti: il testo dice 'tra i più antichi'."
+  },
+  {
+    "slug": "palermo",
+    "tagline_it": "Capoluogo arabo-normanno tra mercati, palazzi e cattedrali",
+    "description_it": "Palermo è il capoluogo della Sicilia e la città più popolosa dell’isola, con oltre 600mila abitanti. Nel centro si incontrano le tracce delle dominazioni fenicia, romana, bizantina, araba e normanna, e il sito arabo-normanno è Patrimonio UNESCO dal 2015 insieme alle cattedrali di Cefalù e Monreale. I mercati storici di Ballarò, Vucciria e Capo sono il modo più diretto per entrare nella vita quotidiana della città. Palermo è anche la base più comoda per Monreale, Cefalù e Mondello.",
+    "consigli": [
+      "Nei mercati scegli le prime ore del mattino: i banchi sono più pieni e il caldo arriva più tardi. Il centro storico si percorre quasi tutto a piedi, tra vicoli e piazze, quindi porta scarpe comode e lascia l’auto fuori dal centro.",
+      "In alta stagione conviene prenotare in anticipo le visite ai luoghi arabo-normanni, come la Cappella Palatina. Controlla orari e modalità sui siti ufficiali, perché possono cambiare tra giorni feriali e festivi."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Palermo",
+      "https://www.balarm.it/luoghi/cappella-palatina-palermo-palermo-1517"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "pantalica",
+    "tagline_it": "Necropoli rupestre nelle gole dell’Anapo, patrimonio UNESCO.",
+    "description_it": "Pantalica è una necropoli rupestre con migliaia di tombe scavate nella roccia, lungo le gole dei fiumi Anapo e Calcinara, a circa venti chilometri da Siracusa. Il sito è patrimonio UNESCO dal 2005. Le tombe risalgono all’età del Bronzo finale e all’inizio dell’età del Ferro, e sono legate alle popolazioni dei Siculi. Il percorso si fa interamente a piedi, con discese e risalite.",
+    "consigli": [
+      "Porta acqua in abbondanza e scarpe da trekking: i sentieri sono sterrati e il percorso comporta discese e risalite. Parti presto, perché nelle ore centrali il sole è forte e l’ombra è poca.",
+      "Gli accessi principali sono da Ferla e da Sortino: scegli il punto di partenza in base al percorso che vuoi fare. Informati sulle condizioni del sentiero prima di scendere, soprattutto dopo le piogge."
+    ],
+    "fonti": [
+      "https://travel.thewom.it/italia/sicilia/pantalica-necropoli.html",
+      "https://www.italia.it/it/sicilia/siracusa/necropoli-di-pantalica",
+      "https://siviaggia.it/vacanze-natura/pantalica-sicilia-natura-archeologia-fascino-unico/449639/"
+    ],
+    "note": "Datazione delle tombe discordante tra fonti (tra XIII e VIII secolo a.C.): il testo usa una formula generica. Fonti non concordano se l’UNESCO riguardi solo la necropoli o anche Siracusa."
+  },
+  {
+    "slug": "piano-battaglia",
+    "tagline_it": "Altopiano di faggete a 1.572 metri, nel cuore delle Madonie",
+    "description_it": "Piano Battaglia è un altopiano a 1.572 metri nel massiccio delle Madonie, frazione di Petralia Sottana. È circondato da faggete e fa da punto di partenza per molte escursioni sulle alte Madonie, tra cui la salita a Pizzo Carbonara. Un sentiero geologico attraversa il polje della Battaglietta, con fossili di formazioni coralline del Mesozoico e un profondo inghiottitoio. La località ha anche una stazione sciistica, riaperta nel 2017 dopo la chiusura del 2007, con una seggiovia e uno skilift.",
+    "consigli": [
+      "Porta una giacca anche in estate: a quota 1.500 metri le sere sono più fresche della costa, e in autunno e in inverno il clima cambia in fretta. Controlla le condizioni meteo prima di salire.",
+      "L’altopiano è il punto di partenza di percorsi di lunghezza diversa: scegli in base al tempo a disposizione e porta acqua. Alcune uscite guidate richiedono prenotazione, quindi verificalo in anticipo."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Piano_Battaglia",
+      "https://www.montagna.tv/165330/esplorando-nuovi-sentieri-con-il-club-alpino-italiano/"
+    ],
+    "note": "Piano Battaglia è una frazione di Petralia Sottana, non un comune: la scheda può dirlo."
+  },
+  {
+    "slug": "piazza-armerina",
+    "tagline_it": "Centro medievale, con la Villa Romana del Casale poco fuori città",
+    "description_it": "Piazza Armerina è un centro dell’entroterra ennese, noto soprattutto per la Villa Romana del Casale, che sorge fuori dalla città. Il sito, iscritto nella lista UNESCO dal 1997, conserva decine di ambienti con pavimenti a mosaico, tra cui la Grande Caccia. Nel centro storico la cattedrale, costruita tra il Seicento e il primo Settecento, domina la parte alta, mentre il tessuto urbano si divide in quattro quartieri medievali. Conviene abbinarlo alla villa nello stesso giorno, dedicando il pomeriggio alla passeggiata.",
+    "consigli": [
+      "Parti dalla cattedrale, nella parte più alta: da lì il centro si scopre scendendo verso i quartieri, con più soste lungo i vicoli. Il castello aragonese sul monte Mira si vede solo dall’esterno, secondo le guide consultate.",
+      "La villa è fuori dal centro: l’auto è la soluzione più semplice. Se pensi al servizio di navetta dal centro, controlla gli orari della stagione, perché cambiano di anno in anno e non tutte le fonti sono aggiornate."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Villa_romana_del_Casale",
+      "https://en.wikipedia.org/wiki/Piazza_Armerina_Cathedral",
+      "https://travel.thewom.it/italia/sicilia/piazza-armerina.html"
+    ],
+    "note": "Le date di fondazione della città non concordano tra le fonti (1130 o 1163): non riportate. Tariffe e orari della villa non inseriti."
+  },
+  {
+    "slug": "polizzi",
+    "tagline_it": "Borgo in cima alle Madonie, con lo sfoglio alla tuma",
+    "description_it": "Polizzi Generosa è un comune di circa 2.700 abitanti a 920 metri di quota, nel Parco delle Madonie. Il sito è abitato dal VI secolo a.C. e il paese fu un centro prospero già in età islamica, con un castello di epoca bizantina ampliato e fortificato dai Normanni. Tra i monumenti ci sono la chiesa di Santa Maria Assunta, dell’XI secolo, e l’abbazia di Santa Croce, con affreschi bizantini. Il dolce tipico è lo sfoglio, una torta ripiena di tuma, formaggio fresco della zona, riconosciuta come prodotto agroalimentare tradizionale.",
+    "consigli": [
+      "Lo sfoglio si trova nelle pasticcerie del paese. Chiedi come lo preparano e quale formaggio usano, perché la tuma è il cuore del ripieno e il dolce è condiviso con alcuni paesi vicini.",
+      "Polizzi è un buon punto di partenza per le Madonie, ma le strade di montagna richiedono più tempo di quanto suggeriscano le mappe. Pianifica la giornata con margine, soprattutto se hai in programma escursioni in quota."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Polizzi_Generosa"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "ragusa-ibla",
+    "tagline_it": "Il borgo barocco sulla collina, nel cuore di Ragusa.",
+    "description_it": "Ibla è il centro storico di Ragusa, il borgo barocco sulla collina. Dopo il terremoto del 1693 fu ricostruito in stile barocco, e fa parte delle città tardo barocche del Val di Noto riconosciute dall’UNESCO nel 2002. La cattedrale di San Giorgio, progettata da Rosario Gagliardi, domina la piazza con una facciata a tre ordini, a cui si arriva da una scalinata. Fino al 1929 Ragusa superiore e Ibla erano comuni separati.",
+    "consigli": [
+      "Ibla si gira bene a piedi, ma le strade sono in forte pendenza: scarpe comode e tempo per le salite, soprattutto con il caldo.",
+      "Ibla è un buon punto per la giornata di città: la mattina presto le piazze sono più libere e la luce è migliore per le foto della cattedrale. Per il cioccolato e i prodotti locali, cerca le botteghe che indicano provenienza e produzione."
+    ],
+    "fonti": [
+      "https://reidsguides.com/italy/destinations/sicily/southeast_sicily/ragusa/sights.html",
+      "https://www.italia.it/it/sicilia/ragusa/duomo-di-s-giorgio-di-ragusa",
+      "https://visitsicily.inera.it/en/?p=2840"
+    ],
+    "note": "Data della facciata del Duomo di San Giorgio discordante tra fonti (1744 o fine Settecento): non riportata. Le fonti non danno dettagli sulla fondazione di Santa Maria dell’Itria."
+  },
+  {
+    "slug": "riserva-dello-zingaro",
+    "tagline_it": "Sentieri costieri e calette tra Scopello e San Vito Lo Capo",
+    "description_it": "La Riserva naturale orientata dello Zingaro è la prima riserva naturale della Sicilia, istituita nel 1981 dopo le proteste contro una strada litoranea tra Scopello e San Vito Lo Capo. Si sviluppa lungo circa sette chilometri di costa, su un territorio di circa 1.600 ettari tra i comuni di Castellammare del Golfo e San Vito Lo Capo. Il sentiero costiero attraversa piccole calette di ciottoli, come Punta Capreria. La riserva è affidata all’Azienda Regionale Foreste Demaniali, con sede amministrativa a Castellammare del Golfo.",
+    "consigli": [
+      "Per il sentiero costiero, che collega i due ingressi in circa due ore, scegli scarpe da trekking e porta acqua e un cappello. Il percorso è esposto al sole in più tratti, e l’ombra è poca.",
+      "Il sentiero costiero è pensato da un ingresso all’altro: organizza il rientro in anticipo. Dall’ingresso di Scopello c’è il centro visitatori, utile per informarsi prima di partire."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Riserva_naturale_orientata_dello_Zingaro"
+    ],
+    "note": "Nel seed la riserva ha una scheda luogo senza attività collegate: l’attività Riserva dello Zingaro è sotto San Vito. Superficie: la fonte riporta 1.600 ettari di terra e 1.700 nel testo (scelto 1.600). Sede amministrativa a Castellammare del Golfo."
+  },
+  {
+    "slug": "san-vito",
+    "tagline_it": "Spiaggia di sabbia dorata all’estremità del golfo",
+    "description_it": "San Vito Lo Capo è un comune di circa 4.800 abitanti, nella provincia di Trapani, all’estremità occidentale del golfo di Castellammare. La spiaggia di sabbia dorata si sviluppa per circa tre chilometri, e nella frazione di Macari si trova la Cala del Bue Marino. Dal 1998 il paese ospita il Cous Cous Fest, rassegna internazionale di cultura e cucina mediterranea con una gara di cuscus tra chef di diversi paesi, a fine settembre. A est del territorio comincia la Riserva dello Zingaro.",
+    "consigli": [
+      "Il Cous Cous Fest richiama molti visitatori a fine estate: se vuoi partecipare, prenota l’alloggio con anticipo e controlla il programma ufficiale, perché le date cambiano da un anno all’altro.",
+      "Il cous cous di pesce è il piatto da assaggiare qui: si serve con un brodo di pesce di scoglio, ed è diverso dalla versione trapanese, cotta a bagnomaria con pesce azzurro. Chiedilo in un locale del paese."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/San_Vito_Lo_Capo",
+      "https://www.voloscontato.it/guide-per-viaggiatori/cous-cous-di-pesce-a-san-vito-lo-capo-i-locali-da-provare-almeno-una-volta.php"
+    ],
+    "note": "Le fonti non concordano sulle date del Cous Cous Fest (settembre o ottobre): nel testo scrivo fine settembre, secondo Wikipedia. Da verificare sul sito del festival."
+  },
+  {
+    "slug": "scala-dei-turchi",
+    "tagline_it": "Falesia di marna bianca che scende sul mare di Realmonte",
+    "description_it": "La Scala dei Turchi è una falesia di marna bianca, la formazione dei Trubi, lungo la costa di Realmonte, nel libero consorzio di Agrigento. Il bianco della roccia è netto, e la scogliera si raggiunge dal litorale salendo una scalinata naturale di pietra calcarea. Dalla sommità si vede la costa fino a Capo Rossello. Il sito è soggetto a erosione e frane: è stato chiuso più volte, e dal 2023 è bene pubblico con accesso regolato, con ingressi contingentati e biglietto.",
+    "consigli": [
+      "Per la scalinata servono scarpe chiuse con suola antiscivolo: la marna diventa scivolosa con l’umidità e il vento. Porta con te solo l’essenziale, perché il percorso è in parte sassoso e in salita.",
+      "Prima di partire verifica lo stato di accesso sui canali ufficiali del Comune di Realmonte e del Parco archeologico, perché le regole sono cambiate più volte. In alta stagione conviene arrivare presto."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Scala_dei_Turchi",
+      "https://www.lasicilia.it/news/cronaca/3037934/scala-dei-turchi-cambia-tutto-addio-prenotazioni-online-ingresso-a-6-euro-e-accessi-contingentati-per-salvare-la-falesia-bianca.html"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "sciacca",
+    "tagline_it": "Maiolica dal Quattrocento, botteghe e terme sul monte Kronio",
+    "description_it": "Sciacca è un comune di circa 38mila abitanti sulla costa meridionale, con circa 33 chilometri di litorale e il monte Kronio alle spalle. La maiolica è la sua tradizione più viva: la produzione è attestata dal tardo Quattrocento, con piatti, vasi e piastrelle in giallo, verde e blu cobalto. Nel centro storico lavorano ancora una trentina di ceramisti, in botteghe lungo il Corso Vittorio Emanuele e nei vicoli. Alle falde del Kronio scaturiscono le acque termali, e la località è definita la più antica località termale della Sicilia.",
+    "consigli": [
+      "Per la ceramica cerca le botteghe del centro storico e chiedi di vedere il laboratorio. Molti pezzi sono dipinti a mano con i colori tradizionali: giallo paglia, arancio, turchese, blu e verde ramina.",
+      "Sul monte Kronio, oltre alle acque termali, si trovano il santuario di San Calogero e l’Antiquarium: se ti interessano, inseriscili nella giornata. Il Comune ha avviato nel 2026 il percorso per la tutela IGP: chiedi al banco se il pezzo è prodotto in città."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Sciacca",
+      "https://www.buongiornoceramica.it/wp-content/uploads/2016/01/38_Sciacca_TCI.pdf",
+      "https://www.lasicilia.it/news/attualita/3056911/ceramica-di-sciacca-igp-al-via-il-piano-per-il-marchio-ue.html"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "scicli",
+    "tagline_it": "Città barocca tra colline e valli, nella Val di Noto.",
+    "description_it": "Scicli è una delle città tardo barocche della Val di Noto, riconosciute dall’UNESCO nel 2002. Il centro conserva palazzi e chiese barocchi, e la città si sviluppa su più colline. La chiesa di San Matteo, la più antica della città, sorge sul colle omonimo, nel nucleo originario dell’abitato. Via Mormino Penna è la via principale del centro, con i palazzi più rappresentativi.",
+    "consigli": [
+      "Le chiese del centro si visitano a piedi in mezza giornata. Per salire a San Matteo, parti con calma: la salita è in pendenza e conviene farla nelle ore fresche. Controlla gli orari di apertura sul posto, perché cambiano.",
+      "Via Mormino Penna è il punto di ritrovo serale del centro: lascia la passeggiata alla sera, dopo la visita alle chiese durante il giorno."
+    ],
+    "fonti": [
+      "https://siviaggia.it/viaggi/scicli-cosa-vedere-cosa-visitare/277955/",
+      "https://www.balarm.it/eventi/a-scicli-tra-stucchi-intarsi-e-decori-rococo-con-le-vie-dei-tesori-nel-gioiello-barocco-127841"
+    ],
+    "note": "La chiesa di San Matteo è indicata come principale luogo di culto fino al 1874 (una fonte): nel testo non compare. Le fonti non indicano l’indirizzo esatto della chiesa."
+  },
+  {
+    "slug": "segesta",
+    "tagline_it": "Tempio dorico quasi intatto sul colle, e il teatro sul monte",
+    "description_it": "Segesta si trova sul Monte Barbaro, nel territorio di Calatafimi, tra Alcamo e Castellammare del Golfo. Il tempio dorico fu costruito nell’ultimo trentennio del V secolo a.C., ha 36 colonne e il colonnato è conservato per intero. Sulla cima più alta del monte il teatro fu costruito alla fine del III secolo a.C., può accogliere circa quattromila spettatori ed è ancora usato per eventi e rievocazioni. La città elima fu alleata di Roma nella prima guerra punica e ottenne lo status di città libera.",
+    "consigli": [
+      "Il teatro è sulla cima del monte e la salita è più impegnativa del tempio: se viaggi con bambini piccoli o hai difficoltà a camminare, valuta con calma cosa vedere. Porta acqua e un cappello, perché il sole sul colle si sente.",
+      "Il teatro ospita rievocazioni ed eventi all’alba e al tramonto, ma la programmazione cambia di anno in anno. Controlla il calendario del sito prima di organizzare la visita."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Segesta"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "siracusa",
+    "tagline_it": "Capoluogo sulla costa ionica, con la Neapolis sulla terraferma",
+    "description_it": "Siracusa è il capoluogo della provincia omonima, sulla costa orientale della Sicilia. Il centro antico è Ortigia, un’isola collegata alla terraferma da ponti. Il Parco archeologico della Neapolis, con il teatro greco scavato nel colle Temenite, l’anfiteatro romano e la latomia del Paradiso, si trova sulla terraferma e non sull’isola. Dal centro di Ortigia il parco si raggiunge in auto o con un tragitto a piedi più lungo. Da Siracusa si arriva in auto a Pantalica, a circa venti chilometri, e alle spiagge a sud della città.",
+    "consigli": [
+      "Il parco della Neapolis si gira a piedi, ma le distanze tra teatro, anfiteatro e grotta non sono brevi. Il sole batte forte sulle gradinate: scegli le prime ore del giorno e porta acqua e un cappello.",
+      "Dal centro di Ortigia il parco si raggiunge in auto o con un tragitto a piedi più lungo: controlla il percorso prima di partire, e verifica orari e biglietti sul sito del parco, perché possono cambiare."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Siracusa",
+      "https://www.civitatis.com/it/siracusa/visita-guidata-parco-archeologico-neapolis/"
+    ],
+    "note": "Luogo creato per il Parco della Neapolis, che è sulla terraferma e non su Ortigia. Coordinate del comune di Siracusa da it.wikipedia.org/wiki/Siracusa (37.069167, 15.2875)."
+  },
+  {
+    "slug": "sperlinga",
+    "tagline_it": "Castello in parte scavato nella roccia, tra Nebrodi e Madonie",
+    "description_it": "Sperlinga è un piccolo comune della provincia di Enna, poco più di seicento abitanti, tra i Nebrodi e le Madonie. Il castello sorge su uno sperone di arenaria ed è in parte scavato nella roccia, e il borgo conta decine di grotte artificiali. Il castello è documentato dal 1132, quando apparteneva alla famiglia Rosso. Durante i Vespri siciliani del 1282 la guarnigione angioina resistette per oltre un anno, e un motto latino sull’arco d’ingresso ricorda l’episodio. La salita avviene per una scalinata ricavata nella pietra.",
+    "consigli": [
+      "Il borgo è in salita e la scalinata è ricavata nella roccia: parti dal centro con calma e scegli scarpe con suola antiscivolo, soprattutto quando piove.",
+      "Chiedi all’ufficio turistico del Comune gli orari del castello e del borgo rupestre prima di partire: le informazioni online non sono sempre aggiornate."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Sperlinga",
+      "https://siviaggia.it/borghi/sperlinga-enna-sicilia/594632/"
+    ],
+    "note": "Luogo creato per il castello, che è nel comune di Sperlinga e non in quello di Enna. Coordinate da it.wikipedia.org/wiki/Sperlinga (37.766667, 14.35)."
+  },
+  {
+    "slug": "taormina",
+    "tagline_it": "Il teatro antico sul mare, sotto il Monte Tauro.",
+    "description_it": "Taormina sorge su una terrazza del Monte Tauro, a circa 200 metri sul mare Ionio, con l’Etna sullo sfondo. Il Corso Umberto, la strada principale del centro, attraversa il paese tra botteghe artigiane, caffè storici e ristoranti. Il Teatro Antico, di origine greca e rimaneggiato in età romana, è il monumento più noto e si affaccia sulla costa. Sotto il paese, Mazzarò ha calette adatte al bagno, e a valle c’è Giardini Naxos, con i resti dell’antica colonia greca di Naxos.",
+    "consigli": [
+      "Il centro sorge su un’altura: le strade sono in pendenza e alcune salite sono ripide. Muoviti a piedi con scarpe comode e prevedi più tempo per le discese e le risalite di quanto indicano le mappe.",
+      "Per il Teatro Antico, arriva al mattino presto o nel tardo pomeriggio: il sole sulle gradinate è forte in estate. Controlla orari e biglietti sul sito del Parco archeologico Naxos Taormina prima di partire, perché cambiano e le fonti non concordano."
+    ],
+    "fonti": [
+      "https://en.wikipedia.org/wiki/Ancient_theatre_of_Taormina",
+      "https://www.italia.it/it/sicilia/taormina/guida-storia-curiosita",
+      "https://www.ilturista.info/guide/taormina-sicilia-mare-spiagge-cosa-vedere-sapere/"
+    ],
+    "note": "Fondazione di Naxos e di Taormina (Tauromenium): le fonti danno date diverse, non riportate."
+  },
+  {
+    "slug": "trapani",
+    "tagline_it": "Saline, porto antico e l’arcipelago delle Egadi di fronte",
+    "description_it": "Trapani sorge su un promontorio nella parte più occidentale della Sicilia. Il nome greco Drepanon significa falce, per la forma della penisola. Nel Medioevo il porto fu uno dei più importanti del Mediterraneo, e il mare è ancora il cuore della città. Le Saline di Trapani e Paceco, riserva naturale gestita dal WWF, sono ancora attive e producono sale marino a Indicazione Geografica Protetta, tra vasche e mulini a vento. Di fronte alla costa si vede l’arcipelago delle Egadi.",
+    "consigli": [
+      "Per le saline l’ora migliore è il tardo pomeriggio: la luce radente rende più nitide le vasche e i mulini. Le visite partono di solito dal centro visitatori WWF, e conviene controllare orari e modalità sul sito della riserva.",
+      "Trapani è una buona base per Erice, Segesta e le Egadi. Per la gita in barca prenota in anticipo nei mesi estivi e tieni un margine nel programma, perché il mare può cambiare le partenze."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Trapani",
+      "https://en.wikipedia.org/wiki/Salt_pans_of_Trapani_and_Paceco"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "valle-dei-templi",
+    "tagline_it": "Templi dorici su 1.300 ettari, patrimonio UNESCO dal 1997",
+    "description_it": "La Valle dei Templi è un parco archeologico di circa 1.300 ettari, istituito dalla Regione Siciliana con legge regionale nel 2000 e inserito nella lista UNESCO dal 1997. Ospita i templi dorici della città greca di Akragas: il tempio della Concordia, il tempio di Giunone e il tempio di Giove, o Olympeion, iniziato nel 480 a.C. e mai completato. Nel parco si trova anche la Kolymbethra, un grande bacino artificiale di età greca oggi trasformato in giardino.",
+    "consigli": [
+      "Il parco è molto esteso e in buona parte all’aperto: prevedi almeno mezza giornata, scarpe comode e acqua. In estate la visita del mattino presto è più sostenibile, mentre il pomeriggio è il momento più caldo.",
+      "Per le visite serali o al tramonto controlla il programma del parco prima di partire, perché le aperture variano per stagione. Il giardino Kolymbethra, che si visita con il biglietto del parco, ha orari propri."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Valle_dei_Templi",
+      "https://fondoambiente.it/luoghi/giardino-della-kolymbethra/visita"
+    ],
+    "note": "Nel seed questa scheda non ha attività: le attività della Valle sono collegate ad Agrigento."
+  }
+]

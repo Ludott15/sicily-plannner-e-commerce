@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { isLocalDatabase, parseGuideSource, planGuideImport } from "./import-guides.mjs";
+import { isGuideFile, isLocalDatabase, parseGuideSource, planGuideImport } from "./import-guides.mjs";
+
+describe("isGuideFile", () => {
+  it("considera guide solo i file con nome in minuscolo, e non FONTI.md", () => {
+    expect(isGuideFile("cosa-mangiare-in-sicilia.md")).toBe(true);
+    expect(isGuideFile("FONTI.md")).toBe(false);
+    expect(isGuideFile("fonti.md.bak")).toBe(false);
+    expect(isGuideFile("Guida.md")).toBe(false);
+  });
+});
 
 const source = [
   "---",

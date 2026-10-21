@@ -8,15 +8,15 @@ test("le pagine del catalogo sono renderizzate lato server", async ({ request })
   expect(res.status()).toBe(200);
   const html = await res.text();
   expect(html).toContain("<h1");
-  expect(html).toContain("Valle dei Templi al tramonto");
+  expect(html).toContain("Valle dei Templi");
   expect(html).toContain('"@type":"TouristAttraction"');
 });
 
 test("attività: titolo, descrizione, canonical, hreflang e dati strutturati", async ({ page }) => {
   await page.goto("/it/attivita/demo-valle-templi");
 
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Valle dei Templi al tramonto");
-  await expect(page).toHaveTitle("Valle dei Templi al tramonto · Agrigento · Isula");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Valle dei Templi");
+  await expect(page).toHaveTitle("Valle dei Templi · Agrigento · Isula");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /templi dorici/);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
@@ -26,7 +26,7 @@ test("attività: titolo, descrizione, canonical, hreflang e dati strutturati", a
     "href",
     "http://localhost:3000/en/attivita/demo-valle-templi",
   );
-  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "Valle dei Templi al tramonto");
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "Valle dei Templi");
 
   // La pagina ha più blocchi JSON-LD (TouristAttraction e BreadcrumbList): si prende quello dell'attività.
   const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
@@ -36,11 +36,12 @@ test("attività: titolo, descrizione, canonical, hreflang e dati strutturati", a
 });
 
 test("nessun testo tra parentesi quadre dei mockup nelle pagine", async ({ request }) => {
-  for (const path of ["/it", "/it/attivita", "/it/attivita/demo-zingaro", "/it/itinerari", "/it/itinerari/demo-sicilia-orientale", "/it/luoghi/demo-trapani"]) {
+  for (const path of ["/it", "/it/attivita", "/it/attivita/demo-zingaro", "/it/itinerari", "/it/itinerari/demo-sicilia-orientale", "/it/luoghi/demo-trapani", "/it/luoghi/demo-siracusa", "/it/itinerari/demo-agrigento-scala"]) {
     const html = await (await request.get(path)).text();
     const body = html.slice(html.indexOf("<body"));
-    // I titoli del seed iniziano con [DEMO]: sono dati di prova, non segnaposto dei mockup.
-    const placeholders = body.replace(/\[DEMO\]/g, "").match(/\[(?:Foto|€|Partner|Nome|Durata|durata|PREZZO|mese anno|km|distanza)[^\]]*\]/g);
+    // Nessun [DEMO] nelle pagine pubbliche: il seed ha testi del catalogo, non segnaposto.
+    expect(body, path).not.toContain("[DEMO]");
+    const placeholders = body.match(/\[(?:Foto|€|Partner|Nome|Durata|durata|PREZZO|mese anno|km|distanza)[^\]]*\]/g);
     expect(placeholders, path).toBeNull();
   }
 });
@@ -67,7 +68,7 @@ test("scheda attività: offerte dei partner dalla più economica, prezzo in loco
   await expect(page.getByText("ingresso 5 € in loco")).toBeVisible();
   const offers = page.locator("aside .is-offer");
   await expect(offers).toHaveCount(2);
-  await expect(offers.first()).toContainText("[DEMO] Escursione guidata nella Riserva dello Zingaro");
+  await expect(offers.first()).toContainText("Escursione guidata nella Riserva dello Zingaro");
   await expect(offers.first()).toContainText("45 €");
   await expect(offers.first().getByRole("link", { name: "Vedi disponibilità su GetYourGuide" })).toHaveAttribute(
     "href",
@@ -213,7 +214,7 @@ test("itinerario pronto: la linea del percorso finisce al centro dell'ultima tap
 
 test("itinerario pronto giorno per giorno, con i titoli dei giorni", async ({ page }) => {
   await page.goto("/it/itinerari");
-  await page.getByRole("link", { name: "[DEMO] Sicilia orientale in cinque giorni" }).click();
+  await page.getByRole("link", { name: "Sicilia orientale in cinque giorni" }).click();
   await expect(page).toHaveURL(/\/it\/itinerari\/demo-sicilia-orientale$/);
 
   const days = page.getByRole("navigation", { name: "Giorni" }).getByRole("button");
@@ -259,14 +260,14 @@ test("sitemap e robots", async ({ request }) => {
 test("consigli locali: firma e data di verifica nella scheda, accanto alla tappa e in home; gli scaduti no", async ({ page }) => {
   await page.goto("/it/attivita/demo-zingaro");
   const tip = page.getByRole("complementary", { name: "Consiglio locale" }).first();
-  await expect(tip).toContainText("[DEMO] Entra dall'ingresso di Scopello");
+  await expect(tip).toContainText("Per il sentiero costiero scegli scarpe da trekking");
   await expect(tip).toContainText("Redazione di Isula");
   await expect(tip).toContainText(/Verificato a \w+ \d{4}/);
 
   await page.goto("/it/itinerari/demo-sicilia-orientale");
-  await expect(page.locator("ol.is-route").getByText("[DEMO] Arriva prima delle 8")).toBeVisible();
+  await expect(page.locator("ol.is-route").getByText("Arriva presto: il mercato lavora")).toBeVisible();
 
   await page.goto("/it");
   await expect(page.getByRole("heading", { name: "Consigli firmati, con la data di verifica" })).toBeVisible();
-  await expect(page.getByText("Consiglio scaduto")).toHaveCount(0);
+  await expect(page.getByText("Le scarpe comode sono il consiglio più utile")).toHaveCount(0);
 });

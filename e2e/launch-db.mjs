@@ -3,7 +3,8 @@
 // LAUNCH_DATABASE_URL: connessione al database di produzione (basta un ruolo in sola lettura).
 import postgres from "postgres";
 
-// Prefissi dei dati che non devono esistere in produzione: "demo-" e "[DEMO]" (seed), "e2e-" e
+// Prefissi dei dati che non devono esistere in produzione: "demo-" (seed; anche il titolo dei
+// dati demo degli slug demo-) e "[DEMO]" (immagini demo di scripts/media/demo-images.mjs), "e2e-" e
 // "int-" (test). Si guardano slug, titoli, testi e codici dei partner.
 const PREFIXES = ["demo-%", "e2e-%", "int-%", "[DEMO]%"];
 

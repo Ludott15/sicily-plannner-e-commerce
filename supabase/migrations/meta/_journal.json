@@ -449,6 +449,13 @@
       "when": 1792354880207,
       "tag": "20261018202120_checkout_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1792532269297,
+      "tag": "20261020213749_itinerary_tips",
+      "breakpoints": true
     }
   ]
 }

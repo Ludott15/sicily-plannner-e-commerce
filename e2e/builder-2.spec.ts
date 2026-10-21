@@ -48,7 +48,7 @@ test("link pubblico: si legge senza account, revocato porta a 404", async ({ pag
   const guest = await anonymous.newPage();
   const shared = await guest.goto(url);
   expect(shared?.status()).toBe(200);
-  await expect(guest.getByRole("heading", { level: 1 })).toHaveText("[DEMO] Weekend a Palermo e dintorni");
+  await expect(guest.getByRole("heading", { level: 1 })).toHaveText("Weekend a Palermo e dintorni");
   await expect(guest.getByRole("button", { name: "Giorno 2 · Monreale e Palermo" })).toBeVisible();
   await expect(guest.getByRole("button", { name: /Sposta|Togli|Trascina/ })).toHaveCount(0);
   await expect(guest.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
