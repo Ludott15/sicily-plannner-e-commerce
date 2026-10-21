@@ -70,7 +70,7 @@
     "flightsEyebrow": "Flights",
     "flightsTitle": "Find a flight to Sicily",
     "flightsText": "Indicative prices from the partners, with the date they were updated. The partner confirms the final price.",
-    "trustLine": "No account needed to start. Indicative prices from partners, with the date they were updated.",
+    "trustLine": "No account needed to start.",
     "howTitle": "How it works",
     "howStep1Title": "Tell us what you like",
     "howStep1Text": "Sea, food, history, pace and budget: a few taps tell us what you are looking for.",
@@ -2785,7 +2785,9 @@
       "limit": "You cannot add more: you have reached the quantity or product limit.",
       "invalid": "Choose a quantity between 1 and 10.",
       "unavailable": "The cart is not available right now."
-    }
+    },
+    "quantityTimes": "{quantity} ×",
+    "editInCart": "Edit in cart"
   },
   "Checkout": {
     "successTitle": "Thank you",

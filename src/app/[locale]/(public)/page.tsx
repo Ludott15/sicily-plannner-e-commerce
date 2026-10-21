@@ -50,6 +50,8 @@ const MIN_FEATURED_PLACES = 4;
 // Una sola scala verticale per tutte le sezioni (manuale: space-12 su mobile, space-16 su desktop).
 const SECTION = "mx-auto w-full max-w-[1200px] px-4 py-12 md:px-16 md:py-16";
 const SECTION_TITLE = "is-display mt-2 text-heading-1";
+// Quante guide e quanti prodotti mostra la home: il limite va in SQL (vedi listGuides, listProducts).
+const HOME_LIMIT = 3;
 const EYEBROW = "text-label uppercase text-lava-muted";
 
 type HeroImage = { placeName: string; placeSlug: string; media: CoverMedia };
@@ -60,21 +62,22 @@ export default async function HomePage({ params }: Props) {
   await connection();
 
   const user = await getUser();
-  const [t, tPoints, tGuides, homeHero, featured, templates, tips, guides, shopProducts, points] = await Promise.all([
+  const [t, tPoints, tGuides, featured, templates, tips, guides, shopProducts, points] = await Promise.all([
     getTranslations("Home"),
     getTranslations("Points"),
     getTranslations("Guides"),
-    getHomeHero(),
     listFeaturedPlaces(),
     listTemplates(),
     listLatestTips(3),
-    listGuides(locale),
-    listProducts({}, locale),
+    listGuides(locale, HOME_LIMIT),
+    listProducts({}, locale, HOME_LIMIT),
     user ? getHomePoints(user) : Promise.resolve(null),
   ]);
 
-  // Hero: un luogo in evidenza a caso. Senza luoghi in evidenza, il luogo di getHomeHero().
+  // Hero: un luogo in evidenza a caso. Senza luoghi in evidenza, il luogo di getHomeHero(), che si
+  // legge solo in quel caso.
   const [heroPlace] = shuffle(featured);
+  const homeHero = heroPlace ? null : await getHomeHero();
   const hero: HeroImage | null = heroPlace
     ? { placeName: heroPlace.name, placeSlug: heroPlace.slug, media: heroPlace.cover }
     : homeHero?.cover
@@ -141,16 +144,10 @@ export default async function HomePage({ params }: Props) {
         </div>
       </section>
 
-      {/* 2. Ricerca voli compatta: una barra sotto l'hero; la ricerca completa è in /voli. */}
-      <section aria-labelledby="voli-home" className="border-y border-divider bg-calce-sunk">
-        <div className={`${SECTION} grid gap-6 md:grid-cols-[1fr_1.4fr] md:items-start md:gap-12`}>
-          <div className="flex flex-col gap-3">
-            <p className={EYEBROW}>{t("flightsEyebrow")}</p>
-            <h2 id="voli-home" className="is-display text-heading-1">
-              {t("flightsTitle")}
-            </h2>
-            <p className="text-body text-pretty text-lava-muted">{t("flightsText")}</p>
-          </div>
+      {/* 2. Ricerca voli compatta: una barra a tutta larghezza sotto l'hero, senza titolo visibile;
+          la ricerca completa è in /voli. Il nome accessibile della regione è il titolo della sezione. */}
+      <section aria-label={t("flightsTitle")} className="border-y border-divider bg-calce-sunk">
+        <div className={SECTION}>
           <FlightSearch
             variant="compact"
             initial={{ origin: null, destination: null, departure: null, returnDate: null, passengers: 1, itineraryId: null }}
@@ -241,7 +238,7 @@ export default async function HomePage({ params }: Props) {
                   className="flex h-full min-h-44 flex-col gap-3 rounded-lg border border-card-edge bg-calce p-5 text-lava no-underline shadow-card hover:shadow-lift focus-visible:outline-2 focus-visible:outline-focus"
                 >
                   <service.icon size={24} strokeWidth={1.5} aria-hidden="true" className="shrink-0 text-mare" />
-                  <span className="text-heading-3 font-semibold">{service.title}</span>
+                  <h3 className="text-heading-3 font-semibold">{service.title}</h3>
                   <span className="text-body-s text-lava-muted">{service.text}</span>
                 </Link>
               </li>

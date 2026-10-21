@@ -97,18 +97,19 @@ function inArea(areaSlugOrId: SQL): SQL {
   )`;
 }
 
-async function cardsWhere(tx: UserTx, where: SQL | undefined, locale: ShopLocale): Promise<ShopCard[]> {
-  const rows = await tx
+async function cardsWhere(tx: UserTx, where: SQL | undefined, locale: ShopLocale, limit?: number): Promise<ShopCard[]> {
+  const query = tx
     .select(cardColumns)
     .from(products)
     .innerJoin(producers, eq(producers.id, products.producerId))
     .where(where)
     .orderBy(asc(products.title), asc(products.slug));
+  const rows = await (limit === undefined ? query : query.limit(limit));
   return rows.map((row) => toCard({ ...row, titleIt: row.titleIt }, locale));
 }
 
-// Prodotti vendibili, con i filtri della pagina /shop.
-export function listProducts(filters: ShopFilters, locale: ShopLocale): Promise<ShopCard[]> {
+// Prodotti vendibili, con i filtri della pagina /shop. Con limit il tetto va in SQL (la home ne chiede tre).
+export function listProducts(filters: ShopFilters, locale: ShopLocale, limit?: number): Promise<ShopCard[]> {
   return dbPublic((tx) =>
     cardsWhere(
       tx,
@@ -119,6 +120,7 @@ export function listProducts(filters: ShopFilters, locale: ShopLocale): Promise<
         filters.maxPriceCents !== undefined ? sql`${products.priceCents} <= ${filters.maxPriceCents}` : undefined,
       ),
       locale,
+      limit,
     ),
   );
 }

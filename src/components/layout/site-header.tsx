@@ -72,11 +72,11 @@ export async function SiteHeader() {
   return (
     <SiteHeaderFrame>
       <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between gap-4 px-4 md:h-16 md:px-16">
-        <div className="flex items-center gap-10">
+        <div className="flex items-center gap-6 lg:gap-10">
           <Link
             href="/"
             aria-label={t("home")}
-            className="text-[26px] leading-none text-lava no-underline md:text-[30px]"
+            className="text-heading-2 leading-none text-lava no-underline"
           >
             <Logo />
           </Link>
@@ -89,15 +89,15 @@ export async function SiteHeader() {
           />
         </div>
 
-        {/* Campo di ricerca da lg (nel tablet la navigazione ha bisogno dello spazio): sotto, l'icona. */}
-        <div className="hidden min-w-0 flex-1 justify-end lg:flex">
+        {/* Campo di ricerca da xl: fra md e xl la navigazione ha bisogno dello spazio, e resta l'icona. */}
+        <div className="hidden min-w-0 flex-1 justify-end xl:flex">
           <div className="w-56 xl:w-72">
             <SiteSearch variant="header" />
           </div>
         </div>
 
         <div className="flex items-center gap-1">
-          <ButtonLink href="/cerca" variant="ghost" size="sm" className="lg:hidden" aria-label={tSearch("openSearch")}>
+          <ButtonLink href="/cerca" variant="ghost" size="sm" className="xl:hidden" aria-label={tSearch("openSearch")}>
             <Search size={20} strokeWidth={1.5} aria-hidden="true" />
           </ButtonLink>
 

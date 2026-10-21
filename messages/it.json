@@ -70,7 +70,7 @@
     "flightsEyebrow": "Voli",
     "flightsTitle": "Trova un volo per la Sicilia",
     "flightsText": "Prezzi indicativi dai partner, con la data di aggiornamento. Il prezzo finale lo conferma il partner.",
-    "trustLine": "Nessun account per iniziare. Prezzi indicativi dai partner, con la data di aggiornamento.",
+    "trustLine": "Nessun account per iniziare.",
     "howTitle": "Come funziona",
     "howStep1Title": "Scegli cosa ti piace",
     "howStep1Text": "Mare, cibo, storia, ritmo e budget: bastano pochi tocchi per dirci cosa cerchi.",
@@ -2785,7 +2785,9 @@
       "limit": "Non puoi aggiungere altro: hai raggiunto il limite di quantità o di prodotti.",
       "invalid": "Scegli una quantità tra 1 e 10.",
       "unavailable": "Il carrello non è disponibile in questo momento."
-    }
+    },
+    "quantityTimes": "{quantity} ×",
+    "editInCart": "Modifica nel carrello"
   },
   "Checkout": {
     "successTitle": "Grazie",

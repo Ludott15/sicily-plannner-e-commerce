@@ -64,18 +64,31 @@ function CartLineRow({ line, locale, compact }: { line: CartLine; locale: string
         )}
 
         <div className="mt-1 flex flex-wrap items-center gap-3">
-          <label htmlFor={quantityId} className="text-body-s font-semibold">
-            {t("quantity")}
-          </label>
-          <Select
-            id={quantityId}
-            value={String(line.quantity)}
-            disabled={pending}
-            onValueChange={(value) => save(Number(value))}
-            label={`${t("quantity")}: ${line.title}`}
-            options={quantities.map((value) => ({ value: String(value), label: String(value) }))}
-            className="w-24"
-          />
+          {compact ? (
+            // Nella finestra del carrello la quantità è testo: il menu resta sulla pagina del carrello,
+            // fuori dal popover con focus trap.
+            <>
+              <p className="text-body-s font-semibold">{t("quantityTimes", { quantity: line.quantity })}</p>
+              <Link href="/carrello" className="text-body-s font-semibold text-coccio-text underline-offset-4 hover:underline">
+                {t("editInCart")}
+              </Link>
+            </>
+          ) : (
+            <>
+              <label htmlFor={quantityId} className="text-body-s font-semibold">
+                {t("quantity")}
+              </label>
+              <Select
+                id={quantityId}
+                value={String(line.quantity)}
+                disabled={pending}
+                onValueChange={(value) => save(Number(value))}
+                label={`${t("quantity")}: ${line.title}`}
+                options={quantities.map((value) => ({ value: String(value), label: String(value) }))}
+                className="w-24"
+              />
+            </>
+          )}
           <Button
             variant="ghost"
             size="sm"
