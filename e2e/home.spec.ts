@@ -40,3 +40,38 @@ test("a 390 px la home non scorre in orizzontale e il carosello non mostra le fr
   await expect(page.getByRole("button", { name: "Luoghi successivi" })).toBeHidden();
   await expect(page.getByRole("list", { name: "Dove andare in Sicilia" })).toBeVisible();
 });
+
+// Redesign della home e della navigazione (2026-10-20): sezioni in ordine, voce attiva, menu Servizi.
+test("home e navigazione: sezioni del redesign, menu Servizi e voce attiva", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/it");
+
+  await expect(page.getByRole("heading", { name: "Come funziona" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Organizza il viaggio" })).toBeVisible();
+
+  const nav = page.getByRole("navigation", { name: "Principale" });
+  for (const name of ["Itinerari", "Attività", "Guide", "Shop"]) {
+    await expect(nav.getByRole("link", { name, exact: true })).toBeVisible();
+  }
+  await nav.getByRole("button", { name: "Servizi" }).click();
+  for (const name of ["Voli", "Dove dormire", "Noleggio auto", "Traghetti", "Tutti i servizi"]) {
+    await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
+  }
+  await page.keyboard.press("Escape");
+
+  await page.goto("/it/attivita");
+  await expect(
+    page.getByRole("navigation", { name: "Principale" }).getByRole("link", { name: "Attività", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+});
+
+test("mobile: la barra in basso apre Esplora, con le stesse voci dell'intestazione", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/it");
+
+  await page.locator('a[href="/it/esplora"]').click();
+  await expect(page).toHaveURL(/\/it\/esplora$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Esplora" })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "Itinerari", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});

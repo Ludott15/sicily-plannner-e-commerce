@@ -2,18 +2,23 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Bell, Search } from "lucide-react";
 import { ButtonLink, Logo } from "@/components/design";
 import { CartButton } from "@/components/cart/cart-button";
-import { ActionMenu, type ActionMenuItem } from "@/components/layout/action-menu";
+import { type ActionMenuItem } from "@/components/layout/action-menu";
 import { AvatarMenu } from "@/components/layout/avatar-menu";
+import { HeaderNav } from "@/components/layout/header-nav";
+import { PRIMARY_NAV, SERVICE_NAV, SHOP_NAV, type NavLabelKey } from "@/components/layout/nav-links";
+import { SiteHeaderFrame } from "@/components/layout/site-header-frame";
 import { SiteSearch } from "@/components/search/site-search";
 import { Link } from "@/lib/i18n/navigation";
 import { signOut } from "@/server/auth/actions";
 import { getHeaderUser } from "@/server/auth/header-user";
 import { emptyCartView, readCart, readCartCount } from "@/server/shop/cart";
 
-// Intestazione (brief 6.1, navigazione a due livelli).
-// Desktop: logo, Esplora (menu: Attività, Itinerari pronti, Noleggio auto), Voli, Dove dormire.
-// A destra: senza sessione "Accedi"; con account la campanella e il menu personale (avatar con le iniziali).
-// Mobile: logo, campanella e avatar; la navigazione sta nella barra in basso (MobileTabBar).
+// Intestazione (brief 6.1, navigazione a due livelli; redesign della home del 2026-10-20).
+// Desktop: logo, Itinerari, Attività, Guide, menu Servizi (Voli, Dove dormire, Noleggio auto, Traghetti,
+// Tutti i servizi), Shop. A destra: ricerca, carrello, notifiche e avatar; senza sessione "Accedi".
+// Sticky, con bordo sottile quando si scorre (SiteHeaderFrame). Voci in nav-links.ts.
+// Mobile: logo, ricerca, carrello, campanella e avatar; la navigazione sta nella barra in basso (MobileTabBar),
+// la cui voce Esplora porta alla pagina /esplora con le stesse voci.
 // Ospite (sessione anonima): solo il menu personale, con I miei viaggi, Preferenze, Crea l'account ed Esci.
 // Carrello: icona con il numero di articoli, a tutte le larghezze (drawer da md, pagina su mobile).
 // Il bottone principale della pagina sta nella pagina, non qui.
@@ -36,13 +41,11 @@ export async function SiteHeader() {
     fields: { locale },
   };
 
-  const exploreItems: ActionMenuItem[] = [
-    { kind: "link", href: "/attivita", label: t("activities"), icon: "compass" },
-    { kind: "link", href: "/itinerari", label: t("itineraries"), icon: "map" },
-    { kind: "link", href: "/guide", label: t("guides"), icon: "book" },
-    { kind: "link", href: "/noleggio-auto", label: t("car"), icon: "car" },
-    { kind: "link", href: "/shop", label: t("shop") },
-  ];
+  // Etichette delle voci di navigazione, tradotte qui e passate al client (HeaderNav).
+  const labelOf = (label: NavLabelKey) => t(label);
+  const primaryLinks = PRIMARY_NAV.map((item) => ({ href: item.href, label: labelOf(item.label) }));
+  const serviceLinks = SERVICE_NAV.map((item) => ({ href: item.href, label: labelOf(item.label), icon: item.icon }));
+  const shopLink = { href: SHOP_NAV.href, label: labelOf(SHOP_NAV.label) };
 
   const memberItems: ActionMenuItem[] = [
     { kind: "link", href: "/viaggi", label: t("trips"), icon: "map" },
@@ -66,10 +69,8 @@ export async function SiteHeader() {
     signOutItem,
   ];
 
-  const navLinkClass = "rounded-md text-lava no-underline hover:underline hover:underline-offset-[6px]";
-
   return (
-    <header className="border-b border-divider bg-calce">
+    <SiteHeaderFrame>
       <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between gap-4 px-4 md:h-16 md:px-16">
         <div className="flex items-center gap-10">
           <Link
@@ -79,15 +80,13 @@ export async function SiteHeader() {
           >
             <Logo />
           </Link>
-          <nav aria-label={t("main")} className="hidden items-center gap-6 text-[15px] font-medium md:flex">
-            <ActionMenu variant="text" text={t("explore")} items={exploreItems} align="start" />
-            <Link href="/voli" className={navLinkClass}>
-              {t("flights")}
-            </Link>
-            <Link href="/dove-dormire" className={navLinkClass}>
-              {t("lodging")}
-            </Link>
-          </nav>
+          <HeaderNav
+            mainLabel={t("main")}
+            primary={primaryLinks}
+            servicesLabel={t("navServices")}
+            services={serviceLinks}
+            shop={shopLink}
+          />
         </div>
 
         {/* Campo di ricerca da lg (nel tablet la navigazione ha bisogno dello spazio): sotto, l'icona. */}
@@ -140,6 +139,6 @@ export async function SiteHeader() {
           )}
         </div>
       </div>
-    </header>
+    </SiteHeaderFrame>
   );
 }

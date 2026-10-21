@@ -12,7 +12,7 @@ import { pendingAttributes, type PendingId } from "@/lib/pending-actions";
 export type TabKey = "explore" | "trips" | "groups" | "profile";
 
 const TABS: { key: TabKey; href: string; label: "tabExplore" | "tabTrips" | "tabGroups" | "tabProfile"; icon: LucideIcon }[] = [
-  { key: "explore", href: "/attivita", label: "tabExplore", icon: Compass },
+  { key: "explore", href: "/esplora", label: "tabExplore", icon: Compass },
   { key: "trips", href: "/viaggi", label: "tabTrips", icon: Map },
   { key: "groups", href: "/gruppi", label: "tabGroups", icon: Users },
   { key: "profile", href: "/profilo", label: "tabProfile", icon: User },
