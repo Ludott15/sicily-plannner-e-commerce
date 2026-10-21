@@ -1,3 +1,4 @@
+import { chooseOption } from "./helpers/controls";
 import { expect, test } from "@playwright/test";
 
 // Usano il seed demo (supabase/seed.sql), caricato da `supabase db reset` in locale e in CI.
@@ -161,7 +162,7 @@ test("elenco attività: filtri per interesse e provincia nell'URL, lista renderi
   await expect(page.getByRole("link", { name: "Visita al Teatro Massimo" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Riserva dello Zingaro" })).toBeVisible();
 
-  await page.getByLabel("Provincia").selectOption("TP");
+  await chooseOption(page, "Provincia", "Trapani");
   await expect(page).toHaveURL(/\/it\/attivita\?interessi=sea&provincia=TP$/);
   await expect(page.getByRole("link", { name: "Isola Bella in kayak" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Riserva dello Zingaro" })).toBeVisible();
@@ -169,10 +170,10 @@ test("elenco attività: filtri per interesse e provincia nell'URL, lista renderi
   // Lo stato resta dopo il ricaricamento: viene dall'URL.
   await page.reload();
   await expect(page.getByRole("button", { name: "Mare", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByLabel("Provincia")).toHaveValue("TP");
+  await expect(page.getByLabel("Provincia")).toHaveText("Trapani");
 
   await page.getByRole("button", { name: "Mare", exact: true }).click();
-  await page.getByLabel("Provincia").selectOption("");
+  await chooseOption(page, "Provincia", "Tutte le province");
   await expect(page).toHaveURL(/\/it\/attivita$/);
   await expect(results.locator(":scope > li")).toHaveCount(all);
 });

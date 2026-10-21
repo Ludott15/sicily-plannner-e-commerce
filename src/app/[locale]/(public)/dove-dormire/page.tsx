@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { buttonClass, ButtonAnchor, PendingButton } from "@/components/design";
+import { buttonClass, ButtonAnchor, DateField, PendingButton, Select } from "@/components/design";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { isIsoDate } from "@/lib/flights/search-params";
@@ -126,39 +126,30 @@ export default async function LodgingPage({ params, searchParams }: Props) {
               <label htmlFor="luogo" className="text-body-s font-semibold">
                 {t("placeLabel")}
               </label>
-              <select id="luogo" name="luogo" defaultValue={selected?.key ?? ""} required className={FIELD}>
-                <option value="" disabled>
-                  {t("placePlaceholder")}
-                </option>
-                <optgroup label={t("placeGroupAreas")}>
-                  {data.areas.map((a) => (
-                    <option key={a.slug} value={`area:${a.slug}`}>
-                      {a.name}
-                    </option>
-                  ))}
-                </optgroup>
-                {data.cities.length > 0 && (
-                  <optgroup label={t("placeGroupCities")}>
-                    {data.cities.map((c) => (
-                      <option key={c.slug} value={`city:${c.slug}`}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
+              <Select
+                id="luogo"
+                name="luogo"
+                label={t("placeLabel")}
+                placeholder={t("placePlaceholder")}
+                defaultValue={selected?.key ?? undefined}
+                required
+                options={[
+                  ...data.areas.map((a) => ({ value: `area:${a.slug}`, label: a.name, description: t("placeGroupAreas") })),
+                  ...data.cities.map((c) => ({ value: `city:${c.slug}`, label: c.name, description: t("placeGroupCities") })),
+                ]}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="checkin" className="text-body-s font-semibold">
                 {t("checkin")}
               </label>
-              <input id="checkin" name="checkin" type="date" defaultValue={checkin} className={FIELD} />
+              <DateField id="checkin" name="checkin" label={t("checkin")} defaultValue={checkin} />
             </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="checkout" className="text-body-s font-semibold">
                 {t("checkout")}
               </label>
-              <input id="checkout" name="checkout" type="date" defaultValue={checkout} className={FIELD} />
+              <DateField id="checkout" name="checkout" label={t("checkout")} defaultValue={checkout} />
             </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="persone" className="text-body-s font-semibold">

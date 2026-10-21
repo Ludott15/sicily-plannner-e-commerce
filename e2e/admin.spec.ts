@@ -1,3 +1,4 @@
+import { chooseOption } from "./helpers/controls";
 import { expect, test } from "@playwright/test";
 import { signUpWithCode } from "./helpers";
 
@@ -19,7 +20,7 @@ test("admin: crea un'attività, non la attiva senza interessi, la attiva con un 
   await page.goto("/it/admin/attivita/nuova");
   await page.getByLabel("Titolo", { exact: true }).fill("e2e- Attività di prova");
   await page.getByLabel("Slug (indirizzo della pagina)").fill(slug);
-  await page.getByLabel("Luogo").selectOption({ label: "Palermo" });
+  await chooseOption(page, "Luogo", "Palermo");
   await page.getByLabel("Durata (minuti)").fill("90");
   await page.getByLabel("Attiva (visibile nel sito)").check();
   await page.getByRole("button", { name: "Salva" }).click();
@@ -28,7 +29,7 @@ test("admin: crea un'attività, non la attiva senza interessi, la attiva con un 
   );
   expect((await request.get(`/it/attivita/${slug}`)).status()).toBe(404);
 
-  await page.getByLabel("Mare").selectOption("2");
+  await chooseOption(page, "Mare", "2");
   await page.getByRole("button", { name: "Salva" }).click();
   await expect(page.getByRole("status")).toHaveText("Salvato.");
   expect((await request.get(`/it/attivita/${slug}`)).status()).toBe(200);
@@ -57,11 +58,12 @@ test("admin: itinerario pronto in bozza, con una tappa nella sua fascia oraria",
 
   // Senza slug non è pubblicato: la tappa si aggiunge con la fascia oraria, non con un orario.
   const day1 = page.locator("#giorno-1");
-  await day1.getByLabel("Attività").selectOption({ label: "Palazzo dei Normanni e Cappella Palatina" });
-  await day1.getByLabel("Fascia oraria").first().selectOption("morning");
+  await chooseOption(page, "Attività", "Palazzo dei Normanni e Cappella Palatina", day1);
+  await day1.getByLabel("Fascia oraria").first().click();
+  await page.getByRole("option", { name: "Mattina", exact: true }).click();
   await day1.getByRole("button", { name: "Aggiungi tappa" }).click();
   await expect(page.locator("#giorno-1")).toContainText("Palazzo dei Normanni e Cappella Palatina");
-  await expect(page.locator("#giorno-1").getByLabel("Fascia oraria").first()).toHaveValue("morning");
+  await expect(page.locator("#giorno-1").getByLabel("Fascia oraria").first()).toHaveText("Mattina");
   expect((await request.get(`/it/itinerari/${slug}`)).status()).toBe(404);
 });
 
@@ -80,7 +82,7 @@ test("admin: coda Da riverificare, nuovo consiglio e riverifica", async ({ page,
   try {
   await page.getByRole("link", { name: "Nuovo consiglio" }).click();
   await page.getByLabel("Consiglio", { exact: true }).fill(body);
-  await page.getByLabel("Luogo", { exact: true }).selectOption({ label: "Palermo" });
+  await chooseOption(page, "Luogo", "Palermo");
   await page.getByRole("button", { name: "Salva" }).click();
   await expect(page.getByRole("status")).toHaveText("Salvato.");
   await expect(page.getByText(body)).toBeVisible();

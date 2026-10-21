@@ -1,3 +1,4 @@
+import { chooseOption } from "./helpers/controls";
 import { expect, test } from "@playwright/test";
 import { signUpWithCode } from "./helpers";
 
@@ -38,12 +39,12 @@ test("admin: l'immagine verticale è un PNG e la pagina la mostra", async ({ pag
   const email = await signUpWithCode(page, request);
   const { withDb } = await import("./db.mjs");
   await withDb((sql) => sql`update profiles set role = 'admin' where id = (select id from auth.users where email = ${email})`);
-  const [place] = await withDb((sql) => sql`select id from places where slug like 'demo-%' order by name limit 1`);
+  const [place] = await withDb((sql) => sql`select id, name from places where slug like 'demo-%' order by name limit 1`);
   if (!place) throw new Error("Il seed demo non ha luoghi: npm run db:reset");
 
   await page.goto("/it/admin/contenuti");
   await expect(page.getByRole("heading", { name: "Contenuti video" })).toBeVisible();
-  await page.getByLabel("Itinerario o luogo").selectOption(`luogo:${place.id}`);
+  await chooseOption(page, /Itinerario o luogo/, place.name);
   await page.getByRole("button", { name: "Mostra anteprima" }).click();
   await expect(page.getByRole("link", { name: "Scarica PNG" })).toBeVisible();
 

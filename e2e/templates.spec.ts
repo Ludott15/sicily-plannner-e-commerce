@@ -1,3 +1,4 @@
+import { chooseOption } from "./helpers/controls";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { signUpWithCode } from "./helpers";
 
@@ -43,7 +44,7 @@ test("admin: senza ritmo l'itinerario non si pubblica, e il controllo sparisce c
   expect((await request.get(`/it/itinerari/${slug}`)).status()).toBe(404);
 
   // La bozza non tiene lo slug: si richiede la pubblicazione una seconda volta, ora con il ritmo.
-  await page.getByLabel("Ritmo", { exact: true }).selectOption("balanced");
+  await chooseOption(page, "Ritmo", "Equilibrato");
   await page.getByLabel("Slug per la pubblicazione").fill(slug);
   await page.getByRole("button", { name: "Salva", exact: true }).click();
   // La pagina può avere più di un alert: si filtra sul messaggio del form.
@@ -74,7 +75,7 @@ test("admin: riordino da tastiera e spostamento di una tappa al giorno 2", async
   await expect(day1.first()).toContainText("e2e- Tappa B");
 
   // Tra i giorni, senza mouse: il select "Sposta al giorno".
-  await day1.filter({ hasText: "e2e- Tappa A" }).getByLabel("Sposta al giorno").selectOption({ label: "Giorno 2" });
+  await chooseOption(page, "Sposta al giorno", "Giorno 2", day1.filter({ hasText: "e2e- Tappa A" }));
   await expect(page.locator("#giorno-2")).toContainText("e2e- Tappa A");
   await expect(page.locator("#giorno-1")).not.toContainText("e2e- Tappa A");
 });

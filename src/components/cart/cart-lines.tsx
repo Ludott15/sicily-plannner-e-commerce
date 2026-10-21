@@ -1,8 +1,8 @@
 "use client";
 
-import { useId, useState, useTransition, type ChangeEvent } from "react";
+import { useId, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/design";
+import { Button, Select } from "@/components/design";
 import { Link } from "@/lib/i18n/navigation";
 import { CART_MAX_QUANTITY } from "@/lib/shop/cart";
 import { formatCents, productImageUrl } from "@/lib/shop/present";
@@ -40,10 +40,6 @@ function CartLineRow({ line, locale, compact }: { line: CartLine; locale: string
     });
   }
 
-  function onQuantityChange(event: ChangeEvent<HTMLSelectElement>) {
-    save(Number(event.currentTarget.value));
-  }
-
   return (
     <li className={compact ? "flex gap-3 py-3" : "flex gap-4 py-4"}>
       <div className={compact ? "relative size-16 shrink-0 overflow-hidden rounded-md bg-pistacchio-tint" : "relative size-24 shrink-0 overflow-hidden rounded-md bg-pistacchio-tint"}>
@@ -71,20 +67,15 @@ function CartLineRow({ line, locale, compact }: { line: CartLine; locale: string
           <label htmlFor={quantityId} className="text-body-s font-semibold">
             {t("quantity")}
           </label>
-          <select
+          <Select
             id={quantityId}
-            value={line.quantity}
+            value={String(line.quantity)}
             disabled={pending}
-            onChange={onQuantityChange}
-            aria-label={`${t("quantity")}: ${line.title}`}
-            className="min-h-11 rounded-md border border-card-edge bg-calce-raised px-3 text-body text-lava focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-          >
-            {quantities.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
+            onValueChange={(value) => save(Number(value))}
+            label={`${t("quantity")}: ${line.title}`}
+            options={quantities.map((value) => ({ value: String(value), label: String(value) }))}
+            className="w-24"
+          />
           <Button
             variant="ghost"
             size="sm"

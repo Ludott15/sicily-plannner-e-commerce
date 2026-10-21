@@ -3,6 +3,8 @@
 import { useId, useMemo, useState, useTransition, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/design/button";
+import { DateField } from "@/components/design/date-field";
+import { Select } from "@/components/design/select";
 import { isSicilyAirport, SICILY_AIRPORT_CODES, SICILY_AIRPORTS, type SicilyAirportCode } from "@/lib/flights/airports";
 import { getDeparture, normalizeSearchText, searchDepartures, type DepartureAirport } from "@/lib/flights/departures";
 import { MAX_PASSENGERS, serializeFlightSearchParams } from "@/lib/flights/search-params";
@@ -272,21 +274,18 @@ export function FlightSearch({ variant, initial }: FlightSearchProps) {
           <label htmlFor={destinationId} className="text-body-s font-semibold">
             {t("destination")}
           </label>
-          <select
+          <Select
             id={destinationId}
+            label={t("destination")}
             value={destination}
-            onChange={(event) => {
-              const value = event.target.value;
+            onValueChange={(value) => {
               if (isSicilyAirport(value)) setDestination(value);
             }}
-            className={control}
-          >
-            {SICILY_AIRPORT_CODES.map((code) => (
-              <option key={code} value={code}>
-                {`${SICILY_AIRPORTS[code].name[lang]} (${code})`}
-              </option>
-            ))}
-          </select>
+            options={SICILY_AIRPORT_CODES.map((code) => ({
+              value: code,
+              label: `${SICILY_AIRPORTS[code].name[lang]} (${code})`,
+            }))}
+          />
         </div>
       </div>
 
@@ -306,17 +305,16 @@ export function FlightSearch({ variant, initial }: FlightSearchProps) {
           <label htmlFor={departureId} className="text-body-s font-semibold">
             {t("departure")}
           </label>
-          <input
+          <DateField
             id={departureId}
-            type="date"
+            label={t("departure")}
             value={departure}
-            onChange={(event) => {
-              setDeparture(event.target.value);
+            onValueChange={(value) => {
+              setDeparture(value);
               setError(null);
             }}
             aria-invalid={error === "departure"}
             aria-describedby={error === "departure" ? dateErrorId : undefined}
-            className={control}
           />
           {error === "departure" && (
             <p id={dateErrorId} role="alert" className="text-body-s text-danger">
@@ -330,18 +328,17 @@ export function FlightSearch({ variant, initial }: FlightSearchProps) {
             <label htmlFor={returnId} className="text-body-s font-semibold">
               {t("returnDate")}
             </label>
-            <input
+            <DateField
               id={returnId}
-              type="date"
+              label={t("returnDate")}
               value={returnDate}
               min={departure || undefined}
-              onChange={(event) => {
-                setReturnDate(event.target.value);
+              onValueChange={(value) => {
+                setReturnDate(value);
                 setError(null);
               }}
               aria-invalid={error === "return"}
               aria-describedby={error === "return" ? dateErrorId : undefined}
-              className={control}
             />
             {error === "return" && (
               <p id={dateErrorId} role="alert" className="text-body-s text-danger">
@@ -355,18 +352,16 @@ export function FlightSearch({ variant, initial }: FlightSearchProps) {
           <label htmlFor={passengersId} className="text-body-s font-semibold">
             {t("passengers")}
           </label>
-          <select
+          <Select
             id={passengersId}
-            value={passengers}
-            onChange={(event) => setPassengers(Number(event.target.value))}
-            className={control}
-          >
-            {PASSENGER_OPTIONS.map((count) => (
-              <option key={count} value={count}>
-                {t("passengersOption", { count })}
-              </option>
-            ))}
-          </select>
+            label={t("passengers")}
+            value={String(passengers)}
+            onValueChange={(value) => setPassengers(Number(value))}
+            options={PASSENGER_OPTIONS.map((count) => ({
+              value: String(count),
+              label: t("passengersOption", { count }),
+            }))}
+          />
         </div>
       </div>
 

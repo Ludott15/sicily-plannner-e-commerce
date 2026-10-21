@@ -19,6 +19,9 @@ import { readCartCount } from "@/server/shop/cart";
 import { routing } from "@/lib/i18n/routing";
 import "../globals.css";
 import "@/components/design/isula.css";
+import "@/components/design/styles/controls.css";
+import "@/components/design/styles/profilo.css";
+import "@/components/design/styles/chat.css";
 
 type Props = {
   children: React.ReactNode;

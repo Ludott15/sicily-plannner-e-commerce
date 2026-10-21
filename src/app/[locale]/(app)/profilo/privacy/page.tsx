@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
-import { ButtonAnchor } from "@/components/design";
+import { Download } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { ConsentSwitches, type ConsentView } from "@/components/privacy/consent-switches";
@@ -11,10 +11,16 @@ import { listConsents, type ConsentRecord } from "@/server/privacy/consents";
 
 // Account › Privacy (passo 8.2): consensi con il loro interruttore e la data dell'ultima scelta,
 // scarico dei propri dati (route GET /api/account/export: JSON e CSV dei punti, nessun file salvato),
-// eliminazione dell'account (o dei dati dell'ospite). Pagina personale: non indicizzata.
-// Per l'ospite restano i consensi (profilazione, posizione, dati sensibili: anche senza account),
-// lo scarico e l'eliminazione dei dati dell'ospite. Le newsletter arrivano con il passo 8.1.
+// eliminazione dell'account (o dei dati dell'ospite) in una zona di pericolo separata.
+// Pagina personale: non indicizzata. Per l'ospite restano i consensi (profilazione, posizione, dati
+// sensibili: anche senza account), lo scarico e l'eliminazione dei dati dell'ospite.
+// Le newsletter arrivano con il passo 8.1.
 const SHOWN = ["profiling", "location", "sensitive"] as const;
+
+const EXPORTS = [
+  { href: "/api/account/export?formato=json", key: "downloadJson" },
+  { href: "/api/account/export?formato=csv", key: "downloadCsv" },
+] as const;
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -26,7 +32,12 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
   const { locale } = await params;
   setRequestLocale(locale);
   const user = await requireUser();
-  const [t, format, consents] = await Promise.all([getTranslations("Privacy"), getFormatter(), listConsents(user)]);
+  const [t, tProfile, format, consents] = await Promise.all([
+    getTranslations("Privacy"),
+    getTranslations("Profile"),
+    getFormatter(),
+    listConsents(user),
+  ]);
 
   // Lo stato di un consenso è l'ultima riga per tipo (l'elenco arriva dal più recente).
   const latest = new Map<string, ConsentRecord>();
@@ -47,7 +58,12 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
 
   return (
     <PageContainer>
-      <PageHeader title={t("title")} subtitle={t("intro")} />
+      <PageHeader
+        title={t("title")}
+        subtitle={t("intro")}
+        breadcrumb={[{ label: tProfile("title"), href: "/profilo" }]}
+        breadcrumbLabel={t("breadcrumbLabel")}
+      />
 
       <section aria-labelledby="privacy-consents" className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
@@ -59,22 +75,26 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
         <ConsentSwitches consents={views} />
       </section>
 
-      <section aria-labelledby="privacy-download" className="flex flex-col gap-4 border-t border-divider pt-8">
-        <h2 id="privacy-download" className="text-heading-3">
-          {t("downloadHeading")}
-        </h2>
-        <p className="text-body text-pretty">{t("downloadText")}</p>
-        <div className="flex flex-wrap gap-3">
-          <ButtonAnchor href="/api/account/export?formato=json" variant="secondary">
-            {t("downloadJson")}
-          </ButtonAnchor>
-          <ButtonAnchor href="/api/account/export?formato=csv" variant="ghost">
-            {t("downloadCsv")}
-          </ButtonAnchor>
+      <section aria-labelledby="privacy-download" className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <h2 id="privacy-download" className="text-heading-3">
+            {t("downloadHeading")}
+          </h2>
+          <p className="text-body text-pretty">{t("downloadText")}</p>
         </div>
+        <ul className="is-settings">
+          {EXPORTS.map(({ href, key }) => (
+            <li key={href}>
+              <a href={href} className="is-setting">
+                <span className="is-setting__label">{t(key)}</span>
+                <Download aria-hidden="true" className="is-setting__action size-5" />
+              </a>
+            </li>
+          ))}
+        </ul>
       </section>
 
-      <div className="border-t border-divider pt-8">
+      <div className="is-danger">
         <DeleteAccount isGuest={Boolean(user.is_anonymous)} phrase={deleteConfirmationFor(locale)} />
       </div>
     </PageContainer>

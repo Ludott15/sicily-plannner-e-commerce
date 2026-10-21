@@ -2,11 +2,11 @@
 
 import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/design";
+import { Button, Select } from "@/components/design";
 import { Dialog } from "@/components/ui/dialog";
 import { TIME_SLOTS, type TimeSlot } from "@/lib/itinerary-checks";
 import { saveDayNote, saveStopNote, type TripFormState } from "@/server/trips/actions";
-import { FieldLabel, FormAlert, SavedNote, controlClass, textareaClass } from "./trip-ui";
+import { FieldLabel, FormAlert, SavedNote, textareaClass } from "./trip-ui";
 import { useTripForm } from "./use-trip-form";
 
 // Note del builder (brief 6.1): la nota del giorno sta sotto il titolo del giorno, quella della tappa
@@ -93,14 +93,16 @@ export function StopNoteForm({ stopId, timeSlot, notes }: { stopId: string; time
       <input type="hidden" name="stopId" value={stopId} />
       <div className="flex flex-col gap-1.5">
         <FieldLabel htmlFor={`${id}-slot`}>{t("stopTimeSlot")}</FieldLabel>
-        <select id={`${id}-slot`} name="timeSlot" defaultValue={timeSlot ?? ""} className={controlClass}>
-          <option value="">{t("timeSlotNone")}</option>
-          {TIME_SLOTS.map((slot) => (
-            <option key={slot} value={slot}>
-              {t(`timeSlot.${slot}`)}
-            </option>
-          ))}
-        </select>
+        <Select
+          id={`${id}-slot`}
+          label={t("stopTimeSlot")}
+          name="timeSlot"
+          defaultValue={timeSlot ?? ""}
+          options={[
+            { value: "", label: t("timeSlotNone") },
+            ...TIME_SLOTS.map((slot) => ({ value: slot, label: t(`timeSlot.${slot}`) })),
+          ]}
+        />
       </div>
       <div className="flex flex-col gap-1.5">
         <FieldLabel htmlFor={`${id}-note`}>{t("stopNote")}</FieldLabel>

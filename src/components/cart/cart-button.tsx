@@ -1,22 +1,22 @@
 "use client";
 
-import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ShoppingBag } from "lucide-react";
-import { Button, ButtonLink } from "@/components/design";
-import { Dialog } from "@/components/ui/dialog";
+import { Button, ButtonLink, buttonClass, Popover } from "@/components/design";
+import { Link } from "@/lib/i18n/navigation";
 import { CartLines } from "./cart-lines";
 import { CartSummary } from "./cart-summary";
 import type { CartView } from "@/server/shop/cart";
 
 // Icona del carrello nell'intestazione, con il numero di articoli.
-// Da md: apre il drawer laterale con le righe e il riepilogo. Su mobile: link alla pagina /carrello.
-// Il conteggio e la vista arrivano dal server (layout rivalidato dalle azioni del carrello).
+// Da md: apre la finestra del carrello (Popover del design system: mini-righe, riepilogo, azioni; sheet
+// dal basso su mobile). Sotto md: link alla pagina /carrello. Il conteggio e la vista arrivano dal
+// server (layout rivalidato dalle azioni del carrello).
 export function CartButton({ count, view }: { count: number; view: CartView }) {
   const t = useTranslations("Cart");
   const locale = useLocale();
-  const [open, setOpen] = useState<boolean>(false);
   const label = t("openCart", { count });
+  const hasLines = view.lines.length > 0;
 
   const badge =
     count > 0 ? (
@@ -28,42 +28,56 @@ export function CartButton({ count, view }: { count: number; view: CartView }) {
       </span>
     ) : null;
 
+  const icon = (
+    <>
+      <ShoppingBag size={20} strokeWidth={1.5} aria-hidden="true" />
+      {badge}
+    </>
+  );
+
   return (
     <>
       <ButtonLink href="/carrello" variant="ghost" size="sm" className="relative md:hidden" aria-label={label}>
-        <ShoppingBag size={20} strokeWidth={1.5} aria-hidden="true" />
-        {badge}
+        {icon}
       </ButtonLink>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="relative hidden md:inline-flex"
-        aria-label={label}
-        aria-haspopup="dialog"
-        onClick={() => setOpen(true)}
+      <Popover
+        trigger={icon}
+        triggerLabel={label}
+        triggerClassName={buttonClass("ghost", "sm", "relative hidden md:inline-flex")}
+        title={t("title")}
+        align="end"
+        footer={
+          hasLines
+            ? (close) => (
+                <>
+                  <ButtonLink href="/carrello" variant="primary" onClick={close}>
+                    {t("goToCart")}
+                  </ButtonLink>
+                  <Button variant="secondary" onClick={close}>
+                    {t("keepShopping")}
+                  </Button>
+                </>
+              )
+            : undefined
+        }
       >
-        <ShoppingBag size={20} strokeWidth={1.5} aria-hidden="true" />
-        {badge}
-      </Button>
-
-      <Dialog open={open} title={t("title")} onClose={() => setOpen(false)}>
-        {view.lines.length === 0 ? (
-          <p className="text-body">{t("empty")}</p>
-        ) : (
+        {hasLines ? (
           <>
             <CartLines lines={view.lines} locale={locale} compact />
             <CartSummary view={view} locale={locale} />
           </>
+        ) : (
+          <div className="flex flex-col items-center gap-4 py-4 text-center">
+            <span className="grid size-16 place-items-center rounded-pill bg-calce-sunk text-lava-muted">
+              <ShoppingBag size={28} strokeWidth={1.5} aria-hidden="true" />
+            </span>
+            <p className="text-body">{t("empty")}</p>
+            <Link href="/shop" className={buttonClass("secondary", "md")}>
+              {t("emptyCta")}
+            </Link>
+          </div>
         )}
-        <div className="flex flex-wrap gap-3">
-          <ButtonLink href="/carrello" variant="primary" onClick={() => setOpen(false)}>
-            {t("goToCart")}
-          </ButtonLink>
-          <Button variant="secondary" onClick={() => setOpen(false)}>
-            {t("keepShopping")}
-          </Button>
-        </div>
-      </Dialog>
+      </Popover>
     </>
   );
 }

@@ -1,3 +1,4 @@
+import { chooseOption } from "./helpers/controls";
 import { expect, test } from "@playwright/test";
 import { signUpWithCode } from "./helpers";
 
@@ -7,7 +8,7 @@ import { signUpWithCode } from "./helpers";
 
 test("shop: il filtro per categoria mostra solo i dolci demo", async ({ page }) => {
   await page.goto("/it/shop");
-  await page.getByLabel("Categoria", { exact: true }).selectOption("dolci");
+  await chooseOption(page, "Categoria", "Dolci");
   await page.getByRole("button", { name: "Applica i filtri" }).click();
   // Il modulo GET aggiunge anche i filtri vuoti: basta che la categoria sia nell'URL.
   await expect(page).toHaveURL(/\/it\/shop\?.*categoria=dolci/);
@@ -94,8 +95,8 @@ test("admin: crea un prodotto; attivo senza allergeni verificati non si salva", 
   await page.goto("/it/admin/prodotti/nuovo");
   await page.getByLabel("Nome (italiano)", { exact: true }).fill(title);
   await page.getByLabel("Slug", { exact: true }).fill(slug);
-  await page.getByLabel("Produttore", { exact: true }).selectOption({ label: "Produttore di pistacchi di Bronte" });
-  await page.getByLabel("Fornitore", { exact: true }).selectOption({ label: "Fornitore di prova" });
+  await chooseOption(page, "Produttore", "Produttore di pistacchi di Bronte");
+  await chooseOption(page, "Fornitore", "Fornitore di prova");
   await page.getByLabel("Prezzo di vendita (€)").fill("9,90");
   await page.getByLabel("Attivo", { exact: true }).check();
 

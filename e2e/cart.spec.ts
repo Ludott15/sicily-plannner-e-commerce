@@ -1,3 +1,4 @@
+import { chooseOption } from "./helpers/controls";
 import { expect, test, type Page } from "@playwright/test";
 
 // Carrello e checkout (passo 7.2). Il seed demo (supabase/seed.sql) dà il prodotto non deperibile
@@ -11,7 +12,7 @@ const fakeProvider = process.env.CHECKOUT_TEST_PROVIDER === "fake";
 async function addFromProduct(page: Page, slug: string, quantity = 1) {
   await page.goto(`/it/prodotti/${slug}`);
   if (quantity !== 1) {
-    await page.getByRole("combobox", { name: /^Quantità:/ }).selectOption(String(quantity));
+    await chooseOption(page, /^Quantità:/, String(quantity));
   }
   await page.getByRole("button", { name: "Aggiungi al carrello" }).click();
   await expect(page.getByText("Aggiunto al carrello", { exact: true })).toBeVisible();
@@ -45,8 +46,7 @@ test("pagina del carrello: quantità modificabile, rimozione e spedizione gratui
   await page.goto("/it/carrello");
   await expect(page.getByText("Ti mancano", { exact: false }).first()).toBeVisible();
 
-  const quantity = page.getByRole("combobox", { name: `Quantità: ${PISTACCHIO}` });
-  await quantity.selectOption("3");
+  await chooseOption(page, `Quantità: ${PISTACCHIO}`, "3");
   await expect(page.getByRole("button", { name: "Carrello, 3 articoli" })).toBeVisible();
 
   await page.getByRole("button", { name: `Rimuovi ${PISTACCHIO} dal carrello` }).click();

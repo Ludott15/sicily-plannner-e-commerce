@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/design";
 import type { AdminFormAction } from "@/lib/admin-form";
-import { Field, FormError, TextArea, TextInput } from "../fields";
+import { DateInput, Field, FormError, TextArea, TextInput } from "../fields";
 import { useAdminForm } from "../use-admin-form";
 
 export type AuthorizationValues = {
@@ -46,10 +46,10 @@ export function AuthorizationForm({
             <TextInput id={`reference-${key}`} name="reference" defaultValue={values.reference} required maxLength={200} />
           </Field>
           <Field label={t("authorizationIssuedOn")} htmlFor={`issued-${key}`}>
-            <TextInput id={`issued-${key}`} name="issuedOn" type="date" defaultValue={values.issuedOn} required />
+            <DateInput id={`issued-${key}`} name="issuedOn" defaultValue={values.issuedOn} required />
           </Field>
           <Field label={t("authorizationValidUntil")} htmlFor={`valid-${key}`}>
-            <TextInput id={`valid-${key}`} name="validUntil" type="date" defaultValue={values.validUntil} required />
+            <DateInput id={`valid-${key}`} name="validUntil" defaultValue={values.validUntil} required />
           </Field>
           <Field label={t("authorizationDocument")} htmlFor={`document-${key}`}>
             <TextInput id={`document-${key}`} name="documentUrl" type="url" defaultValue={values.documentUrl ?? ""} />

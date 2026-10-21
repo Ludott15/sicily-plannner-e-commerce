@@ -217,7 +217,7 @@ export function ActionMenu(props: ActionMenuProps) {
           aria-label={menuLabel}
           onKeyDown={onMenuKeyDown}
           className={cn(
-            "absolute top-full z-30 mt-2 flex min-w-56 flex-col gap-0.5 rounded-lg border border-card-edge bg-calce-raised p-1.5 shadow-lift",
+            "is-panel absolute top-full z-30 mt-2 flex min-w-56 flex-col gap-0.5 p-1.5",
             align === "end" ? "right-0" : "left-0",
           )}
         >

@@ -180,7 +180,7 @@ export function SiteSearch({ variant, initialQuery = "", autoFocus = false }: Si
 
       <div
         className={cn(
-          "absolute top-full right-0 left-0 z-30 mt-2 max-h-[70vh] flex-col overflow-y-auto rounded-lg border-[1.5px] border-card-edge bg-calce-raised p-2 shadow-lift",
+          "is-panel absolute top-full right-0 left-0 z-30 mt-2 max-h-[70vh] flex-col overflow-y-auto p-2",
           panelVisible ? "flex" : "hidden",
         )}
       >

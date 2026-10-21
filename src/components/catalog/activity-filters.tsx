@@ -2,7 +2,7 @@
 
 import { useOptimistic, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { InterestChip, type Domain } from "@/components/design";
+import { InterestChip, Select, type Domain } from "@/components/design";
 import { activityFiltersQuery, type ActivityFilters as Filters } from "@/lib/activity-filters";
 import { useRouter } from "@/lib/i18n/navigation";
 
@@ -62,19 +62,16 @@ export function ActivityFilters({
         <label htmlFor="filtro-provincia" className="text-body-s font-semibold">
           {t("filterProvince")}
         </label>
-        <select
+        <Select
           id="filtro-provincia"
-          className="min-h-11 w-full rounded-sm border-[1.5px] border-border-control bg-calce-raised px-3 text-body text-lava"
+          label={t("filterProvince")}
           value={filters.province ?? ""}
-          onChange={(e) => apply({ ...filters, province: e.target.value || null })}
-        >
-          <option value="">{t("filterAllProvinces")}</option>
-          {provinces.map((p) => (
-            <option key={p.code} value={p.code}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+          onValueChange={(value) => apply({ ...filters, province: value || null })}
+          options={[
+            { value: "", label: t("filterAllProvinces") },
+            ...provinces.map((p) => ({ value: p.code, label: p.name })),
+          ]}
+        />
       </div>
     </div>
   );

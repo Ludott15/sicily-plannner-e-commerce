@@ -3,7 +3,7 @@
 import { startTransition, useActionState, useEffect, useId, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Checkbox, Field, FormError, FormNotice, TextInput } from "@/components/admin/fields";
+import { Field, FormError, FormNotice, TextInput } from "@/components/admin/fields";
 import { buttonClass } from "@/components/design";
 import { setLeaderboardOptOut, setPublicName } from "@/server/gamification/leaderboard-actions";
 import type { SettingsFormState } from "@/lib/leaderboard-form";
@@ -35,6 +35,8 @@ export function LeaderboardSettings({ optOut, displayName, publicName }: Props) 
   const optOutForm = useSettingsForm(setLeaderboardOptOut);
   const nameForm = useSettingsForm(setPublicName);
   const nameId = useId();
+  const optOutId = useId();
+  const optOutHintId = useId();
 
   function errorFor(state: SettingsFormState): string | null {
     if (state.status !== "error") return null;
@@ -56,19 +58,39 @@ export function LeaderboardSettings({ optOut, displayName, publicName }: Props) 
 
   return (
     <div className="flex flex-col gap-8">
-      <form onSubmit={onOptOutSubmit} className="flex flex-col gap-3">
+      <form onSubmit={onOptOutSubmit} className="flex flex-col gap-4">
         <FormError message={errorFor(optOutForm.state)} />
         <FormNotice message={optOutForm.state.status === "saved" ? t("saved") : null} />
-        <Checkbox name="optOut" defaultChecked={optOut} label={t("optOutLabel")} />
-        <p className="text-caption text-lava-muted">{t("optOutHint")}</p>
+        {/* Riga con interruttore: il checkbox nativo resta, con il suo nome ("optOut") e la sua etichetta. */}
+        <div className="is-settings">
+          <div className="is-setting">
+            <label htmlFor={optOutId} className="is-setting__label">
+              {t("optOutLabel")}
+            </label>
+            <span id={optOutHintId} className="is-setting__value">
+              {t("optOutHint")}
+            </span>
+            <span className="is-switch is-setting__action">
+              <input
+                id={optOutId}
+                type="checkbox"
+                name="optOut"
+                defaultChecked={optOut}
+                aria-describedby={optOutHintId}
+                className="is-switch__input"
+              />
+              <span aria-hidden="true" className="is-switch__track" />
+            </span>
+          </div>
+        </div>
         <div>
-          <button type="submit" className={buttonClass("primary")} disabled={optOutForm.pending}>
+          <button type="submit" className={buttonClass("secondary")} disabled={optOutForm.pending}>
             {optOutForm.pending ? t("saving") : t("saveOptOut")}
           </button>
         </div>
       </form>
 
-      <form onSubmit={onNameSubmit} className="flex flex-col gap-3">
+      <form onSubmit={onNameSubmit} className="flex flex-col gap-4">
         <FormError message={errorFor(nameForm.state)} />
         <FormNotice message={nameForm.state.status === "saved" ? t("saved") : null} />
         <Field label={t("publicNameLabel")} htmlFor={nameId} hint={t("publicNameHint")}>

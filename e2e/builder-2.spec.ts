@@ -1,3 +1,4 @@
+import { chooseOption, pickDate } from "./helpers/controls";
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { signUpWithCode } from "./helpers";
@@ -13,8 +14,8 @@ async function useTemplate(page: Page) {
   await page.goto(`/it/itinerari/${TEMPLATE}`);
   await page.getByRole("link", { name: "Usa questo itinerario" }).first().click();
   await expect(page).toHaveURL(new RegExp(`/it/viaggio/salva\\?da=${TEMPLATE}$`));
-  await page.getByLabel("Data di partenza").fill("2027-05-12");
-  await page.getByLabel("Persone").selectOption("4");
+  await pickDate(page, "Data di partenza", "2027-05-12");
+  await chooseOption(page, "Persone", "4 persone");
   const save = page.getByRole("button", { name: "Salva il viaggio" });
   // Senza sessione serve Turnstile (chiavi di prova: si risolve da solo).
   await expect(save).toBeEnabled({ timeout: 30_000 });

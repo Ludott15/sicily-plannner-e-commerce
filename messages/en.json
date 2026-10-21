@@ -101,7 +101,12 @@
     "title": "You're using Isula as a guest",
     "description": "The trips you create are saved on this device. Add your email to find them anywhere: they stay yours, nothing is lost.",
     "signOut": "Sign out",
-    "signOutWarning": "If you sign out without saving the account, trips created as a guest can't be recovered."
+    "signOutWarning": "If you sign out without saving the account, trips created as a guest can't be recovered.",
+    "benefitsHeading": "With an account",
+    "benefitOne": "Find your trips on every device.",
+    "benefitTwo": "Earn points for your profile, on-site check-ins and reviews.",
+    "saveHeading": "Create your account with your email",
+    "saveIntro": "We send you a 6-digit code. No password to remember."
   },
   "Profile": {
     "title": "Your profile",
@@ -111,7 +116,24 @@
     "memberSince": "Member since",
     "accountHeading": "Account",
     "hubHeading": "Your sections",
-    "privacyLink": "Privacy and data"
+    "privacyLink": "Privacy and data",
+    "publicName": "Public name",
+    "noPublicName": "No public name",
+    "memberSinceLabel": "Member since {date}",
+    "roleAdmin": "Administrator",
+    "sectionTrips": "Your trips",
+    "tripsHint": "Itineraries you created or take part in.",
+    "groupsHint": "Trips shared with your travel companions.",
+    "conversations": "Assistant conversations",
+    "conversationsHint": "Conversations you saved with the assistant.",
+    "sectionActivity": "Activity and rewards",
+    "pointsHint": "Balance, movements and badges.",
+    "notificationsHint": "Replies to your proposals in groups and badges earned.",
+    "sectionPreferences": "Preferences",
+    "tastesLabel": "Travel tastes",
+    "tastesHint": "Interests, heat, crowds, mobility and diet. They apply to all your trips.",
+    "sectionPrivacy": "Privacy and data",
+    "privacyHint": "Consents, data download and account deletion."
   },
   "Catalog": {
     "activitiesTitle": "Things to do in Sicily",
@@ -2356,7 +2378,7 @@
     "intro": "Ask for activities, trip ideas or a change to your itinerary. I answer with the activities in the Isula catalogue.",
     "newConversation": "New conversation",
     "backToList": "All conversations",
-    "listEmpty": "You have no conversations yet. Start with a question below.",
+    "listEmpty": "Your saved conversations will appear here.",
     "untitled": "Untitled conversation",
     "forTrip": "For your trip",
     "updatedAt": "Last message {date}",
@@ -2366,9 +2388,9 @@
     "stop": "Stop",
     "retry": "Try again",
     "examplesTitle": "Where to start",
-    "example1": "Which activities are there in Noto with children?",
-    "example2": "Add a sea stop to the second day",
-    "example3": "I like nature and street food: update my tastes",
+    "example1": "Plan 3 days in Palermo",
+    "example2": "What to see near Catania with kids",
+    "example3": "A weekend between Noto and Ortigia",
     "assistantName": "Assistant",
     "you": "You",
     "thinking": "Preparing the answer",
@@ -2435,14 +2457,29 @@
       "deleteText": "The messages and proposals of this conversation will disappear. Changes already applied to the trip stay.",
       "cancel": "Cancel",
       "confirmDelete": "Delete",
-      "error": "We could not complete the action. Try again."
+      "error": "We could not complete the action. Try again.",
+      "menu": "Conversation actions"
     },
     "launcher": {
       "open": "Ask the assistant",
       "close": "Close the assistant",
       "title": "Assistant for {title}",
       "disabled": "The assistant is not available right now."
-    }
+    },
+    "greeting": "Hi. Tell me what you need for your trip.",
+    "sessionsTitle": "Conversations",
+    "closeSessions": "Close the list",
+    "groups": {
+      "today": "Today",
+      "week": "Last 7 days",
+      "older": "Earlier"
+    },
+    "example4": "What to bring home from Sicily",
+    "jumpToLatest": "Latest messages",
+    "copy": "Copy",
+    "copied": "Copied",
+    "note": "The assistant can make mistakes: check times and prices.",
+    "counter": "{count}/{max}"
   },
   "Guides": {
     "title": "Guides",
@@ -2640,7 +2677,8 @@
       "captcha_failed": "We could not verify that you are a person. Try again.",
       "rate_limited": "You asked for too many codes. Try again in a few minutes.",
       "failed": "We could not complete the action. Try again."
-    }
+    },
+    "breadcrumbLabel": "Breadcrumb"
   },
   "AccountDeleted": {
     "title": "Account deleted",
@@ -2738,5 +2776,14 @@
     "fakeCancel": "Cancel",
     "fakeExpire": "Simulate expiry",
     "fakeExpireError": "The expiry could not be simulated."
+  },
+  "Controls": {
+    "placeholder": "Choose a date",
+    "calendar": "Calendar",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "today": "Today",
+    "clear": "Clear",
+    "close": "Close"
   }
 }
