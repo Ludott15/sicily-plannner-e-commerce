@@ -43,5 +43,8 @@ export function pageFor(
   else if (link.vertical === "ferry") key = `${link.from}>${link.to}`;
   else if (usesPlace(link.vertical)) key = link.place;
   if (!key) return null;
-  return PARTNER_PAGES[link.partner]?.[key] ?? null;
+  // Object.hasOwn: una chiave come "constructor" non deve trovare nulla dal prototipo.
+  if (!Object.hasOwn(PARTNER_PAGES, link.partner)) return null;
+  const pages = PARTNER_PAGES[link.partner]!;
+  return Object.hasOwn(pages, key) ? (pages[key] ?? null) : null;
 }

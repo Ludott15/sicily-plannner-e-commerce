@@ -53,6 +53,14 @@ export function isVertical(value: string): value is Vertical {
   return (VERTICALS as readonly string[]).includes(value);
 }
 
+// Lingue delle pagine (routing.locales in src/lib/i18n/routing.ts): firmate nel link.
+export const VERTICAL_LOCALES = ["it", "en"] as const;
+export type VerticalLocale = (typeof VERTICAL_LOCALES)[number];
+
+export function isVerticalLocale(value: string): value is VerticalLocale {
+  return (VERTICAL_LOCALES as readonly string[]).includes(value);
+}
+
 export const VERTICAL_CONTEXTS = ["page", "itinerary", "chat", "flights"] as const;
 export type VerticalContext = (typeof VERTICAL_CONTEXTS)[number];
 
@@ -343,6 +351,8 @@ export type VerticalLink = {
   // Persone (1..30) per alloggi e traghetti; 0 altrove.
   adults: number;
   context: VerticalContext;
+  // Lingua della pagina di ripiego (it | en): firmata, così il link non cambia lingua da solo.
+  locale: VerticalLocale;
   itineraryId: string | null;
   // Scadenza in secondi Unix.
   expiresAt: number;
@@ -406,6 +416,7 @@ export function verticalFields(link: VerticalLink): string[] {
   } else if (link.adults !== 0) throw new Error("vertical_link: adults");
 
   if (!(VERTICAL_CONTEXTS as readonly string[]).includes(link.context)) throw new Error("vertical_link: context");
+  if (!(VERTICAL_LOCALES as readonly string[]).includes(link.locale)) throw new Error("vertical_link: locale");
   if (link.itineraryId !== null && !UUID.test(link.itineraryId)) throw new Error("vertical_link: itineraryId");
   if (!Number.isInteger(link.expiresAt) || link.expiresAt <= 0) throw new Error("vertical_link: expiresAt");
 
@@ -423,6 +434,7 @@ export function verticalFields(link: VerticalLink): string[] {
     link.checkout,
     String(link.adults),
     link.context,
+    link.locale,
     link.itineraryId ?? "",
     String(link.expiresAt),
   ];
@@ -496,6 +508,7 @@ const verticalQuerySchema = z.object({
   checkout: z.string().max(10),
   adults: z.string().regex(ADULTS).transform(Number),
   c: z.enum(VERTICAL_CONTEXTS),
+  l: z.enum(VERTICAL_LOCALES),
   i: z.string().regex(UUID).or(z.literal("")),
   exp: z.string().regex(/^[1-9]\d{0,11}$/).transform(Number),
   s: z.string().min(1).max(128),
@@ -517,6 +530,7 @@ export function parseVerticalLinkQuery(search: URLSearchParams): { link: Vertica
     checkout: search.get("checkout") ?? "",
     adults: search.get("adults"),
     c: search.get("c"),
+    l: search.get("l"),
     i: search.get("i") ?? "",
     exp: search.get("exp"),
     s: search.get("s"),
@@ -537,6 +551,7 @@ export function parseVerticalLinkQuery(search: URLSearchParams): { link: Vertica
       checkout: q.checkout,
       adults: q.adults,
       context: q.c,
+      locale: q.l,
       itineraryId: q.i === "" ? null : q.i,
       expiresAt: q.exp,
     },
@@ -545,7 +560,7 @@ export function parseVerticalLinkQuery(search: URLSearchParams): { link: Vertica
 }
 
 // Href relativo della route firmata /api/go/v, con la lingua della pagina di ripiego.
-export function verticalLinkHref(link: VerticalLink, secret: string | undefined, locale: string): string {
+export function verticalLinkHref(link: VerticalLink, secret: string | undefined): string {
   const query = new URLSearchParams({
     partner: link.partner,
     vertical: link.vertical,
@@ -562,7 +577,7 @@ export function verticalLinkHref(link: VerticalLink, secret: string | undefined,
     i: link.itineraryId ?? "",
     exp: String(link.expiresAt),
     s: signVerticalLink(link, secret),
-    l: locale,
+    l: link.locale,
   });
   return `/api/go/v?${query.toString()}`;
 }

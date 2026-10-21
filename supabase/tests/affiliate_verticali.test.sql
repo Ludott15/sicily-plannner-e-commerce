@@ -94,6 +94,33 @@ select results_eq(
   $$values ('samboat'::text)$$,
   'admin: vede il partner inattivo'
 );
+-- Righe nuove: l'admin vede gli inattivi tra quelle del passo 3.2 e aggiorna quelle attive.
+select results_eq(
+  $$select partner::text from public.affiliate_partners
+    where partner in ('pitchup', 'samboat', 'radicalstorage') and not is_active order by partner$$,
+  $$values ('pitchup'::text), ('samboat'::text)$$,
+  'admin: vede pitchup e samboat (inattivi) tra le righe nuove'
+);
+select lives_ok(
+  $$update public.affiliate_partners set name = 'Radical Storage (test)' where partner = 'radicalstorage'$$,
+  'admin: aggiorna il nome di una riga nuova attiva (radicalstorage)'
+);
+select throws_ok(
+  $$select allowed_hosts from public.affiliate_partners where partner = 'heymondo'$$,
+  '42501', null, 'admin dal client: host di una riga nuova non leggibili (si legge dal server)'
+);
+select results_eq(
+  $$select allowed_hosts from public.affiliate_partner_config('heymondo')$$,
+  $$values (array['www.heymondo.it']::text[])$$,
+  'admin: affiliate_partner_config restituisce l''host italiano di heymondo'
+);
+reset role;
+select is(
+  (select name from public.affiliate_partners where partner = 'radicalstorage'),
+  'Radical Storage (test)',
+  'admin: il nome della riga nuova è cambiato (verifica come proprietario)'
+);
+select tests.authenticate_as('admin');
 
 ----------------------------------------------------------------------------
 -- VINCOLO SULLE VERTICALI (come proprietario della migrazione)

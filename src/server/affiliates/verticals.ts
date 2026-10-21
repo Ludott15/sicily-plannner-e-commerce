@@ -8,6 +8,7 @@ import { getPartnerConfig, readyPartner, VERTICAL_PARTNER } from "./partners";
 import { catalogPlaceName } from "./vertical-places";
 import {
   destinationFor,
+  isVerticalLocale,
   usesPlace,
   verticalFields,
   verticalLinkHref,
@@ -17,6 +18,7 @@ import {
   type Vertical,
   type VerticalContext,
   type VerticalLink,
+  type VerticalLocale,
 } from "./vertical-links";
 import { pageFor } from "./vertical-pages";
 
@@ -57,7 +59,12 @@ export type VerticalHrefResult =
 // Subid di prova per verificare che il template regga; il subid reale lo crea la route al click.
 const PROBE_SUBID = "probeprobeprobe";
 
-function linkFromInput(input: VerticalSearchInput, ctx: VerticalCallContext, expiresAt: number): VerticalLink {
+function linkFromInput(
+  input: VerticalSearchInput,
+  ctx: VerticalCallContext,
+  lang: VerticalLocale,
+  expiresAt: number,
+): VerticalLink {
   const base: VerticalLink = {
     partner: input.partner ?? VERTICAL_PARTNER[input.vertical],
     vertical: input.vertical,
@@ -71,6 +78,7 @@ function linkFromInput(input: VerticalSearchInput, ctx: VerticalCallContext, exp
     checkout: "",
     adults: 0,
     context: ctx.context,
+    locale: lang,
     itineraryId: ctx.itineraryId,
     expiresAt,
   };
@@ -101,9 +109,11 @@ function linkFromInput(input: VerticalSearchInput, ctx: VerticalCallContext, exp
 // percorso: il link porta solo campi validati dalle liste chiuse e lo slug del catalogo.
 export async function buildVerticalHref(input: VerticalSearchInput, ctx: VerticalCallContext): Promise<VerticalHrefResult> {
   const vertical: Vertical = input.vertical;
+  if (!isVerticalLocale(ctx.locale)) return { error: "invalid" };
+  const lang: VerticalLocale = ctx.locale;
   let link: VerticalLink;
   try {
-    link = linkFromInput(input, ctx, Math.floor(Date.now() / 1000) + VERTICAL_LINK_TTL_SECONDS);
+    link = linkFromInput(input, ctx, lang, Math.floor(Date.now() / 1000) + VERTICAL_LINK_TTL_SECONDS);
     verticalFields(link);
   } catch {
     return { error: "invalid" };
@@ -137,20 +147,13 @@ export async function buildVerticalHref(input: VerticalSearchInput, ctx: Vertica
 
   try {
     return {
-      href: verticalLinkHref(link, secret, ctx.locale),
+      href: verticalLinkHref(link, secret),
       partnerName: ready.config.name,
       passesSearch: destination.passesSearch,
     };
   } catch {
     return { error: "inactive" };
   }
-}
-
-// "ready" se la verticale può già mandare utenti al partner predefinito, altrimenti "coming_soon".
-export async function verticalAvailability(vertical: Vertical): Promise<"ready" | "coming_soon"> {
-  if (!affiliateLinkSecret()) return "coming_soon";
-  const ready = readyPartner(await getPartnerConfig(VERTICAL_PARTNER[vertical]), vertical);
-  return ready ? "ready" : "coming_soon";
 }
 
 // Aree di viaggio e le città (luoghi attivi) con più attività attive per area, al massimo tre per area.

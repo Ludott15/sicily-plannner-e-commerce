@@ -5,7 +5,7 @@ import { dbAdmin } from "@/server/db/admin";
 import { affiliateClicks, areas, places } from "@/server/db/schema";
 import { getPartnerConfig, VERTICAL_PARTNER } from "./partners";
 import { recordVerticalClick } from "./vertical-click";
-import { buildVerticalHref, verticalAvailability, type VerticalCallContext } from "./verticals";
+import { buildVerticalHref, type VerticalCallContext } from "./verticals";
 import { VERTICALS, type Vertical } from "./vertical-links";
 
 // Verticali affiliate su Postgres locale (npm run test:int). Luogo e area di prova con prefisso int-;
@@ -57,7 +57,6 @@ describe("disponibilità e link di ricerca", () => {
   it("senza ID nell'ambiente la verticale è pronta e il link non porta nessun ID", async () => {
     vi.stubEnv("AFFILIATE_LINK_SECRET", SECRET);
     vi.stubEnv("BOOKING_AFFILIATE_ID", "");
-    expect(await verticalAvailability("lodging")).toBe("ready");
     const result = await buildVerticalHref(LODGING, CTX);
     expect(result).toEqual({
       href: expect.stringMatching(/^\/api\/go\/v\?/),
@@ -70,14 +69,12 @@ describe("disponibilità e link di ricerca", () => {
   it("con ID nell'ambiente il link firmato resta senza ID (l'ID entra solo nella route)", async () => {
     vi.stubEnv("AFFILIATE_LINK_SECRET", SECRET);
     vi.stubEnv("BOOKING_AFFILIATE_ID", "int-test-partner");
-    expect(await verticalAvailability("lodging")).toBe("ready");
     const result = await buildVerticalHref(LODGING, CTX);
     expect((result as { href: string }).href).not.toContain("int-test-partner");
   });
 
   it("senza chiave dei link: inattiva, nessun link", async () => {
     vi.stubEnv("AFFILIATE_LINK_SECRET", "");
-    expect(await verticalAvailability("lodging")).toBe("coming_soon");
     expect(await buildVerticalHref(LODGING, CTX)).toEqual({ error: "inactive" });
   });
 

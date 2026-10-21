@@ -1651,7 +1651,6 @@
     "routeIntro": "Pick a departure date: the calendar shows the lowest price for each day of the month."
   },
   "Verticals": {
-    "comingSoon": "Coming soon",
     "unavailable": "This link is not available right now. Please try again later.",
     "rateLimited": "Too many clicks in a short time. Try again in a minute.",
     "summaryTitle": "Your search",

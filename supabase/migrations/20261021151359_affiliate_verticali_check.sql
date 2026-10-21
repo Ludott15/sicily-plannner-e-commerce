@@ -1,6 +1,7 @@
 -- Passo 3.2 (verticali affiliate): le verticali nuove entrano nel vincolo su affiliate_partners.verticals
--- e in record_vertical_click. Lista identica in src/server/db/schema/affiliates.ts e in
--- src/server/affiliates/vertical-links.ts (VERTICALS). Dopo la migrazione enum (20261021151338).
+-- e in record_vertical_click. La lista è: 'activity' e 'flight' (già ammesse prima di questo passo) più le
+-- verticali di VERTICALS in src/server/affiliates/vertical-links.ts. La stessa lista è in
+-- src/server/db/schema/affiliates.ts (il vincolo). Dopo la migrazione enum (20261021151338).
 -- La funzione non è nello schema Drizzle: il vincolo sì, lo snapshot resta quello del diff.
 ALTER TABLE "affiliate_partners" DROP CONSTRAINT "affiliate_partners_verticals_valid";--> statement-breakpoint
 ALTER TABLE "affiliate_partners" ADD CONSTRAINT "affiliate_partners_verticals_valid" CHECK (cardinality("affiliate_partners"."verticals") > 0 and "affiliate_partners"."verticals" <@ array['activity','lodging','car','flight','ferry','train','transfer','tickets','boat','insurance','esim','luggage']::text[]);

@@ -53,13 +53,15 @@ export async function GET(request: NextRequest) {
   const parsed = parseVerticalLinkQuery(searchParams);
   if (!parsed) return invalid("invalid_params");
   const { link } = parsed;
+  // Lingua firmata nel link: la pagina di ripiego e il luogo usano questa, non il parametro grezzo.
+  const signedLocale = link.locale;
   if (checkVerticalLink(link, parsed.signature, affiliateLinkSecret()) !== "ok") return invalid("invalid_signature");
 
   const cookieValue = request.cookies.get(ANON_COOKIE)?.value;
   const anonId = anonIdFor(cookieValue, analyticsConsentFromCookie(request.cookies.get(CONSENT_COOKIE)?.value));
   const unavailable = (vertical: Vertical) => {
     const response = NextResponse.redirect(
-      new URL(`/${locale}/${VERTICAL_PAGE[vertical]}?avviso=non-disponibile`, origin),
+      new URL(`/${signedLocale}/${VERTICAL_PAGE[vertical]}?avviso=non-disponibile`, origin),
       303,
     );
     response.headers.set("Cache-Control", "no-store");
@@ -73,7 +75,7 @@ export async function GET(request: NextRequest) {
   // Il luogo è uno slug firmato: il nome si prende dal catalogo, mai dal client.
   let placeName: string | null = null;
   if (usesPlace(link.vertical)) {
-    placeName = await catalogPlaceName(link.place, locale, link.vertical === "lodging");
+    placeName = await catalogPlaceName(link.place, signedLocale, link.vertical === "lodging");
     if (placeName === null) return unavailable(link.vertical);
   }
 
@@ -83,7 +85,7 @@ export async function GET(request: NextRequest) {
     placeName,
     partnerId: ready.partnerId,
     subid: subId,
-    locale,
+    locale: signedLocale,
     page: pageFor(link),
   });
   if (destination === null) return unavailable(link.vertical);

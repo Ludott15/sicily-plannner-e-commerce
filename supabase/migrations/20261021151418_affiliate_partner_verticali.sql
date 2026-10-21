@@ -8,8 +8,7 @@
 --    del primo host in allowed_hosts: nessuna ricerca arriva al partner (passesSearch "none").
 --  - subid_param null quando il parametro non è verificato: il link esce senza subid nell'URL; il click
 --    si registra comunque.
---  - partner_id_env: nome della variabile d'ambiente con l'ID (src/lib/partner-env-names.ts). Nessun
---    template porta ancora il parametro dell'ID: va aggiunto quando il programma ne conferma il nome.
+--  - partner_id_env: nome della variabile d'ambiente con l'ID (src/lib/partner-env-names.ts). Booking e DiscoverCars portano l'ID (`aid`, `a_aid`); gli altri template non lo portano.
 --  - is_active false: partner non cliccabile (pitchup: nessun programma per publisher trovato; samboat:
 --    programma italiano in pausa secondo Cuelinks).
 --  - Verifica dei deep link: scratchpad verifica-deeplink.md (2026-10-21). Dove è indicato "non verificato",
@@ -28,11 +27,13 @@ where partner = 'booking';
 
 ----------------------------------------------------------------------------
 -- DISCOVERCARS: pagina della destinazione Catania per l'aeroporto CTA (verificato: pagina valida).
--- I parametri di data della ricerca non pre-compilano il form: non si usano. subid_param null.
+-- I parametri di data della ricerca non pre-compilano il form: non si usano. Restano a_aid (ID del partner,
+-- se configurato) e data1 (subid di questo click): nome del parametro del subid non verificato, come
+-- nella riga originale (subid_param 'data1'). Senza ID, a_aid non compare nell'URL.
 ----------------------------------------------------------------------------
 update public.affiliate_partners
-set search_url_template = 'https://www.discovercars.com/{page}',
-    subid_param = null,
+set search_url_template = 'https://www.discovercars.com/{page}?a_aid={partner_id}&data1={subid}',
+    subid_param = 'data1',
     updated_at = now()
 where partner = 'discovercars';
 

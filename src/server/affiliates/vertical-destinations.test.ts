@@ -30,9 +30,9 @@ const DIRECTFERRIES: PartnerTemplate = {
   subidParam: null,
 };
 const DISCOVERCARS: PartnerTemplate = {
-  searchUrlTemplate: "https://www.discovercars.com/{page}",
+  searchUrlTemplate: "https://www.discovercars.com/{page}?a_aid={partner_id}&data1={subid}",
   allowedHosts: ["www.discovercars.com"],
-  subidParam: null,
+  subidParam: "data1",
 };
 const HEYMONDO: PartnerTemplate = { searchUrlTemplate: "https://www.heymondo.it/", allowedHosts: ["www.heymondo.it"], subidParam: null };
 const AIRALO: PartnerTemplate = { searchUrlTemplate: "https://www.airalo.com/Italy-esim", allowedHosts: ["www.airalo.com"], subidParam: null };
@@ -47,6 +47,7 @@ const BASE: VerticalLink = {
   partner: "hostelworld",
   vertical: "lodging",
   place: "palermo",
+  locale: "it",
   from: "",
   to: "",
   date: "",
@@ -145,11 +146,15 @@ describe("pagine verificate per partner", () => {
   it("DiscoverCars e Rentalcars all'aeroporto di Catania: pagina dell'aeroporto o della destinazione", () => {
     const car: VerticalLink = { ...BASE, partner: "discovercars", vertical: "car", place: "", airport: "CTA", adults: 0 };
     expect(dest(car, DISCOVERCARS)).toEqual({
-      url: "https://www.discovercars.com/it/italy-sicily/catania-sicily",
+      url: `https://www.discovercars.com/it/italy-sicily/catania-sicily?data1=${SUBID}`,
       passesSearch: "place",
     });
+    // Con l'ID del partner configurato: a_aid entra nell'URL; senza, sparisce (caso sopra).
+    const withId = destinationFor(car, DISCOVERCARS, { placeName: null, partnerId: "X1", subid: SUBID, locale: "it", page: pageFor(car) });
+    expect(new URL(withId!.url).searchParams.get("a_aid")).toBe("X1");
+    expect(new URL(withId!.url).searchParams.get("data1")).toBe(SUBID);
     const rental: VerticalLink = { ...car, partner: "rentalcars" };
-    expect(dest(rental, { ...DISCOVERCARS, searchUrlTemplate: "https://www.rentalcars.com/{page}", allowedHosts: ["www.rentalcars.com"] })).toEqual({
+    expect(dest(rental, { searchUrlTemplate: "https://www.rentalcars.com/{page}", allowedHosts: ["www.rentalcars.com"], subidParam: null })).toEqual({
       url: "https://www.rentalcars.com/on/airport/it/cta/rentacar",
       passesSearch: "place",
     });

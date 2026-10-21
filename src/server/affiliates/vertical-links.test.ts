@@ -51,6 +51,7 @@ const LODGING: VerticalLink = {
   checkout: "2026-11-05",
   adults: 2,
   context: "itinerary",
+  locale: "it",
   itineraryId: ITINERARY,
   expiresAt: NOW + 3600,
 };
@@ -70,7 +71,7 @@ const VALID_LINKS: Record<string, VerticalLink> = {
 };
 
 function parsedOf(link: VerticalLink) {
-  return parseVerticalLinkQuery(new URL(verticalLinkHref(link, SECRET, "it"), "https://app.example").searchParams);
+  return parseVerticalLinkQuery(new URL(verticalLinkHref(link, SECRET), "https://app.example").searchParams);
 }
 
 describe("buildVerticalUrl", () => {
@@ -298,10 +299,10 @@ describe("firma dei link delle verticali", () => {
 
   it("scaduto: expired; chiave assente: missing_secret", () => {
     const expired = { ...LODGING, expiresAt: NOW };
-    const signature = verticalLinkHref(expired, SECRET, "it").split("&s=")[1]!.split("&")[0]!;
+    const signature = verticalLinkHref(expired, SECRET).split("&s=")[1]!.split("&")[0]!;
     expect(checkVerticalLink(expired, signature, SECRET, NOW)).toBe("expired");
     expect(checkVerticalLink(LODGING, signature, undefined, NOW)).toBe("missing_secret");
-    expect(() => verticalLinkHref(LODGING, undefined, "it")).toThrow();
+    expect(() => verticalLinkHref(LODGING, undefined)).toThrow();
   });
 
   it("valori fuori formato: la firma non si controlla nemmeno (invalid_signature)", () => {
@@ -312,7 +313,7 @@ describe("firma dei link delle verticali", () => {
   });
 
   it("parametri mancanti o malformati: null; parametri estranei ignorati", () => {
-    const base = new URL(verticalLinkHref(LODGING, SECRET, "it"), "https://app.example").searchParams;
+    const base = new URL(verticalLinkHref(LODGING, SECRET), "https://app.example").searchParams;
     const without = (key: string) => {
       const copy = new URLSearchParams(base);
       copy.delete(key);
@@ -320,6 +321,7 @@ describe("firma dei link delle verticali", () => {
     };
     expect(parseVerticalLinkQuery(without("partner"))).toBeNull();
     expect(parseVerticalLinkQuery(without("s"))).toBeNull();
+    expect(parseVerticalLinkQuery(without("l"))).toBeNull();
     expect(parseVerticalLinkQuery(without("adults"))).toBeNull();
     const badVertical = new URLSearchParams(base);
     badVertical.set("vertical", "flight");
@@ -329,5 +331,21 @@ describe("firma dei link delle verticali", () => {
     extra.set("host", "evil.example");
     extra.set("target", "https://evil.example");
     expect(parseVerticalLinkQuery(extra)?.link).toEqual(LODGING);
+  });
+});
+
+describe("lingua firmata", () => {
+  it("il locale è nella firma: cambiarlo rende il link non valido", () => {
+    const parsed = parsedOf(LODGING);
+    expect(checkVerticalLink({ ...parsed!.link, locale: "en" }, parsed!.signature, SECRET, NOW)).toBe("invalid_signature");
+  });
+
+  it("una lingua fuori dall'elenco (it, en) non si firma", () => {
+    expect(() => verticalFields({ ...LODGING, locale: "fr" as VerticalLink["locale"] })).toThrow("vertical_link: locale");
+  });
+
+  it("un link con l=en si rilegge con la lingua en", () => {
+    const link = { ...LODGING, locale: "en" as const };
+    expect(parsedOf(link)?.link.locale).toBe("en");
   });
 });
