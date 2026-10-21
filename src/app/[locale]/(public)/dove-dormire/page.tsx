@@ -1,185 +1,200 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { buttonClass, ButtonAnchor, DateField, PendingButton, Select } from "@/components/design";
+import { DateField, Select } from "@/components/design";
+import { VerticalExtras } from "@/components/verticals/vertical-extras";
+import { VerticalField, VerticalForm } from "@/components/verticals/vertical-form";
+import { VerticalNotices, VerticalResult, type SummaryItem } from "@/components/verticals/vertical-result";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { isIsoDate } from "@/lib/flights/search-params";
+import { Link } from "@/lib/i18n/navigation";
 import { canonicalFor } from "@/lib/seo";
-import { getPartnerConfig, VERTICAL_PARTNER } from "@/server/affiliates/partners";
+import { cn } from "@/lib/utils";
 import {
-  getLodgingPageData,
-  verticalAvailability,
-  verticalSearchHref,
-} from "@/server/affiliates/verticals";
+  countParam,
+  formatIsoDate,
+  isoParam,
+  oneOfParam,
+  paramOf,
+  queryString,
+  rangeOk,
+  type ParamValue,
+} from "@/lib/verticals/search-params";
+import { activePartners, publishedGuides, searchOutcome } from "@/server/affiliates/vertical-page-data";
+import { getLodgingPageData } from "@/server/affiliates/verticals";
+import { LODGING_KINDS, type LodgingKind, VERTICAL_PAGE, VERTICAL_PARTNERS } from "@/server/affiliates/vertical-links";
+import { VERTICAL_PARTNER } from "@/server/affiliates/partners";
 
-// Dove dormire (passo 3.1): scelta di area o città, date e persone, poi un link firmato verso
-// Booking (/api/go/v costruisce la destinazione dal template del partner). Senza ID del partner la
-// pagina dice "in arrivo" e non mostra il form. Nessun testo inventato sulle strutture.
-// Finché il partner non è pronto la pagina non è indicizzata.
+// Dove dormire (verticale lodging): zona o città, date, persone e tipo di alloggio. Il link firmato va
+// a Booking (predefinito), con le alternative Hostelworld (ostelli) e Pitchup (campeggi) nella stessa
+// pagina. Il tipo passa da una mappa chiusa nel server: il valore dell'URL non arriva mai al link.
 
-const DEFAULT_ADULTS = 2;
 const MAX_ADULTS = 30;
-const FIELD =
-  "min-h-11 w-full rounded-sm border-[1.5px] border-border-control bg-calce-raised px-3 text-body text-lava";
+const DEFAULT_ADULTS = 2;
+const PAGE = VERTICAL_PAGE.lodging;
+
+const KIND_KEYS = {
+  hotel: "kindHotel",
+  bnb: "kindBnb",
+  ostello: "kindOstello",
+  campeggio: "kindCampeggio",
+  agriturismo: "kindAgriturismo",
+  casa_vacanze: "kindCasa",
+} as const satisfies Record<LodgingKind, string>;
 
 type Props = {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{
-    luogo?: string;
-    checkin?: string;
-    checkout?: string;
-    persone?: string;
-    avviso?: string;
-  }>;
+  searchParams: Promise<Record<string, ParamValue>>;
 };
-
-function isoOrEmpty(value: string | undefined): string {
-  return value && isIsoDate(value) ? value : "";
-}
-
-function adultsOf(value: string | undefined): number {
-  const n = Number(value);
-  return Number.isInteger(n) && n >= 1 && n <= MAX_ADULTS ? n : DEFAULT_ADULTS;
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
-  const [t, availability] = await Promise.all([
-    getTranslations({ locale, namespace: "Lodging" }),
-    verticalAvailability("lodging"),
-  ]);
+  const t = await getTranslations({ locale, namespace: "Lodging" });
   return {
     title: t("title"),
     description: t("intro"),
-    alternates: canonicalFor(locale, "/dove-dormire"),
-    ...(availability === "ready" ? {} : { robots: { index: false, follow: false } }),
+    alternates: canonicalFor(locale, `/${PAGE}`),
   };
 }
 
 export default async function LodgingPage({ params, searchParams }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const [t, tAff, tVert, query, data, config, availability] = await Promise.all([
+  const [t, tVert, query, data, partners] = await Promise.all([
     getTranslations("Lodging"),
-    getTranslations("Affiliates"),
     getTranslations("Verticals"),
     searchParams,
     getLodgingPageData(locale),
-    getPartnerConfig(VERTICAL_PARTNER.lodging),
-    verticalAvailability("lodging"),
+    activePartners("lodging"),
   ]);
 
   const options = [
-    ...data.areas.map((a) => ({ key: `area:${a.slug}`, label: a.name })),
-    ...data.cities.map((c) => ({ key: `city:${c.slug}`, label: c.name })),
+    ...data.areas.map((a) => ({ value: `area:${a.slug}`, label: a.name, slug: a.slug, group: "area" as const })),
+    ...data.cities.map((c) => ({ value: `city:${c.slug}`, label: c.name, slug: c.slug, group: "city" as const })),
   ];
-  const selected = options.find((o) => o.key === query.luogo) ?? null;
-  const checkin = isoOrEmpty(query.checkin);
-  const checkout = isoOrEmpty(query.checkout);
-  const adults = adultsOf(query.persone);
-  const datesOk = checkin !== "" && checkout !== "" && checkout > checkin;
-  const partnerName = config?.name ?? "";
+  const selected = options.find((o) => o.value === paramOf(query.luogo)) ?? null;
+  const checkin = isoParam(query.checkin);
+  const checkout = isoParam(query.checkout);
+  const adults = countParam(query.persone, DEFAULT_ADULTS, MAX_ADULTS);
+  const kind = oneOfParam(query.tipo, LODGING_KINDS);
+  const partner = oneOfParam(query.partner, VERTICAL_PARTNERS.lodging) || VERTICAL_PARTNER.lodging;
+  const datesOk = rangeOk(checkin, checkout);
 
-  const href =
-    availability === "ready" && selected && datesOk
-      ? await verticalSearchHref({
-          vertical: "lodging",
-          query: selected.label,
-          airport: "",
-          checkin,
-          checkout,
-          adults,
-          context: "page",
-          itineraryId: null,
-          locale,
-        })
+  const outcome =
+    selected && datesOk
+      ? await searchOutcome(
+          {
+            vertical: "lodging",
+            place: selected.slug,
+            checkin,
+            checkout,
+            adults,
+            kind,
+            partner,
+          },
+          { context: "page", itineraryId: null, locale },
+        )
       : null;
+
+  const summary: SummaryItem[] = [];
+  if (selected) summary.push({ label: tVert("fieldPlace"), value: selected.label });
+  if (checkin) summary.push({ label: tVert("fieldCheckin"), value: formatIsoDate(checkin, locale) });
+  if (checkout) summary.push({ label: tVert("fieldCheckout"), value: formatIsoDate(checkout, locale) });
+  if (selected || checkin || checkout) summary.push({ label: t("people"), value: String(adults) });
+  if (kind) summary.push({ label: tVert("fieldKind"), value: tVert(KIND_KEYS[kind]) });
+
+  const placeLabel: string | undefined = selected?.label;
+  const hint = !selected ? t("pickPlace") : t("needDates");
+
+  // Stessa ricerca su un altro sito partner, con gli stessi campi.
+  const current = {
+    luogo: selected?.value ?? "",
+    checkin,
+    checkout,
+    persone: String(adults),
+    tipo: kind,
+  };
+  const alternatives = partners
+    .filter((p) => p.partner !== partner)
+    .map((p) => ({ name: p.name, href: queryString({ ...current, partner: p.partner }) }));
+
+  const kindHref = (value: LodgingKind | ""): string => queryString({ ...current, tipo: value, partner: partner === VERTICAL_PARTNER.lodging ? "" : partner });
+
+  const tips = [t("tip1"), t("tip2"), t("tip3")];
+  const faq = [
+    { question: t("faq1q"), answer: t("faq1a") },
+    { question: t("faq2q"), answer: t("faq2a") },
+    { question: t("faq3q"), answer: t("faq3a") },
+  ];
+  const guides = await publishedGuides(locale, ["prima-volta-in-sicilia", "quando-andare-in-sicilia"]);
 
   return (
     <PageContainer width="work">
-      <PageHeader title={t("title")} subtitle={t("intro")} />
+      <PageHeader
+        title={t("title")}
+        subtitle={t("intro")}
+        breadcrumb={[{ label: tVert("servicesCrumb"), href: "/servizi" }]}
+        breadcrumbLabel={tVert("servicesLabel")}
+      />
 
-      {query.avviso === "non-disponibile" && (
-        <p role="alert" className="rounded-lg border border-card-edge bg-calce-raised p-4 text-body">
-          {tVert("unavailable")}
-        </p>
-      )}
+      <VerticalNotices avviso={paramOf(query.avviso)} />
 
-      {query.avviso === "troppi-click" && (
-        <p role="alert" className="rounded-lg border border-card-edge bg-calce-raised p-4 text-body">
-          {tVert("rateLimited")}
-        </p>
-      )}
+      <nav aria-label={t("kindLabel")} className="flex flex-wrap gap-2">
+        {[{ value: "" as const, label: tVert("kindAll") }, ...LODGING_KINDS.map((value) => ({ value, label: tVert(KIND_KEYS[value]) }))].map(
+          (chip) => {
+            const active = chip.value === kind;
+            return (
+              <Link
+                key={chip.value || "all"}
+                href={`/${PAGE}${kindHref(chip.value)}`}
+                aria-current={active ? "true" : undefined}
+                className={cn(
+                  "inline-flex min-h-11 items-center rounded-pill border px-4 text-body-s",
+                  active ? "border-coccio bg-coccio text-on-coccio" : "border-border-control bg-calce-raised",
+                )}
+              >
+                {chip.label}
+              </Link>
+            );
+          },
+        )}
+      </nav>
 
-      {availability !== "ready" ? (
-        <div className="flex max-w-2xl flex-col items-start gap-3 rounded-lg border border-card-edge bg-calce-raised p-6">
-          <p className="text-label uppercase text-lava-muted">{tVert("comingSoon")}</p>
-          <p className="text-body-l">{t("comingSoonText")}</p>
-          <PendingButton id="vertical.lodging" variant="primary">
-            {t("submit")}
-          </PendingButton>
-        </div>
-      ) : (
-        <>
-          <form method="get" className="grid gap-4 rounded-lg border border-card-edge bg-calce-raised p-6 md:grid-cols-2 lg:grid-cols-5">
-            <div className="flex flex-col gap-1.5 lg:col-span-2">
-              <label htmlFor="luogo" className="text-body-s font-semibold">
-                {t("placeLabel")}
-              </label>
-              <Select
-                id="luogo"
-                name="luogo"
-                label={t("placeLabel")}
-                placeholder={t("placePlaceholder")}
-                defaultValue={selected?.key ?? undefined}
-                required
-                options={[
-                  ...data.areas.map((a) => ({ value: `area:${a.slug}`, label: a.name, description: t("placeGroupAreas") })),
-                  ...data.cities.map((c) => ({ value: `city:${c.slug}`, label: c.name, description: t("placeGroupCities") })),
-                ]}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="checkin" className="text-body-s font-semibold">
-                {t("checkin")}
-              </label>
-              <DateField id="checkin" name="checkin" label={t("checkin")} defaultValue={checkin} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="checkout" className="text-body-s font-semibold">
-                {t("checkout")}
-              </label>
-              <DateField id="checkout" name="checkout" label={t("checkout")} defaultValue={checkout} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="persone" className="text-body-s font-semibold">
-                {t("people")}
-              </label>
-              <input id="persone" name="persone" type="number" min={1} max={MAX_ADULTS} defaultValue={adults} className={FIELD} />
-            </div>
-            <div className="flex items-end lg:col-span-5">
-              <button type="submit" className={buttonClass("primary", "md", "w-full md:w-auto")}>
-                {t("submit")}
-              </button>
-            </div>
-          </form>
+      <VerticalForm
+        submitLabel={t("submit")}
+        hidden={{ tipo: kind, partner: partner === VERTICAL_PARTNER.lodging ? "" : partner }}
+      >
+        <VerticalField label={t("placeLabel")} wide>
+          <Select
+            name="luogo"
+            label={t("placeLabel")}
+            options={options.map((o) => ({ value: o.value, label: o.label, description: o.group === "area" ? t("placeGroupAreas") : t("placeGroupCities") }))}
+            defaultValue={selected?.value}
+            placeholder={t("placePlaceholder")}
+            required
+          />
+        </VerticalField>
+        <VerticalField label={t("checkin")} htmlFor="checkin">
+          <DateField id="checkin" name="checkin" defaultValue={checkin} label={t("checkin")} placeholder={t("checkin")} />
+        </VerticalField>
+        <VerticalField label={t("checkout")} htmlFor="checkout">
+          <DateField id="checkout" name="checkout" defaultValue={checkout} label={t("checkout")} placeholder={t("checkout")} />
+        </VerticalField>
+        <VerticalField label={t("people")} htmlFor="persone">
+          <input
+            id="persone"
+            name="persone"
+            type="number"
+            min={1}
+            max={MAX_ADULTS}
+            defaultValue={adults}
+            className="is-field min-h-11 w-full px-3 text-body"
+          />
+        </VerticalField>
+      </VerticalForm>
 
-          <div className="flex flex-col items-start gap-2">
-            {href && partnerName ? (
-              <>
-                <ButtonAnchor variant="primary" href={href} rel="sponsored noopener">
-                  {t("searchOn", { partner: partnerName })}
-                </ButtonAnchor>
-                <p className="text-caption text-lava-muted">{tAff("disclosure", { partner: partnerName })}</p>
-              </>
-            ) : (
-              <p className="text-body text-lava-muted">
-                {!selected ? t("pickPlace") : datesOk ? tVert("unavailable") : t("needDates")}
-              </p>
-            )}
-          </div>
-        </>
-      )}
+      <VerticalResult summary={summary} outcome={outcome} hint={hint} placeName={placeLabel} />
+
+      <VerticalExtras tips={tips} faq={faq} guides={guides} alternatives={alternatives} />
     </PageContainer>
   );
 }

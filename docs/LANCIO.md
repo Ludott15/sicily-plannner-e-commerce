@@ -105,6 +105,34 @@ Da rifare a ogni aggiornamento dei dati: controllare le città in italiano e i c
 | `ANTHROPIC_API_KEY` | chiave API Anthropic (facoltativa) | Senza, le attività nuove dell'import arrivano senza tag proposti. Con la chiave, la coda "Da verificare" mostra i tag proposti. |
 | `EMBEDDINGS_PROVIDER`, `VOYAGE_API_KEY` | `voyage` (default) e la chiave Voyage AI (facoltativa) | Senza chiave il cron delle 4:00 UTC (`embed-activities`) non fa nulla. Con la chiave risponde 200 con il numero di attività calcolate. |
 
+### Affiliati da verificare dopo l'iscrizione
+
+I template delle verticali nuove (migrazione `20261021151418`) usano i formati verificati il 2026-10-21 (letture pubbliche; `verifica-deeplink`). Dove un formato non è verificato, il link va alla home del partner. `passesSearch` dice cosa arriva al partner per ogni link: `full` (luogo, date e persone), `place` (solo il luogo, la tratta o l'aeroporto), `none` (solo la home). Prima di attivare un partner nel sito, per ogni riga:
+
+| Partner (chiave) | Verticale | Link oggi | passesSearch | Da verificare nel programma |
+| --- | --- | --- | --- | --- |
+| Booking.com (`booking`) | alloggi | ricerca per luogo con date e persone; `ht_id` vuoto (filtro per tipo non applicato) | full | formato di ricerca (`ss`, date, persone), parametro del subid (`label`), parametro dell'ID (`aid`), valori `ht_id` per tipo (mappa `KIND_FILTER`), tracciamento CJ |
+| Hostelworld (`hostelworld`) | alloggi (ostelli) | Palermo: pagina città con date e ospiti; altri luoghi: home | full a Palermo, none altrove | programma per publisher (Partnerize, FlexOffers o Travelpayouts), parametro del subid, parametro dell'ID |
+| Pitchup (`pitchup`) | alloggi (campeggi) | home, **inattivo** | none | esiste un programma per publisher? Se sì, attivare |
+| DiscoverCars (`discovercars`) | noleggio | pagina Catania (aeroporto CTA); altri aeroporti: home | place (CTA), none altrove | programma, parametro del subid e dell'ID (ora assenti) |
+| Rentalcars.com (`rentalcars`) | noleggio (alternativa) | pagina dell'aeroporto di Catania (CTA); altri: home | place (CTA), none altrove | link Awin (6% / 1%), parametro del subid |
+| Ferryhopper (`ferryhopper`) | traghetti | home (formato del link di rotta visto, esito non confermato) | none | parametri `itinerary` e `dates` da confermare nel browser; decidere se usarli |
+| Direct Ferries (`directferries`) | traghetti (alternativa) | pagina della tratta Milazzo–Lipari; altre tratte: home | place (Milazzo–Lipari), none altrove | programma (FlexOffers o Tradedoubler), Italia e Sicilia |
+| Omio (`omio`) | treni e bus | home (403 alla verifica) | none | formato del link di ricerca, marker Travelpayouts |
+| Welcome Pickups (`welcomepickups`) | transfer | home (403 alla verifica) | none | programma (Tapfiliate o Travelpayouts), formato della pagina Catania |
+| Tiqets (`tiqets`) | biglietti | pagina città Palermo; altre città: home | full a Palermo, none altrove | link di rete (Awin o Travelpayouts), parametro del subid |
+| Click&Boat (`clickandboat`) | barche | pagina città Palermo (filtri nel percorso); altre città: home | place a Palermo, none altrove | programma su Impact: il link deve passare da Impact; pattern `/people-N` per gli ospiti |
+| SamBoat (`samboat`) | barche (alternativa) | home, **inattivo** | none | attivare solo con un programma confermato |
+| Heymondo (`heymondo`) | assicurazione | home italiana (`www.heymondo.it`) | none | condizioni del programma (commissioni non pubbliche), cookie di 30 giorni |
+| Airalo (`airalo`) | eSIM | pagina Italia (`Italy-esim`) | none | programma su Impact: il link deve passare da Impact |
+| Radical Storage (`radicalstorage`) | deposito bagagli | pagina città Palermo; altre città: home | full a Palermo, none altrove | programma (Travelpayouts, solo prenotazioni dal sito web) da confermare; il dominio è verificato dalla pagina città |
+
+Città, aeroporti e tratte coperti sono in `src/server/affiliates/vertical-pages.ts`: Palermo (Hostelworld, Tiqets, Click&Boat, Radical Storage), Catania aeroporto CTA (DiscoverCars, Rentalcars), tratta Milazzo–Lipari (Direct Ferries). Ogni nuova pagina va aperta nel browser e confermata prima di aggiungerla. Lo slug `palermo` del catalogo reale va confermato dopo il primo caricamento (il seed usa `demo-palermo`).
+
+Chiavi d'ambiente (senza valore il link esce senza parametro d'affiliazione e il click si registra): `HOSTELWORLD_AFFILIATE_ID`, `PITCHUP_AFFILIATE_ID`, `RENTALCARS_AFFILIATE_ID`, `FERRYHOPPER_AFFILIATE_ID`, `DIRECTFERRIES_AFFILIATE_ID`, `OMIO_AFFILIATE_ID`, `WELCOMEPICKUPS_AFFILIATE_ID`, `TIQETS_AFFILIATE_ID`, `CLICKANDBOAT_AFFILIATE_ID`, `SAMBOAT_AFFILIATE_ID`, `HEYMONDO_AFFILIATE_ID`, `AIRALO_AFFILIATE_ID`, `RADICALSTORAGE_AFFILIATE_ID`. Nessun template porta ancora il parametro dell'ID: va aggiunto quando il programma ne conferma il nome.
+
+Verifica a mano dopo ogni modifica: il click di prova di ogni verticale porta alla pagina dichiarata da `passesSearch`, con il subid dove il parametro è noto.
+
 ## 5. Conversioni dei partner (report)
 
 Le conversioni entrano in due modi: dal CSV caricato dall'admin (Affiliati → Importa, con anteprima) e dal cron `/api/cron/import-conversions` (05:00 UTC), che oggi non esegue alcun adattatore. Nessun partner è collegato via API: i report API vanno verificati con le condizioni di ogni programma prima di attivarli (accesso al report, frequenza consentita, dati personali nel report). Finché non ci sono adattatori attivi, il cron risponde 200 con zero righe e i dati si caricano dal CSV.

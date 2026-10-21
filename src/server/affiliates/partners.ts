@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { dbPublic } from "@/server/db/public";
 import { isPartnerIdEnvName } from "@/lib/partner-env-names";
-import type { Vertical } from "./vertical-links";
+import { VERTICALS, VERTICAL_PARTNERS, type Vertical } from "./vertical-links";
 
 export { PARTNER_ID_ENV_NAMES, type PartnerIdEnvName } from "@/lib/partner-env-names";
 
@@ -25,14 +25,14 @@ export type PartnerConfig = {
 
 export type ReadyPartner = {
   config: PartnerConfig & { searchUrlTemplate: string };
-  partnerId: string;
+  // Null finché l'ID non è configurato: il link esce senza il parametro d'affiliazione (partner_id).
+  partnerId: string | null;
 };
 
-// Verticale -> partner che la serve (per le pagine e i chip). Aggiungere un partner: una riga qui.
-export const VERTICAL_PARTNER: Record<Vertical, string> = {
-  lodging: "booking",
-  car: "discovercars",
-};
+// Verticale -> partner predefinito (il primo di VERTICAL_PARTNERS; gli altri sono alternative).
+export const VERTICAL_PARTNER: Record<Vertical, string> = Object.fromEntries(
+  VERTICALS.map((vertical) => [vertical, VERTICAL_PARTNERS[vertical][0]!]),
+) as Record<Vertical, string>;
 
 const configRowSchema = z.object({
   partner: z.string(),
@@ -88,11 +88,13 @@ export function partnerIdFromEnv(envName: string | null): string | null {
   return value && PARTNER_ID.test(value) ? value : null;
 }
 
-// Il partner può servire la verticale: attivo, la verticale è sua, c'è un template e l'ID è configurato.
+// Il partner può servire la verticale: attivo, la verticale è sua e c'è un template. L'ID del partner
+// non è richiesto: senza ID il link funziona come link normale verso il partner (partnerId null).
 export function readyPartner(config: PartnerConfig | null, vertical: Vertical): ReadyPartner | null {
   if (!config || !config.isActive || !config.verticals.includes(vertical)) return null;
   if (config.searchUrlTemplate === null) return null;
-  const partnerId = partnerIdFromEnv(config.partnerIdEnv);
-  if (partnerId === null) return null;
-  return { config: { ...config, searchUrlTemplate: config.searchUrlTemplate }, partnerId };
+  return {
+    config: { ...config, searchUrlTemplate: config.searchUrlTemplate },
+    partnerId: partnerIdFromEnv(config.partnerIdEnv),
+  };
 }

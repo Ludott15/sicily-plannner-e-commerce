@@ -16,6 +16,22 @@ export const partner = pgEnum("partner", [
   "booking",
   "discovercars",
   "civitatis",
+  // Passo 3.2 (verticali affiliate): alloggi alternativi, traghetti, treni, transfer, biglietti,
+  // barche, assicurazione, eSIM, deposito bagagli. Aggiunti con la migrazione enum a sé
+  // (ALTER TYPE ... ADD VALUE non si usa nella transazione che lo crea).
+  "hostelworld",
+  "pitchup",
+  "rentalcars",
+  "ferryhopper",
+  "directferries",
+  "omio",
+  "welcomepickups",
+  "tiqets",
+  "clickandboat",
+  "samboat",
+  "heymondo",
+  "airalo",
+  "radicalstorage",
 ]);
 export const eventType = pgEnum("event_type", [
   "view",

@@ -18,9 +18,6 @@ const PAGES = [
   "/it/cookie",
   "/it/condizioni-di-vendita",
   "/it/viaggio/nuovo",
-  // Verticali del passo 3.1: "in arrivo" finché manca l'ID del partner (vertical.lodging, vertical.car).
-  "/it/dove-dormire",
-  "/it/noleggio-auto",
   // Classifica (passo 5.3): pubblica, con il link al regolamento dei punti.
   "/it/classifica",
 ];
@@ -81,13 +78,6 @@ test("le azioni in sospeso nelle pagine sono esattamente quelle dell'elenco", as
   test.setTimeout(180_000);
   const found = await collectPending(page);
   expect(Object.fromEntries([...found].sort())).toEqual(Object.fromEntries(Object.entries(expectedPending()).sort()));
-});
-
-test("un'azione in sospeso non fa nulla", async ({ page }) => {
-  await page.goto("/it/dove-dormire");
-  const url = page.url();
-  await page.locator('[data-pending-id="vertical.lodging"]').first().click({ force: true });
-  await expect(page).toHaveURL(url);
 });
 
 test("\"Disponibile a breve\" solo in sviluppo", async ({ page }) => {

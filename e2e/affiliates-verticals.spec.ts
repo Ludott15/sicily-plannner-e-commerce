@@ -23,16 +23,14 @@ test("/it/link-affiliati → 308 a /it/affiliazioni", async ({ request }) => {
   expect(res.headers()["location"]).toMatch(/\/it\/affiliazioni$/);
 });
 
-test("dove-dormire e noleggio-auto senza ID dei partner: stato in arrivo, nessun form", async ({ page }) => {
+test("dove-dormire e noleggio-auto senza ID dei partner: il form c'è, nessun 'in arrivo'", async ({ page }) => {
   await page.goto("/it/dove-dormire");
-  await expect(page.getByText("In arrivo", { exact: true })).toBeVisible();
-  await expect(page.locator('[data-pending-id="vertical.lodging"]')).toHaveAttribute("aria-disabled", "true");
-  await expect(page.locator("form[method='get'] select#luogo")).toHaveCount(0);
+  await expect(page.getByText("In arrivo", { exact: true })).toHaveCount(0);
+  await expect(page.locator("form[method='get'] input[name='luogo']")).toHaveCount(1);
 
   await page.goto("/it/noleggio-auto");
-  await expect(page.getByText("In arrivo", { exact: true })).toBeVisible();
-  await expect(page.locator('[data-pending-id="vertical.car"]')).toHaveAttribute("aria-disabled", "true");
-  await expect(page.locator("form[method='get'] select#aeroporto")).toHaveCount(0);
+  await expect(page.getByText("In arrivo", { exact: true })).toHaveCount(0);
+  await expect(page.locator("form[method='get'] input[name='aeroporto']")).toHaveCount(1);
 });
 
 test("dove-dormire con avviso di link non disponibile mostra il messaggio", async ({ page }) => {

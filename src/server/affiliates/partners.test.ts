@@ -6,6 +6,7 @@ import { partnerIdFromEnv, PARTNER_ID_ENV_NAMES } from "./partners";
 
 const KEYS = [
   "BOOKING_AFFILIATE_ID",
+  "FERRYHOPPER_AFFILIATE_ID",
   "AFFILIATE_LINK_SECRET",
   "RATE_LIMIT_SECRET",
   "FLIGHT_LINK_SECRET",
@@ -58,7 +59,15 @@ describe("partnerIdFromEnv", () => {
 
   it("la lista contiene i partner previsti e non i segreti", () => {
     expect(PARTNER_ID_ENV_NAMES).toContain("BOOKING_AFFILIATE_ID");
+    expect(PARTNER_ID_ENV_NAMES).toContain("FERRYHOPPER_AFFILIATE_ID");
+    expect(PARTNER_ID_ENV_NAMES).toContain("RADICALSTORAGE_AFFILIATE_ID");
     expect(PARTNER_ID_ENV_NAMES).not.toContain("AFFILIATE_LINK_SECRET");
     expect(PARTNER_ID_ENV_NAMES).not.toContain("RATE_LIMIT_SECRET");
+    expect(PARTNER_ID_ENV_NAMES.every((name) => /^[A-Z][A-Z0-9_]*_(AFFILIATE_ID|PARTNER_ID|AGENCY_ID|MARKER)$/.test(name))).toBe(true);
+  });
+
+  it("senza ID il nome del partner dà null (link senza parametro, non errore)", () => {
+    delete process.env.FERRYHOPPER_AFFILIATE_ID;
+    expect(partnerIdFromEnv("FERRYHOPPER_AFFILIATE_ID")).toBeNull();
   });
 });

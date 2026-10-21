@@ -470,6 +470,27 @@
       "when": 1792594854487,
       "tag": "20261021150054_place_legs_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1792595618614,
+      "tag": "20261021151338_partner_enum_verticali",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1792595639664,
+      "tag": "20261021151359_affiliate_verticali_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1792595658874,
+      "tag": "20261021151418_affiliate_partner_verticali",
+      "breakpoints": true
     }
   ]
 }

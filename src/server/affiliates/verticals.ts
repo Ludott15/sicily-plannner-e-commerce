@@ -5,72 +5,148 @@ import { activities, areas, places } from "@/server/db/schema";
 import { dbPublic } from "@/server/db/public";
 import { affiliateLinkSecret, VERTICAL_LINK_TTL_SECONDS } from "./config";
 import { getPartnerConfig, readyPartner, VERTICAL_PARTNER } from "./partners";
+import { catalogPlaceName } from "./vertical-places";
 import {
-  buildVerticalUrl,
+  destinationFor,
+  usesPlace,
+  verticalFields,
   verticalLinkHref,
+  VERTICAL_PARTNERS,
+  type LodgingKind,
+  type PassesSearch,
   type Vertical,
   type VerticalContext,
   type VerticalLink,
 } from "./vertical-links";
+import { pageFor } from "./vertical-pages";
 
-// Dati e link delle pagine di alloggi (/dove-dormire) e noleggi (/noleggio-auto), e dei chip del
-// viaggio. "in arrivo" = il partner non è pronto (manca l'ID nell'ambiente, il partner è inattivo,
-// la chiave dei link non c'è): nessun link, nessun host costruito.
+// Pagine delle verticali (alloggi, noleggi, traghetti, treni, transfer, biglietti, barche, assicurazione,
+// eSIM, deposito bagagli): ricerca -> link firmato verso /api/go/v (buildVerticalHref). Il partner
+// predefinito è il primo di VERTICAL_PARTNERS; "partner" sceglie un'alternativa della stessa verticale.
+// "inactive" = il partner non può ricevere traffico (non attivo, senza template, senza chiave dei link);
+// "invalid" = la ricerca non è valida (valori fuori dalle liste chiuse, luogo non nel catalogo).
+// Un partner senza ID configurato è comunque "pronto": il link esce senza il parametro d'affiliazione.
 
-export type VerticalSearchInput = {
-  vertical: Vertical;
-  query: string;
-  airport: string;
-  checkin: string;
-  checkout: string;
-  adults: number;
+type WithPartner = { partner?: string };
+
+export type VerticalSearchInput =
+  | ({ vertical: "lodging"; place: string; checkin: string; checkout: string; adults: number; kind?: LodgingKind | "" } & WithPartner)
+  | ({ vertical: "car"; airport: string; checkin: string; checkout: string } & WithPartner)
+  | ({ vertical: "ferry"; from: string; to: string; date: string; adults: number } & WithPartner)
+  | ({ vertical: "train"; from: string; to: string; date: string } & WithPartner)
+  | ({ vertical: "transfer"; airport: string; place: string; date: string } & WithPartner)
+  | ({ vertical: "tickets"; place: string } & WithPartner)
+  | ({ vertical: "boat"; place: string; date: string } & WithPartner)
+  | ({ vertical: "insurance" } & WithPartner)
+  | ({ vertical: "esim" } & WithPartner)
+  | ({ vertical: "luggage"; place: string } & WithPartner);
+
+// Dove nasce la ricerca: pagina, itinerario o chat, e la lingua della pagina di ripiego.
+export type VerticalCallContext = {
   context: VerticalContext;
   itineraryId: string | null;
   locale: string;
 };
 
+// passesSearch: quanta ricerca arriva al partner con questo link ("full", "place", "none"). La pagina lo
+// usa per dire onestamente cosa arriva (vedi vertical-pages.ts e vertical-links.ts passesSearchFor).
+export type VerticalHrefResult =
+  | { href: string; partnerName: string; passesSearch: PassesSearch }
+  | { error: "inactive" | "invalid" };
+
 // Subid di prova per verificare che il template regga; il subid reale lo crea la route al click.
 const PROBE_SUBID = "probeprobeprobe";
 
-// Href firmato verso /api/go/v, o null se la verticale non è pronta o la ricerca non si può
-// costruire (per esempio manca l'area).
-export async function verticalSearchHref(input: VerticalSearchInput): Promise<string | null> {
-  const secret = affiliateLinkSecret();
-  if (!secret) return null;
-  const ready = readyPartner(await getPartnerConfig(VERTICAL_PARTNER[input.vertical]), input.vertical);
-  if (!ready) return null;
-
-  const values = {
-    query: input.query,
-    airport: input.airport,
-    checkin: input.checkin,
-    checkout: input.checkout,
-    adults: String(input.adults),
-    partner_id: ready.partnerId,
-    locale: input.locale,
-  };
-  if (buildVerticalUrl(ready.config, { ...values, subid: PROBE_SUBID }) === null) return null;
-
-  const link: VerticalLink = {
-    partner: ready.config.partner,
+function linkFromInput(input: VerticalSearchInput, ctx: VerticalCallContext, expiresAt: number): VerticalLink {
+  const base: VerticalLink = {
+    partner: input.partner ?? VERTICAL_PARTNER[input.vertical],
     vertical: input.vertical,
-    query: input.query,
-    airport: input.airport,
-    checkin: input.checkin,
-    checkout: input.checkout,
-    adults: input.adults,
-    context: input.context,
-    itineraryId: input.itineraryId,
-    expiresAt: Math.floor(Date.now() / 1000) + VERTICAL_LINK_TTL_SECONDS,
+    place: "",
+    from: "",
+    to: "",
+    date: "",
+    kind: "",
+    airport: "",
+    checkin: "",
+    checkout: "",
+    adults: 0,
+    context: ctx.context,
+    itineraryId: ctx.itineraryId,
+    expiresAt,
   };
-  try {
-    return verticalLinkHref(link, secret, input.locale);
-  } catch {
-    return null;
+  switch (input.vertical) {
+    case "lodging":
+      return { ...base, place: input.place, checkin: input.checkin, checkout: input.checkout, adults: input.adults, kind: input.kind ?? "" };
+    case "car":
+      return { ...base, airport: input.airport, checkin: input.checkin, checkout: input.checkout };
+    case "ferry":
+      return { ...base, from: input.from, to: input.to, date: input.date, adults: input.adults };
+    case "train":
+      return { ...base, from: input.from, to: input.to, date: input.date };
+    case "transfer":
+      return { ...base, airport: input.airport, place: input.place, date: input.date };
+    case "tickets":
+      return { ...base, place: input.place };
+    case "boat":
+      return { ...base, place: input.place, date: input.date };
+    case "insurance":
+    case "esim":
+      return base;
+    case "luggage":
+      return { ...base, place: input.place };
   }
 }
 
-// "ready" se la verticale può già mandare utenti al partner, altrimenti "coming_soon".
+// Href firmato verso /api/go/v per una ricerca di verticale. Nessun parametro di input diventa host o
+// percorso: il link porta solo campi validati dalle liste chiuse e lo slug del catalogo.
+export async function buildVerticalHref(input: VerticalSearchInput, ctx: VerticalCallContext): Promise<VerticalHrefResult> {
+  const vertical: Vertical = input.vertical;
+  let link: VerticalLink;
+  try {
+    link = linkFromInput(input, ctx, Math.floor(Date.now() / 1000) + VERTICAL_LINK_TTL_SECONDS);
+    verticalFields(link);
+  } catch {
+    return { error: "invalid" };
+  }
+  if (!(VERTICAL_PARTNERS[vertical] as readonly string[]).includes(link.partner)) return { error: "invalid" };
+
+  const secret = affiliateLinkSecret();
+  if (!secret) return { error: "inactive" };
+
+  let ready: Awaited<ReturnType<typeof readyPartner>>;
+  let placeName: string | null = null;
+  try {
+    ready = readyPartner(await getPartnerConfig(link.partner), vertical);
+    if (!ready) return { error: "inactive" };
+    if (usesPlace(vertical)) {
+      placeName = await catalogPlaceName(link.place, ctx.locale, vertical === "lodging");
+      if (placeName === null) return { error: "invalid" };
+    }
+  } catch {
+    return { error: "inactive" };
+  }
+
+  const destination = destinationFor(link, ready.config, {
+    placeName,
+    partnerId: ready.partnerId,
+    subid: PROBE_SUBID,
+    locale: ctx.locale,
+    page: pageFor(link),
+  });
+  if (destination === null) return { error: "inactive" };
+
+  try {
+    return {
+      href: verticalLinkHref(link, secret, ctx.locale),
+      partnerName: ready.config.name,
+      passesSearch: destination.passesSearch,
+    };
+  } catch {
+    return { error: "inactive" };
+  }
+}
+
+// "ready" se la verticale può già mandare utenti al partner predefinito, altrimenti "coming_soon".
 export async function verticalAvailability(vertical: Vertical): Promise<"ready" | "coming_soon"> {
   if (!affiliateLinkSecret()) return "coming_soon";
   const ready = readyPartner(await getPartnerConfig(VERTICAL_PARTNER[vertical]), vertical);
