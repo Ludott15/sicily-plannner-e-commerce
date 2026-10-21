@@ -2408,6 +2408,18 @@
       "cta": "Open the order",
       "footer": "You receive this email because you are a producer on {brand}. The customer’s details are not in this email."
     },
+    "supplierOrder": {
+      "subject": "Order {orderNumber} to ship",
+      "heading": "New order to ship",
+      "preheader": "Order {orderNumber}: ship within {leadTimeDays} business days.",
+      "greeting": "Hello {supplierName},",
+      "body": "We are forwarding order {orderNumber}. Please ship it within {leadTimeDays} business days to the address below, and reply to this email with the tracking code.",
+      "line": "{title} × {quantity}",
+      "lineSku": "{title} × {quantity} (code {sku})",
+      "address": "Recipient: {address}",
+      "phone": "Phone: {phone}",
+      "footer": "You receive this email because you are a supplier of {brand}. It contains no sale prices."
+    },
     "tripReminder": {
       "subject": "{tripName}: departure {startDate}",
       "heading": "{tripName}",

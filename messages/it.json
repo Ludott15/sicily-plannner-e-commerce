@@ -2408,6 +2408,18 @@
       "cta": "Apri l’ordine",
       "footer": "Ricevi questa email perché sei un produttore su {brand}. I dati del cliente non compaiono in questa email."
     },
+    "supplierOrder": {
+      "subject": "Ordine {orderNumber} da spedire",
+      "heading": "Nuovo ordine da spedire",
+      "preheader": "Ordine {orderNumber}: spedire entro {leadTimeDays} giorni lavorativi.",
+      "greeting": "Ciao {supplierName},",
+      "body": "Ti inoltriamo l’ordine {orderNumber}. Spediscilo entro {leadTimeDays} giorni lavorativi all’indirizzo qui sotto, e rispondi a questa email con il codice di tracciamento.",
+      "line": "{title} × {quantity}",
+      "lineSku": "{title} × {quantity} (codice {sku})",
+      "address": "Destinatario: {address}",
+      "phone": "Telefono: {phone}",
+      "footer": "Ricevi questa email perché sei un fornitore di {brand}. Non contiene prezzi di vendita."
+    },
     "tripReminder": {
       "subject": "{tripName}: si parte {startDate}",
       "heading": "{tripName}",

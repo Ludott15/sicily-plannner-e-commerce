@@ -13,7 +13,9 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { SupplierStatus } from "@/lib/shop/orders";
 import { areas, places } from "./catalog";
+import { checkoutSessions } from "./checkout";
 import { media } from "./media";
 import { orderStatus } from "./enums";
 import { profiles } from "./profiles";
@@ -227,39 +229,98 @@ export const boxItems = pgTable(
   ],
 );
 
-// user_id null: ordine di un ospite, oppure account eliminato. Gli ordini restano
-// per obblighi fiscali, quindi l'eliminazione dell'account imposta user_id a null.
+// Ordine pagato con Stripe (passo 7.3). Lo crea il webhook checkout.session.completed nella stessa
+// transazione in cui registra l'evento. Due stati: `status` è quello che vede il cliente (pagato,
+// spedito, consegnato), `supplier_status` è l'inoltro al fornitore; le transizioni li aggiornano insieme.
+// user_id null: ordine di un ospite, oppure account eliminato. Gli ordini restano per obblighi fiscali,
+// quindi l'eliminazione dell'account imposta user_id a null. Il telefono del cliente sta dentro
+// shipping_address (JSON): così il job di retention lo anonimizza insieme all'indirizzo.
 export const orders = pgTable(
   "orders",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    // Numero leggibile ISU-AAAA-NNNNNN, dalla sequenza di public.next_order_number() (migrazione 7.3).
+    orderNumber: text("order_number")
+      .notNull()
+      .unique()
+      .default(sql`public.next_order_number()`),
     userId: uuid("user_id").references(() => profiles.id, { onDelete: "set null" }),
     email: text("email").notNull(),
+    // Lingua della pagina e delle email (it, en): dal checkout di Stripe.
+    locale: text("locale").notNull().default("it"),
     status: orderStatus("status").notNull().default("pending"),
+    supplierStatus: text("supplier_status").$type<SupplierStatus>().notNull().default("pending"),
+    // Da verificare a mano: importo o dati di Stripe non coincidono con lo snapshot. Nessun inoltro.
+    needsReview: boolean("needs_review").notNull().default(false),
     subtotalCents: integer("subtotal_cents").notNull(),
     discountCents: integer("discount_cents").notNull().default(0),
     shippingCents: integer("shipping_cents").notNull().default(0),
     totalCents: integer("total_cents").notNull(),
     pointsRedeemed: integer("points_redeemed").notNull().default(0),
+    // Importo effettivamente incassato da Stripe (amount_total dell'evento), per il controllo.
+    paidAmountCents: integer("paid_amount_cents"),
     stripeSessionId: text("stripe_session_id").notNull().unique(),
+    paymentIntentId: text("payment_intent_id"),
+    checkoutSessionId: uuid("checkout_session_id").references(() => checkoutSessions.id, { onDelete: "set null" }),
+    // SHA-256 del token del link ospite (nell'email). Null per gli account. Ruotato a ogni email al cliente.
+    accessTokenHash: text("access_token_hash"),
     shippingAddress: jsonb("shipping_address"),
+    carrier: text("carrier"),
+    trackingNumber: text("tracking_number"),
+    trackingUrl: text("tracking_url"),
+    problemNote: text("problem_note"),
+    forwardedAt: timestamp("forwarded_at", { withTimezone: true }),
+    shippedAt: timestamp("shipped_at", { withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    // Avviso di ritardo del fornitore: una sola volta (cron /api/cron/shop).
+    supplierDelayNotifiedAt: timestamp("supplier_delay_notified_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("orders_user_id_idx").on(t.userId),
     index("orders_status_idx").on(t.status),
+    index("orders_supplier_status_idx").on(t.supplierStatus),
+    index("orders_checkout_session_id_idx").on(t.checkoutSessionId),
+    check("orders_order_number_format", sql`${t.orderNumber} ~ '^ISU-[0-9]{4}-[0-9]{6}$'`),
+    check("orders_locale_valid", sql`${t.locale} in ('it','en')`),
+    check(
+      "orders_supplier_status_valid",
+      sql`${t.supplierStatus} in ('pending','forwarded','confirmed','shipped','delivered','problem')`,
+    ),
     check(
       "orders_amounts_non_negative",
       sql`${t.subtotalCents} >= 0 and ${t.discountCents} >= 0 and ${t.shippingCents} >= 0 and ${t.pointsRedeemed} >= 0`,
     ),
+    check("orders_paid_amount_non_negative", sql`${t.paidAmountCents} is null or ${t.paidAmountCents} >= 0`),
     check(
       "orders_total_consistent",
       sql`${t.totalCents} = ${t.subtotalCents} - ${t.discountCents} + ${t.shippingCents}`,
     ),
     check("orders_discount_max_15_percent", sql`${t.discountCents} * 100 <= ${t.subtotalCents} * 15`),
+    check(
+      "orders_payment_intent_format",
+      sql`${t.paymentIntentId} is null or ${t.paymentIntentId} ~ '^pi_[A-Za-z0-9_]+$'`,
+    ),
+    check(
+      "orders_access_token_hash_format",
+      sql`${t.accessTokenHash} is null or ${t.accessTokenHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+    check("orders_tracking_url_https", sql`${t.trackingUrl} is null or ${t.trackingUrl} ~ '^https://'`),
+    check(
+      "orders_problem_note_length",
+      sql`${t.problemNote} is null or char_length(${t.problemNote}) between 1 and 1000`,
+    ),
+    check(
+      "orders_shipped_has_date",
+      sql`${t.status} not in ('shipped','delivered') or ${t.shippedAt} is not null`,
+    ),
+    check("orders_delivered_has_date", sql`${t.status} <> 'delivered' or ${t.deliveredAt} is not null`),
   ],
 );
 
+// Righe dell'ordine: lo snapshot di ciò che il cliente ha comprato (titolo, prezzo, IVA) e, solo per
+// l'admin, il costo d'acquisto e il fornitore al momento dell'ordine. Il cliente non legge costo,
+// fornitore e codice del fornitore (grant per colonna, migrazione 7.3).
 export const orderItems = pgTable(
   "order_items",
   {
@@ -273,19 +334,32 @@ export const orderItems = pgTable(
     producerId: uuid("producer_id")
       .notNull()
       .references(() => producers.id, { onDelete: "restrict" }),
+    supplierId: uuid("supplier_id")
+      .notNull()
+      .references(() => suppliers.id, { onDelete: "restrict" }),
+    supplierSku: text("supplier_sku"),
+    titleSnapshot: text("title_snapshot").notNull(),
     quantity: integer("quantity").notNull(),
+    // Prezzo IVA inclusa per unità, come nel carrello al momento del pagamento.
     unitPriceCents: integer("unit_price_cents").notNull(),
+    vatRate: smallint("vat_rate").notNull(),
+    // Costo d'acquisto preso dal prodotto nel momento dell'ordine. Null se il prodotto non ha costo.
+    costCentsSnapshot: integer("cost_cents_snapshot"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("order_items_order_id_idx").on(t.orderId),
+    index("order_items_supplier_id_idx").on(t.supplierId),
     check("order_items_quantity_positive", sql`${t.quantity} > 0`),
     check("order_items_unit_price_non_negative", sql`${t.unitPriceCents} >= 0`),
+    check("order_items_vat_rate_valid", sql`${t.vatRate} in (4, 10, 22)`),
+    check("order_items_cost_non_negative", sql`${t.costCentsSnapshot} is null or ${t.costCentsSnapshot} >= 0`),
+    check("order_items_title_length", sql`char_length(btrim(${t.titleSnapshot})) between 1 and 200`),
   ],
 );
 
-// Una spedizione per produttore coinvolto nell'ordine. Il token del link al produttore
-// esiste in chiaro solo nell'email: qui c'è l'hash SHA-256 (hex).
+// Una spedizione per produttore nell'ordine: tabella del modello precedente, non usata dal passo 7.3
+// (corriere e tracking stanno su orders). Da eliminare con una migrazione dedicata.
 export const orderShipments = pgTable(
   "order_shipments",
   {
