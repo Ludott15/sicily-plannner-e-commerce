@@ -292,7 +292,7 @@ Le decisioni tecniche stanno nel codice: header in `src/lib/security/headers.ts`
 
 | Variabile | Valore | Verifica |
 | --- | --- | --- |
-| `RATE_LIMIT_SECRET` | chiave casuale (`openssl rand -hex 32`), diversa da `AFFILIATE_LINK_SECRET` | Senza chiave in produzione i limiti di accesso, ospiti e aeroporti negano (fail closed), e i click `/api/go` non sono limitati. Dopo il deploy, un controllo a mano: il 61° click al minuto su `/api/go/…` porta all'avviso "troppi click". |
+| `RATE_LIMIT_SECRET` | chiave casuale (`openssl rand -hex 32`), diversa da `AFFILIATE_LINK_SECRET` | Senza chiave in produzione l'accesso e gli ospiti negano (fail closed); recensioni e aeroporti non si limitano (fail open) e i click `/api/go` non sono limitati. Dopo il deploy, un controllo a mano: il 61° click al minuto su `/api/go/…` porta all'avviso "troppi click". |
 | `NEXT_PUBLIC_SENTRY_DSN` | DSN del progetto Sentry (pubblico, va bene nel browser) | Senza, nessun SDK parte e nessuna richiesta esce verso Sentry. |
 | `SENTRY_DSN` | stesso DSN, solo server (facoltativo) | Serve solo se il server deve usare un DSN diverso. |
 | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | token di Sentry con permesso di caricare release e sourcemap; solo su Vercel, ambiente Production | Senza token le sourcemap non si caricano e il build non tocca Sentry. Con il token, il log del build riporta "Uploaded" per le sourcemap. Il token non va mai con prefisso `NEXT_PUBLIC_`. |
@@ -334,3 +334,5 @@ Da configurare fuori dal codice, con UptimeRobot o Better Stack (piano gratuito 
 - Dependabot: `.github/dependabot.yml` apre ogni lunedì le PR per npm e per le GitHub Actions; le patch di npm arrivano raggruppate in un'unica PR. Nelle impostazioni del repository attivare anche "Dependabot alerts" e "Dependabot security updates".
 - Secret scanning: Settings, Code security, attivare "Secret scanning" e "Push protection" sul repository. Non si attiva dal codice.
 - `npm audit --audit-level=high` non è in CI perché oggi fallisce (12 vulnerabilità di gravità alta, quasi tutte nelle dipendenze di sviluppo, oltre a Next.js 16.3.6 che ha avvisi aperti). Quando il comando passa, aggiungerlo allo step di `checks` in `.github/workflows/ci.yml`. Il rimedio per Next.js è un aggiornamento separato, con la sua PR e la CI verde.
+
+Verifica dell'IP su una preview Vercel (passo 11.5, revisione B4): dalla stessa connessione reale inviare 130 richieste a `/api/go/<id>` con un `x-forwarded-for` forgiato e diverso a ogni richiesta. Attesi: le prime 60 passano e le successive vanno all'avviso "troppi click". Se le richieste con IP forgiati non vengono contate insieme, l'IP non è quello di Vercel e il limite per IP non regge. Fonte: https://vercel.com/docs/headers/request-headers (`x-real-ip` e `x-forwarded-for` hanno l'IP del client).

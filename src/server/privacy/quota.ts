@@ -1,8 +1,7 @@
 import "server-only";
 import { createHmac } from "node:crypto";
-import { sql } from "drizzle-orm";
 import { rateLimitSecret } from "@/server/affiliates/config";
-import { dbPublic } from "@/server/db/public";
+import { hitRateLimit } from "@/server/db/rate-limiter";
 import type { DbUser } from "@/server/db/user";
 
 // Quota per utente di un'operazione sensibile (export, eliminazione dei dati dell'ospite), a finestra
@@ -18,12 +17,7 @@ export async function userQuotaAllowed(
   if (!secret) return false;
   const bucket = createHmac("sha256", secret).update(`${scope}:user:${user.id}`).digest("base64url");
   try {
-    const [row] = await dbPublic((tx) =>
-      tx.execute<{ allowed: boolean }>(
-        sql`select public.hit_rate_limit(${bucket}, ${limit}, ${windowSeconds}) as allowed`,
-      ),
-    );
-    return row?.allowed === true;
+    return await hitRateLimit(bucket, limit, windowSeconds);
   } catch {
     return false;
   }

@@ -4,9 +4,10 @@ import { clientIp, rateLimitBucket } from "./rate-key";
 const SECRET = "test-secret-do-not-use-in-prod";
 
 describe("clientIp", () => {
-  it("primo IP di x-forwarded-for, poi x-real-ip, altrimenti null", () => {
+  it("preferisce x-real-ip, poi il primo IP di x-forwarded-for, altrimenti null", () => {
+    expect(clientIp(new Headers({ "x-real-ip": "198.51.100.2", "x-forwarded-for": "203.0.113.7" }))).toBe("198.51.100.2");
     expect(clientIp(new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" }))).toBe("203.0.113.7");
-    expect(clientIp(new Headers({ "x-real-ip": "198.51.100.2" }))).toBe("198.51.100.2");
+    expect(clientIp(new Headers({ "x-real-ip": "  " }))).toBeNull();
     expect(clientIp(new Headers())).toBeNull();
   });
 });

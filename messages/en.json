@@ -1624,6 +1624,7 @@
     "originNoResults": "No airport found. Try the city or the IATA code.",
     "originSearching": "Searching airports…",
     "originSearchError": "We cannot search airports right now. Try again shortly.",
+    "originSearchLimited": "Too many searches in a short time. Try again in a minute.",
     "originSicily": "You are already in Sicily: pick a departure airport outside the island.",
     "originRequired": "Pick a departure airport from the list.",
     "destination": "Arrival in Sicily",

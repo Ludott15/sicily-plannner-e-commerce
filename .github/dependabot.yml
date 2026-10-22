@@ -28,5 +28,8 @@ updates:
       actions:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
     commit-message:
       prefix: "chore(ci)"

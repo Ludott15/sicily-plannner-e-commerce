@@ -5,33 +5,11 @@
 
 export const REDACTED = "[redatto]";
 
-// Chiavi rimosse ovunque compaiano nell'evento (a qualunque profondità).
-const DROP_KEYS = new Set([
-  "cookie",
-  "cookies",
-  "set-cookie",
-  "authorization",
-  "proxy-authorization",
-  "x-forwarded-for",
-  "x-real-ip",
-  "x-api-key",
-  "apikey",
-  "api_key",
-  "email",
-  "password",
-  "token",
-  "access_token",
-  "refresh_token",
-  "provider_token",
-  "secret",
-  "ip_address",
-  "username",
-  "query_string",
-  "body",
-  "data",
-  "request_body",
-  "form_data",
-]);
+// Chiavi rimosse ovunque compaiano nell'evento, a qualunque profondità e senza distinzione di maiuscole.
+// Include le intestazioni che portano l'IP del visitatore (x-vercel-forwarded-for, REMOTE_ADDR, ...): un IP
+// è un dato personale, anche se nessuna chiave dice "email" o "user".
+export const DROP_KEY_RE =
+  /^(cookies?|set-cookie|authorization|proxy-authorization|forwarded|x-forwarded-for|x-real-ip|x-vercel-forwarded-for|true-client-ip|cf-connecting-ip|remote_addr|ip|ip_address|x-api-key|apikey|api_key|email|password|token|access_token|refresh_token|provider_token|secret|username|query_string|body|request_body|form_data|data)$/i;
 
 // Chiavi di risposta: si tengono, ma i valori di tipo stringa passano dalla redazione.
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
@@ -56,7 +34,7 @@ function scrubValue(value: unknown): unknown {
   if (value !== null && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, child] of Object.entries(value)) {
-      if (DROP_KEYS.has(key.toLowerCase())) continue;
+      if (DROP_KEY_RE.test(key)) continue;
       out[key] = scrubValue(child);
     }
     return out;

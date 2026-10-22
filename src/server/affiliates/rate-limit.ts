@@ -1,7 +1,6 @@
 import "server-only";
-import { sql } from "drizzle-orm";
 import { NextResponse, type NextRequest } from "next/server";
-import { dbPublic } from "@/server/db/public";
+import { hitRateLimit } from "@/server/db/rate-limiter";
 import type { DbUser } from "@/server/db/user";
 import { GO_RATE_LIMIT, rateLimitSecret } from "./config";
 import { clientIp, rateLimitBucket } from "./rate-key";
@@ -12,12 +11,7 @@ import { clientIp, rateLimitBucket } from "./rate-key";
 // completare (.env.example). Un guasto del contatore non blocca l'uscita verso il partner.
 
 async function hitBucket(bucket: string): Promise<boolean> {
-  const [row] = await dbPublic((tx) =>
-    tx.execute<{ allowed: boolean }>(
-      sql`select public.hit_rate_limit(${bucket}, ${GO_RATE_LIMIT.limit}, ${GO_RATE_LIMIT.windowSeconds}) as allowed`,
-    ),
-  );
-  return row?.allowed !== false;
+  return hitRateLimit(bucket, GO_RATE_LIMIT.limit, GO_RATE_LIMIT.windowSeconds);
 }
 
 // true se il click è consentito. Con utente si contano anche i suoi click.

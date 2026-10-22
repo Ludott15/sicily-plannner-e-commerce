@@ -84,9 +84,9 @@ describe("checkRates", () => {
 });
 
 describe("ipIdentity", () => {
-  it("usa il primo IP di x-forwarded-for, poi x-real-ip; senza IP il limite per IP non si applica", () => {
+  it("usa x-real-ip, poi il primo IP di x-forwarded-for; senza IP il limite per IP non si applica", () => {
     expect(ipIdentity(new Headers({ "x-forwarded-for": "9.9.9.9, 10.0.0.1" }))).toBe("9.9.9.9");
-    expect(ipIdentity(new Headers({ "x-real-ip": "8.8.8.8" }))).toBe("8.8.8.8");
+    expect(ipIdentity(new Headers({ "x-real-ip": "8.8.8.8", "x-forwarded-for": "9.9.9.9" }))).toBe("8.8.8.8");
     expect(ipIdentity(new Headers())).toBeNull();
   });
 });

@@ -28,6 +28,34 @@ describe("redactString", () => {
   });
 });
 
+describe("chiavi che portano l'IP", () => {
+  it("toglie x-vercel-forwarded-for, REMOTE_ADDR, forwarded, cf-connecting-ip, true-client-ip e la chiave ip", () => {
+    const scrubbed = scrubSentryEvent({
+      request: {
+        headers: {
+          "x-vercel-forwarded-for": "203.0.113.7",
+          REMOTE_ADDR: "203.0.113.8",
+          forwarded: "for=203.0.113.9",
+          "cf-connecting-ip": "203.0.113.10",
+          "True-Client-IP": "203.0.113.11",
+          "user-agent": "Mozilla/5.0",
+        },
+      },
+      extra: { ip: "203.0.113.12", note: "conservato" },
+    });
+    const text = JSON.stringify(scrubbed);
+    for (const ip of ["203.0.113.7", "203.0.113.8", "203.0.113.9", "203.0.113.10", "203.0.113.11", "203.0.113.12"]) {
+      expect(text).not.toContain(ip);
+    }
+    expect(scrubbed.request.headers).toEqual({ "user-agent": "Mozilla/5.0" });
+    expect(scrubbed.extra).toEqual({ note: "conservato" });
+  });
+
+  it("non toglie le chiavi che contengono 'ip' ma non lo sono (ship, tipo)", () => {
+    expect(scrubSentryEvent({ ship: "ok", tipo: "ok" })).toEqual({ ship: "ok", tipo: "ok" });
+  });
+});
+
 describe("scrubSentryEvent", () => {
   it("toglie cookie, autorizzazione, corpo e query string della richiesta", () => {
     const event = {

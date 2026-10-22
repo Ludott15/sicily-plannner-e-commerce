@@ -1,9 +1,8 @@
 import "server-only";
 import { createHmac } from "node:crypto";
-import { sql } from "drizzle-orm";
 import { rateLimitSecret } from "@/server/affiliates/config";
 import { clientIp } from "@/server/affiliates/rate-key";
-import { dbPublic } from "@/server/db/public";
+import { hitRateLimit } from "@/server/db/rate-limiter";
 
 // Limite generico per le azioni pubbliche senza un contatore dedicato (passo 11.5): accesso e codici
 // via email, ospiti, aeroporti. Usa la stessa funzione SQL dei click affiliati (hit_rate_limit, finestra
@@ -28,15 +27,7 @@ function withoutSecret(): RateDecision {
   return process.env.VERCEL_ENV === "production" ? "unavailable" : "allowed";
 }
 
-const databaseCounter: RateCounter = async (bucket, limit, windowSeconds) => {
-  const [row] = await dbPublic((tx) =>
-    tx.execute<{ allowed: boolean | null }>(
-      sql`select public.hit_rate_limit(${bucket}, ${limit}, ${windowSeconds}) as allowed`,
-    ),
-  );
-  if (row?.allowed !== true && row?.allowed !== false) throw new Error("rate_counter_invalid");
-  return row.allowed;
-};
+const databaseCounter: RateCounter = (bucket, limit, windowSeconds) => hitRateLimit(bucket, limit, windowSeconds);
 
 // Conta una richiesta per l'identità data e dice se è consentita. Il contatore è iniettabile per i test.
 export async function checkRate(

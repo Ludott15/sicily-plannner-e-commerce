@@ -1,7 +1,7 @@
 import createIntlMiddleware from "next-intl/middleware";
 import { NextRequest } from "next/server";
 import { routing } from "@/lib/i18n/routing";
-import { buildContentSecurityPolicy, buildSecurityHeaders, createNonce } from "@/lib/security/headers";
+import { buildContentSecurityPolicy, buildSecurityHeaders, createNonce, isPrefetchRequest } from "@/lib/security/headers";
 import { updateSession } from "@/server/supabase/session";
 
 const intl = createIntlMiddleware(routing);
@@ -28,6 +28,8 @@ export async function proxy(request: NextRequest) {
   for (const [name, value] of Object.entries(buildSecurityHeaders(securityOptions))) {
     response.headers.set(name, value);
   }
+  // Un prefetch non è una navigazione: il rinnovo del token si fa alla navigazione vera.
+  if (isPrefetchRequest(request.headers)) return response;
   return updateSession(forwarded, response);
 }
 
@@ -35,5 +37,5 @@ export const config = {
   // Esclude API, file interni di Next e file statici (con estensione).
   // Il punto dell'estensione va raddoppiato nella stringa ("\\."): con un solo "\" JavaScript lo
   // riduce a "." e l'esclusione copre quasi ogni percorso, così il proxy girava solo sulla home.
-  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
+  matcher: ["/((?!api(?:/|$)|_next|_vercel|.*\\..*).*)"],
 };

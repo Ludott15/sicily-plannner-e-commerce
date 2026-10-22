@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isPrefetchRequest,
   buildContentSecurityPolicy,
   buildSecurityHeaders,
   createNonce,
@@ -146,5 +147,13 @@ describe("createNonce", () => {
     expect(a).toMatch(/^[A-Za-z0-9+/]+=*$/);
     expect(a).not.toBe(b);
     expect(Buffer.from(a, "base64")).toHaveLength(16);
+  });
+});
+
+describe("isPrefetchRequest", () => {
+  it("riconosce il prefetch del router e la sua intestazione purpose", () => {
+    expect(isPrefetchRequest(new Headers({ "next-router-prefetch": "1" }))).toBe(true);
+    expect(isPrefetchRequest(new Headers({ purpose: "prefetch" }))).toBe(true);
+    expect(isPrefetchRequest(new Headers({ accept: "text/html" }))).toBe(false);
   });
 });

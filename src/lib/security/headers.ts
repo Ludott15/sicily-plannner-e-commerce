@@ -105,3 +105,9 @@ export function buildSecurityHeaders(options: SecurityHeaderOptions): Record<str
 export function createNonce(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64");
 }
+
+// Le richieste di prefetch del router (next/link) non cambiano la sessione: il proxy salta il rinnovo del
+// token per loro, ma gli header di sicurezza restano sulla risposta.
+export function isPrefetchRequest(headers: Headers): boolean {
+  return headers.has("next-router-prefetch") || headers.get("purpose") === "prefetch";
+}
