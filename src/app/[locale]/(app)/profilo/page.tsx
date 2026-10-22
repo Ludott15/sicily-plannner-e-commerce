@@ -82,10 +82,11 @@ export default async function ProfilePage({ params }: Props) {
     );
   }
 
-  const [profile, points, t, format, tPoints, tNotifications, tNav, leaderboard, tLeaderboard] = await Promise.all([
+  const [profile, points, t, tOrders, format, tPoints, tNotifications, tNav, leaderboard, tLeaderboard] = await Promise.all([
     getProfile(user),
     getHomePoints(user),
     getTranslations("Profile"),
+    getTranslations("Orders"),
     getFormatter(),
     getTranslations("Points"),
     getTranslations("Notifications"),
@@ -163,6 +164,21 @@ export default async function ProfilePage({ params }: Props) {
               </Link>
             </li>
           ))}
+        </ul>
+      </section>
+
+      <section aria-labelledby="profile-purchases" className="flex flex-col gap-4">
+        <h2 id="profile-purchases" className="text-heading-3">
+          {t("sectionPurchases")}
+        </h2>
+        <ul className="is-settings">
+          <li>
+            <Link href="/ordini" className="is-setting">
+              <span className="is-setting__label">{tOrders("title")}</span>
+              <span className="is-setting__value">{t("ordersHint")}</span>
+              <ChevronRight aria-hidden="true" className="is-setting__action size-5" />
+            </Link>
+          </li>
         </ul>
       </section>
 

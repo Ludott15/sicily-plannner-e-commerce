@@ -65,10 +65,17 @@ export function ChatSessionActions({ sessionId, title }: { sessionId: string; ti
 
   // Nello sheet mobile (dialog nativo nel top layer) il menu va nel dialog, non in body: altrimenti resta sotto.
   const menuContainer = useRef<HTMLElement | null>(null);
+  // Quando una voce apre un dialog, il menu non riporta il focus al pulsante "...": il focus deve restare
+  // nel dialog di rinomina o di conferma. Il valore si riarma ad ogni apertura del menu.
+  const returnFocus = useRef(true);
 
   return (
     <>
-      <BaseMenu.Root>
+      <BaseMenu.Root
+        onOpenChange={(open) => {
+          if (open) returnFocus.current = true;
+        }}
+      >
         <BaseMenu.Trigger
           ref={(node: HTMLButtonElement | null) => {
             menuContainer.current = node?.closest("dialog") ?? null;
@@ -78,10 +85,15 @@ export function ChatSessionActions({ sessionId, title }: { sessionId: string; ti
         </BaseMenu.Trigger>
         <BaseMenu.Portal container={menuContainer}>
           <BaseMenu.Positioner side="bottom" align="end" sideOffset={6} collisionPadding={12} className="is-overlay">
-            <BaseMenu.Popup aria-label={t("menu")} className="is-panel is-chat-menu">
+            <BaseMenu.Popup
+              aria-label={t("menu")}
+              className="is-panel is-chat-menu"
+              finalFocus={() => returnFocus.current}
+            >
               <BaseMenu.Item
                 className="is-chat-menu__item"
                 onClick={() => {
+                  returnFocus.current = false;
                   setRenameOpen(true);
                 }}
               >
@@ -91,6 +103,7 @@ export function ChatSessionActions({ sessionId, title }: { sessionId: string; ti
               <BaseMenu.Item
                 className="is-chat-menu__item"
                 onClick={() => {
+                  returnFocus.current = false;
                   setDeleteOpen(true);
                 }}
               >

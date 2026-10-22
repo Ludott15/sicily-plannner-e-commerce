@@ -46,6 +46,14 @@ export const MAX_POINTS_DISCOUNT_PERCENT = 15;
 // Recesso del consumatore: 14 giorni per i prodotti non deperibili.
 export const RETURN_WINDOW_DAYS = 14;
 
+// Punti guadagnati a consegna avvenuta (passo 7.3): 1 punto per euro intero del totale pagato.
+export const POINTS_EARNED_PER_EURO = 1;
+
+// Ordini (passo 7.3). Oltre il tempo di evasione massimo delle righe più questi giorni, senza tracking,
+// l'admin riceve un avviso (una volta). Gli ordini spediti passano a consegnati dopo questi giorni.
+export const SUPPLIER_DELAY_GRACE_DAYS = 2;
+export const AUTO_DELIVERY_DAYS = 10;
+
 // Tariffa di spedizione per il subtotale (in centesimi, IVA inclusa). Gratuita dalla soglia in su.
 export function shippingCentsFor(subtotalCents: number): number {
   if (!Number.isInteger(subtotalCents) || subtotalCents < 0) {

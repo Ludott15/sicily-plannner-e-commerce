@@ -21,7 +21,7 @@ test("accesso con codice, profilo protetto e logout", async ({ page, request }) 
   await expect(page).toHaveURL(/\/it\/login$/);
 
   const email = await signUpWithCode(page, request);
-  await expect(page.getByText(email)).toBeVisible();
+  await expect(page.getByText(email).first()).toBeVisible();
 
   await page.getByRole("button", { name: "Menu personale" }).click();
   await page.getByRole("menuitem", { name: "Esci" }).click();
@@ -53,7 +53,7 @@ test("il link nell'email resta un'alternativa al codice", async ({ page, request
   await requestLoginCode(page, email);
   await page.goto(await waitForMagicLink(request, email));
   await expect(page).toHaveURL(/\/it\/profilo$/);
-  await expect(page.getByText(email)).toBeVisible();
+  await expect(page.getByText(email).first()).toBeVisible();
 });
 
 test("nel browser di Instagram Google non c'è, con l'invito ad aprire il browser", async ({ browser, page }) => {
@@ -95,14 +95,14 @@ test("ospite: crea un itinerario, salva l'account con il codice e l'itinerario r
 
   const email = testEmail();
   const before = await lastMessageId(request, email);
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Mandami il codice" }).click();
   await expect(page.getByRole("status")).toContainText(email);
   await page.getByLabel("Codice di 6 cifre").fill(await waitForCode(request, email, before));
   await page.getByRole("button", { name: "Salva il mio account" }).click();
 
   await expect(page.getByRole("heading", { name: "Il tuo profilo" })).toBeVisible();
-  await expect(page.getByText(email)).toBeVisible();
+  await expect(page.getByText(email).first()).toBeVisible();
   expect(await sessionUserId(page)).toBe(guestId);
 
   const [account] = await withDb((sql) => sql`select is_anonymous, email from auth.users where id = ${guestId}`);
@@ -120,10 +120,10 @@ test("ospite con l'email di un account esistente: errore, resta ospite", async (
   await page.goto("/it/login");
   await page.getByRole("button", { name: "Continua senza account" }).click();
   await expect(page).toHaveURL(/\/it\/profilo$/);
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Mandami il codice" }).click();
   await expect(page.locator("main").getByRole("alert")).toContainText("Questa email ha già un account.");
-  await expect(page.getByLabel("Email")).toHaveValue(email);
+  await expect(page.getByLabel("Email", { exact: true })).toHaveValue(email);
   await expect(page.getByRole("heading", { name: "Stai usando Isula come ospite" })).toBeVisible();
 
   // Nel database: l'ospite resta senza email, l'account dell'altro utente non cambia.
@@ -146,7 +146,7 @@ test("ospite: senza il codice giusto l'email non è sua", async ({ page, request
 
   // Chiede il codice per un'email nuova ma non lo verifica: l'email resta in attesa, non sua.
   const email = testEmail();
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Mandami il codice" }).click();
   await expect(page.getByRole("status")).toContainText(email);
   const code = await waitForCode(request, email);

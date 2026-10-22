@@ -2,9 +2,9 @@
   {
     "type": "place",
     "slug": "bronte",
-    "file": "File:95034 Bronte CT, Italy - panoramio.jpg",
-    "motivo": "Veduta di Bronte (CC BY). Da verificare a mano: mostra l'Etna sopra le case",
-    "alt_it": "Veduta di Bronte con l'Etna innevato sopra le case",
+    "file": "File:Centro storico (Bronte) 06 10 2024 01.jpg",
+    "motivo": "Terrazzo in via Cavallotti, centro storico di Bronte (CC0)",
+    "alt_it": "Terrazzo in via Cavallotti nel centro storico di Bronte",
     "allow_sa": false
   },
   {
@@ -29,7 +29,8 @@
     "file": "File:La valle dei templi Agrigento - panoramio.jpg",
     "motivo": "Tempio di Giunone nella Valle dei Templi (CC BY)",
     "alt_it": "Tempio di Giunone nella Valle dei Templi di Agrigento",
-    "allow_sa": false
+    "allow_sa": false,
+    "bene_culturale": true
   },
   {
     "type": "place",
@@ -42,18 +43,18 @@
   {
     "type": "place",
     "slug": "siracusa",
-    "file": "File:Neapolis Archaelogical Park, with the The Basilica of the Madonna delle Lacrime in the Background, Syracuse, Sicily.jpg",
-    "motivo": "Parco archeologico della Neapolis con la basilica della Madonna delle Lacrime (CC0)",
-    "alt_it": "Parco archeologico della Neapolis a Siracusa, con la basilica della Madonna delle Lacrime sullo sfondo",
+    "file": "File:Ortigia, lungomare alfeo.JPG",
+    "motivo": "Lungomare di Ortigia, Siracusa (CC BY 2.5), paesaggio della città al posto del parco archeologico",
+    "alt_it": "Lungomare di Ortigia a Siracusa, con il mare",
     "allow_sa": false
   },
   {
     "type": "place",
     "slug": "sperlinga",
-    "file": "File:Castello sperlinga.JPG",
-    "motivo": "Castello di Sperlinga (pubblico dominio)",
-    "alt_it": "Il castello di Sperlinga, sulla roccia",
-    "allow_sa": false
+    "file": "File:Castello (Sperlinga) 18 10 2020 02.jpg",
+    "motivo": "Panorama del borgo di Sperlinga (CC BY-SA 4.0), al posto del castello",
+    "alt_it": "Panorama del borgo di Sperlinga",
+    "allow_sa": true
   },
   {
     "type": "activity",
@@ -69,14 +70,15 @@
     "file": "File:IMG 6572 - Agrigento - caos la casa natale di Luigi Pirandello - 2 di 2 -.jpg",
     "motivo": "Caos di Agrigento, casa natale di Pirandello (CC BY-SA 2.0)",
     "alt_it": "Il Caos di Agrigento, casa natale di Luigi Pirandello",
-    "allow_sa": true
+    "allow_sa": true,
+    "bene_culturale": true
   },
   {
     "type": "activity",
     "slug": "pescheria-catania",
-    "file": "File:Pescheria (Catania) 08 11 2025 08.jpg",
-    "motivo": "Bancarelle della pescheria di Catania (CC0)",
-    "alt_it": "Bancarelle di pesce alla pescheria di Catania",
+    "file": "File:Pescheria (Catania) 10 11 2025 06.jpg",
+    "motivo": "Ingresso del mercato della pescheria di Catania (CC0). Persone sullo sfondo, non riconoscibili",
+    "alt_it": "Ingresso del mercato della pescheria di Catania",
     "allow_sa": false
   },
   {
@@ -98,9 +100,9 @@
   {
     "type": "activity",
     "slug": "erice-borgo",
-    "file": "File:Castle of Balio, Torretta Pepoli, Erice, Trapani province, Italy, july 2023.jpg",
-    "motivo": "Castello di Venere e torri di Balio, Erice (CC BY 4.0)",
-    "alt_it": "Il castello di Erice, sulla rupe",
+    "file": "File:Streets of Erice, Sicilia, Italy , july 2023, KP477.jpg",
+    "motivo": "Strade del borgo di Erice (CC BY 4.0): al posto della chiesa di Sant'Alberto, di cui non è verificata la proprietà pubblica",
+    "alt_it": "Strada del borgo di Erice",
     "allow_sa": false
   },
   {
@@ -125,7 +127,8 @@
     "file": "File:Giardino della Kolymbetra Agrigento.JPG",
     "motivo": "Giardino della Kolymbetra nella Valle dei Templi (CC BY-SA 4.0)",
     "alt_it": "Giardino della Kolymbetra ad Agrigento, con agrumeti",
-    "allow_sa": true
+    "allow_sa": true,
+    "bene_culturale": true
   },
   {
     "type": "activity",
@@ -138,9 +141,9 @@
   {
     "type": "activity",
     "slug": "grotta-etna",
-    "file": "File:Grotta di scorrimento.jpg",
-    "motivo": "Ingresso di una grotta di scorrimento lavico sull'Etna (CC BY-SA 4.0)",
-    "alt_it": "Ingresso di una grotta di scorrimento lavico",
+    "file": "File:Etna-Grotte-Entrée.jpg",
+    "motivo": "Grotta di scorrimento lavico sul versante sud dell'Etna (CC BY-SA 3.0)",
+    "alt_it": "Ingresso di una grotta lavica sull'Etna",
     "allow_sa": true
   },
   {
@@ -157,7 +160,8 @@
     "file": "File:Lavatoio Medievale Cefalù 01.jpg",
     "motivo": "Lavatoio medievale di Cefalù (CC BY 4.0)",
     "alt_it": "Lavatoio medievale di Cefalù, con vasche di pietra",
-    "allow_sa": false
+    "allow_sa": false,
+    "bene_culturale": true
   },
   {
     "type": "activity",
@@ -194,18 +198,18 @@
   {
     "type": "activity",
     "slug": "museo-ceramica",
-    "file": "File:Gela, scodella in protomaiolica di tipo gela 2, 1233-1275 ca., da mus. reg. ceramica di caltagirone.JPG",
-    "motivo": "Scodella in protomaiolica esposta nel Museo regionale della ceramica di Caltagirone (CC BY-SA 3.0)",
-    "alt_it": "Scodella in protomaiolica esposta nel Museo regionale della ceramica di Caltagirone",
-    "allow_sa": true
+    "file": "File:Panorama (Caltagirone) 10 12 2023 11.jpg",
+    "motivo": "Negozio di ceramiche di Caltagirone (CC0), al posto dell'oggetto di museo",
+    "alt_it": "Negozio di ceramiche di Caltagirone con vasi e teste in maiolica",
+    "allow_sa": false
   },
   {
     "type": "activity",
     "slug": "pantalica-trekking",
-    "file": "File:Anfore dalla necropoli nord-ovest di Pantalica, età del Bronzo Recente -FG1.jpg",
-    "motivo": "Anfore del corredo funerario della necropoli di Pantalica, reperti senza persone (CC0)",
-    "alt_it": "Anfore dell'età del Bronzo dalla necropoli di Pantalica",
-    "allow_sa": false
+    "file": "File:Pantalica valley near San Micidiario.jpg",
+    "motivo": "Valle di Pantalica, il paesaggio della necropoli (CC BY-SA 4.0)",
+    "alt_it": "Valle di Pantalica, con le pareti rocciose e il bosco",
+    "allow_sa": true
   },
   {
     "type": "activity",
@@ -218,9 +222,9 @@
   {
     "type": "activity",
     "slug": "ortigia-tour",
-    "file": "File:Cathedral of Syracuse.jpg",
-    "motivo": "Duomo di Siracusa, nel cuore di Ortigia (CC0)",
-    "alt_it": "Facciata barocca del duomo di Siracusa, in Ortigia",
+    "file": "File:Ortigia, vicolo terzo alla giudecca.JPG",
+    "motivo": "Vicolo di Ortigia, Siracusa (CC BY 2.5): al posto del duomo, che è un bene culturale ita-mibac",
+    "alt_it": "Vicolo di Ortigia, a Siracusa",
     "allow_sa": false
   },
   {
@@ -274,10 +278,11 @@
   {
     "type": "activity",
     "slug": "morgantina",
-    "file": "File:Morgantina pan teatro.JPG",
-    "motivo": "Teatro di Morgantina (pubblico dominio)",
-    "alt_it": "Teatro dell'antica Morgantina",
-    "allow_sa": false
+    "file": "File:Aidone - Castellaccio - 2023-09-03 09-09-30 002.JPG",
+    "motivo": "Castellaccio di Aidone, monumento censito (Commons, categoria beni culturali): bene culturale in attesa di autorizzazione",
+    "alt_it": "Il Castellaccio di Aidone, con il paesaggio della campagna",
+    "allow_sa": true,
+    "bene_culturale": true
   },
   {
     "type": "activity",
@@ -290,9 +295,9 @@
   {
     "type": "activity",
     "slug": "mercato-ballaro",
-    "file": "File:Ballarò Palermo.JPG",
-    "motivo": "Mercato di Ballarò, Palermo (CC BY-SA 3.0)",
-    "alt_it": "Mercato di Ballarò a Palermo, con banchi di frutta e verdura",
+    "file": "File:Ballarò - Palermo, Italia - 28 Aprile 2023.jpg",
+    "motivo": "Facciata e banchi del mercato di Ballarò, Palermo (CC BY-SA 4.0). Nessuna persona riconoscibile",
+    "alt_it": "Facciata di un palazzo del mercato di Ballarò a Palermo, con i banchi in basso",
     "allow_sa": true
   }
 ]

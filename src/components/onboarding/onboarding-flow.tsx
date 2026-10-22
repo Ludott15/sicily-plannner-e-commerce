@@ -229,7 +229,7 @@ export function OnboardingFlow({
           // Informativa sotto i pulsanti della prima domanda.
           <p className="text-caption text-lava-muted">
             {t.rich("privacyNote", {
-              privacy: (chunks) => <Link href="/privacy">{chunks}</Link>,
+              privacy: (chunks) => <Link href="/privacy" className="underline underline-offset-4">{chunks}</Link>,
             })}
           </p>
         )}

@@ -65,7 +65,7 @@ export default async function AffiliationsPage({ params }: Props) {
       <TextSection id="click" title={t("clickTitle")}>
         <p>
           {t.rich("clickText", {
-            privacy: (chunks) => <Link href="/privacy">{chunks}</Link>,
+            privacy: (chunks) => <Link href="/privacy" className="underline underline-offset-4">{chunks}</Link>,
           })}
         </p>
       </TextSection>

@@ -281,7 +281,7 @@ test("il profilo resta all'utente nella conversione da ospite ad account", async
 
   const email = testEmail();
   await page.goto("/it/profilo");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Mandami il codice" }).click();
   await page.getByLabel("Codice di 6 cifre").fill(await waitForCode(request, email));
   await page.getByRole("button", { name: "Salva il mio account" }).click();

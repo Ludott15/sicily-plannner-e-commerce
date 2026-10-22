@@ -37,7 +37,7 @@ test("la partenza si sceglie dalla tastiera", async ({ page }) => {
   await expect(origin).toHaveAttribute("aria-activedescendant", /.+/);
   await origin.press("Enter");
   // Milano ha due aeroporti (MXP, LIN): la prima voce dipende dall'ordine per codice.
-  await expect(origin).toHaveValue(/^Milano ((MXP|LIN))$/);
+  await expect(origin).toHaveValue(/^Milano \((MXP|LIN)\)$/);
   await expect(list).toBeHidden();
 });
 

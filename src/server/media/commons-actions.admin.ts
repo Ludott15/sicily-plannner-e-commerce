@@ -10,7 +10,9 @@ import type {
 } from "@/lib/media-admin";
 import { requireAdmin } from "@/server/auth";
 import { entitiesNeedingPhoto, importedCommonsPages } from "./admin-queries.admin";
-import { fillCommonsPhotos, importFile } from "./commons-fill.admin";
+import { fillCommonsPhotos, importChosenFiles, importFile } from "./commons-fill.admin";
+import chosenJson from "../../../content/media/commons-scelte.json";
+import { CHOSEN_BATCH_SIZE, chosenPhotosSchema, chosenStepSchema, nextChosenOffset, type ChosenItemResult } from "@/lib/media-chosen";
 import { cleanName, photoTarget } from "./commons-target";
 import { commonsFileTitle, fetchCommonsFile } from "./commons";
 import { searchCommons, type CommonsCandidate } from "./commons-search";
@@ -104,4 +106,25 @@ export async function autoAssignCommonsPhotos(input: unknown): Promise<AutoAssig
   });
   for (const path of MEDIA_PATHS) revalidatePath(path, "page");
   return { ok: true, items: step.items, remaining: step.remaining };
+}
+
+// Foto scelte dalla redazione (content/media/commons-scelte.json): un lotto di CHOSEN_BATCH_SIZE voci per
+// passo, dal browser fino a next === null. Idempotente: le entità già coperte non vengono toccate.
+// Il file è nel bundle del server; la scrittura usa la sessione dell'admin (sessionStorage).
+export type ChosenStep =
+  | { ok: true; results: ChosenItemResult[]; next: number | null; total: number }
+  | { ok: false; error: "invalid" | "file_invalid" };
+
+export async function importChosenPhotos(input: unknown): Promise<ChosenStep> {
+  const parsed = chosenStepSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid" };
+  const { user } = await requireAdmin();
+  const all = chosenPhotosSchema.safeParse(chosenJson);
+  if (!all.success) return { ok: false, error: "file_invalid" };
+  const offset = parsed.data.offset;
+  const batch = all.data.slice(offset, offset + CHOSEN_BATCH_SIZE);
+  // Slug del file senza prefisso: in produzione le entità hanno gli slug reali.
+  const { results } = await importChosenFiles(batch, { slugPrefix: "", userId: user.id });
+  for (const path of MEDIA_PATHS) revalidatePath(path, "page");
+  return { ok: true, results, next: nextChosenOffset(offset, batch.length, all.data.length), total: all.data.length };
 }

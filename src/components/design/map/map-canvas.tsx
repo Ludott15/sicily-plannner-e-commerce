@@ -79,6 +79,8 @@ export function MapCanvas({
   const onStateRef = useRef(onState);
   const onSelectRef = useRef(onSelect);
   const lastFlownRef = useRef<string | null>(null);
+  // Firma di coordinate e numeri: la vista si rifà solo se questa cambia (non per un cambio di visited).
+  const fittedKeyRef = useRef("");
   const inputRef = useRef({ points, legs, route, activeId });
 
   useEffect(() => {
@@ -291,6 +293,7 @@ export function MapCanvas({
       }
       lastFlownRef.current = inputRef.current.activeId;
       rebuildPoints(map);
+      fittedKeyRef.current = geometryKeyOf(inputRef.current.points);
       fitPoints(map);
       onStateRef.current("ready");
     };
@@ -339,7 +342,11 @@ export function MapCanvas({
     const map = mapRef.current;
     if (map && loadedRef.current) {
       rebuildPoints(map);
-      fitPoints(map);
+      const key = geometryKeyOf(points);
+      if (key !== fittedKeyRef.current) {
+        fittedKeyRef.current = key;
+        fitPoints(map);
+      }
     }
     // Il riferimento di points cambia solo quando cambia il contenuto (TripMap lo stabilizza).
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -368,6 +375,11 @@ export function MapCanvas({
   }, [fitToken]);
 
   return <div ref={container} className="is-map__canvas" />;
+}
+
+// Coordinate, numeri ed etichette dei punti: se non cambiano, la vista resta dov'è.
+function geometryKeyOf(points: readonly MapPoint[]): string {
+  return points.map((p) => `${p.id}|${p.lat}|${p.lng}|${p.number ?? ""}|${p.label}`).join("\n");
 }
 
 // Freccia di direzione della tratta: un triangolo SVG orientato dal rotation del marker.

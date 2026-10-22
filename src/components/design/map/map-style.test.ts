@@ -154,6 +154,16 @@ describe("bezierArc", () => {
   });
 });
 
+describe("bezierArc alle latitudini alte", () => {
+  it("scala la longitudine con cos(lat): a 60 gradi lo scostamento laterale è la metà", () => {
+    // Due punti alla stessa latitudine (60) a 0.2 gradi di distanza: la curva si scosta in latitudine
+    // di 0.01 gradi a metà (con la longitudine non scalata sarebbe 0.02).
+    const arc = bezierArc([12.5, 60], [12.7, 60], 32);
+    const mid = arc[16]!;
+    expect(mid[1] - 60).toBeCloseTo(0.01, 3);
+  });
+});
+
 describe("routeSegments", () => {
   it("usa la tratta stradale quando esiste per la coppia ordinata", () => {
     const route = [leg("p1", "p2", [[12.5, 38], [12.55, 38.05], [12.6, 38.1]])];

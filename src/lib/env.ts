@@ -5,6 +5,15 @@ import { z } from "zod";
 // variabile è obbligatoria.
 const TURNSTILE_TEST_SITE_KEY = "1x00000000000000000000AA";
 
+// Indirizzo che riceve gli avvisi dell'area ordini (fornitore in ritardo). Opzionale: senza, l'avviso resta solo
+// nell'elenco admin ("fornitore in ritardo"). Solo lato server: mai con NEXT_PUBLIC_.
+export function ordersAdminEmail(env: Readonly<Record<string, string | undefined>> = process.env): string | null {
+  const value = env.ORDERS_ADMIN_EMAIL?.trim();
+  if (!value) return null;
+  const parsed = z.email().safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
 // Variabili pubbliche: leggibili anche dal browser.
 export const publicEnv = z
   .object({

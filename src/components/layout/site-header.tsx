@@ -51,6 +51,7 @@ export async function SiteHeader() {
     { kind: "link", href: "/viaggi", label: t("trips"), icon: "map" },
     { kind: "link", href: "/chat", label: t("assistant"), icon: "message" },
     { kind: "link", href: "/gruppi", label: t("groups"), icon: "users" },
+    { kind: "link", href: "/ordini", label: t("orders"), icon: "receipt" },
     { kind: "link", href: "/punti", label: t("points"), icon: "star" },
     { kind: "link", href: "/classifica", label: t("leaderboard"), icon: "trophy" },
     { kind: "link", href: "/notifiche", label: t("notifications"), icon: "bell" },

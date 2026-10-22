@@ -41,16 +41,19 @@ export type Day = {
   // Dove si dorme la notte dopo questo giorno (null se non c'è una scelta o è l'ultimo giorno).
   night: string | null;
   stops: DayStop[];
+  // Tratte stradali delle sole coppie di tappe consecutive di questo giorno (place_legs).
+  legs: RouteLeg[];
 };
 
-// legs: tratte stradali tra i luoghi di tappe consecutive (tutti i giorni; ogni mappa usa le sue).
-export function ItineraryDays({ days, legs = [] }: { days: Day[]; legs?: RouteLeg[] }) {
+export function ItineraryDays({ days }: { days: Day[] }) {
   const t = useTranslations("Catalog");
   const locale = useLocale();
   const [current, setCurrent] = useState(0);
   const [firstOpen, setFirstOpen] = useState(true);
   // Tappa attiva sulla mappa: la condividono la mappa e l'elenco (la scheda si evidenzia).
   const [activeStop, setActiveStop] = useState<string | null>(null);
+  // Giorno con il <details> della mappa aperto (solo mobile; su desktop la mappa è sempre in colonna).
+  const [mapOpenDay, setMapOpenDay] = useState<number | null>(null);
   const tMap = useTranslations("Map");
 
   return (
@@ -60,6 +63,7 @@ export function ItineraryDays({ days, legs = [] }: { days: Day[]; legs?: RouteLe
         current={current}
         onSelect={(i) => {
           setFirstOpen(false);
+          setActiveStop(null);
           setCurrent(i);
         }}
       />
@@ -80,11 +84,19 @@ export function ItineraryDays({ days, legs = [] }: { days: Day[]; legs?: RouteLe
           >
             <div className="flex min-w-0 flex-col gap-8 md:col-span-8">
               {points.length > 0 && (
-                <details className="is-map-details is-map-printable md:hidden">
+                <details
+                  className="is-map-details is-map-printable md:hidden"
+                  open={mapOpenDay === index}
+                  onToggle={(event) => {
+                    const open = event.currentTarget.open;
+                    // Chiusura di un giorno che non è più quello aperto: non tocca l'apertura attuale.
+                    setMapOpenDay((prev) => (open ? index : prev === index ? null : prev));
+                  }}
+                >
                   <summary>{tMap("showMap")}</summary>
                   <TripMap
                     points={points}
-                    legs={legs}
+                    legs={day.legs}
                     route
                     ariaLabel={mapLabel}
                     activeId={activeStop}
@@ -109,7 +121,15 @@ export function ItineraryDays({ days, legs = [] }: { days: Day[]; legs?: RouteLe
                       >
                         {stop.note && <p className="text-body text-lava">{stop.note}</p>}
                         {stop.lat !== null && stop.lng !== null && (
-                          <Button variant="ghost" size="sm" className="mt-2" onClick={() => setActiveStop(stop.id)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => {
+                              setActiveStop(stop.id);
+                              setMapOpenDay(index);
+                            }}
+                          >
                             {tMap("showOnMap")}
                           </Button>
                         )}
@@ -142,7 +162,7 @@ export function ItineraryDays({ days, legs = [] }: { days: Day[]; legs?: RouteLe
                   <div className="is-map-desktop">
                     <TripMap
                       points={points}
-                      legs={legs}
+                      legs={day.legs}
                       route
                       ariaLabel={mapLabel}
                       activeId={activeStop}

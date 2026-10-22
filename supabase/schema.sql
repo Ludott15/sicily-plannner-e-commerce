@@ -151,7 +151,20 @@ CREATE TYPE "public"."partner" AS ENUM (
     'internal',
     'booking',
     'discovercars',
-    'civitatis'
+    'civitatis',
+    'hostelworld',
+    'pitchup',
+    'rentalcars',
+    'ferryhopper',
+    'directferries',
+    'omio',
+    'welcomepickups',
+    'tiqets',
+    'clickandboat',
+    'samboat',
+    'heymondo',
+    'airalo',
+    'radicalstorage'
 );
 
 
@@ -927,6 +940,30 @@ $$;
 
 
 ALTER FUNCTION "public"."checkout_expire_from_stripe"("p_checkout_id" "uuid", "p_stripe_session_id" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."checkout_fail_from_stripe"("p_checkout_id" "uuid", "p_stripe_session_id" "text") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_id uuid;
+begin
+  select cs.id into v_id
+    from public.checkout_sessions cs
+   where cs.status = 'open'
+     and (cs.id = p_checkout_id or cs.stripe_session_id = p_stripe_session_id)
+   order by (cs.id = p_checkout_id) desc nulls last
+   limit 1;
+  if v_id is null then
+    return false;
+  end if;
+  return public.checkout_close(v_id, 'failed');
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_fail_from_stripe"("p_checkout_id" "uuid", "p_stripe_session_id" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") RETURNS boolean
@@ -2452,6 +2489,72 @@ $_$;
 ALTER FUNCTION "public"."my_seasonal_rank"("p_season" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."next_order_number"() RETURNS "text"
+    LANGUAGE "sql"
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select 'ISU-' || to_char(now() at time zone 'Europe/Rome', 'YYYY') || '-' || lpad(nextval('public.order_number_seq')::text, 6, '0');
+$$;
+
+
+ALTER FUNCTION "public"."next_order_number"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."order_for_checkout_session"("p_stripe_session_id" "text") RETURNS "jsonb"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select jsonb_build_object('order_number', o.order_number, 'status', o.status)
+    from public.orders o
+   where o.stripe_session_id = p_stripe_session_id;
+$$;
+
+
+ALTER FUNCTION "public"."order_for_checkout_session"("p_stripe_session_id" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token" "text") RETURNS "jsonb"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $_$
+  select jsonb_build_object(
+    'order_number', o.order_number,
+    'status', o.status,
+    'created_at', o.created_at,
+    'subtotal_cents', o.subtotal_cents,
+    'discount_cents', o.discount_cents,
+    'shipping_cents', o.shipping_cents,
+    'total_cents', o.total_cents,
+    'points_redeemed', o.points_redeemed,
+    'shipping_address', o.shipping_address,
+    'carrier', o.carrier,
+    'tracking_number', o.tracking_number,
+    'tracking_url', o.tracking_url,
+    'shipped_at', o.shipped_at,
+    'delivered_at', o.delivered_at,
+    'items', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'title', i.title_snapshot,
+        'quantity', i.quantity,
+        'unit_price_cents', i.unit_price_cents,
+        'vat_rate', i.vat_rate
+      ) order by i.created_at, i.id)
+        from public.order_items i
+       where i.order_id = o.id
+    ), '[]'::jsonb)
+  )
+    from public.orders o
+   where o.order_number = p_order_number
+     and o.user_id is null
+     and o.access_token_hash is not null
+     and p_token ~ '^[A-Za-z0-9_-]{43}$'
+     and o.access_token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex');
+$_$;
+
+
+ALTER FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."point_delta"("p_reason" "public"."point_reason") RETURNS integer
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -2913,7 +3016,8 @@ begin
     raise exception 'partner_not_active' using errcode = 'P0001';
   end if;
 
-  if p_vertical not in ('activity', 'lodging', 'car', 'flight') or not (p_vertical = any (v_partner.verticals)) then
+  if p_vertical not in ('activity', 'lodging', 'car', 'flight', 'ferry', 'train', 'transfer', 'tickets', 'boat', 'insurance', 'esim', 'luggage')
+     or not (p_vertical = any (v_partner.verticals)) then
     raise exception 'vertical_not_allowed' using errcode = 'P0001';
   end if;
 
@@ -3834,7 +3938,7 @@ CREATE TABLE IF NOT EXISTS "public"."affiliate_partners" (
     CONSTRAINT "affiliate_partners_partner_not_internal" CHECK (("partner" <> 'internal'::"public"."partner")),
     CONSTRAINT "affiliate_partners_subid_param_format" CHECK ((("subid_param" IS NULL) OR ("subid_param" ~ '^[a-z][a-z0-9_]{0,19}$'::"text"))),
     CONSTRAINT "affiliate_partners_template_https" CHECK ((("search_url_template" IS NULL) OR ("search_url_template" ~ '^https://'::"text"))),
-    CONSTRAINT "affiliate_partners_verticals_valid" CHECK ((("cardinality"("verticals") > 0) AND ("verticals" <@ ARRAY['activity'::"text", 'lodging'::"text", 'car'::"text", 'flight'::"text"])))
+    CONSTRAINT "affiliate_partners_verticals_valid" CHECK ((("cardinality"("verticals") > 0) AND ("verticals" <@ ARRAY['activity'::"text", 'lodging'::"text", 'car'::"text", 'flight'::"text", 'ferry'::"text", 'train'::"text", 'transfer'::"text", 'tickets'::"text", 'boat'::"text", 'insurance'::"text", 'esim'::"text", 'luggage'::"text"])))
 );
 
 
@@ -4461,12 +4565,31 @@ CREATE TABLE IF NOT EXISTS "public"."order_items" (
     "quantity" integer NOT NULL,
     "unit_price_cents" integer NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "supplier_id" "uuid" NOT NULL,
+    "supplier_sku" "text",
+    "title_snapshot" "text" NOT NULL,
+    "vat_rate" smallint NOT NULL,
+    "cost_cents_snapshot" integer,
+    CONSTRAINT "order_items_cost_non_negative" CHECK ((("cost_cents_snapshot" IS NULL) OR ("cost_cents_snapshot" >= 0))),
     CONSTRAINT "order_items_quantity_positive" CHECK (("quantity" > 0)),
-    CONSTRAINT "order_items_unit_price_non_negative" CHECK (("unit_price_cents" >= 0))
+    CONSTRAINT "order_items_title_length" CHECK ((("char_length"("btrim"("title_snapshot")) >= 1) AND ("char_length"("btrim"("title_snapshot")) <= 200))),
+    CONSTRAINT "order_items_unit_price_non_negative" CHECK (("unit_price_cents" >= 0)),
+    CONSTRAINT "order_items_vat_rate_valid" CHECK (("vat_rate" = ANY (ARRAY[4, 10, 22])))
 );
 
 
 ALTER TABLE "public"."order_items" OWNER TO "postgres";
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."order_number_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."order_number_seq" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."order_shipments" (
@@ -4497,9 +4620,35 @@ CREATE TABLE IF NOT EXISTS "public"."orders" (
     "stripe_session_id" "text" NOT NULL,
     "shipping_address" "jsonb",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "order_number" "text" DEFAULT "public"."next_order_number"() NOT NULL,
+    "locale" "text" DEFAULT 'it'::"text" NOT NULL,
+    "supplier_status" "text" DEFAULT 'pending'::"text" NOT NULL,
+    "needs_review" boolean DEFAULT false NOT NULL,
+    "paid_amount_cents" integer,
+    "payment_intent_id" "text",
+    "checkout_session_id" "uuid",
+    "access_token_hash" "text",
+    "carrier" "text",
+    "tracking_number" "text",
+    "tracking_url" "text",
+    "problem_note" "text",
+    "forwarded_at" timestamp with time zone,
+    "shipped_at" timestamp with time zone,
+    "delivered_at" timestamp with time zone,
+    "supplier_delay_notified_at" timestamp with time zone,
+    CONSTRAINT "orders_access_token_hash_format" CHECK ((("access_token_hash" IS NULL) OR ("access_token_hash" ~ '^[0-9a-f]{64}$'::"text"))),
     CONSTRAINT "orders_amounts_non_negative" CHECK ((("subtotal_cents" >= 0) AND ("discount_cents" >= 0) AND ("shipping_cents" >= 0) AND ("points_redeemed" >= 0))),
+    CONSTRAINT "orders_delivered_has_date" CHECK ((("status" <> 'delivered'::"public"."order_status") OR ("delivered_at" IS NOT NULL))),
     CONSTRAINT "orders_discount_max_15_percent" CHECK ((("discount_cents" * 100) <= ("subtotal_cents" * 15))),
-    CONSTRAINT "orders_total_consistent" CHECK (("total_cents" = (("subtotal_cents" - "discount_cents") + "shipping_cents")))
+    CONSTRAINT "orders_locale_valid" CHECK (("locale" = ANY (ARRAY['it'::"text", 'en'::"text"]))),
+    CONSTRAINT "orders_order_number_format" CHECK (("order_number" ~ '^ISU-[0-9]{4}-[0-9]{6}$'::"text")),
+    CONSTRAINT "orders_paid_amount_non_negative" CHECK ((("paid_amount_cents" IS NULL) OR ("paid_amount_cents" >= 0))),
+    CONSTRAINT "orders_payment_intent_format" CHECK ((("payment_intent_id" IS NULL) OR ("payment_intent_id" ~ '^pi_[A-Za-z0-9_]+$'::"text"))),
+    CONSTRAINT "orders_problem_note_length" CHECK ((("problem_note" IS NULL) OR (("char_length"("problem_note") >= 1) AND ("char_length"("problem_note") <= 1000)))),
+    CONSTRAINT "orders_shipped_has_date" CHECK ((("status" <> ALL (ARRAY['shipped'::"public"."order_status", 'delivered'::"public"."order_status"])) OR ("shipped_at" IS NOT NULL))),
+    CONSTRAINT "orders_supplier_status_valid" CHECK (("supplier_status" = ANY (ARRAY['pending'::"text", 'forwarded'::"text", 'confirmed'::"text", 'shipped'::"text", 'delivered'::"text", 'problem'::"text"]))),
+    CONSTRAINT "orders_total_consistent" CHECK (("total_cents" = (("subtotal_cents" - "discount_cents") + "shipping_cents"))),
+    CONSTRAINT "orders_tracking_url_https" CHECK ((("tracking_url" IS NULL) OR ("tracking_url" ~ '^https://'::"text")))
 );
 
 
@@ -4526,6 +4675,40 @@ CREATE TABLE IF NOT EXISTS "public"."partner_import_runs" (
 
 
 ALTER TABLE "public"."partner_import_runs" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."place_leg_failures" (
+    "from_place_id" "uuid" NOT NULL,
+    "to_place_id" "uuid" NOT NULL,
+    "failed_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "place_leg_failures_distinct_places" CHECK (("from_place_id" <> "to_place_id"))
+);
+
+
+ALTER TABLE "public"."place_leg_failures" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."place_legs" (
+    "from_place_id" "uuid" NOT NULL,
+    "to_place_id" "uuid" NOT NULL,
+    "distance_m" integer NOT NULL,
+    "duration_s" integer NOT NULL,
+    "geometry" "jsonb" NOT NULL,
+    "source" "text" DEFAULT 'osrm'::"text" NOT NULL,
+    "computed_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "place_legs_distance_non_negative" CHECK (("distance_m" >= 0)),
+    CONSTRAINT "place_legs_distinct_places" CHECK (("from_place_id" <> "to_place_id")),
+    CONSTRAINT "place_legs_duration_non_negative" CHECK (("duration_s" >= 0)),
+    CONSTRAINT "place_legs_geometry_size" CHECK (
+CASE
+    WHEN ("jsonb_typeof"("geometry") = 'array'::"text") THEN (("jsonb_array_length"("geometry") >= 2) AND ("jsonb_array_length"("geometry") <= 400))
+    ELSE false
+END),
+    CONSTRAINT "place_legs_source_osrm" CHECK (("source" = 'osrm'::"text"))
+);
+
+
+ALTER TABLE "public"."place_legs" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."places" (
@@ -5218,6 +5401,11 @@ ALTER TABLE ONLY "public"."order_shipments"
 
 
 ALTER TABLE ONLY "public"."orders"
+    ADD CONSTRAINT "orders_order_number_unique" UNIQUE ("order_number");
+
+
+
+ALTER TABLE ONLY "public"."orders"
     ADD CONSTRAINT "orders_pkey" PRIMARY KEY ("id");
 
 
@@ -5229,6 +5417,16 @@ ALTER TABLE ONLY "public"."orders"
 
 ALTER TABLE ONLY "public"."partner_import_runs"
     ADD CONSTRAINT "partner_import_runs_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."place_leg_failures"
+    ADD CONSTRAINT "place_leg_failures_from_place_id_to_place_id_pk" PRIMARY KEY ("from_place_id", "to_place_id");
+
+
+
+ALTER TABLE ONLY "public"."place_legs"
+    ADD CONSTRAINT "place_legs_from_place_id_to_place_id_pk" PRIMARY KEY ("from_place_id", "to_place_id");
 
 
 
@@ -5575,7 +5773,19 @@ CREATE INDEX "order_items_order_id_idx" ON "public"."order_items" USING "btree" 
 
 
 
+CREATE INDEX "order_items_supplier_id_idx" ON "public"."order_items" USING "btree" ("supplier_id");
+
+
+
+CREATE INDEX "orders_checkout_session_id_idx" ON "public"."orders" USING "btree" ("checkout_session_id");
+
+
+
 CREATE INDEX "orders_status_idx" ON "public"."orders" USING "btree" ("status");
+
+
+
+CREATE INDEX "orders_supplier_status_idx" ON "public"."orders" USING "btree" ("supplier_status");
 
 
 
@@ -5584,6 +5794,10 @@ CREATE INDEX "orders_user_id_idx" ON "public"."orders" USING "btree" ("user_id")
 
 
 CREATE INDEX "partner_import_runs_partner_started_at_idx" ON "public"."partner_import_runs" USING "btree" ("partner", "started_at");
+
+
+
+CREATE INDEX "place_legs_to_place_id_idx" ON "public"."place_legs" USING "btree" ("to_place_id");
 
 
 
@@ -6149,6 +6363,11 @@ ALTER TABLE ONLY "public"."order_items"
 
 
 
+ALTER TABLE ONLY "public"."order_items"
+    ADD CONSTRAINT "order_items_supplier_id_suppliers_id_fk" FOREIGN KEY ("supplier_id") REFERENCES "public"."suppliers"("id") ON DELETE RESTRICT;
+
+
+
 ALTER TABLE ONLY "public"."order_shipments"
     ADD CONSTRAINT "order_shipments_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE CASCADE;
 
@@ -6160,7 +6379,32 @@ ALTER TABLE ONLY "public"."order_shipments"
 
 
 ALTER TABLE ONLY "public"."orders"
+    ADD CONSTRAINT "orders_checkout_session_id_checkout_sessions_id_fk" FOREIGN KEY ("checkout_session_id") REFERENCES "public"."checkout_sessions"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."orders"
     ADD CONSTRAINT "orders_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."place_leg_failures"
+    ADD CONSTRAINT "place_leg_failures_from_place_id_places_id_fk" FOREIGN KEY ("from_place_id") REFERENCES "public"."places"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."place_leg_failures"
+    ADD CONSTRAINT "place_leg_failures_to_place_id_places_id_fk" FOREIGN KEY ("to_place_id") REFERENCES "public"."places"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."place_legs"
+    ADD CONSTRAINT "place_legs_from_place_id_places_id_fk" FOREIGN KEY ("from_place_id") REFERENCES "public"."places"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."place_legs"
+    ADD CONSTRAINT "place_legs_to_place_id_places_id_fk" FOREIGN KEY ("to_place_id") REFERENCES "public"."places"("id") ON DELETE CASCADE;
 
 
 
@@ -6916,6 +7160,16 @@ CREATE POLICY "partner_import_runs_select_admin" ON "public"."partner_import_run
 
 
 
+ALTER TABLE "public"."place_leg_failures" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."place_legs" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "place_legs_select_all" ON "public"."place_legs" FOR SELECT TO "authenticated", "anon" USING (true);
+
+
+
 ALTER TABLE "public"."places" ENABLE ROW LEVEL SECURITY;
 
 
@@ -7298,6 +7552,11 @@ GRANT ALL ON FUNCTION "public"."checkout_expire_from_stripe"("p_checkout_id" "uu
 
 
 
+REVOKE ALL ON FUNCTION "public"."checkout_fail_from_stripe"("p_checkout_id" "uuid", "p_stripe_session_id" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_fail_from_stripe"("p_checkout_id" "uuid", "p_stripe_session_id" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") TO "authenticated";
@@ -7570,6 +7829,25 @@ GRANT ALL ON FUNCTION "public"."my_leaderboard_settings"() TO "authenticated";
 REVOKE ALL ON FUNCTION "public"."my_seasonal_rank"("p_season" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."my_seasonal_rank"("p_season" "text") TO "service_role";
 GRANT ALL ON FUNCTION "public"."my_seasonal_rank"("p_season" "text") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."next_order_number"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."next_order_number"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."order_for_checkout_session"("p_stripe_session_id" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."order_for_checkout_session"("p_stripe_session_id" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."order_for_checkout_session"("p_stripe_session_id" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."order_for_checkout_session"("p_stripe_session_id" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token" "text") TO "service_role";
 
 
 
@@ -8631,7 +8909,46 @@ GRANT UPDATE("read_at") ON TABLE "public"."notifications" TO "authenticated";
 
 
 GRANT ALL ON TABLE "public"."order_items" TO "service_role";
-GRANT SELECT ON TABLE "public"."order_items" TO "authenticated";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."order_items" TO "authenticated";
+
+
+
+GRANT SELECT("order_id") ON TABLE "public"."order_items" TO "authenticated";
+
+
+
+GRANT SELECT("product_id") ON TABLE "public"."order_items" TO "authenticated";
+
+
+
+GRANT SELECT("producer_id") ON TABLE "public"."order_items" TO "authenticated";
+
+
+
+GRANT SELECT("quantity") ON TABLE "public"."order_items" TO "authenticated";
+
+
+
+GRANT SELECT("unit_price_cents") ON TABLE "public"."order_items" TO "authenticated";
+
+
+
+GRANT SELECT("created_at") ON TABLE "public"."order_items" TO "authenticated";
+
+
+
+GRANT SELECT("title_snapshot") ON TABLE "public"."order_items" TO "authenticated";
+
+
+
+GRANT SELECT("vat_rate") ON TABLE "public"."order_items" TO "authenticated";
+
+
+
+GRANT ALL ON SEQUENCE "public"."order_number_seq" TO "service_role";
 
 
 
@@ -8664,12 +8981,126 @@ GRANT SELECT("created_at") ON TABLE "public"."order_shipments" TO "authenticated
 
 
 GRANT ALL ON TABLE "public"."orders" TO "service_role";
-GRANT SELECT ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("user_id") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("email") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("status") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("subtotal_cents") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("discount_cents") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("shipping_cents") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("total_cents") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("points_redeemed") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("shipping_address") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("created_at") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("order_number") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("locale") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("carrier") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("tracking_number") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("tracking_url") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("shipped_at") ON TABLE "public"."orders" TO "authenticated";
+
+
+
+GRANT SELECT("delivered_at") ON TABLE "public"."orders" TO "authenticated";
 
 
 
 GRANT ALL ON TABLE "public"."partner_import_runs" TO "service_role";
 GRANT SELECT ON TABLE "public"."partner_import_runs" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."place_leg_failures" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."place_legs" TO "service_role";
+
+
+
+GRANT SELECT("from_place_id") ON TABLE "public"."place_legs" TO "anon";
+GRANT SELECT("from_place_id") ON TABLE "public"."place_legs" TO "authenticated";
+
+
+
+GRANT SELECT("to_place_id") ON TABLE "public"."place_legs" TO "anon";
+GRANT SELECT("to_place_id") ON TABLE "public"."place_legs" TO "authenticated";
+
+
+
+GRANT SELECT("distance_m") ON TABLE "public"."place_legs" TO "anon";
+GRANT SELECT("distance_m") ON TABLE "public"."place_legs" TO "authenticated";
+
+
+
+GRANT SELECT("duration_s") ON TABLE "public"."place_legs" TO "anon";
+GRANT SELECT("duration_s") ON TABLE "public"."place_legs" TO "authenticated";
+
+
+
+GRANT SELECT("geometry") ON TABLE "public"."place_legs" TO "anon";
+GRANT SELECT("geometry") ON TABLE "public"."place_legs" TO "authenticated";
+
+
+
+GRANT SELECT("source") ON TABLE "public"."place_legs" TO "anon";
+GRANT SELECT("source") ON TABLE "public"."place_legs" TO "authenticated";
+
+
+
+GRANT SELECT("computed_at") ON TABLE "public"."place_legs" TO "anon";
+GRANT SELECT("computed_at") ON TABLE "public"."place_legs" TO "authenticated";
 
 
 
