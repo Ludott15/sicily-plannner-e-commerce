@@ -3231,7 +3231,7 @@
       "invalid_state": "Questa azione non è disponibile per lo stato attuale dell’ordine.",
       "needs_review": "L’ordine è in revisione: verifica l’importo prima di procedere.",
       "failed": "Non siamo riusciti a salvare. Riprova tra poco.",
-      "not_clearable": "Questa revisione non si può chiudere: manca un’email valida o il pagamento è scaduto. Gestisci l’ordine a mano."
+      "not_clearable": "Questa revisione non si sblocca da qui: l’ordine va gestito a mano (email assente o pagamento annullato o scaduto)."
     },
     "resendHint": "Rimanda al cliente l’email con il link per vedere l’ordine.",
     "resendLink": "Rimanda il link al cliente"
