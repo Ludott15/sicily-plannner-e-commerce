@@ -38,11 +38,14 @@ export function OrderAdminActions({ orderId, status, supplierStatus, needsReview
   const t = useTranslations("AdminOrders");
   const canForward = status === "paid" && !needsReview && (supplierStatus === "pending" || supplierStatus === "problem");
   const canConfirm = supplierStatus === "forwarded";
-  const canShip = status === "paid" && !needsReview;
+  // La spedizione si registra solo dopo l'inoltro: il fornitore deve aver confermato o almeno ricevuto l'ordine.
+  const canShip =
+    status === "paid" && !needsReview && (supplierStatus === "forwarded" || supplierStatus === "confirmed");
   const canDeliver = status === "shipped";
   const canReport = status === "paid" || status === "shipped";
+  const canResend = (status === "paid" || status === "shipped") && !needsReview && actions.resendLink !== undefined;
 
-  const nothingToDo = !canForward && !canConfirm && !canShip && !canDeliver && !canReport && !needsReview && !actions.resendLink;
+  const nothingToDo = !canForward && !canConfirm && !canShip && !canDeliver && !canReport && !needsReview && !canResend;
 
   return (
     <section aria-labelledby="order-actions" className="flex flex-col gap-6">
@@ -90,7 +93,7 @@ export function OrderAdminActions({ orderId, status, supplierStatus, needsReview
 
       {canReport && <ProblemForm orderId={orderId} action={actions.problem} />}
 
-      {actions.resendLink && (
+      {canResend && actions.resendLink && (
         <div className="flex flex-col gap-3 rounded-lg border border-card-edge bg-calce-raised p-6">
           <p className="text-body-s text-lava-muted">{t("resendHint")}</p>
           <OrderActionButton label={t("resendLink")} action={actions.resendLink} input={{ orderId }} />

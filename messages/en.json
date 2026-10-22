@@ -3227,7 +3227,7 @@
       "invalid_state": "This action is not available for the current order status.",
       "needs_review": "The order is under review: check the amount before continuing.",
       "failed": "We could not save. Please try again shortly.",
-      "not_clearable": "This review cannot be closed: there is no valid email or the payment expired. Handle the order manually."
+      "not_clearable": "This review cannot be cleared from here: handle the order by hand (no email, or the payment was cancelled or expired)."
     },
     "resendHint": "Send the customer the email with the link to see the order again.",
     "resendLink": "Resend the link to the customer"

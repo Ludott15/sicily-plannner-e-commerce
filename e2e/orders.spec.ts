@@ -113,6 +113,12 @@ test("account: ordine in /ordini, spedizione dall'admin, consegna e punti una so
   await expect(adminPage.getByRole("link", { name: orderNumber })).toBeVisible();
 
   await adminPage.goto(`/it/admin/ordini/${id}`);
+  // Senza email al fornitore (CI) l'ordine resta da inoltrare: la spedizione non è ancora ammessa.
+  await expect(adminPage.getByRole("button", { name: "Segna come spedito" })).toHaveCount(0);
+  // Flusso reale: prima l'inoltro al fornitore, poi la spedizione.
+  await adminPage.getByRole("button", { name: "Segna come inoltrato" }).click();
+  await expect(adminPage.locator(".is-tag", { hasText: "Inoltrato" })).toBeVisible();
+  await expect(adminPage.getByLabel("Corriere", { exact: true })).toBeVisible();
   await adminPage.getByLabel("Corriere", { exact: true }).fill("Corriere e2e");
   await adminPage.getByLabel("Numero di tracciamento", { exact: true }).fill("E2E-TRACK-123");
   await adminPage.getByLabel("Link di tracciamento", { exact: true }).fill("https://example.com/track/e2e");
