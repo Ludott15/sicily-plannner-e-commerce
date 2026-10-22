@@ -10,7 +10,7 @@ const FIRST_STOP = "Street food al mercato di Ballarò";
 async function useTemplate(page: Page) {
   await page.goto(`/it/itinerari/${TEMPLATE}`);
   await page.getByRole("link", { name: "Usa questo itinerario" }).first().click();
-  await expect(page).toHaveURL(new RegExp(`/it/viaggio/salva\?da=${TEMPLATE}$`));
+  await expect(page).toHaveURL(new RegExp(`/it/viaggio/salva\\?da=${TEMPLATE}$`));
   await pickDate(page, "Data di partenza", "2027-05-12");
   await chooseOption(page, "Persone", "4 persone");
   const save = page.getByRole("button", { name: "Salva il viaggio" });
