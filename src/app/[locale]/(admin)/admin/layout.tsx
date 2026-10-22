@@ -61,6 +61,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <Link href="/admin/fornitori" className="text-body font-semibold text-lava">
           {tShop("navSuppliers")}
         </Link>
+        <Link href="/admin/ordini" className="text-body font-semibold text-lava">
+          {tShop("navOrders")}
+        </Link>
         <Link href="/admin/produttori" className="text-body font-semibold text-lava">
           {tShop("navProducers")}
         </Link>
