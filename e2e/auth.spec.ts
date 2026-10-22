@@ -21,7 +21,7 @@ test("accesso con codice, profilo protetto e logout", async ({ page, request }) 
   await expect(page).toHaveURL(/\/it\/login$/);
 
   const email = await signUpWithCode(page, request);
-  await expect(page.getByText(email)).toBeVisible();
+  await expect(page.getByText(email).first()).toBeVisible();
 
   await page.getByRole("button", { name: "Menu personale" }).click();
   await page.getByRole("menuitem", { name: "Esci" }).click();
@@ -53,7 +53,7 @@ test("il link nell'email resta un'alternativa al codice", async ({ page, request
   await requestLoginCode(page, email);
   await page.goto(await waitForMagicLink(request, email));
   await expect(page).toHaveURL(/\/it\/profilo$/);
-  await expect(page.getByText(email)).toBeVisible();
+  await expect(page.getByText(email).first()).toBeVisible();
 });
 
 test("nel browser di Instagram Google non c'è, con l'invito ad aprire il browser", async ({ browser, page }) => {
@@ -102,7 +102,7 @@ test("ospite: crea un itinerario, salva l'account con il codice e l'itinerario r
   await page.getByRole("button", { name: "Salva il mio account" }).click();
 
   await expect(page.getByRole("heading", { name: "Il tuo profilo" })).toBeVisible();
-  await expect(page.getByText(email)).toBeVisible();
+  await expect(page.getByText(email).first()).toBeVisible();
   expect(await sessionUserId(page)).toBe(guestId);
 
   const [account] = await withDb((sql) => sql`select is_anonymous, email from auth.users where id = ${guestId}`);
