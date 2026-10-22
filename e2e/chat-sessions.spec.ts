@@ -19,7 +19,11 @@ async function createConversation(page: Page) {
   await page.getByRole("button", { name: "Invia" }).click();
   await expect(page).toHaveURL(SESSION_PATH, { timeout: 30_000 });
   await expect(page.getByRole("link", { name: /^Vedi/ }).first()).toBeVisible({ timeout: 30_000 });
-  return new URL(page.url()).pathname;
+  // L'indirizzo cambia senza navigare: si apre la pagina della conversazione, con il suo menu.
+  const path = new URL(page.url()).pathname;
+  await page.goto(path);
+  await expect(page.getByRole("link", { name: /^Vedi/ }).first()).toBeVisible({ timeout: 30_000 });
+  return path;
 }
 
 // Il focus deve stare dentro un <dialog> aperto (non tornare sul pulsante del menu, fuori dal dialog).
@@ -91,7 +95,12 @@ test.describe("menu delle conversazioni, mobile 390 px", () => {
     await dialog.getByLabel("Titolo della conversazione").fill(RENAMED);
     await dialog.getByRole("button", { name: "Salva titolo" }).click();
 
-    // Su mobile la colonna laterale è nascosta ma resta nel DOM: si verifica l'elenco dello sheet.
+    // Su mobile la colonna laterale è nascosta ma resta nel DOM: si verifica l'elenco dello sheet,
+    // riaprendolo dopo l'aggiornamento della pagina se si è chiuso.
+    await expect(dialog).toBeHidden({ timeout: 15_000 });
+    await page.reload();
+    await page.getByRole("button", { name: "Conversazioni", exact: true }).click();
+    await expect(sheet).toBeVisible();
     await expect(sheet.getByRole("link", { name: RENAMED })).toBeVisible({ timeout: 15_000 });
     await expect(sheet.locator(`a[href="${sessionPath}"]`)).toHaveText(RENAMED);
   });
