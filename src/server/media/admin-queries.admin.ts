@@ -244,6 +244,12 @@ export type PhotoNeed = {
 // Con only: quella sola entità, anche se ha già una foto (per sostituirla).
 export async function entitiesNeedingPhoto(limit = 500, only?: { type: PhotoNeed["type"]; id: string }): Promise<PhotoNeed[]> {
   await requireAdmin();
+  return listPhotoNeeds(limit, only);
+}
+
+// Stessa lettura senza controllo di accesso: la usano le azioni già verificate con requireAdmin e
+// lo script locale npm run media:commons-fill (che non ha una sessione).
+export async function listPhotoNeeds(limit = 500, only?: { type: PhotoNeed["type"]; id: string }): Promise<PhotoNeed[]> {
   const rows = await dbAdmin.execute<{
     type: PhotoNeed["type"];
     id: string;
@@ -308,6 +314,11 @@ export async function entitiesNeedingPhoto(limit = 500, only?: { type: PhotoNeed
 // Pagine di Commons già importate: la ricerca non ripropone la stessa foto per due entità.
 export async function importedCommonsPages(): Promise<Set<string>> {
   await requireAdmin();
+  return listImportedCommonsPages();
+}
+
+// Come importedCommonsPages, senza controllo di accesso (vedi listPhotoNeeds).
+export async function listImportedCommonsPages(): Promise<Set<string>> {
   const rows = await dbAdmin
     .select({ sourceUrl: media.sourceUrl })
     .from(media)

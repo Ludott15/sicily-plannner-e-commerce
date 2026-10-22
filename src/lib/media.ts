@@ -57,6 +57,12 @@ export function mediaUrl(path: string) {
   return `/api/media/${path}`;
 }
 
+// Miniatura quadrata (1:1, 480 px) di una copertina per le tappe. Le illustrazioni sono SVG: si usano intere.
+export function coverThumbUrl(cover: CoverMedia): string {
+  if (cover.kind === "illustration" || cover.variantsVersion === 0) return mediaUrl(cover.storagePath);
+  return mediaUrl(variantPath(cover.id, cover.variantsVersion, "1x1", 480, "webp"));
+}
+
 // Sceglie la variante: la più piccola larga almeno quanto richiesto, altrimenti la più larga.
 export function pickVariantWidth(requested: number, available: readonly number[] = VARIANT_WIDTHS): number {
   const sorted = [...available].sort((a, b) => a - b);

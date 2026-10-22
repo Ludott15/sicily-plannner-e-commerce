@@ -1181,7 +1181,13 @@
       "productAllergensDeclaredHint": "Tick only after checking the list. Without this box the product cannot be activated.",
       "activeNeedsAllergens": "Not saved: an active product needs the \"Allergens verified\" box ticked.",
       "activeNeedsIngredientsAndFormat": "Not saved: an active product needs ingredients and format."
-    }
+    },
+    "photoChosenTitle": "Photos chosen by the editors",
+    "photoChosenIntro": "Imports the photos chosen for places and activities (file content/media/commons-scelte.json). Each photo keeps its author and license, and entities already covered are left alone.",
+    "photoChosenButton": "Import the photos chosen by the editors",
+    "photoChosenProgress": "Processed {done} of {total} entries…",
+    "photoChosenDone": "Import complete: {assigned} assigned, {already} already present, {rejected} rejected, {notNeeded} no longer needed.",
+    "photoChosenFailed": "The import stopped. Try again: entries already done are not repeated."
   },
   "Og": {
     "activity": "Activity · {province}",
@@ -1610,6 +1616,8 @@
     "originHint": "Type a city, a name or a code, for example Milan or MXP.",
     "originListLabel": "Departure airports",
     "originNoResults": "No airport found. Try the city or the IATA code.",
+    "originSearching": "Searching airports…",
+    "originSearchError": "We cannot search airports right now. Try again shortly.",
     "originSicily": "You are already in Sicily: pick a departure airport outside the island.",
     "originRequired": "Pick a departure airport from the list.",
     "destination": "Arrival in Sicily",

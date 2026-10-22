@@ -216,6 +216,17 @@ const isCommonsFileUrl = (raw: string) => {
   }
 };
 
+// Restrizioni di Commons che contano per la redazione. "ita-mibac" (monumento censito dal Ministero) è un
+// bene culturale come "cultural-heritage": stesso trattamento, stessi avvisi.
+export function warningsFrom(restrictions: string): string[] {
+  const mapped = restrictions
+    .toLowerCase()
+    .split("|")
+    .map((r) => (r === "ita-mibac" ? "cultural-heritage" : r))
+    .filter((r) => r === "personality" || r === "trademarked" || r === "cultural-heritage");
+  return [...new Set(mapped)];
+}
+
 export function parseCommonsResponse(
   json: unknown,
   options: LicenseOptions = {},
@@ -274,7 +285,7 @@ export function parseCommonsResponse(
       license: decision.license,
       licenseUrl: decision.licenseUrl,
       description: htmlToText(ext(meta, "ImageDescription") ?? ext(meta, "ObjectName") ?? "", 250) || null,
-      warnings: restrictions.split("|").filter((r) => r === "personality" || r === "trademarked" || r === "cultural-heritage"),
+      warnings: warningsFrom(restrictions),
     },
   };
 }

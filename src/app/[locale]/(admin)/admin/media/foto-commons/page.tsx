@@ -1,10 +1,12 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { ChosenPhotoImporter } from "@/components/admin/media/chosen-photo-importer";
 import { CommonsPhotoFinder } from "@/components/admin/media/commons-photo-finder";
 import { Link } from "@/lib/i18n/navigation";
 import { entitiesNeedingPhoto } from "@/server/media/admin-queries.admin";
 import { wikimediaContact } from "@/server/media/wikimedia";
 import {
   autoAssignCommonsPhotos,
+  importChosenPhotos,
   importCommonsForEntity,
   searchCommonsForEntity,
 } from "@/server/media/commons-actions.admin";
@@ -30,6 +32,7 @@ export default async function AdminCommonsPhotosPage({ params }: { params: Promi
           {t("photoFinderNoContact")}
         </p>
       )}
+      <ChosenPhotoImporter importChosen={importChosenPhotos} />
       <CommonsPhotoFinder
         needs={needs.map((n) => ({ type: n.type, id: n.id, name: n.name, placeName: n.placeName, current: n.current }))}
         autoAssign={autoAssignCommonsPhotos}

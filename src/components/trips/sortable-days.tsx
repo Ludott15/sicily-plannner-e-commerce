@@ -39,7 +39,7 @@ export function DayDropZones({ className, children }: { className?: string; chil
 }
 
 export type StopItemProps = {
-  stop: { id: string; title: string; href: string | null; meta: string; timeSlot: TimeSlot | null; notes: string | null };
+  stop: { id: string; title: string; href: string | null; meta: string; timeSlot: TimeSlot | null; notes: string | null; thumbUrl: string | null };
   dayIndex: number;
   dayCount: number;
   index: number;
@@ -93,7 +93,7 @@ export function StopItem({
   ];
 
   return (
-    <ItineraryStop time={slotLabel} title={stop.title} href={stop.href ?? undefined} meta={stop.meta} votes={votes}>
+    <ItineraryStop time={slotLabel} title={stop.title} href={stop.href ?? undefined} meta={stop.meta} thumbUrl={stop.thumbUrl} votes={votes}>
       {stop.notes && <p className="is-trip-print-note mt-2 text-body-s text-lava-muted">{stop.notes}</p>}
       <div ref={setNodeRef} className="mt-3 flex flex-wrap items-center justify-between gap-2" aria-busy={pending}>
         <div className="min-w-0">{checkIn}</div>

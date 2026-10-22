@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { isSicilyAirport } from "@/lib/flights/airports";
+import type { CoverMedia } from "@/lib/media";
 import { dayMinutesLimit, TIME_SLOTS, type Pace, type TimeSlot } from "@/lib/itinerary-checks";
 import { partitionTrips, romeToday } from "@/lib/trip-days";
 import { tripWarnings } from "@/lib/trip-warnings";
@@ -20,6 +21,7 @@ import {
   userConstraints,
 } from "@/server/db/schema";
 import { dbAsUser, type DbUser } from "@/server/db/user";
+import { areaCoverJson, coverJson } from "@/server/catalog/covers";
 import { dbPublic } from "@/server/db/public";
 import { driveTimesBySlug, getSavedPreferences } from "@/server/personalization/data";
 import { DAILY_HOURS } from "@/server/personalization/config";
@@ -71,6 +73,10 @@ export type TripStop = {
   lng: number | null;
   // L'utente ha già fatto il check-in su questo luogo oggi (ora italiana).
   checkedInToday: boolean;
+  // Copertine della tappa (attività, luogo, area): la foto della tappa è scelta in src/lib/itinerary-photos.ts.
+  activityCover: CoverMedia | null;
+  placeCover: CoverMedia | null;
+  areaCover: CoverMedia | null;
 };
 
 export async function getTrip(user: DbUser, id: string) {
@@ -111,6 +117,9 @@ export async function getTrip(user: DbUser, id: string) {
         startTime: itineraryItems.startTime,
         timeSlot: itineraryItems.timeSlot,
         notes: itineraryItems.notes,
+        activityCover: coverJson(activities.coverMediaId),
+        placeCover: coverJson(places.coverMediaId),
+        areaCover: areaCoverJson(places.areaId),
       })
       .from(itineraryItems)
       .leftJoin(activities, eq(activities.id, itineraryItems.activityId))
