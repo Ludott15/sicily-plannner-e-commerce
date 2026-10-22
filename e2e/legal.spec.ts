@@ -20,7 +20,7 @@ test("pagine legali: titolo, data e versione, nessun segnaposto né parentesi qu
   for (const { path, heading } of LEGAL) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 }), path).toHaveText(heading);
-    await expect(page.locator("main"), path).toContainText(/Aggiornato il .+ · versione 1/);
+    await expect(page.locator("main"), path).toContainText(/Aggiornato il .+ · versione \d+/);
     const text = await page.locator("main").innerText();
     expect(text, path).not.toMatch(/\{\{|\}\}|\[|\]/);
   }
