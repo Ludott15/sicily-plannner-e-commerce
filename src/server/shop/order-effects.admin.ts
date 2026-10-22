@@ -15,8 +15,18 @@ import type { OrderEffect } from "./orders-state.admin";
 // falliscono, l'ordine resta com'è e si registra solo il codice dell'errore. Un ordine ancora in attesa
 // (supplier_status pending) compare nell'admin come "da inoltrare a mano".
 
+// Invio con esito registrato: se la posta non risponde "sent" (non configurata o fallita) si logga il tipo
+// di email e lo stato, mai il destinatario né il contenuto.
+async function deliver(kind: string, to: string, message: { subject: string; html: string; text: string }): Promise<void> {
+  const result = await sendEmail({ to, subject: message.subject, html: message.html, text: message.text });
+  if (result.status !== "sent") {
+    console.error("order_email_not_sent", { kind, status: result.status });
+  }
+}
+
 // Pagamento ricevuto: email di conferma al cliente, poi inoltro ai fornitori (un'email per fornitore).
-async function sendPaidEffects(orderId: string, accessToken: string | null): Promise<void> {
+// Con forward false (rimando del link) si manda solo la conferma.
+async function sendPaidEffects(orderId: string, accessToken: string | null, forward = true): Promise<void> {
   const [order] = await dbAdmin.select().from(orders).where(eq(orders.id, orderId)).limit(1);
   if (!order) return;
   const locale = order.locale === "en" ? "en" : "it";
@@ -55,10 +65,11 @@ async function sendPaidEffects(orderId: string, accessToken: string | null): Pro
     totalLabel: formatCents(order.totalCents, locale),
     url,
   });
-  await sendEmail({ to: order.email, subject: confirmation.subject, html: confirmation.html, text: confirmation.text });
+  await deliver("conferma", order.email, confirmation);
 
-  // Revisione in corso: nessun inoltro. Inoltro già fatto (o annullato): nessun doppione.
-  if (order.needsReview || order.supplierStatus !== "pending" || order.status !== "paid") return;
+  // Rimando del link: solo la conferma, mai l'inoltro. Revisione in corso: nessun inoltro. Inoltro già fatto
+  // (o annullato): nessun doppione.
+  if (!forward || order.needsReview || order.supplierStatus !== "pending" || order.status !== "paid") return;
 
   const supplierIds = [...new Set(items.map((item) => item.supplierId))];
   const supplierRows = await dbAdmin.select().from(suppliers).where(inArray(suppliers.id, supplierIds));
@@ -109,15 +120,23 @@ async function sendShippedEffect(orderId: string, accessToken: string | null): P
     estimatedDate: null,
     url: orderPageUrl({ siteUrl: publicEnv.NEXT_PUBLIC_SITE_URL, locale, orderNumber: order.orderNumber, accessToken }),
   });
-  await sendEmail({ to: order.email, subject: email.subject, html: email.html, text: email.text });
+  await deliver("spedizione", order.email, email);
 }
 
 // Esegue gli effetti di un evento già committato. Non lancia: un errore si registra con il solo codice.
 export async function runOrderEffects(effects: readonly OrderEffect[]): Promise<void> {
   for (const effect of effects) {
     try {
-      if (effect.kind === "paid") await sendPaidEffects(effect.orderId, effect.accessToken);
-      else await sendShippedEffect(effect.orderId, effect.accessToken);
+      if (effect.kind === "paid") {
+        await sendPaidEffects(effect.orderId, effect.accessToken);
+      } else if (effect.kind === "shipped") {
+        await sendShippedEffect(effect.orderId, effect.accessToken);
+      } else {
+        // Rimando del link: l'email giusta per lo stato dell'ordine, senza inoltro al fornitore.
+        const [order] = await dbAdmin.select({ status: orders.status }).from(orders).where(eq(orders.id, effect.orderId)).limit(1);
+        if (order?.status === "shipped") await sendShippedEffect(effect.orderId, effect.accessToken);
+        else await sendPaidEffects(effect.orderId, effect.accessToken, false);
+      }
     } catch (error) {
       console.error("order_effect_failed", {
         kind: effect.kind,

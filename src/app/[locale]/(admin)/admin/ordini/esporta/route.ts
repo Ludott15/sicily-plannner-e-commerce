@@ -1,13 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { exportOrdersCsv, csvPeriodSchema } from "@/server/shop/orders.admin";
+import { getProfile, getUser } from "@/server/auth";
+import { csvPeriodSchema, exportOrdersCsv } from "@/server/shop/orders.admin";
 
 // CSV degli ordini per il commercialista (passo 7.3): GET ?from=AAAA-MM-GG&to=AAAA-MM-GG (estremi inclusi,
-// fuso di Roma). Solo admin: exportOrdersCsv chiama requireAdmin, che interrompe la richiesta per un non admin
-// (come nel resto dell'area admin).
+// fuso di Roma). Senza sessione: 401. Con una sessione che non è admin: 404, come il resto dell'area admin.
+// Non usa requireAdmin, che reindirizza al login invece di rispondere con uno stato HTTP.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const user = await getUser();
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const profile = await getProfile(user);
+  if (profile?.role !== "admin") return new NextResponse(null, { status: 404 });
+
   const period = csvPeriodSchema.safeParse({
     from: request.nextUrl.searchParams.get("from"),
     to: request.nextUrl.searchParams.get("to"),

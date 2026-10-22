@@ -12,14 +12,14 @@ import {
 import { dbPublic } from "@/server/db/public";
 import { orderItems, orders } from "@/server/db/schema";
 import { dbAsUser, type DbUser } from "@/server/db/user";
-import { accessTokenMatches, accessTokenSchema, hashAccessToken } from "./order-token";
+import { accessTokenSchema } from "./order-token";
 
 // Letture degli ordini per il cliente (passo 7.3). Nessuna scrittura. Tre percorsi:
 // - account: elenco e dettaglio con dbAsUser, quindi con la RLS (proprietario) e i grant per colonna. Il
 //   cliente non vede costo d'acquisto, fornitore, codice del fornitore, token né id di Stripe;
-// - ospite: numero + token del link. Il server legge l'hash del token con public.order_guest_token_hash, lo
-//   confronta a tempo costante (accessTokenMatches) e poi chiama public.order_guest_detail, che ricontrolla
-//   l'hash in SQL. Nessun dato se il token non coincide;
+// - ospite: numero + token del link. Il server passa il token a public.order_guest_detail, che calcola lo
+//   SHA-256 nel database e confronta con access_token_hash. Nessun hash esce dal database; senza il token
+//   giusto non torna nessun dato;
 // - pagina di esito: numero e stato dell'ordine dalla sessione Stripe (public.order_for_checkout_session).
 // Ogni input passa da una validazione prima di toccare il database; un input non valido dà null.
 
@@ -201,19 +201,11 @@ export async function getGuestOrder(orderNumber: string, token: string): Promise
   const parsedToken = accessTokenSchema.safeParse(token);
   if (!parsedToken.success) return null;
 
-  const storedRows = await dbPublic((tx) =>
-    tx.execute<{ hash: string | null }>(
-      sql`select public.order_guest_token_hash(${orderNumber}::text) as hash`,
-    ),
-  );
-  const storedHash = storedRows[0]?.hash ?? null;
-  // Il confronto a tempo costante si fa sempre, anche con un numero inesistente (accessTokenMatches gestisce null).
-  if (!accessTokenMatches(storedHash, parsedToken.data)) return null;
-
-  const candidateHash = hashAccessToken(parsedToken.data);
+  // Il token va alla funzione SQL, che calcola lo SHA-256 e confronta con access_token_hash. Nessun hash passa
+  // dal server: l'unica risposta è la riga dell'ordine, o nulla.
   const detailRows = await dbPublic((tx) =>
     tx.execute<{ detail: unknown }>(
-      sql`select public.order_guest_detail(${orderNumber}::text, ${candidateHash}::text) as detail`,
+      sql`select public.order_guest_detail(${orderNumber}::text, ${parsedToken.data}::text) as detail`,
     ),
   );
   const detail = detailRows[0]?.detail;

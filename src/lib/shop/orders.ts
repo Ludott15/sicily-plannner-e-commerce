@@ -54,22 +54,104 @@ export function vatSplit(grossCents: number, vatRate: number): { netCents: numbe
 
 export type VatBucket = { netCents: number; vatCents: number };
 
-// Somma per aliquota delle righe (lordo per riga), con le tre aliquote sempre presenti.
-export function vatBreakdown(lines: readonly { totalCents: number; vatRate: number }[]): Record<"4" | "10" | "22", VatBucket> {
-  const buckets: Record<"4" | "10" | "22", VatBucket> = {
+export type VatBuckets = Record<"4" | "10" | "22", VatBucket>;
+
+export type VatLine = { totalCents: number; vatRate: number };
+
+// Ripartizione di un importo intero in quote proporzionali ai pesi, con il metodo dei resti più grandi:
+// ogni quota è la parte intera della proporzione, e i centesimi rimasti vanno ai resti più grandi (a parità,
+// la riga precedente). La somma delle quote è sempre esattamente total.
+export function allocateProportionally(weights: readonly number[], total: number): number[] {
+  if (!Number.isInteger(total) || total < 0) {
+    throw new RangeError("allocateProportionally: il totale deve essere un intero non negativo");
+  }
+  if (weights.some((weight) => !Number.isInteger(weight) || weight < 0)) {
+    throw new RangeError("allocateProportionally: i pesi devono essere interi non negativi");
+  }
+  const weightSum = weights.reduce((sum, weight) => sum + weight, 0);
+  if (weightSum === 0) {
+    if (total !== 0) throw new RangeError("allocateProportionally: nessun peso per ripartire un importo");
+    return weights.map(() => 0);
+  }
+  // Aritmetica intera: il quoziente e il resto della divisione, senza errori di virgola mobile.
+  const parts = weights.map((weight) => {
+    const product = weight * total;
+    const quotient = Math.floor(product / weightSum);
+    return { quotient, remainder: product - quotient * weightSum };
+  });
+  let left = total - parts.reduce((sum, part) => sum + part.quotient, 0);
+  const byRemainder = parts
+    .map((part, index) => ({ index, remainder: part.remainder }))
+    .sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+  const result = parts.map((part) => part.quotient);
+  for (const candidate of byRemainder) {
+    if (left === 0) break;
+    result[candidate.index] = (result[candidate.index] ?? 0) + 1;
+    left -= 1;
+  }
+  return result;
+}
+
+// Sconto punti ripartito sulle righe in proporzione al loro valore (IVA inclusa), con i resti più grandi.
+export function allocateDiscount(lines: readonly VatLine[], discountCents: number): number[] {
+  return allocateProportionally(
+    lines.map((line) => line.totalCents),
+    discountCents,
+  );
+}
+
+function emptyBuckets(): VatBuckets {
+  return {
     "4": { netCents: 0, vatCents: 0 },
     "10": { netCents: 0, vatCents: 0 },
     "22": { netCents: 0, vatCents: 0 },
   };
-  for (const line of lines) {
-    const key = String(line.vatRate);
-    if (key !== "4" && key !== "10" && key !== "22") {
-      throw new RangeError("vatBreakdown: aliquota non prevista");
-    }
-    const split = vatSplit(line.totalCents, line.vatRate);
+}
+
+function rateKey(vatRate: number): keyof VatBuckets {
+  const key = String(vatRate);
+  if (key !== "4" && key !== "10" && key !== "22") {
+    throw new RangeError("aliquota IVA non prevista");
+  }
+  return key;
+}
+
+// Imponibile e IVA per aliquota delle righe, con l'IVA calcolata DOPO lo sconto punti. Lo sconto si ripartisce
+// sulle righe in proporzione al valore e con i resti più grandi (allocateDiscount); ogni riga scompone il suo
+// lordo scontato in imponibile e IVA. Le tre aliquote sono sempre presenti.
+export function vatBreakdown(lines: readonly VatLine[], discountCents = 0): VatBuckets {
+  const discounts = allocateDiscount(lines, discountCents);
+  const buckets = emptyBuckets();
+  lines.forEach((line, index) => {
+    const key = rateKey(line.vatRate);
+    const grossAfterDiscount = line.totalCents - (discounts[index] ?? 0);
+    const split = vatSplit(grossAfterDiscount, line.vatRate);
     buckets[key].netCents += split.netCents;
     buckets[key].vatCents += split.vatCents;
-  }
+  });
+  return buckets;
+}
+
+// Come vatBreakdown, più la spedizione. La spedizione è un'operazione accessoria (art. 12 DPR 633/72) e segue
+// l'aliquota dei beni: si ripartisce tra le aliquote in proporzione all'imponibile dei beni di ciascuna
+// (dopo lo sconto), con i resti più grandi, e su ogni quota si scorpora l'IVA. Così per ogni ordine
+// la somma di imponibile e IVA di tutte le aliquote è uguale al totale incassato.
+export function orderVatBreakdown(input: {
+  lines: readonly VatLine[];
+  discountCents: number;
+  shippingCents: number;
+}): VatBuckets {
+  const buckets = vatBreakdown(input.lines, input.discountCents);
+  const keys: (keyof VatBuckets)[] = ["4", "10", "22"];
+  const shares = allocateProportionally(
+    keys.map((key) => buckets[key].netCents),
+    input.shippingCents,
+  );
+  keys.forEach((key, index) => {
+    const split = vatSplit(shares[index] ?? 0, Number(key));
+    buckets[key].netCents += split.netCents;
+    buckets[key].vatCents += split.vatCents;
+  });
   return buckets;
 }
 

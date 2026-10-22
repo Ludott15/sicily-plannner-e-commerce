@@ -18,9 +18,11 @@ export type OrderRow = typeof orders.$inferSelect;
 
 // Dopo il commit: email al cliente (conferma o spedizione), inoltro al fornitore. Il token è quello in
 // chiaro del link ospite, se l'ordine è di un ospite; per gli account è null.
+// "link": l'admin rimanda l'email con il link (conferma se pagato, spedizione se spedito); niente inoltro.
 export type OrderEffect =
   | { kind: "paid"; orderId: string; accessToken: string | null }
-  | { kind: "shipped"; orderId: string; accessToken: string | null };
+  | { kind: "shipped"; orderId: string; accessToken: string | null }
+  | { kind: "link"; orderId: string; accessToken: string | null };
 
 export type WebhookOrderResult = {
   outcome:
@@ -30,14 +32,13 @@ export type WebhookOrderResult = {
     | "order_paid"
     | "order_cancelled"
     | "checkout_failed"
-    | "checkout_unknown"
     | "ignored";
   effects: OrderEffect[];
 };
 
 export type TransitionResult<T extends object = object> =
   | ({ ok: true; effects: OrderEffect[] } & T)
-  | { ok: false; code: "not_found" | "invalid_state" | "needs_review" };
+  | { ok: false; code: "not_found" | "invalid_state" | "needs_review" | "not_clearable" };
 
 // Snapshot del carrello salvato in checkout_sessions.cart (scritto da checkout.ts, stessa forma).
 const cartSnapshotSchema = z.array(
@@ -50,7 +51,8 @@ const cartSnapshotSchema = z.array(
   }),
 );
 
-const PLACEHOLDER_EMAIL = "senza-email@invalid.local";
+// Email di segnaposto degli ordini senza email nell'evento Stripe: finché resta, l'ordine non si sblocca.
+export const PLACEHOLDER_EMAIL = "senza-email@invalid.local";
 
 function shippingAddressJson(address: SessionShippingAddress | null): Record<string, string | null> | null {
   if (!address) return null;
@@ -80,7 +82,7 @@ async function audit(
 
 // Ruota il token del link ospite: il nuovo token va nell'email che parte, quello vecchio non vale più.
 // Per gli account non c'è token (null).
-async function rotateGuestToken(tx: AdminTx, order: Pick<OrderRow, "id" | "userId">): Promise<string | null> {
+export async function rotateGuestToken(tx: AdminTx, order: Pick<OrderRow, "id" | "userId">): Promise<string | null> {
   if (order.userId) return null;
   const { token, hash } = newAccessToken();
   await tx.update(orders).set({ accessTokenHash: hash }).where(eq(orders.id, order.id));
@@ -106,10 +108,9 @@ async function lockOrderById(tx: AdminTx, orderId: string): Promise<OrderRow | n
 // o due eventi per la stessa sessione, non creano due ordini (stripe_session_id è unico).
 export async function recordCompletedSession(tx: AdminTx, session: Stripe.Checkout.Session): Promise<WebhookOrderResult> {
   const facts = readSessionFacts(session);
-  if (!facts.checkoutId) {
-    console.error("order_checkout_id_missing", { sessionId: facts.sessionId });
-    return { outcome: "checkout_unknown", effects: [] };
-  }
+  // Senza checkout_id non si può collegare la sessione allo snapshot: si lancia, così la transazione si annulla
+  // e Stripe riprova; l'errore resta visibile nei log.
+  if (!facts.checkoutId) throw new Error("order_checkout_id_missing");
 
   const [existing] = await tx
     .select({ id: orders.id })
@@ -123,10 +124,8 @@ export async function recordCompletedSession(tx: AdminTx, session: Stripe.Checko
     .from(checkoutSessions)
     .where(eq(checkoutSessions.id, facts.checkoutId))
     .for("update");
-  if (!checkout) {
-    console.error("order_checkout_not_found", { checkoutId: facts.checkoutId });
-    return { outcome: "checkout_unknown", effects: [] };
-  }
+  // Checkout inesistente: stessa regola, la transazione si annulla e Stripe riprova.
+  if (!checkout) throw new Error("order_checkout_not_found");
 
   const cart = cartSnapshotSchema.parse(checkout.cart);
   const productRows = await tx
@@ -298,6 +297,10 @@ export async function shipOrderTx(
   if (!order) return { ok: false, code: "not_found" };
   if (order.needsReview) return { ok: false, code: "needs_review" };
   if (order.status !== "paid") return { ok: false, code: "invalid_state" };
+  // La spedizione si registra solo dopo l'inoltro: il fornitore deve averlo confermato o almeno ricevuto.
+  if (order.supplierStatus !== "forwarded" && order.supplierStatus !== "confirmed") {
+    return { ok: false, code: "invalid_state" };
+  }
 
   const token = await rotateGuestToken(tx, order);
   await tx
@@ -372,6 +375,18 @@ export async function clearReviewTx(
   const order = await lockOrderById(tx, input.orderId);
   if (!order) return { ok: false, code: "not_found" };
   if (!order.needsReview) return { ok: false, code: "invalid_state" };
+  // Senza email, o con il checkout già scaduto o annullato (punti restituiti), la revisione non si sblocca:
+  // l'ordine va trattato a mano, non confermato al cliente.
+  if (order.email === PLACEHOLDER_EMAIL) return { ok: false, code: "not_clearable" };
+  if (order.checkoutSessionId) {
+    const [checkout] = await tx
+      .select({ status: checkoutSessions.status })
+      .from(checkoutSessions)
+      .where(eq(checkoutSessions.id, order.checkoutSessionId));
+    if (checkout && (checkout.status === "expired" || checkout.status === "failed")) {
+      return { ok: false, code: "not_clearable" };
+    }
+  }
 
   await tx.update(orders).set({ needsReview: false }).where(eq(orders.id, order.id));
   await audit(tx, input.actorId, "order.review_cleared", order.id, { status: order.status });
@@ -379,4 +394,20 @@ export async function clearReviewTx(
   if (order.status !== "paid") return { ok: true, effects: [] };
   const token = await rotateGuestToken(tx, order);
   return { ok: true, effects: [{ kind: "paid", orderId: order.id, accessToken: token }] };
+}
+
+// Rimanda l'email con il link dell'ordine (conferma se pagato, spedizione se spedito). Ruota il token degli
+// ospiti, così il link precedente smette di valere. Non inoltra al fornitore. Non per ordini in revisione.
+export async function resendOrderLinkTx(
+  tx: AdminTx,
+  input: { orderId: string; actorId: string },
+): Promise<TransitionResult> {
+  const order = await lockOrderById(tx, input.orderId);
+  if (!order) return { ok: false, code: "not_found" };
+  if (order.needsReview) return { ok: false, code: "needs_review" };
+  if (order.status !== "paid" && order.status !== "shipped") return { ok: false, code: "invalid_state" };
+
+  const token = await rotateGuestToken(tx, order);
+  await audit(tx, input.actorId, "order.link_resent", order.id, { status: order.status });
+  return { ok: true, effects: [{ kind: "link", orderId: order.id, accessToken: token }] };
 }

@@ -1,3 +1,12 @@
+-- Guardia: le colonne nuove di order_items sono NOT NULL senza default, quindi la migrazione si ferma se
+-- la tabella ha già righe (non dovrebbe averne: le righe le scrive solo il webhook dal passo 7.3).
+DO $guard$
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.order_items) THEN
+    RAISE EXCEPTION 'order_items_not_empty';
+  END IF;
+END
+$guard$;--> statement-breakpoint
 -- Numero d'ordine (passo 7.3): sequenza e funzione usate come default di orders.order_number. Vanno
 -- prima delle colonne, che le usano come default: le righe già presenti ricevono un numero.
 -- Formato ISU-AAAA-NNNNNN; l'anno è quello di creazione, la sequenza non si azzera.

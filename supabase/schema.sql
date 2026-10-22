@@ -2513,10 +2513,10 @@ $$;
 ALTER FUNCTION "public"."order_for_checkout_session"("p_stripe_session_id" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token_hash" "text") RETURNS "jsonb"
+CREATE OR REPLACE FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token" "text") RETURNS "jsonb"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
-    AS $$
+    AS $_$
   select jsonb_build_object(
     'order_number', o.order_number,
     'status', o.status,
@@ -2547,25 +2547,12 @@ CREATE OR REPLACE FUNCTION "public"."order_guest_detail"("p_order_number" "text"
    where o.order_number = p_order_number
      and o.user_id is null
      and o.access_token_hash is not null
-     and o.access_token_hash = p_token_hash;
-$$;
+     and p_token ~ '^[A-Za-z0-9_-]{43}$'
+     and o.access_token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex');
+$_$;
 
 
-ALTER FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token_hash" "text") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."order_guest_token_hash"("p_order_number" "text") RETURNS "text"
-    LANGUAGE "sql" STABLE SECURITY DEFINER
-    SET "search_path" TO 'public', 'pg_temp'
-    AS $$
-  select o.access_token_hash
-    from public.orders o
-   where o.order_number = p_order_number
-     and o.user_id is null;
-$$;
-
-
-ALTER FUNCTION "public"."order_guest_token_hash"("p_order_number" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."point_delta"("p_reason" "public"."point_reason") RETURNS integer
@@ -7857,17 +7844,10 @@ GRANT ALL ON FUNCTION "public"."order_for_checkout_session"("p_stripe_session_id
 
 
 
-REVOKE ALL ON FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token_hash" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token_hash" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token_hash" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token_hash" "text") TO "service_role";
-
-
-
-REVOKE ALL ON FUNCTION "public"."order_guest_token_hash"("p_order_number" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."order_guest_token_hash"("p_order_number" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."order_guest_token_hash"("p_order_number" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."order_guest_token_hash"("p_order_number" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."order_guest_detail"("p_order_number" "text", "p_token" "text") TO "service_role";
 
 
 

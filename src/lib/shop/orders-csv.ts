@@ -18,6 +18,7 @@ export const ORDERS_CSV_COLUMNS = [
   "sconto_punti",
   "totale",
   "costo_acquisto",
+  "in_revisione",
 ] as const;
 
 export type OrdersCsvRow = {
@@ -25,13 +26,16 @@ export type OrdersCsvRow = {
   date: string;
   orderNumber: string;
   status: string;
-  // Righe per aliquota: lordo dei prodotti scomposto in imponibile e IVA (prima dello sconto punti).
+  // Imponibile e IVA per aliquota: beni dopo lo sconto punti più la spedizione ripartita (orderVatBreakdown).
+  // La somma di tutte le quote è il totale incassato.
   vat: Record<"4" | "10" | "22", VatBucket>;
+  // Spedizione lorda: solo informativa, già compresa nelle colonne imponibile e IVA.
   shippingCents: number;
   discountCents: number;
   totalCents: number;
   // Somma dei costi d'acquisto delle righe. Null se manca il costo di almeno una riga.
   costCents: number | null;
+  needsReview: boolean;
 };
 
 // Centesimi come importo in euro con due decimali: 1250 → "12.50", 5 → "0.05".
@@ -69,6 +73,7 @@ export function ordersCsv(rows: readonly OrdersCsvRow[]): string {
         cell(centsToDecimal(row.discountCents)),
         cell(centsToDecimal(row.totalCents)),
         cell(row.costCents === null ? null : centsToDecimal(row.costCents)),
+        cell(row.needsReview ? "sì" : "no"),
       ].join(","),
     );
   }

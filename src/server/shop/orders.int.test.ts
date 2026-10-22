@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import Stripe from "stripe";
 import { NextRequest } from "next/server";
+import Stripe from "stripe";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { GET as cronGet } from "@/app/api/cron/shop/route";
-import { GET as csvGet } from "@/app/[locale]/(admin)/admin/ordini/esporta/route";
 import { POST as testCompletePost } from "@/app/api/stripe/test-complete/route";
 import { POST as webhookPost } from "@/app/api/stripe/webhook/route";
+import { GET as csvGet } from "@/app/[locale]/(admin)/admin/ordini/esporta/route";
 import { expectedPaidCents, isOrderNumber } from "@/lib/shop/orders";
 import { dbAdmin } from "@/server/db/admin";
 import {
@@ -21,11 +21,11 @@ import {
 } from "@/server/db/schema";
 import type { EmailSendResult } from "@/server/email/send";
 import { fakeSessionId } from "./checkout-gateway";
-import { hashAccessToken } from "./order-token";
-import { markOrderDeliveredAction, reportOrderProblemAction, shipOrderAction } from "./orders-actions.admin";
 import { getGuestOrder, getMyOrder, listMyOrders, orderForCheckoutSession } from "./orders";
 import { exportOrdersCsv, listOrdersAdmin } from "./orders.admin";
+import { markOrderDeliveredAction, reportOrderProblemAction, shipOrderAction } from "./orders-actions.admin";
 import { runOrdersCron } from "./orders-cron.admin";
+import { runOrderEffects } from "./order-effects.admin";
 import {
   clearReviewTx,
   deliverOrderTx,
@@ -33,25 +33,28 @@ import {
   markProblemTx,
   recordAsyncPaymentSucceeded,
   recordCompletedSession,
+  resendOrderLinkTx,
   shipOrderTx,
   type AdminTx,
 } from "./orders-state.admin";
+import { hashAccessToken } from "./order-token";
 import { handleStripeEvent } from "./stripe-webhook.admin";
 
 // Ordini (passo 7.3) con il database reale: webhook completed/async/failed con idempotenza e prova a rovescio
-// dell'importo, ospite con token, transizioni admin con audit e punti una sola volta, cron con le tre regole,
-// export CSV. Le email sono simulate: si registrano le chiamate e si decide l'esito dell'invio. Dati con
-// prefisso int- e pulizia a fine suite.
+// dell'importo, valuta e paese, ospite con token, transizioni admin con audit e punti una volta, cron con le
+// regole e l'avviso admin, export CSV con riconciliazione, route e azioni. Le email sono simulate: si
+// registrano le chiamate e si decide l'esito dell'invio. Dati con prefisso int- e pulizia a fine suite.
 
-const sendEmailMock = vi.hoisted(() => ({
-  result: "unavailable" as "sent" | "unavailable" | "failed",
-  calls: [] as { to: string; subject: string }[],
+const mocks = vi.hoisted(() => ({
+  emailResult: "unavailable" as "sent" | "unavailable" | "failed",
+  emailCalls: [] as { to: string; subject: string }[],
+  auth: { userId: null as string | null, role: "admin" as "admin" | "user" },
 }));
 
 vi.mock("@/server/email/send", () => ({
   sendEmail: async (message: { to: string; subject: string }): Promise<EmailSendResult> => {
-    sendEmailMock.calls.push({ to: message.to, subject: message.subject });
-    return { status: sendEmailMock.result };
+    mocks.emailCalls.push({ to: message.to, subject: message.subject });
+    return { status: mocks.emailResult };
   },
 }));
 
@@ -61,6 +64,8 @@ vi.mock("next-intl/server", () => ({
 
 vi.mock("@/server/auth", () => ({
   requireAdmin: async () => ({ user: { id: adminId }, profile: { id: adminId, role: "admin" } }),
+  getUser: async () => (mocks.auth.userId ? { id: mocks.auth.userId } : null),
+  getProfile: async () => ({ id: adminId, role: mocks.auth.role }),
 }));
 
 const tag = `o${Date.now()}`;
@@ -92,22 +97,21 @@ async function createCheckout(opts: {
   discountCents?: number;
   pointsRedeemed?: number;
   shippingCents?: number;
+  status?: "open" | "expired";
 }): Promise<{ checkoutId: string; sessionId: string }> {
   const checkoutId = randomUUID();
   const sessionId = `cs_test_int_${checkoutId.replace(/-/g, "")}`;
-  const discount = opts.discountCents ?? 0;
-  const shipping = opts.shippingCents ?? SHIPPING;
   await dbAdmin.insert(checkoutSessions).values({
     id: checkoutId,
     stripeSessionId: sessionId,
     userId: opts.userId,
     cart,
     subtotalCents: SUBTOTAL,
-    shippingCents: shipping,
-    discountCents: discount,
+    shippingCents: opts.shippingCents ?? SHIPPING,
+    discountCents: opts.discountCents ?? 0,
     pointsRedeemed: opts.pointsRedeemed ?? 0,
     tokenHash: hashAccessToken(randomUUID()),
-    status: "open",
+    status: opts.status ?? "open",
     expiresAt: new Date(Date.now() + 30 * 60 * 1000),
   });
   createdCheckoutIds.push(checkoutId);
@@ -120,6 +124,8 @@ function sessionObject(opts: {
   amountTotal: number;
   paymentStatus?: "paid" | "unpaid";
   email?: string;
+  currency?: string;
+  country?: string;
 }): Record<string, unknown> {
   return {
     id: opts.sessionId,
@@ -128,7 +134,7 @@ function sessionObject(opts: {
     payment_status: opts.paymentStatus ?? "paid",
     payment_intent: `pi_test_${opts.sessionId.slice(-12)}`,
     amount_total: opts.amountTotal,
-    currency: "eur",
+    currency: opts.currency ?? "eur",
     locale: "it",
     customer_details: { email: opts.email ?? accountEmail, name: "Maria Prova", phone: "+390000000000" },
     collected_information: {
@@ -140,7 +146,7 @@ function sessionObject(opts: {
           city: "Palermo",
           state: "PA",
           postal_code: "90100",
-          country: "IT",
+          country: opts.country ?? "IT",
         },
       },
     },
@@ -244,7 +250,7 @@ afterAll(async () => {
 
 describe("webhook checkout.session.completed", () => {
   it("crea un ordine pagato dallo snapshot, con le righe, il costo e il fornitore; la ripetizione non ne crea un altro", async () => {
-    sendEmailMock.result = "unavailable";
+    mocks.emailResult = "unavailable";
     const { checkoutId, sessionId } = await createCheckout({ userId: accountId });
     const eventId = `evt_int_${tag}_1`;
     createdEventIds.push(eventId);
@@ -291,16 +297,13 @@ describe("webhook checkout.session.completed", () => {
       ),
     ).toBe("order_existing");
     createdEventIds.push(`evt_int_${tag}_1b`);
-    const count = await dbAdmin
-      .select({ id: orders.id })
-      .from(orders)
-      .where(eq(orders.stripeSessionId, sessionId));
+    const count = await dbAdmin.select({ id: orders.id }).from(orders).where(eq(orders.stripeSessionId, sessionId));
     expect(count).toHaveLength(1);
   });
 
   it("prova a rovescio: importo manomesso in Stripe → needs_review, nessun inoltro, totale dallo snapshot", async () => {
-    sendEmailMock.result = "sent";
-    sendEmailMock.calls.length = 0;
+    mocks.emailResult = "sent";
+    mocks.emailCalls.length = 0;
     const { checkoutId, sessionId } = await createCheckout({ userId: accountId });
     const eventId = `evt_int_${tag}_tamper`;
     createdEventIds.push(eventId);
@@ -317,8 +320,35 @@ describe("webhook checkout.session.completed", () => {
     expect(order?.paidAmountCents).toBe(tampered);
     expect(order?.supplierStatus).toBe("pending");
     // Nessuna email al cliente e nessun inoltro al fornitore: la revisione li ferma entrambi.
-    expect(sendEmailMock.calls).toHaveLength(0);
-    sendEmailMock.result = "unavailable";
+    expect(mocks.emailCalls).toHaveLength(0);
+    mocks.emailResult = "unavailable";
+  });
+
+  it("prova a rovescio: valuta USD o paese FR → needs_review, nessuna email", async () => {
+    mocks.emailResult = "sent";
+    mocks.emailCalls.length = 0;
+    const usd = await createCheckout({ userId: accountId });
+    const usdEvent = `evt_int_${tag}_usd`;
+    createdEventIds.push(usdEvent);
+    expect(
+      await handleStripeEvent(
+        completedEvent(usdEvent, sessionObject({ sessionId: usd.sessionId, checkoutId: usd.checkoutId, amountTotal: expectedTotal(0), currency: "usd" })),
+      ),
+    ).toBe("needs_review");
+    expect((await orderBySession(usd.sessionId))?.needsReview).toBe(true);
+
+    const fr = await createCheckout({ userId: accountId });
+    const frEvent = `evt_int_${tag}_fr`;
+    createdEventIds.push(frEvent);
+    expect(
+      await handleStripeEvent(
+        completedEvent(frEvent, sessionObject({ sessionId: fr.sessionId, checkoutId: fr.checkoutId, amountTotal: expectedTotal(0), country: "FR" })),
+      ),
+    ).toBe("needs_review");
+    expect((await orderBySession(fr.sessionId))?.needsReview).toBe(true);
+
+    expect(mocks.emailCalls).toHaveLength(0);
+    mocks.emailResult = "unavailable";
   });
 
   it("email mancante nell'evento → revisione, con un indirizzo di segnaposto", async () => {
@@ -328,6 +358,22 @@ describe("webhook checkout.session.completed", () => {
     createdEventIds.push(`evt_int_${tag}_noemail`);
     expect(outcome).toBe("needs_review");
     expect((await orderBySession(sessionId))?.email).toBe("senza-email@invalid.local");
+  });
+
+  it("checkout_id mancante o checkout inesistente: errore, nessun evento registrato (Stripe riprova)", async () => {
+    const withoutId = sessionObject({ sessionId: `cs_test_int_noid_${tag}`, checkoutId: "", amountTotal: expectedTotal(0) });
+    withoutId.metadata = {};
+    const missingEventId = `evt_int_${tag}_noid`;
+    await expect(handleStripeEvent(completedEvent(missingEventId, withoutId))).rejects.toThrow("order_checkout_id_missing");
+    const [registered] = await dbAdmin.select({ id: stripeEvents.id }).from(stripeEvents).where(eq(stripeEvents.id, missingEventId));
+    expect(registered).toBeUndefined();
+
+    const ghostCheckout = randomUUID();
+    const ghost = sessionObject({ sessionId: `cs_test_int_ghost_${tag}`, checkoutId: ghostCheckout, amountTotal: expectedTotal(0) });
+    const ghostEventId = `evt_int_${tag}_ghost`;
+    await expect(handleStripeEvent(completedEvent(ghostEventId, ghost))).rejects.toThrow("order_checkout_not_found");
+    const [ghostRegistered] = await dbAdmin.select({ id: stripeEvents.id }).from(stripeEvents).where(eq(stripeEvents.id, ghostEventId));
+    expect(ghostRegistered).toBeUndefined();
   });
 
   it("route del webhook: firma valida → 200, e l'ordine si crea", async () => {
@@ -376,11 +422,7 @@ describe("pagamento asincrono", () => {
 
   it("async_payment_failed su un ordine in attesa: annullato e punti restituiti una volta sola", async () => {
     const before = await balanceOf(accountId);
-    const { checkoutId, sessionId } = await createCheckout({
-      userId: accountId,
-      discountCents: 300,
-      pointsRedeemed: 300,
-    });
+    const { checkoutId, sessionId } = await createCheckout({ userId: accountId, discountCents: 300, pointsRedeemed: 300 });
     // Punti scalati come fa checkout_create: il saldo scende di 300.
     await dbAdmin.execute(sql`
       insert into public.points_ledger (user_id, delta, reason, ref_type, ref_id, season)
@@ -410,7 +452,7 @@ describe("pagamento asincrono", () => {
 });
 
 describe("ospite e lettura dell'ordine", () => {
-  it("ospite: il token del link apre l'ordine senza costi, un token sbagliato non apre nulla", async () => {
+  it("ospite: il token del link apre l'ordine senza costi; un token sbagliato o l'hash del token non aprono nulla", async () => {
     const { checkoutId, sessionId } = await createCheckout({ userId: null, shippingCents: SHIPPING });
     const eventId = `evt_int_${tag}_guest`;
     createdEventIds.push(eventId);
@@ -422,7 +464,8 @@ describe("ospite e lettura dell'ordine", () => {
     expect(order?.userId).toBeNull();
     expect(order?.accessTokenHash).toMatch(/^[0-9a-f]{64}$/);
 
-    // Il token in chiaro esce solo dagli effetti: qui lo prendiamo da una nuova rotazione (spedizione).
+    // Il token in chiaro esce solo dagli effetti: qui lo prendiamo da una nuova rotazione (inoltro e spedizione).
+    await tx((transaction) => markForwardedTx(transaction, { orderId: order?.id ?? "", actorId: adminId, now: new Date() }));
     const shipped = await tx((transaction) =>
       shipOrderTx(transaction, {
         orderId: order?.id ?? "",
@@ -448,6 +491,9 @@ describe("ospite e lettura dell'ordine", () => {
 
     expect(await getGuestOrder(order?.orderNumber ?? "", "x".repeat(43))).toBeNull();
     expect(await getGuestOrder(order?.orderNumber ?? "", token.replace(/.$/, (c) => (c === "a" ? "b" : "a")))).toBeNull();
+    expect(await getGuestOrder(order?.orderNumber ?? "", "corto")).toBeNull();
+    // L'hash del token non apre l'ordine: serve il token del link.
+    expect(await getGuestOrder(order?.orderNumber ?? "", hashAccessToken(token))).toBeNull();
     expect(await getGuestOrder("ISU-2099-000001", token)).toBeNull();
   });
 
@@ -461,6 +507,7 @@ describe("ospite e lettura dell'ordine", () => {
     expect(firstToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(await getGuestOrder(order?.orderNumber ?? "", firstToken)).not.toBeNull();
 
+    await tx((transaction) => markForwardedTx(transaction, { orderId: order?.id ?? "", actorId: adminId, now: new Date() }));
     // La spedizione genera un token nuovo: il primo smette di valere.
     await tx((transaction) =>
       shipOrderTx(transaction, { orderId: order?.id ?? "", actorId: adminId, carrier: "GLS", trackingNumber: "G1", trackingUrl: null, now: new Date() }),
@@ -504,18 +551,24 @@ describe("transizioni admin: audit, inoltro, spedizione, consegna, punti una vol
     const orderId = order?.id ?? "";
     const pointsBefore = await balanceOf(accountId);
 
+    // La spedizione prima dell'inoltro non si registra.
+    const early = await tx((transaction) =>
+      shipOrderTx(transaction, { orderId, actorId: adminId, carrier: "BRT", trackingNumber: "T0", trackingUrl: null, now: new Date() }),
+    );
+    expect(early).toEqual({ ok: false, code: "invalid_state" });
+
     const forwarded = await tx((transaction) => markForwardedTx(transaction, { orderId, actorId: adminId, now: new Date() }));
     expect(forwarded.ok).toBe(true);
     const forwardedAgain = await tx((transaction) => markForwardedTx(transaction, { orderId, actorId: adminId, now: new Date() }));
     expect(forwardedAgain).toEqual({ ok: false, code: "invalid_state" });
 
-    const problem = await tx((transaction) => markProblemTx(transaction, { orderId, actorId: adminId, note: "ritardo del corriere" }));
-    expect(problem.ok).toBe(true);
-
     const shipped = await tx((transaction) =>
       shipOrderTx(transaction, { orderId, actorId: adminId, carrier: "BRT", trackingNumber: `TRK-${tag}-2`, trackingUrl: null, now: new Date() }),
     );
     expect(shipped.ok).toBe(true);
+
+    const problem = await tx((transaction) => markProblemTx(transaction, { orderId, actorId: adminId, note: "ritardo del corriere" }));
+    expect(problem.ok).toBe(true);
 
     const delivered = await tx((transaction) => deliverOrderTx(transaction, { orderId, actorId: adminId, now: new Date() }));
     expect(delivered.ok).toBe(true);
@@ -558,80 +611,147 @@ describe("transizioni admin: audit, inoltro, spedizione, consegna, punti una vol
     const [after] = await dbAdmin.select().from(orders).where(eq(orders.id, orderId));
     expect(after?.needsReview).toBe(false);
   });
+
+  it("revisione per email mancante o checkout chiuso: non si sblocca", async () => {
+    // Email mancante: il segnaposto resta, quindi la revisione non si chiude.
+    const noEmail = await createCheckout({ userId: accountId });
+    await tx((transaction) =>
+      recordCompletedSession(transaction, sessionObject({ sessionId: noEmail.sessionId, checkoutId: noEmail.checkoutId, amountTotal: expectedTotal(0), email: "" }) as unknown as Stripe.Checkout.Session),
+    );
+    const noEmailOrder = await orderBySession(noEmail.sessionId);
+    expect(await tx((transaction) => clearReviewTx(transaction, { orderId: noEmailOrder?.id ?? "", actorId: adminId }))).toEqual({
+      ok: false,
+      code: "not_clearable",
+    });
+
+    // Checkout già scaduto quando arriva il pagamento: revisione per checkout_closed, non sbloccabile.
+    const closed = await createCheckout({ userId: accountId, status: "expired" });
+    await tx((transaction) =>
+      recordCompletedSession(transaction, sessionObject({ sessionId: closed.sessionId, checkoutId: closed.checkoutId, amountTotal: expectedTotal(0) }) as unknown as Stripe.Checkout.Session),
+    );
+    const closedOrder = await orderBySession(closed.sessionId);
+    expect(closedOrder?.needsReview).toBe(true);
+    expect(await tx((transaction) => clearReviewTx(transaction, { orderId: closedOrder?.id ?? "", actorId: adminId }))).toEqual({
+      ok: false,
+      code: "not_clearable",
+    });
+  });
+
+  it("rimando del link: rotazione del token, audit order.link_resent, email di conferma senza inoltro", async () => {
+    mocks.emailResult = "sent";
+    mocks.emailCalls.length = 0;
+    const { checkoutId, sessionId } = await createCheckout({ userId: null });
+    const first = await tx((transaction) =>
+      recordCompletedSession(transaction, sessionObject({ sessionId, checkoutId, amountTotal: expectedTotal(0), email: `rimando-${tag}@example.com` }) as unknown as Stripe.Checkout.Session),
+    );
+    const order = await orderBySession(sessionId);
+    const oldToken = first.effects[0]?.accessToken ?? "";
+    mocks.emailCalls.length = 0;
+
+    const resent = await tx((transaction) => resendOrderLinkTx(transaction, { orderId: order?.id ?? "", actorId: adminId }));
+    expect(resent.ok).toBe(true);
+    if (!resent.ok) return;
+    const newToken = resent.effects[0]?.accessToken ?? "";
+    expect(newToken).not.toBe(oldToken);
+    expect(await getGuestOrder(order?.orderNumber ?? "", oldToken)).toBeNull();
+    expect(await getGuestOrder(order?.orderNumber ?? "", newToken)).not.toBeNull();
+
+    await runOrderEffects(resent.effects);
+    expect(mocks.emailCalls.map((call) => call.to)).toEqual([`rimando-${tag}@example.com`]);
+    expect(mocks.emailCalls.some((call) => call.to.startsWith("fornitore-"))).toBe(false);
+
+    const audited = await dbAdmin
+      .select({ action: adminAuditLog.action })
+      .from(adminAuditLog)
+      .where(and(eq(adminAuditLog.entityId, order?.id ?? ""), eq(adminAuditLog.action, "order.link_resent")));
+    expect(audited).toHaveLength(1);
+    mocks.emailResult = "unavailable";
+  });
 });
 
 describe("effetti dopo il commit", () => {
   it("con posta disponibile: conferma al cliente e inoltro al fornitore, che passa a forwarded", async () => {
-    sendEmailMock.result = "sent";
-    sendEmailMock.calls.length = 0;
+    mocks.emailResult = "sent";
+    mocks.emailCalls.length = 0;
     const { checkoutId, sessionId } = await createCheckout({ userId: accountId });
     const eventId = `evt_int_${tag}_mail`;
     createdEventIds.push(eventId);
     await handleStripeEvent(completedEvent(eventId, sessionObject({ sessionId, checkoutId, amountTotal: expectedTotal(0) })));
     const order = await orderBySession(sessionId);
-    expect(sendEmailMock.calls.map((call) => call.to)).toEqual(
+    expect(mocks.emailCalls.map((call) => call.to)).toEqual(
       expect.arrayContaining([accountEmail, `fornitore-${tag}@example.com`]),
     );
     expect(order?.supplierStatus).toBe("forwarded");
     expect(order?.forwardedAt).not.toBeNull();
-    sendEmailMock.result = "unavailable";
+    mocks.emailResult = "unavailable";
   });
 });
 
 describe("cron: avviso del fornitore in ritardo e consegna automatica", () => {
-  it("le tre regole: avviso una volta, consegna dopo 10 giorni con i punti una volta", async () => {
+  it("le regole: avviso una volta (anche per email se configurata), consegna dopo 10 giorni con i punti una volta", async () => {
     const now = new Date();
     const day = 24 * 60 * 60 * 1000;
+    const previousAdmin = process.env.ORDERS_ADMIN_EMAIL;
+    process.env.ORDERS_ADMIN_EMAIL = `admin-${tag}@example.com`;
+    mocks.emailResult = "sent";
+    mocks.emailCalls.length = 0;
+    try {
+      // Ordine inoltrato 10 giorni fa, senza tracking: il tempo di evasione è 3 giorni, più 2 di tolleranza.
+      const late = await createPaidOrder({ userId: accountId, supplierStatus: "forwarded", forwardedAt: new Date(now.getTime() - 10 * day) });
+      // Ordine inoltrato ieri: non è in ritardo.
+      const fresh = await createPaidOrder({ userId: accountId, supplierStatus: "forwarded", forwardedAt: new Date(now.getTime() - day) });
+      // Ordine spedito 11 giorni fa: consegna automatica con i punti.
+      const old = await createPaidOrder({
+        userId: accountId,
+        status: "shipped",
+        supplierStatus: "shipped",
+        shippedAt: new Date(now.getTime() - 11 * day),
+        trackingNumber: "TRK-OLD",
+      });
+      // Ordine spedito 2 giorni fa: resta spedito.
+      const recent = await createPaidOrder({
+        userId: accountId,
+        status: "shipped",
+        supplierStatus: "shipped",
+        shippedAt: new Date(now.getTime() - 2 * day),
+        trackingNumber: "TRK-NEW",
+      });
 
-    // Ordine inoltrato 10 giorni fa, senza tracking: il tempo di evasione è 3 giorni, più 2 di tolleranza.
-    const late = await createPaidOrder({ userId: accountId, supplierStatus: "forwarded", forwardedAt: new Date(now.getTime() - 10 * day) });
-    // Ordine inoltrato ieri: non è in ritardo.
-    const fresh = await createPaidOrder({ userId: accountId, supplierStatus: "forwarded", forwardedAt: new Date(now.getTime() - day) });
-    // Ordine spedito 11 giorni fa: consegna automatica con i punti.
-    const old = await createPaidOrder({
-      userId: accountId,
-      status: "shipped",
-      supplierStatus: "shipped",
-      shippedAt: new Date(now.getTime() - 11 * day),
-      trackingNumber: "TRK-OLD",
-    });
-    // Ordine spedito 2 giorni fa: resta spedito.
-    const recent = await createPaidOrder({
-      userId: accountId,
-      status: "shipped",
-      supplierStatus: "shipped",
-      shippedAt: new Date(now.getTime() - 2 * day),
-      trackingNumber: "TRK-NEW",
-    });
+      const pointsBefore = await balanceOf(accountId);
+      const first = await runOrdersCron(now);
+      expect(first.delayNotices).toBeGreaterThanOrEqual(1);
+      expect(first.delivered).toBeGreaterThanOrEqual(1);
+      expect(first.delayEmail).toBe("sent");
+      expect(mocks.emailCalls.some((call) => call.to === `admin-${tag}@example.com`)).toBe(true);
 
-    const pointsBefore = await balanceOf(accountId);
-    const first = await runOrdersCron(now);
-    expect(first.delayNotices).toBeGreaterThanOrEqual(1);
-    expect(first.delivered).toBeGreaterThanOrEqual(1);
+      const [lateRow] = await dbAdmin.select().from(orders).where(eq(orders.id, late.id));
+      expect(lateRow?.supplierDelayNotifiedAt).not.toBeNull();
+      const [freshRow] = await dbAdmin.select().from(orders).where(eq(orders.id, fresh.id));
+      expect(freshRow?.supplierDelayNotifiedAt).toBeNull();
 
-    const [lateRow] = await dbAdmin.select().from(orders).where(eq(orders.id, late.id));
-    expect(lateRow?.supplierDelayNotifiedAt).not.toBeNull();
-    const [freshRow] = await dbAdmin.select().from(orders).where(eq(orders.id, fresh.id));
-    expect(freshRow?.supplierDelayNotifiedAt).toBeNull();
+      const [oldRow] = await dbAdmin.select().from(orders).where(eq(orders.id, old.id));
+      expect(oldRow?.status).toBe("delivered");
+      expect(oldRow?.supplierStatus).toBe("delivered");
+      const awarded = Math.floor(oldRow?.totalCents ? oldRow.totalCents / 100 : 0);
+      expect(await pointsLedgerRows(accountId, "order", old.id)).toBe(1);
+      expect(await balanceOf(accountId)).toBe(pointsBefore + awarded);
 
-    const [oldRow] = await dbAdmin.select().from(orders).where(eq(orders.id, old.id));
-    expect(oldRow?.status).toBe("delivered");
-    expect(oldRow?.supplierStatus).toBe("delivered");
-    const awarded = Math.floor(oldRow?.totalCents ? oldRow.totalCents / 100 : 0);
-    expect(await pointsLedgerRows(accountId, "order", old.id)).toBe(1);
-    expect(await balanceOf(accountId)).toBe(pointsBefore + awarded);
+      const [recentRow] = await dbAdmin.select().from(orders).where(eq(orders.id, recent.id));
+      expect(recentRow?.status).toBe("shipped");
 
-    const [recentRow] = await dbAdmin.select().from(orders).where(eq(orders.id, recent.id));
-    expect(recentRow?.status).toBe("shipped");
-
-    // Seconda esecuzione: nessun nuovo avviso, nessuna nuova consegna, nessun punto in più.
-    const second = await runOrdersCron(now);
-    expect(await dbAdmin.select().from(orders).where(eq(orders.id, late.id)).then((rows) => rows[0]?.supplierDelayNotifiedAt)).toEqual(
-      lateRow?.supplierDelayNotifiedAt,
-    );
-    expect(second.pointsAwarded).toBe(0);
-    expect(await pointsLedgerRows(accountId, "order", old.id)).toBe(1);
-    expect(await balanceOf(accountId)).toBe(pointsBefore + awarded);
+      // Seconda esecuzione: nessun nuovo avviso, nessuna nuova consegna, nessun punto in più.
+      const noticeAt = lateRow?.supplierDelayNotifiedAt;
+      const second = await runOrdersCron(now);
+      const [lateAgain] = await dbAdmin.select().from(orders).where(eq(orders.id, late.id));
+      expect(lateAgain?.supplierDelayNotifiedAt).toEqual(noticeAt);
+      expect(second.pointsAwarded).toBe(0);
+      expect(await pointsLedgerRows(accountId, "order", old.id)).toBe(1);
+      expect(await balanceOf(accountId)).toBe(pointsBefore + awarded);
+    } finally {
+      if (previousAdmin === undefined) delete process.env.ORDERS_ADMIN_EMAIL;
+      else process.env.ORDERS_ADMIN_EMAIL = previousAdmin;
+      mocks.emailResult = "unavailable";
+    }
   });
 
   it("ordine di ospite consegnato automaticamente: nessun punto", async () => {
@@ -652,7 +772,7 @@ describe("cron: avviso del fornitore in ritardo e consegna automatica", () => {
   });
 });
 
-describe("elenco admin ed export CSV", () => {
+describe("elenco admin, export CSV e riconciliazione", () => {
   it("elenco con l'ordine da inoltrare a mano, e CSV del periodo con la riga dell'ordine", async () => {
     const pending = await createPaidOrder({ userId: accountId, supplierStatus: "pending" });
     const rows = await listOrdersAdmin({ attention: "to_forward", limit: 200 });
@@ -663,14 +783,122 @@ describe("elenco admin ed export CSV", () => {
     const csv = await exportOrdersCsv({ from: today, to: today });
     const [header, ...lines] = csv.split("\r\n").filter(Boolean);
     expect(header).toContain('"imponibile_10"');
+    expect(header).toContain('"in_revisione"');
     const line = lines.find((item) => item.includes(`"${pending.orderNumber}"`));
     expect(line).toBeDefined();
     // Costo d'acquisto: 600 centesimi per unità, due unità. Totale 3690 centesimi = 36.90.
     expect(line).toContain('"12.00"');
+    expect(line?.endsWith('"no"')).toBe(true);
+  });
+
+  it("riconciliazione: per ogni ordine, imponibile più IVA di tutte le aliquote è il totale incassato", async () => {
+    const pending = await createPaidOrder({ userId: accountId, supplierStatus: "pending" });
+    const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Rome" }).format(new Date());
+    const csv = await exportOrdersCsv({ from: today, to: today });
+    const [header, ...lines] = csv.split("\r\n").filter(Boolean);
+    const columns = (header ?? "").split(",").map((name) => name.replace(/"/g, ""));
+    const line = lines.find((item) => item.includes(`"${pending.orderNumber}"`));
+    const values = (line ?? "").split(",").map((cell) => cell.replace(/"/g, ""));
+    const cell = (name: string) => values[columns.indexOf(name)] ?? "";
+    const toCents = (decimal: string) => Math.round(Number(decimal) * 100);
+    const collected = toCents(cell("imponibile_4")) + toCents(cell("iva_4")) + toCents(cell("imponibile_10")) + toCents(cell("iva_10")) + toCents(cell("imponibile_22")) + toCents(cell("iva_22"));
+    expect(collected).toBe(toCents(cell("totale")));
+    expect(toCents(cell("totale"))).toBe(expectedTotal(0));
+    // La spedizione è solo informativa, ma compresa nelle quote: 6.90 nella colonna dedicata.
+    expect(cell("spedizione")).toBe("6.90");
   });
 
   it("periodo non valido: errore", async () => {
     await expect(exportOrdersCsv({ from: "2026-10-20", to: "2026-10-01" })).rejects.toThrow(RangeError);
+  });
+});
+
+describe("route e azioni: autorizzazione, modalità finta e validazione", () => {
+  it("cron: senza CRON_SECRET giusto → 401, con il segreto → 200 con il rapporto", async () => {
+    const previous = process.env.CRON_SECRET;
+    process.env.CRON_SECRET = `cron-${tag}`;
+    try {
+      const url = "http://localhost/api/cron/shop";
+      const denied = await cronGet(new NextRequest(url));
+      expect(denied.status).toBe(401);
+      const allowed = await cronGet(new NextRequest(url, { headers: { authorization: `Bearer cron-${tag}` } }));
+      expect(allowed.status).toBe(200);
+      expect(await allowed.json()).toMatchObject({ delayNotices: expect.any(Number), delivered: expect.any(Number) });
+    } finally {
+      if (previous === undefined) delete process.env.CRON_SECRET;
+      else process.env.CRON_SECRET = previous;
+    }
+  });
+
+  it("route di test (solo modalità finta, mai in production): completa una sessione e crea l'ordine", async () => {
+    const { checkoutId } = await createCheckout({ userId: accountId });
+    const post = () =>
+      testCompletePost(
+        new Request("http://localhost/api/stripe/test-complete", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ checkoutId, email: accountEmail }),
+        }),
+      );
+    try {
+      vi.stubEnv("CHECKOUT_TEST_PROVIDER", "");
+      expect((await post()).status).toBe(404);
+
+      vi.stubEnv("CHECKOUT_TEST_PROVIDER", "fake");
+      vi.stubEnv("NODE_ENV", "production");
+      expect((await post()).status).toBe(404);
+
+      vi.stubEnv("NODE_ENV", "test");
+      const on = await post();
+      expect(on.status).toBe(200);
+      expect(await on.json()).toMatchObject({ outcome: "order_created" });
+      // La route usa l'id di sessione del provider finto (cs_fake_…), non quello del checkout.
+      const order = await orderBySession(fakeSessionId(checkoutId));
+      expect(order?.status).toBe("paid");
+      expect(order?.totalCents).toBe(expectedTotal(0));
+      expect(order?.paidAmountCents).toBe(expectedTotal(0));
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("CSV: senza sessione 401, sessione non admin 404, admin con periodo valido 200, periodo invertito 400", async () => {
+    const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Rome" }).format(new Date());
+    const url = `http://localhost/it/admin/ordini/esporta?from=${today}&to=${today}`;
+
+    mocks.auth.userId = null;
+    expect((await csvGet(new NextRequest(url))).status).toBe(401);
+
+    mocks.auth.userId = accountId;
+    mocks.auth.role = "user";
+    expect((await csvGet(new NextRequest(url))).status).toBe(404);
+
+    mocks.auth.role = "admin";
+    const ok = await csvGet(new NextRequest(url));
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get("content-type")).toContain("text/csv");
+    expect(ok.headers.get("content-disposition")).toContain(`ordini-${today}-${today}.csv`);
+    expect(await ok.text()).toContain('"numero"');
+
+    const inverted = await csvGet(new NextRequest("http://localhost/it/admin/ordini/esporta?from=2026-10-20&to=2026-10-01"));
+    expect(inverted.status).toBe(400);
+    mocks.auth.userId = null;
+  });
+
+  it("azioni admin: input non valido rifiutato prima di toccare il database", async () => {
+    expect(await markOrderDeliveredAction({ orderId: "non-uuid" })).toEqual({ status: "error", code: "invalid" });
+    expect(await reportOrderProblemAction({ orderId: randomUUID(), note: "   " })).toEqual({ status: "error", code: "invalid" });
+    expect(
+      await shipOrderAction({ orderId: randomUUID(), carrier: "BRT", trackingNumber: "T1", trackingUrl: "http://insicuro.example" }),
+    ).toEqual({ status: "error", code: "invalid" });
+    expect(await shipOrderAction({ orderId: randomUUID(), carrier: "", trackingNumber: "T1" })).toEqual({
+      status: "error",
+      code: "invalid",
+    });
+  });
+
+  it("azione admin su un ordine inesistente: not_found, nessun effetto", async () => {
+    expect(await markOrderDeliveredAction({ orderId: randomUUID() })).toEqual({ status: "error", code: "not_found" });
   });
 });
 
@@ -720,86 +948,3 @@ async function createPaidOrder(opts: {
   if (!row) throw new Error("createPaidOrder: riga non trovata");
   return row;
 }
-
-
-describe("route e azioni: autorizzazione, modalità finta e validazione", () => {
-  it("cron: senza CRON_SECRET giusto → 401, con il segreto → 200 con il rapporto", async () => {
-    const previous = process.env.CRON_SECRET;
-    process.env.CRON_SECRET = `cron-${tag}`;
-    try {
-      const url = "http://localhost/api/cron/shop";
-      const denied = await cronGet(new NextRequest(url));
-      expect(denied.status).toBe(401);
-      const allowed = await cronGet(new NextRequest(url, { headers: { authorization: `Bearer cron-${tag}` } }));
-      expect(allowed.status).toBe(200);
-      expect(await allowed.json()).toMatchObject({ delayNotices: expect.any(Number), delivered: expect.any(Number) });
-    } finally {
-      if (previous === undefined) delete process.env.CRON_SECRET;
-      else process.env.CRON_SECRET = previous;
-    }
-  });
-
-  it("route di test (solo modalità finta): completa una sessione e crea l'ordine; fuori dalla modalità finta, 404", async () => {
-    const { checkoutId, sessionId } = await createCheckout({ userId: accountId });
-    const previousProvider = process.env.CHECKOUT_TEST_PROVIDER;
-    try {
-      delete process.env.CHECKOUT_TEST_PROVIDER;
-      const off = await testCompletePost(
-        new Request("http://localhost/api/stripe/test-complete", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ checkoutId }),
-        }),
-      );
-      expect(off.status).toBe(404);
-
-      process.env.CHECKOUT_TEST_PROVIDER = "fake";
-      const on = await testCompletePost(
-        new Request("http://localhost/api/stripe/test-complete", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ checkoutId, email: accountEmail }),
-        }),
-      );
-      expect(on.status).toBe(200);
-      expect(await on.json()).toMatchObject({ outcome: "order_created" });
-      // La route usa l'id di sessione del provider finto (cs_fake_…), non quello del checkout.
-      const order = await orderBySession(fakeSessionId(checkoutId));
-      expect(sessionId).toMatch(/^cs_test_int_/);
-      expect(order?.status).toBe("paid");
-      expect(order?.totalCents).toBe(expectedTotal(0));
-      expect(order?.paidAmountCents).toBe(expectedTotal(0));
-    } finally {
-      if (previousProvider === undefined) delete process.env.CHECKOUT_TEST_PROVIDER;
-      else process.env.CHECKOUT_TEST_PROVIDER = previousProvider;
-    }
-  });
-
-  it("esportazione CSV: periodo valido → file CSV; periodo invertito → 400", async () => {
-    const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Rome" }).format(new Date());
-    const ok = await csvGet(new NextRequest(`http://localhost/it/admin/ordini/esporta?from=${today}&to=${today}`));
-    expect(ok.status).toBe(200);
-    expect(ok.headers.get("content-type")).toContain("text/csv");
-    expect(ok.headers.get("content-disposition")).toContain(`ordini-${today}-${today}.csv`);
-    expect(await ok.text()).toContain('"numero"');
-
-    const inverted = await csvGet(new NextRequest(`http://localhost/it/admin/ordini/esporta?from=2026-10-20&to=2026-10-01`));
-    expect(inverted.status).toBe(400);
-  });
-
-  it("azioni admin: input non valido rifiutato prima di toccare il database", async () => {
-    expect(await markOrderDeliveredAction({ orderId: "non-uuid" })).toEqual({ status: "error", code: "invalid" });
-    expect(await reportOrderProblemAction({ orderId: randomUUID(), note: "   " })).toEqual({ status: "error", code: "invalid" });
-    expect(
-      await shipOrderAction({ orderId: randomUUID(), carrier: "BRT", trackingNumber: "T1", trackingUrl: "http://insicuro.example" }),
-    ).toEqual({ status: "error", code: "invalid" });
-    expect(await shipOrderAction({ orderId: randomUUID(), carrier: "", trackingNumber: "T1" })).toEqual({
-      status: "error",
-      code: "invalid",
-    });
-  });
-
-  it("azione admin su un ordine inesistente: not_found, nessun effetto", async () => {
-    expect(await markOrderDeliveredAction({ orderId: randomUUID() })).toEqual({ status: "error", code: "not_found" });
-  });
-});

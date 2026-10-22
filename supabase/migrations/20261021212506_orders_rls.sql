@@ -6,8 +6,8 @@
 -- - il cliente legge solo le proprie righe, con le colonne elencate qui: mai costo d'acquisto, fornitore,
 --   codice del fornitore, token, id di Stripe né note interne;
 -- - nessuna scrittura dai client: ordini e righe li scrive il webhook (dbAdmin, ruolo postgres);
--- - l'ospite accede con il numero d'ordine e il token del link: la funzione SQL verifica l'hash del token,
---   e il server lo confronta a tempo costante prima di chiamarla (src/server/shop/orders.ts);
+-- - l'ospite accede con il numero d'ordine e il token del link: la funzione order_guest_detail riceve il
+--   token, ne calcola lo SHA-256 nel database e confronta con access_token_hash. Nessun hash esce dal database;
 -- - le funzioni con grant ad anon non restituiscono nulla senza il token giusto o, per l'esito, senza
 --   l'id di sessione di Stripe (che solo il cliente riceve dal redirect).
 
@@ -21,8 +21,8 @@ grant select (
   delivered_at, created_at
 ) on table public.orders to authenticated;
 
--- Le policy orders_select_own (proprietario) e orders_select_admin esistono già; i ruoli applicativi
--- non scrivono mai. Il controllo di proprietà passa dal claim auth.uid() come nelle altre tabelle.
+-- Sugli ordini c'è solo la policy orders_select_own (proprietario, da auth.uid()). Non esiste una policy
+-- admin sul client: l'admin legge e scrive con dbAdmin lato server. I ruoli applicativi non scrivono mai.
 
 ----------------------------------------------------------------------------
 -- order_items: il proprietario legge le righe del proprio ordine, senza costo, fornitore e codice.
@@ -62,32 +62,13 @@ $$;
 revoke all on function public.checkout_fail_from_stripe(uuid, text) from public, anon, authenticated;
 
 ----------------------------------------------------------------------------
--- order_guest_token_hash: il server del sito legge l'hash del token dell'ordine ospite, per confrontarlo a
--- tempo costante con quello del link. L'hash di un token casuale di 256 bit non permette di ricavare il token.
--- Ritorna null per un ordine di account, per un numero inesistente, o per un ordine senza token.
+-- order_guest_detail: dettaglio di un ordine ospite. Riceve il token del link (43 caratteri base64url),
+-- ne calcola lo SHA-256 nel database e restituisce la riga solo se coincide con access_token_hash. Solo
+-- ordini senza account (user_id null). Nessun costo, nessun fornitore, nessun codice del fornitore, nessun
+-- id di Stripe. Nessun hash viene restituito: la funzione non rivela nulla senza il token giusto.
+-- Un token di forma diversa non trova nulla (il controllo regex è dentro la query).
 ----------------------------------------------------------------------------
-create or replace function public.order_guest_token_hash(p_order_number text)
-returns text
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-  select o.access_token_hash
-    from public.orders o
-   where o.order_number = p_order_number
-     and o.user_id is null;
-$$;
-
-revoke all on function public.order_guest_token_hash(text) from public;
-grant execute on function public.order_guest_token_hash(text) to anon, authenticated;
-
-----------------------------------------------------------------------------
--- order_guest_detail: dettaglio di un ordine ospite. Restituisce la riga solo se l'hash del token coincide
--- (confronto anche nella funzione: la verifica non dipende dal solo controllo del server). Nessun costo,
--- nessun fornitore, nessun codice del fornitore, nessun id di Stripe.
-----------------------------------------------------------------------------
-create or replace function public.order_guest_detail(p_order_number text, p_token_hash text)
+create or replace function public.order_guest_detail(p_order_number text, p_token text)
 returns jsonb
 language sql
 stable
@@ -124,7 +105,8 @@ as $$
    where o.order_number = p_order_number
      and o.user_id is null
      and o.access_token_hash is not null
-     and o.access_token_hash = p_token_hash;
+     and p_token ~ '^[A-Za-z0-9_-]{43}$'
+     and o.access_token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex');
 $$;
 
 revoke all on function public.order_guest_detail(text, text) from public;

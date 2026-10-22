@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accessTokenMatches, accessTokenSchema, hashAccessToken, newAccessToken } from "./order-token";
+import { accessTokenSchema, hashAccessToken, newAccessToken } from "./order-token";
 
 describe("token del link ospite", () => {
   it("token di 43 caratteri base64url e hash SHA-256 esadecimale", () => {
@@ -14,26 +14,14 @@ describe("token del link ospite", () => {
     expect(newAccessToken().token).not.toBe(newAccessToken().token);
   });
 
-  it("corrisponde solo al token che ha generato l'hash", () => {
-    const { token, hash } = newAccessToken();
-    expect(accessTokenMatches(hash, token)).toBe(true);
-    expect(accessTokenMatches(hash, `${token}x`)).toBe(false);
-    expect(accessTokenMatches(hash, newAccessToken().token)).toBe(false);
-  });
-
-  it("nessun hash (account, numero inesistente) non corrisponde mai", () => {
-    const { token } = newAccessToken();
-    expect(accessTokenMatches(null, token)).toBe(false);
-  });
-
-  it("un hash malformato non corrisponde e non lancia", () => {
-    const { token } = newAccessToken();
-    expect(accessTokenMatches("abc", token)).toBe(false);
-  });
-
   it("rifiuta un token di formato sbagliato", () => {
     expect(accessTokenSchema.safeParse("corto").success).toBe(false);
     expect(accessTokenSchema.safeParse("a".repeat(43) + "=").success).toBe(false);
     expect(accessTokenSchema.safeParse("a".repeat(44)).success).toBe(false);
+  });
+
+  it("l'hash non è un token valido: non passa il controllo di forma", () => {
+    // Il link porta il token, non il suo hash: un hash di 64 caratteri non supera la forma del token.
+    expect(accessTokenSchema.safeParse(hashAccessToken("x")).success).toBe(false);
   });
 });

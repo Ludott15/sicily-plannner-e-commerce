@@ -1,7 +1,7 @@
 -- Ordini (passo 7.3): numero d'ordine, grant per colonna di orders e order_items, funzioni per l'ospite e
 -- per la pagina di esito. Ruoli: anonimo, proprietario (alice), altro utente (bob), ospite (token), admin.
--- Le funzioni SECURITY DEFINER sono le uniche strade per l'ospite: qui si prova che non danno nulla senza
--- il token giusto e che non espongono costo, fornitore o id di Stripe.
+-- L'ospite apre l'ordine solo con il token del link (43 caratteri): la funzione calcola lo SHA-256 nel
+-- database. Nessuna funzione espone l'hash del token.
 begin;
 \ir helpers/setup.psql
 select * from no_plan();
@@ -19,7 +19,7 @@ insert into public.products (id, slug, producer_id, supplier_id, supplier_sku, t
 values ('31111111-aaaa-0000-0000-000000000001', 'test-ordini-crema', '21111111-aaaa-0000-0000-000000000001',
         'a2222222-aaaa-0000-0000-000000000001', 'SKU-ORD-1', 'Crema di prova', 'dolci', 1200, 10, false, true, 500, 3);
 
--- Ordine di alice (account, spedito) e ordine di un ospite con token. Hash del token: sha256('token-ospite-prova').
+-- Ordine di alice (account, spedito) e ordine di un ospite con token di 43 caratteri (il token di prova).
 insert into public.orders (id, user_id, email, status, subtotal_cents, discount_cents, shipping_cents, total_cents,
   stripe_session_id, payment_intent_id, supplier_status, needs_review, paid_amount_cents, shipping_address,
   carrier, tracking_number, problem_note, shipped_at)
@@ -32,7 +32,7 @@ values
    'cs_test_ord_guest', 'pi_test_ord_guest', 'forwarded', false, 1890,
    '{"name":"Ospite Prova","line1":"Via di prova 2","postalCode":"90100","city":"Palermo","country":"IT"}',
    null, null, null, null);
-update public.orders set access_token_hash = encode(sha256(convert_to('token-ospite-prova', 'UTF8')), 'hex')
+update public.orders set access_token_hash = encode(sha256(convert_to('Ospite_Token-Prova-0123456789-abcdefghijklm', 'UTF8')), 'hex')
  where id = '41111111-aaaa-0000-0000-000000000002';
 
 insert into public.order_items (order_id, product_id, producer_id, supplier_id, supplier_sku, title_snapshot, quantity, unit_price_cents, vat_rate, cost_cents_snapshot)
@@ -110,26 +110,33 @@ select is_empty($$select 1 from public.orders$$, 'admin dal client: nessun ordin
 select throws_ok($$update public.orders set status = 'refunded'$$, '42501', null, 'admin dal client: non modifica ordini');
 
 ----------------------------------------------------------------------------
--- ANONIMO: nessuna lettura diretta delle tabelle, solo le funzioni dell'ospite e dell'esito
+-- ANONIMO: nessuna lettura diretta delle tabelle; il dettaglio dell'ospite va solo con il token
 ----------------------------------------------------------------------------
 reset role;
 select tests.as_anon();
 select throws_ok($$select * from public.orders$$, '42501', null, 'anon: non legge gli ordini');
 select throws_ok($$select * from public.order_items$$, '42501', null, 'anon: non legge le righe');
-select is(public.order_guest_token_hash('ISU-2099-000000'), null::text, 'anon: nessun hash per un numero inesistente');
-select is(public.order_guest_token_hash(current_setting('tests.alice_number')), null::text, 'anon: nessun hash per un ordine di account');
-select isnt(public.order_guest_token_hash(current_setting('tests.guest_number')), null::text, 'anon: l''hash del token dell''ospite è leggibile (il server lo confronta a tempo costante)');
 
--- Dettaglio ospite: solo con l'hash giusto, e senza costo, fornitore o id di Stripe.
+-- Nessuna funzione espone più l'hash del token.
+reset role;
+select is(
+  (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'order_guest_token_hash'),
+  0,
+  'ospite: nessuna funzione order_guest_token_hash (l''hash non esce mai dal database)'
+);
+select tests.as_anon();
+
+-- Dettaglio ospite: il token di 43 caratteri giusto apre l'ordine; gli altri no.
 select isnt(
-  public.order_guest_detail(current_setting('tests.guest_number'), encode(sha256(convert_to('token-ospite-prova', 'UTF8')), 'hex')),
+  public.order_guest_detail(current_setting('tests.guest_number'), 'Ospite_Token-Prova-0123456789-abcdefghijklm'),
   null::jsonb,
   'ospite: dettaglio con il token giusto'
 );
 select is(
-  public.order_guest_detail(current_setting('tests.guest_number'), encode(sha256(convert_to('token-sbagliato', 'UTF8')), 'hex')),
+  public.order_guest_detail(current_setting('tests.guest_number'), 'Sbagliato_Token-Prova-0123456789-abcdefghij'),
   null::jsonb,
-  'ospite: token sbagliato, nessun dato'
+  'ospite: token sbagliato di 43 caratteri, nessun dato'
 );
 select is(
   public.order_guest_detail(current_setting('tests.guest_number'), null),
@@ -137,20 +144,30 @@ select is(
   'ospite: token nullo, nessun dato'
 );
 select is(
-  public.order_guest_detail(current_setting('tests.alice_number'), encode(sha256(convert_to('token-ospite-prova', 'UTF8')), 'hex')),
+  public.order_guest_detail(current_setting('tests.guest_number'), 'corto'),
+  null::jsonb,
+  'ospite: token di forma sbagliata, nessun dato'
+);
+select is(
+  public.order_guest_detail(current_setting('tests.guest_number'), encode(sha256(convert_to('Ospite_Token-Prova-0123456789-abcdefghijklm', 'UTF8')), 'hex')),
+  null::jsonb,
+  'ospite: l''hash del token non apre l''ordine (serve il token, non il suo hash)'
+);
+select is(
+  public.order_guest_detail(current_setting('tests.alice_number'), 'Ospite_Token-Prova-0123456789-abcdefghijklm'),
   null::jsonb,
   'ospite: un ordine di account non si apre con un token'
 );
 select ok(
-  not ((public.order_guest_detail(current_setting('tests.guest_number'), encode(sha256(convert_to('token-ospite-prova', 'UTF8')), 'hex'))) ? 'stripe_session_id'),
+  not ((public.order_guest_detail(current_setting('tests.guest_number'), 'Ospite_Token-Prova-0123456789-abcdefghijklm')) ? 'stripe_session_id'),
   'ospite: il dettaglio non contiene l''id di Stripe'
 );
 select ok(
-  not ((public.order_guest_detail(current_setting('tests.guest_number'), encode(sha256(convert_to('token-ospite-prova', 'UTF8')), 'hex')) -> 'items' -> 0) ? 'cost_cents_snapshot'),
+  not ((public.order_guest_detail(current_setting('tests.guest_number'), 'Ospite_Token-Prova-0123456789-abcdefghijklm') -> 'items' -> 0) ? 'cost_cents_snapshot'),
   'ospite: nelle righe non c''è il costo d''acquisto'
 );
 select ok(
-  not ((public.order_guest_detail(current_setting('tests.guest_number'), encode(sha256(convert_to('token-ospite-prova', 'UTF8')), 'hex')) -> 'items' -> 0) ? 'supplier_id'),
+  not ((public.order_guest_detail(current_setting('tests.guest_number'), 'Ospite_Token-Prova-0123456789-abcdefghijklm') -> 'items' -> 0) ? 'supplier_id'),
   'ospite: nelle righe non c''è il fornitore'
 );
 
@@ -171,10 +188,9 @@ select is(public.order_for_checkout_session('cs_test_inesistente'), null::jsonb,
 ----------------------------------------------------------------------------
 reset role;
 select ok(
-  has_function_privilege('anon', 'public.order_guest_token_hash(text)', 'EXECUTE')
-    and has_function_privilege('anon', 'public.order_guest_detail(text, text)', 'EXECUTE')
+  has_function_privilege('anon', 'public.order_guest_detail(text, text)', 'EXECUTE')
     and has_function_privilege('anon', 'public.order_for_checkout_session(text)', 'EXECUTE'),
-  'grant: le funzioni dell''ospite e dell''esito sono eseguibili da anon'
+  'grant: il dettaglio ospite e l''esito sono eseguibili da anon'
 );
 select ok(
   not has_function_privilege('anon', 'public.checkout_fail_from_stripe(uuid, text)', 'EXECUTE')

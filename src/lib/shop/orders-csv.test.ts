@@ -16,6 +16,7 @@ const row: OrdersCsvRow = {
   discountCents: 0,
   totalCents: 1790,
   costCents: 500,
+  needsReview: false,
 };
 
 describe("centsToDecimal", () => {
@@ -52,6 +53,7 @@ describe("ordersCsv", () => {
         '"0.00"',
         '"17.90"',
         '"5.00"',
+        '"no"',
       ].join(","),
     );
     expect(csv.endsWith("\r\n")).toBe(true);
@@ -59,7 +61,7 @@ describe("ordersCsv", () => {
 
   it("costo mancante: cella vuota, senza virgolette", () => {
     const [, line] = ordersCsv([{ ...row, costCents: null }]).split("\r\n");
-    expect(line?.endsWith(",")).toBe(true);
+    expect(line).toContain(",,");
   });
 
   it("le virgolette nei valori si raddoppiano", () => {

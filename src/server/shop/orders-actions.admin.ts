@@ -9,6 +9,7 @@ import { runOrderEffects } from "./order-effects.admin";
 import {
   clearReviewTx,
   deliverOrderTx,
+  resendOrderLinkTx,
   markForwardedTx,
   markProblemTx,
   markSupplierConfirmedTx,
@@ -26,6 +27,7 @@ export type AdminOrderActionCode =
   | "not_found"
   | "invalid_state"
   | "needs_review"
+  | "not_clearable"
   | "failed";
 
 export type AdminOrderActionResult = { status: "ok" } | { status: "error"; code: AdminOrderActionCode };
@@ -130,6 +132,17 @@ export async function reportOrderProblemAction(input: unknown): Promise<AdminOrd
     dbAdmin.transaction((tx) =>
       markProblemTx(tx, { orderId: parsed.data.orderId, actorId: user.id, note: parsed.data.note }),
     ),
+  );
+}
+
+// Rimanda l'email con il link dell'ordine (conferma o spedizione). Ruota il token degli ospiti: il link
+// precedente smette di valere. Non inoltra al fornitore. Per ordini pagati o spediti, non in revisione.
+export async function resendOrderLinkAction(input: unknown): Promise<AdminOrderActionResult> {
+  const parsed = orderIdSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", code: "invalid" };
+  const { user } = await requireAdmin();
+  return run("link_resent", () =>
+    dbAdmin.transaction((tx) => resendOrderLinkTx(tx, { orderId: parsed.data.orderId, actorId: user.id })),
   );
 }
 

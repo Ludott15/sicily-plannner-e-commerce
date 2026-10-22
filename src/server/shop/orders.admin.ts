@@ -5,7 +5,7 @@ import {
   ORDER_STATUSES,
   parseShippingAddress,
   SUPPLIER_STATUSES,
-  vatBreakdown,
+  orderVatBreakdown,
   type OrderShippingAddressView,
   type OrderStatus,
   type SupplierStatus,
@@ -245,6 +245,7 @@ export async function exportOrdersCsv(input: { from: string; to: string }): Prom
       shippingCents: orders.shippingCents,
       discountCents: orders.discountCents,
       totalCents: orders.totalCents,
+      needsReview: orders.needsReview,
     })
     .from(orders)
     .where(
@@ -273,7 +274,11 @@ export async function exportOrdersCsv(input: { from: string; to: string }): Prom
 
   const csvRows: OrdersCsvRow[] = rows.map((row) => {
     const own = items.filter((item) => item.orderId === row.id);
-    const vat = vatBreakdown(own.map((item) => ({ totalCents: item.unitPriceCents * item.quantity, vatRate: item.vatRate })));
+    const vat = orderVatBreakdown({
+      lines: own.map((item) => ({ totalCents: item.unitPriceCents * item.quantity, vatRate: item.vatRate })),
+      discountCents: row.discountCents,
+      shippingCents: row.shippingCents,
+    });
     const costs = own.map((item) => (item.costCents === null ? null : item.costCents * item.quantity));
     const costCents = costs.some((cost) => cost === null)
       ? null
@@ -287,6 +292,7 @@ export async function exportOrdersCsv(input: { from: string; to: string }): Prom
       discountCents: row.discountCents,
       totalCents: row.totalCents,
       costCents,
+      needsReview: row.needsReview,
     };
   });
 
