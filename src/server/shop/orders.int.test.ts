@@ -845,7 +845,9 @@ describe("route e azioni: autorizzazione, modalità finta e validazione", () => 
       expect((await post()).status).toBe(404);
 
       vi.stubEnv("CHECKOUT_TEST_PROVIDER", "fake");
+      // In produzione fuori dalla CI il provider finto è spento.
       vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("CI", "false");
       expect((await post()).status).toBe(404);
 
       vi.stubEnv("NODE_ENV", "test");

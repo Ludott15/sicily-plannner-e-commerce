@@ -23,8 +23,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request): Promise<NextResponse> {
-  // Solo modalità finta e mai con NODE_ENV production (anche se CI=true lascia attivo il provider finto).
-  if (checkoutMode() !== "fake" || process.env.NODE_ENV === "production") return new NextResponse(null, { status: 404 });
+  // Solo modalità finta (checkoutMode: VERCEL_ENV assente e, con NODE_ENV production, solo in CI). Non si
+  // controlla NODE_ENV qui: gli e2e girano con next start (NODE_ENV=production) e CI=true.
+  if (checkoutMode() !== "fake") return new NextResponse(null, { status: 404 });
 
   const secret = webhookSecret();
   if (!secret) return NextResponse.json({ error: "webhook_not_configured" }, { status: 500 });
