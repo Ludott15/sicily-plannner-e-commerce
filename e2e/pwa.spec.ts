@@ -120,7 +120,7 @@ test("Oggi: un viaggio che parte oggi mostra le tappe del giorno con i link alle
 
   await page.goto(`/it/viaggi/${tripId}`);
   await expect(page.getByRole("heading", { name: "Oggi · Giorno 1" })).toBeVisible();
-  await expect(page.getByText(titles[0]!).first()).toBeVisible();
+  await expect(page.getByText(titles[0]!, { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Apri in Google Maps" }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Apri in Mappe di Apple" }).first()).toBeVisible();
 });
@@ -166,15 +166,15 @@ test("offline: il viaggio salvato si riapre con le tappe e il banner", async ({ 
   await page.goto("/it");
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
   await page.goto(`/it/viaggi/${tripId}`);
-  await expect(page.getByText(titles[0]!).first()).toBeVisible();
+  await expect(page.getByText(titles[0]!, { exact: true }).first()).toBeVisible();
   await waitForServiceWorkerControl(page);
   // Ricarica con il service worker attivo: la pagina entra nella cache del viaggio.
   await page.reload();
-  await expect(page.getByText(titles[0]!).first()).toBeVisible();
+  await expect(page.getByText(titles[0]!, { exact: true }).first()).toBeVisible();
 
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByText(titles[0]!).first()).toBeVisible();
+  await expect(page.getByText(titles[0]!, { exact: true }).first()).toBeVisible();
   await expect(page.getByText(titles[1]!).first()).toBeVisible();
   await expect(page.getByText("Sei offline: stai vedendo l'ultima versione salvata.")).toBeVisible();
   await context.setOffline(false);
@@ -189,7 +189,7 @@ test("offline: dopo l'uscita il viaggio esce dalla cache e il secondo utente non
   await page.goto("/it");
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
   await page.goto(`/it/viaggi/${tripId}`);
-  await expect(page.getByText(titles[0]!).first()).toBeVisible();
+  await expect(page.getByText(titles[0]!, { exact: true }).first()).toBeVisible();
   await waitForServiceWorkerControl(page);
   await page.reload();
   await expect.poll(() => cachedTripUrls(page)).not.toEqual([]);
@@ -208,6 +208,6 @@ test("offline: dopo l'uscita il viaggio esce dalla cache e il secondo utente non
   await context.setOffline(true);
   await page.goto(`/it/viaggi/${tripId}`);
   await expect(page.getByRole("heading", { name: "Sei offline" })).toBeVisible();
-  await expect(page.getByText(titles[0]!)).toHaveCount(0);
+  await expect(page.getByText(titles[0]!, { exact: true })).toHaveCount(0);
   await context.setOffline(false);
 });
