@@ -474,7 +474,28 @@
     {
       "idx": 67,
       "version": "7",
-      "when": 1792596593888,
+      "when": 1792595618614,
+      "tag": "20261021151338_partner_enum_verticali",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1792595639664,
+      "tag": "20261021151359_affiliate_verticali_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1792595658874,
+      "tag": "20261021151418_affiliate_partner_verticali",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1792617298533,
       "tag": "20261021152953_place_leg_failures",
       "breakpoints": true
     }

@@ -46,7 +46,7 @@ export const affiliatePartners = pgTable(
     check("affiliate_partners_partner_not_internal", sql`${t.partner} <> 'internal'`),
     check(
       "affiliate_partners_verticals_valid",
-      sql`cardinality(${t.verticals}) > 0 and ${t.verticals} <@ array['activity','lodging','car','flight']::text[]`,
+      sql`cardinality(${t.verticals}) > 0 and ${t.verticals} <@ array['activity','lodging','car','flight','ferry','train','transfer','tickets','boat','insurance','esim','luggage']::text[]`,
     ),
     check(
       "affiliate_partners_template_https",

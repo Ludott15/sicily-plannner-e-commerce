@@ -12,7 +12,20 @@ export type Partner =
   | "internal"
   | "booking"
   | "discovercars"
-  | "civitatis";
+  | "civitatis"
+  | "hostelworld"
+  | "pitchup"
+  | "rentalcars"
+  | "ferryhopper"
+  | "directferries"
+  | "omio"
+  | "welcomepickups"
+  | "tiqets"
+  | "clickandboat"
+  | "samboat"
+  | "heymondo"
+  | "airalo"
+  | "radicalstorage";
 
 // Nome del partner mostrato nell'offerta e nella riga di trasparenza.
 // null: nessun partner da nominare, quindi nessuna offerta affiliata.
@@ -23,6 +36,19 @@ const PARTNER_NAME: Record<Partner, string | null> = {
   civitatis: "Civitatis",
   booking: "Booking.com",
   discovercars: "DiscoverCars",
+  hostelworld: "Hostelworld",
+  pitchup: "Pitchup",
+  rentalcars: "Rentalcars.com",
+  ferryhopper: "Ferryhopper",
+  directferries: "Direct Ferries",
+  omio: "Omio",
+  welcomepickups: "Welcome Pickups",
+  tiqets: "Tiqets",
+  clickandboat: "Click&Boat",
+  samboat: "SamBoat",
+  heymondo: "Heymondo",
+  airalo: "Airalo",
+  radicalstorage: "Radical Storage",
   car_rental: null,
   internal: null,
 };

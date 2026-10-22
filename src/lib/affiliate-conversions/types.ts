@@ -11,6 +11,19 @@ export const CONVERSION_PARTNERS = [
   "booking",
   "discovercars",
   "civitatis",
+  "hostelworld",
+  "pitchup",
+  "rentalcars",
+  "ferryhopper",
+  "directferries",
+  "omio",
+  "welcomepickups",
+  "tiqets",
+  "clickandboat",
+  "samboat",
+  "heymondo",
+  "airalo",
+  "radicalstorage",
 ] as const;
 export type ConversionPartner = (typeof CONVERSION_PARTNERS)[number];
 

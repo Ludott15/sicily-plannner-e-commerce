@@ -6,7 +6,6 @@ import { isLegalReady } from "@/lib/legal-entity";
 import { isSitemapType, SITEMAP_TYPES, type SitemapType } from "@/lib/sitemap-types";
 import { listAreaSlugs } from "@/server/catalog/area-queries";
 import { listPublicSlugs } from "@/server/catalog/queries";
-import { verticalAvailability } from "@/server/affiliates/verticals";
 import { listGuideSlugs } from "@/server/editorial/queries";
 import { listProducerSlugs, listProductSlugs } from "@/server/shop/queries";
 import { mapLimited, MAX_CONCURRENT_REQUESTS, routeHasPrices } from "@/server/flights/search";
@@ -32,11 +31,7 @@ const LEGAL_PATHS = [
 async function pathsFor(type: SitemapType): Promise<string[]> {
   switch (type) {
     case "pagine": {
-      // Alloggi e noleggi entrano solo quando il partner è pronto (ID configurato): altrimenti sono "in arrivo" e noindex.
-      const [lodgingReady, carReady] = await Promise.all([
-        verticalAvailability("lodging").then((s) => s === "ready"),
-        verticalAvailability("car").then((s) => s === "ready"),
-      ]);
+      // Le verticali dei servizi (alloggi, noleggi, traghetti, ...) e l'hub /servizi sono pagine pubbliche.
       return [
         "",
         "/attivita",
@@ -44,8 +39,17 @@ async function pathsFor(type: SitemapType): Promise<string[]> {
         "/voli",
         "/guide",
         "/affiliazioni",
-        ...(lodgingReady ? ["/dove-dormire"] : []),
-        ...(carReady ? ["/noleggio-auto"] : []),
+        "/servizi",
+        "/dove-dormire",
+        "/noleggio-auto",
+        "/traghetti",
+        "/treni-e-bus",
+        "/transfer",
+        "/musei-e-biglietti",
+        "/barche",
+        "/assicurazione-viaggio",
+        "/esim",
+        "/deposito-bagagli",
         "/crediti-foto",
         "/accessibilita",
         "/contatti",

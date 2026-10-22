@@ -1,6 +1,6 @@
 {
-  "id": "ee685d69-b8be-4eb5-9997-54c6b75cc694",
-  "prevId": "5b0f4583-813b-4c3d-9189-572d7eba2c88",
+  "id": "cb13e489-8c59-4d49-b9a7-5fc83ccfd8d6",
+  "prevId": "7b98c123-c749-42e0-84d9-9d0d7444e48e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4486,7 +4486,7 @@
         },
         "affiliate_partners_verticals_valid": {
           "name": "affiliate_partners_verticals_valid",
-          "value": "cardinality(\"affiliate_partners\".\"verticals\") > 0 and \"affiliate_partners\".\"verticals\" <@ array['activity','lodging','car','flight']::text[]"
+          "value": "cardinality(\"affiliate_partners\".\"verticals\") > 0 and \"affiliate_partners\".\"verticals\" <@ array['activity','lodging','car','flight','ferry','train','transfer','tickets','boat','insurance','esim','luggage']::text[]"
         },
         "affiliate_partners_template_https": {
           "name": "affiliate_partners_template_https",
@@ -8181,7 +8181,20 @@
         "internal",
         "booking",
         "discovercars",
-        "civitatis"
+        "civitatis",
+        "hostelworld",
+        "pitchup",
+        "rentalcars",
+        "ferryhopper",
+        "directferries",
+        "omio",
+        "welcomepickups",
+        "tiqets",
+        "clickandboat",
+        "samboat",
+        "heymondo",
+        "airalo",
+        "radicalstorage"
       ]
     },
     "public.point_reason": {

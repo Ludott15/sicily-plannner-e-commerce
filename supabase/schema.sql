@@ -151,7 +151,20 @@ CREATE TYPE "public"."partner" AS ENUM (
     'internal',
     'booking',
     'discovercars',
-    'civitatis'
+    'civitatis',
+    'hostelworld',
+    'pitchup',
+    'rentalcars',
+    'ferryhopper',
+    'directferries',
+    'omio',
+    'welcomepickups',
+    'tiqets',
+    'clickandboat',
+    'samboat',
+    'heymondo',
+    'airalo',
+    'radicalstorage'
 );
 
 
@@ -2913,7 +2926,8 @@ begin
     raise exception 'partner_not_active' using errcode = 'P0001';
   end if;
 
-  if p_vertical not in ('activity', 'lodging', 'car', 'flight') or not (p_vertical = any (v_partner.verticals)) then
+  if p_vertical not in ('activity', 'lodging', 'car', 'flight', 'ferry', 'train', 'transfer', 'tickets', 'boat', 'insurance', 'esim', 'luggage')
+     or not (p_vertical = any (v_partner.verticals)) then
     raise exception 'vertical_not_allowed' using errcode = 'P0001';
   end if;
 
@@ -3834,7 +3848,7 @@ CREATE TABLE IF NOT EXISTS "public"."affiliate_partners" (
     CONSTRAINT "affiliate_partners_partner_not_internal" CHECK (("partner" <> 'internal'::"public"."partner")),
     CONSTRAINT "affiliate_partners_subid_param_format" CHECK ((("subid_param" IS NULL) OR ("subid_param" ~ '^[a-z][a-z0-9_]{0,19}$'::"text"))),
     CONSTRAINT "affiliate_partners_template_https" CHECK ((("search_url_template" IS NULL) OR ("search_url_template" ~ '^https://'::"text"))),
-    CONSTRAINT "affiliate_partners_verticals_valid" CHECK ((("cardinality"("verticals") > 0) AND ("verticals" <@ ARRAY['activity'::"text", 'lodging'::"text", 'car'::"text", 'flight'::"text"])))
+    CONSTRAINT "affiliate_partners_verticals_valid" CHECK ((("cardinality"("verticals") > 0) AND ("verticals" <@ ARRAY['activity'::"text", 'lodging'::"text", 'car'::"text", 'flight'::"text", 'ferry'::"text", 'train'::"text", 'transfer'::"text", 'tickets'::"text", 'boat'::"text", 'insurance'::"text", 'esim'::"text", 'luggage'::"text"])))
 );
 
 

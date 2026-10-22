@@ -1,161 +1,119 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { buttonClass, ButtonAnchor, DateField, PendingButton, Select } from "@/components/design";
+import { DateField, Select } from "@/components/design";
+import { VerticalExtras } from "@/components/verticals/vertical-extras";
+import { VerticalField, VerticalForm } from "@/components/verticals/vertical-form";
+import { VerticalNotices, VerticalResult, type SummaryItem } from "@/components/verticals/vertical-result";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { isSicilyAirport } from "@/lib/flights/airports";
-import { isIsoDate } from "@/lib/flights/search-params";
 import { canonicalFor } from "@/lib/seo";
-import { getPartnerConfig, VERTICAL_PARTNER } from "@/server/affiliates/partners";
-import { carAirports, verticalAvailability, verticalSearchHref } from "@/server/affiliates/verticals";
+import { isoParam, oneOfParam, paramOf, queryString, rangeOk, formatIsoDate, type ParamValue } from "@/lib/verticals/search-params";
+import { SICILY_AIRPORT_CODES } from "@/lib/flights/airports";
+import { activePartners, publishedGuides, searchOutcome } from "@/server/affiliates/vertical-page-data";
+import { carAirports } from "@/server/affiliates/verticals";
+import { VERTICAL_PAGE, VERTICAL_PARTNERS } from "@/server/affiliates/vertical-links";
+import { VERTICAL_PARTNER } from "@/server/affiliates/partners";
 
-// Noleggio auto (passo 3.1): aeroporto siciliano, date di ritiro e riconsegna, poi un link firmato
-// verso DiscoverCars. Senza ID del partner la pagina dice "in arrivo" e non mostra il form.
-// Finché il partner non è pronto la pagina non è indicizzata.
+// Noleggio auto (verticale car): aeroporto siciliano, date di ritiro e riconsegna. Il link firmato va a
+// DiscoverCars (predefinito); Rentalcars è l'alternativa nella stessa pagina.
 
-const CAR_ADULTS = 1;
+const PAGE = VERTICAL_PAGE.car;
 
 type Props = {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{
-    aeroporto?: string;
-    checkin?: string;
-    checkout?: string;
-    avviso?: string;
-  }>;
+  searchParams: Promise<Record<string, ParamValue>>;
 };
-
-function isoOrEmpty(value: string | undefined): string {
-  return value && isIsoDate(value) ? value : "";
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
-  const [t, availability] = await Promise.all([
-    getTranslations({ locale, namespace: "Cars" }),
-    verticalAvailability("car"),
-  ]);
+  const t = await getTranslations({ locale, namespace: "Cars" });
   return {
     title: t("title"),
     description: t("intro"),
-    alternates: canonicalFor(locale, "/noleggio-auto"),
-    ...(availability === "ready" ? {} : { robots: { index: false, follow: false } }),
+    alternates: canonicalFor(locale, `/${PAGE}`),
   };
 }
 
 export default async function CarRentalPage({ params, searchParams }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const [t, tAff, tVert, query, config, availability] = await Promise.all([
+  const [t, tVert, query, partners] = await Promise.all([
     getTranslations("Cars"),
-    getTranslations("Affiliates"),
     getTranslations("Verticals"),
     searchParams,
-    getPartnerConfig(VERTICAL_PARTNER.car),
-    verticalAvailability("car"),
+    activePartners("car"),
   ]);
-
   const airports = carAirports(locale);
-  const airport = query.aeroporto && isSicilyAirport(query.aeroporto) ? query.aeroporto : "";
-  const checkin = isoOrEmpty(query.checkin);
-  const checkout = isoOrEmpty(query.checkout);
-  const datesOk = checkin !== "" && checkout !== "" && checkout > checkin;
-  const partnerName = config?.name ?? "";
 
-  const href =
-    availability === "ready" && airport !== "" && datesOk
-      ? await verticalSearchHref({
-          vertical: "car",
-          query: "",
-          airport,
-          checkin,
-          checkout,
-          adults: CAR_ADULTS,
-          context: "page",
-          itineraryId: null,
-          locale,
-        })
+  const airport = oneOfParam(query.aeroporto, SICILY_AIRPORT_CODES);
+  const checkin = isoParam(query.checkin);
+  const checkout = isoParam(query.checkout);
+  const partner = oneOfParam(query.partner, VERTICAL_PARTNERS.car) || VERTICAL_PARTNER.car;
+  const datesOk = rangeOk(checkin, checkout);
+  const picked = airports.find((a) => a.iata === airport) ?? null;
+
+  const outcome =
+    picked && datesOk
+      ? await searchOutcome(
+          { vertical: "car", airport: picked.iata, checkin, checkout, partner },
+          { context: "page", itineraryId: null, locale },
+        )
       : null;
+
+  const summary: SummaryItem[] = [];
+  if (picked) summary.push({ label: tVert("fieldAirport"), value: picked.name });
+  if (checkin) summary.push({ label: tVert("fieldPickup"), value: formatIsoDate(checkin, locale) });
+  if (checkout) summary.push({ label: tVert("fieldDropoff"), value: formatIsoDate(checkout, locale) });
+
+  const placeLabel: string | undefined = picked?.name;
+  const hint = picked ? t("needDates") : t("pickAirport");
+
+  const current = { aeroporto: airport, checkin, checkout };
+  const alternatives = partners
+    .filter((p) => p.partner !== partner)
+    .map((p) => ({ name: p.name, href: queryString({ ...current, partner: p.partner }) }));
+
+  const tips = [t("tip1"), t("tip2"), t("tip3")];
+  const faq = [
+    { question: t("faq1q"), answer: t("faq1a") },
+    { question: t("faq2q"), answer: t("faq2a") },
+    { question: t("faq3q"), answer: t("faq3a") },
+  ];
+  const guides = await publishedGuides(locale, ["sicilia-senza-auto", "prima-volta-in-sicilia"]);
 
   return (
     <PageContainer width="work">
-      <PageHeader title={t("title")} subtitle={t("intro")} />
+      <PageHeader
+        title={t("title")}
+        subtitle={t("intro")}
+        breadcrumb={[{ label: tVert("servicesCrumb"), href: "/servizi" }]}
+        breadcrumbLabel={tVert("servicesLabel")}
+      />
 
-      {query.avviso === "non-disponibile" && (
-        <p role="alert" className="rounded-lg border border-card-edge bg-calce-raised p-4 text-body">
-          {tVert("unavailable")}
-        </p>
-      )}
+      <VerticalNotices avviso={paramOf(query.avviso)} />
 
-      {query.avviso === "troppi-click" && (
-        <p role="alert" className="rounded-lg border border-card-edge bg-calce-raised p-4 text-body">
-          {tVert("rateLimited")}
-        </p>
-      )}
+      <VerticalForm submitLabel={t("submit")} hidden={{ partner: partner === VERTICAL_PARTNER.car ? "" : partner }}>
+        <VerticalField label={t("airportLabel")} wide>
+          <Select
+            name="aeroporto"
+            label={t("airportLabel")}
+            options={airports.map((a) => ({ value: a.iata, label: t("airportOption", { name: a.name, city: a.city, iata: a.iata }) }))}
+            defaultValue={picked?.iata}
+            placeholder={t("airportPlaceholder")}
+            required
+          />
+        </VerticalField>
+        <VerticalField label={t("pickup")} htmlFor="checkin">
+          <DateField id="checkin" name="checkin" defaultValue={checkin} label={t("pickup")} placeholder={t("pickup")} />
+        </VerticalField>
+        <VerticalField label={t("dropoff")} htmlFor="checkout">
+          <DateField id="checkout" name="checkout" defaultValue={checkout} label={t("dropoff")} placeholder={t("dropoff")} />
+        </VerticalField>
+      </VerticalForm>
 
-      {availability !== "ready" ? (
-        <div className="flex max-w-2xl flex-col items-start gap-3 rounded-lg border border-card-edge bg-calce-raised p-6">
-          <p className="text-label uppercase text-lava-muted">{tVert("comingSoon")}</p>
-          <p className="text-body-l">{t("comingSoonText")}</p>
-          <PendingButton id="vertical.car" variant="primary">
-            {t("submit")}
-          </PendingButton>
-        </div>
-      ) : (
-        <>
-          <form method="get" className="grid gap-4 rounded-lg border border-card-edge bg-calce-raised p-6 md:grid-cols-2 lg:grid-cols-4">
-            <div className="flex flex-col gap-1.5 lg:col-span-2">
-              <label htmlFor="aeroporto" className="text-body-s font-semibold">
-                {t("airportLabel")}
-              </label>
-              <Select
-                id="aeroporto"
-                name="aeroporto"
-                label={t("airportLabel")}
-                placeholder={t("airportPlaceholder")}
-                defaultValue={airport === "" ? undefined : airport}
-                required
-                options={airports.map((a) => ({
-                  value: a.iata,
-                  label: t("airportOption", { name: a.name, city: a.city, iata: a.iata }),
-                }))}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="checkin" className="text-body-s font-semibold">
-                {t("pickup")}
-              </label>
-              <DateField id="checkin" name="checkin" label={t("pickup")} defaultValue={checkin} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="checkout" className="text-body-s font-semibold">
-                {t("dropoff")}
-              </label>
-              <DateField id="checkout" name="checkout" label={t("dropoff")} defaultValue={checkout} />
-            </div>
-            <div className="flex items-end lg:col-span-4">
-              <button type="submit" className={buttonClass("primary", "md", "w-full md:w-auto")}>
-                {t("submit")}
-              </button>
-            </div>
-          </form>
+      <VerticalResult summary={summary} outcome={outcome} hint={hint} placeName={placeLabel} />
 
-          <div className="flex flex-col items-start gap-2">
-            {href && partnerName ? (
-              <>
-                <ButtonAnchor variant="primary" href={href} rel="sponsored noopener">
-                  {t("searchOn", { partner: partnerName })}
-                </ButtonAnchor>
-                <p className="text-caption text-lava-muted">{tAff("disclosure", { partner: partnerName })}</p>
-              </>
-            ) : (
-              <p className="text-body text-lava-muted">
-                {airport === "" ? t("pickAirport") : datesOk ? tVert("unavailable") : t("needDates")}
-              </p>
-            )}
-          </div>
-        </>
-      )}
+      <VerticalExtras tips={tips} faq={faq} guides={guides} alternatives={alternatives} />
     </PageContainer>
   );
 }

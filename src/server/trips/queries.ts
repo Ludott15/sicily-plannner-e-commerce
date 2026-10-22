@@ -25,7 +25,7 @@ import { areaCoverJson, coverJson } from "@/server/catalog/covers";
 import { dbPublic } from "@/server/db/public";
 import { driveTimesBySlug, getSavedPreferences } from "@/server/personalization/data";
 import { DAILY_HOURS } from "@/server/personalization/config";
-import { verticalSearchHref, type VerticalSearchInput } from "@/server/affiliates/verticals";
+import { buildVerticalHref, type VerticalCallContext, type VerticalSearchInput } from "@/server/affiliates/verticals";
 
 // Letture dei viaggi dell'utente (M5, 1.4). Sempre con dbAsUser: la RLS mostra solo i propri
 // itinerari e quelli dei gruppi di cui si è membri (can_access_itinerary).
@@ -224,10 +224,13 @@ export type TripVerticalChips = { lodging: VerticalChip; car: VerticalChip };
 
 const MISSING_DATA: VerticalChip = { status: "missing_data", href: null };
 
-async function chipFor(input: VerticalSearchInput | null): Promise<VerticalChip> {
+// Ricerca non valida (luogo o aeroporto fuori dal catalogo o dalle liste) = dato mancante; partner non
+// pronto = in arrivo.
+async function chipFor(input: VerticalSearchInput | null, ctx: VerticalCallContext): Promise<VerticalChip> {
   if (input === null) return MISSING_DATA;
-  const href = await verticalSearchHref(input);
-  return href === null ? { status: "coming_soon", href: null } : { status: "ready", href };
+  const result = await buildVerticalHref(input, ctx);
+  if ("href" in result) return { status: "ready", href: result.href };
+  return result.error === "invalid" ? MISSING_DATA : { status: "coming_soon", href: null };
 }
 
 // Alloggio: zona della prima notte (itinerary_nights; senza notta, la zona delle tappe del primo
@@ -246,14 +249,14 @@ export async function getTripVerticalChips(
     if (!trip) return null;
 
     const [night] = await tx
-      .select({ placeName: places.name, areaIt: areas.nameIt, areaEn: areas.nameEn })
+      .select({ placeSlug: places.slug, areaSlug: areas.slug })
       .from(itineraryNights)
       .leftJoin(areas, eq(areas.id, itineraryNights.areaId))
       .leftJoin(places, eq(places.id, itineraryNights.placeId))
       .where(and(eq(itineraryNights.itineraryId, tripId), eq(itineraryNights.nightIndex, 1)));
 
     const dayZero = await tx
-      .select({ areaIt: areas.nameIt, areaEn: areas.nameEn, lat: places.lat, lng: places.lng })
+      .select({ areaSlug: areas.slug, lat: places.lat, lng: places.lng })
       .from(itineraryItems)
       .leftJoin(activities, eq(activities.id, itineraryItems.activityId))
       .leftJoin(places, eq(places.id, sql`coalesce(${itineraryItems.placeId}, ${activities.placeId})`))
@@ -270,30 +273,28 @@ export async function getTripVerticalChips(
   });
   if (!data) return null;
 
-  const isEn = locale === "en";
-  const nightLabel = data.night ? (data.night.placeName ?? (isEn ? data.night.areaEn : data.night.areaIt)) : null;
-  const dayZeroLabel =
-    data.dayZero.map((row) => (isEn ? row.areaEn : row.areaIt)).find((name): name is string => !!name) ?? null;
-  const lodgingQuery = nightLabel ?? dayZeroLabel;
+  // Alloggi: slug del luogo della prima notte, altrimenti dell'area; poi l'area delle tappe del primo giorno.
+  const lodgingPlace = data.night ? (data.night.placeSlug ?? data.night.areaSlug) : null;
+  const dayZeroPlace = data.dayZero.map((row) => row.areaSlug).find((slug): slug is string => !!slug) ?? null;
+  const lodgingSlug = lodgingPlace ?? dayZeroPlace;
 
   const checkin = data.trip.startDate;
   const checkout = checkin ? addDays(checkin, Math.max(1, data.trip.days - 1)) : null;
   const adults = data.trip.travelers ?? 2;
+  const ctx: VerticalCallContext = { context: "itinerary", itineraryId: tripId, locale };
 
   const lodgingInput: VerticalSearchInput | null =
-    lodgingQuery && checkin && checkout
-      ? { vertical: "lodging", query: lodgingQuery, airport: "", checkin, checkout, adults, context: "itinerary", itineraryId: tripId, locale }
+    lodgingSlug && checkin && checkout
+      ? { vertical: "lodging", place: lodgingSlug, checkin, checkout, adults }
       : null;
 
   const points = data.dayZero.flatMap((row) => (row.lat !== null && row.lng !== null ? [{ lat: row.lat, lng: row.lng }] : []));
   const arrival = data.arrivalAirport;
   const airport = arrival !== null && isSicilyAirport(arrival) ? arrival : nearestSicilyAirport(points);
   const carInput: VerticalSearchInput | null =
-    airport && checkin && checkout
-      ? { vertical: "car", query: "", airport, checkin, checkout, adults, context: "itinerary", itineraryId: tripId, locale }
-      : null;
+    airport && checkin && checkout ? { vertical: "car", airport, checkin, checkout } : null;
 
-  return { lodging: await chipFor(lodgingInput), car: await chipFor(carInput) };
+  return { lodging: await chipFor(lodgingInput, ctx), car: await chipFor(carInput, ctx) };
 }
 
 // Il viaggio pubblico: solo ciò che public.shared_itinerary restituisce (mai proprietario,

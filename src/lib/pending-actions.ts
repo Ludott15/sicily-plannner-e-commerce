@@ -8,12 +8,10 @@
 // I testi legali, Chi siamo, il regolamento dei punti e l'informativa in onboarding non sono più
 // qui: sono scritti, e la loro prontezza si verifica a runtime con isLegalReady()
 // (src/lib/legal-entity.ts): finché mancano i dati del titolare le pagine restano noindex.
-// "vertical.*": alloggi e noleggi restano "in arrivo" finché il partner non ha il proprio ID
-// nell'ambiente (M6-partner, passo 3.1).
+// Le verticali (alloggi, noleggi, traghetti, ...) non sono più in sospeso: il link firmato funziona anche
+// senza ID del partner (il click si registra comunque). Chi non è attivo mostra un avviso, non "in arrivo".
 
 export const PENDING_ACTIONS = {
-  "vertical.lodging": "M6-partner",
-  "vertical.car": "M6-partner",
   // Pagamento (passo 7.2): in sospeso solo senza provider (né STRIPE_SECRET_KEY né CHECKOUT_TEST_PROVIDER=fake).
   // La pagina del carrello lo mostra in quel caso; con il provider il pulsante è attivo.
   "checkout.pay": "7.2-stripe",

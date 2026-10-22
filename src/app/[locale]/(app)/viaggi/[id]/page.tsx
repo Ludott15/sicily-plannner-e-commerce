@@ -150,8 +150,9 @@ export default async function TripPage({ params, searchParams }: Props) {
     trip.stops.flatMap((s) => (s.activityId && s.activitySlug ? [[s.activityId, s.activitySlug] as const] : [])),
   );
 
-  // Alloggio e noleggio (passo 3.1): link firmato se il partner è pronto, "in arrivo" se no, la
-  // spiegazione di cosa manca se il viaggio non ha ancora zona, date o aeroporto.
+  // Alloggio e noleggio (passo 3.1): link firmato se il partner è pronto, un avviso se il partner non è
+  // attivo (nessuna azione in sospeso), la spiegazione di cosa manca se il viaggio non ha ancora zona,
+  // date o aeroporto.
   const chipFields = (
     kind: "lodging" | "car",
     chip: VerticalChip | null,
@@ -166,11 +167,7 @@ export default async function TripPage({ params, searchParams }: Props) {
       };
     }
     if (chip?.status === "coming_soon") {
-      return {
-        searchAction: null,
-        pending: { id: kind === "lodging" ? "vertical.lodging" : "vertical.car", label },
-        note: tVert("comingSoon"),
-      };
+      return { searchAction: null, pending: null, note: tVert("unavailable") };
     }
     return { searchAction: null, pending: null, note: t(kind === "lodging" ? "lodgingMissing" : "carMissing") };
   };
