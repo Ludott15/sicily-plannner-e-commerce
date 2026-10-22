@@ -21,8 +21,8 @@ insert into public.orders (id, user_id, email, status, subtotal_cents, discount_
 values
   ('33333333-aaaa-0000-0000-000000000001', tests.uid('alice'), 'alice@example.com', 'paid', 2400, 0, 690, 3090, 'cs_test_alice'),
   ('33333333-aaaa-0000-0000-000000000002', null, 'ospite@example.com', 'paid', 1200, 0, 690, 1890, 'cs_test_guest');
-insert into public.order_items (order_id, product_id, producer_id, quantity, unit_price_cents)
-values ('33333333-aaaa-0000-0000-000000000001', '22222222-aaaa-0000-0000-000000000001', '11111111-aaaa-0000-0000-000000000001', 2, 1200);
+insert into public.order_items (order_id, product_id, producer_id, supplier_id, supplier_sku, title_snapshot, quantity, unit_price_cents, vat_rate, cost_cents_snapshot)
+values ('33333333-aaaa-0000-0000-000000000001', '22222222-aaaa-0000-0000-000000000001', '11111111-aaaa-0000-0000-000000000001', 'a1111111-aaaa-0000-0000-000000000001', 'SKU-1', 'Crema di pistacchio', 2, 1200, 4, 600);
 insert into public.order_shipments (order_id, producer_id, token_hash, carrier, tracking_number)
 values ('33333333-aaaa-0000-0000-000000000001', '11111111-aaaa-0000-0000-000000000001',
   encode(sha256('tok-spedizione'::bytea), 'hex'), 'BRT', 'TRK123');
@@ -47,7 +47,11 @@ select throws_ok(
 -- PROPRIETARIO DELL'ORDINE
 ----------------------------------------------------------------------------
 select tests.authenticate_as('alice');
-select results_eq($$select stripe_session_id from public.orders$$, $$values ('cs_test_alice')$$, 'proprietario: vede solo il proprio ordine');
+select results_eq($$select email from public.orders$$, $$values ('alice@example.com')$$, 'proprietario: vede solo il proprio ordine');
+select throws_ok($$select stripe_session_id from public.orders$$, '42501', null, 'proprietario: non legge l''id della sessione Stripe');
+select throws_ok($$select access_token_hash from public.orders$$, '42501', null, 'proprietario: non legge il token ospite');
+select throws_ok($$select cost_cents_snapshot from public.order_items$$, '42501', null, 'proprietario: non legge il costo d''acquisto');
+select throws_ok($$select supplier_id from public.order_items$$, '42501', null, 'proprietario: non legge il fornitore');
 select results_eq($$select quantity from public.order_items$$, $$values (2)$$, 'proprietario: vede le righe del proprio ordine');
 select results_eq(
   $$select carrier, tracking_number from public.order_shipments$$,

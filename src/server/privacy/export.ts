@@ -16,6 +16,7 @@ import {
   itineraryNights,
   itineraryProposals,
   notifications,
+  orderItems,
   orders,
   pointsLedger,
   preferenceWeights,
@@ -169,7 +170,56 @@ async function collect(tx: UserTx, user: DbUser) {
     sessionIds.length === 0 ? [] : await tx.select().from(chatMessages).where(inArray(chatMessages.sessionId, sessionIds));
 
   const clicks = await tx.select().from(affiliateClicks).where(eq(affiliateClicks.userId, user.id));
-  const ownOrders = await tx.select().from(orders).where(eq(orders.userId, user.id));
+  // Colonne esplicite: i grant per colonna dei ruoli applicativi non includono costo, fornitore, codice del
+  // fornitore, token né id di Stripe. Le righe dell'ordine stanno dentro il suo ordine.
+  const ownOrderRows = await tx
+    .select({
+      id: orders.id,
+      orderNumber: orders.orderNumber,
+      email: orders.email,
+      locale: orders.locale,
+      status: orders.status,
+      subtotalCents: orders.subtotalCents,
+      discountCents: orders.discountCents,
+      shippingCents: orders.shippingCents,
+      totalCents: orders.totalCents,
+      pointsRedeemed: orders.pointsRedeemed,
+      shippingAddress: orders.shippingAddress,
+      carrier: orders.carrier,
+      trackingNumber: orders.trackingNumber,
+      shippedAt: orders.shippedAt,
+      deliveredAt: orders.deliveredAt,
+      createdAt: orders.createdAt,
+    })
+    .from(orders)
+    .where(eq(orders.userId, user.id));
+  const ownOrderIds = ownOrderRows.map((row) => row.id);
+  const ownOrderItems =
+    ownOrderIds.length === 0
+      ? []
+      : await tx
+          .select({
+            orderId: orderItems.orderId,
+            title: orderItems.titleSnapshot,
+            quantity: orderItems.quantity,
+            unitPriceCents: orderItems.unitPriceCents,
+            vatRate: orderItems.vatRate,
+            createdAt: orderItems.createdAt,
+          })
+          .from(orderItems)
+          .where(inArray(orderItems.orderId, ownOrderIds));
+  const ownOrders = ownOrderRows.map(({ id, ...order }) => ({
+    ...order,
+    items: ownOrderItems
+      .filter((item) => item.orderId === id)
+      .map((item) => ({
+        title: item.title,
+        quantity: item.quantity,
+        unitPriceCents: item.unitPriceCents,
+        vatRate: item.vatRate,
+        createdAt: item.createdAt,
+      })),
+  }));
   // Colonne esplicite: token_hash non è leggibile dai ruoli applicativi (grant per colonna).
   const ownCheckouts = await tx
     .select({

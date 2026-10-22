@@ -268,7 +268,9 @@ describe("scadenza e webhook", () => {
       id: eventId,
       object: "event",
       livemode: false,
-      type: "checkout.session.completed",
+      // Un tipo che il gestore ignora: il test verifica firma e idempotenza. Il completed senza checkout_id
+      // ora lancia un errore (passo 7.3), quindi non è più un evento neutro per questo test.
+      type: "payment_intent.created",
       data: { object: { id: `cs_test_int_${tag}`, object: "checkout.session", metadata: {} } },
     });
     const badResponse = await webhookPost(

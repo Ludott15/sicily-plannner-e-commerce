@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Image from "next/image";
-import { Bell, BookOpen, ChevronDown, CalendarDays, Compass, Copy, Link2, LogOut, Map as MapIcon, MessageCircle, Pencil, Plane, Plus, Printer, Settings, Star, Trash2, Trophy, User, Users, BedDouble, Car, Ship } from "lucide-react";
+import { Bell, BookOpen, ChevronDown, CalendarDays, Compass, Copy, Link2, LogOut, Map as MapIcon, MessageCircle, Pencil, Plane, Plus, Printer, Receipt, Settings, Star, Trash2, Trophy, User, Users, BedDouble, Car, Ship } from "lucide-react";
 import { Link } from "@/lib/i18n/navigation";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +35,7 @@ const ICONS = {
   ship: Ship,
   message: MessageCircle,
   book: BookOpen,
+  receipt: Receipt,
 } as const;
 
 export type MenuIcon = keyof typeof ICONS;
