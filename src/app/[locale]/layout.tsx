@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createHash } from "node:crypto";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -44,6 +45,9 @@ export async function generateMetadata({ params }: Omit<Props, "children">): Pro
 }
 
 export default async function LocaleLayout({ children, params }: Props) {
+  // Il nonce della Content-Security-Policy (src/proxy.ts) è per richiesta: le pagine si rendono quindi
+  // dopo l'arrivo della richiesta, mai come HTML statico (Next, guida CSP: "must use dynamic rendering").
+  await connection();
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);

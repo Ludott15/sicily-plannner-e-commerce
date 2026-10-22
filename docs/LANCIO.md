@@ -281,3 +281,54 @@ Le guide di `content/guide/*.md` si caricano nel database con `scripts/content/i
 | Import in produzione | `DATABASE_URL` della produzione esportata nella shell (mai in `.env.local`), poi `npm run content:guides`; con host non locale il comando chiede conferma (`--yes` per saltarla) | Le guide compaiono in `/it/guide`; la sitemap `guide` elenca le otto guide. Un luogo mancante è nell'output come avviso "saltato". |
 
 Una modifica al file si rilancia con lo stesso comando: aggiorna la guida con lo stesso slug.
+
+## 12. Sicurezza, monitoraggio e backup (passo 11.5)
+
+Le decisioni tecniche stanno nel codice: header in `src/lib/security/headers.ts` (usati da `src/proxy.ts`), limiti di frequenza in `src/server/security/rate-limit.ts`, Sentry in `src/instrumentation*.ts` e `src/lib/observability/`. La revisione di sicurezza è in `docs/SICUREZZA-REVISIONE.md`.
+
+### 12.1 Variabili d'ambiente di produzione
+
+| Variabile | Valore | Verifica |
+| --- | --- | --- |
+| `RATE_LIMIT_SECRET` | chiave casuale (`openssl rand -hex 32`), diversa da `AFFILIATE_LINK_SECRET` | Senza chiave in produzione i limiti di accesso, ospiti e aeroporti negano (fail closed), e i click `/api/go` non sono limitati. Dopo il deploy, un controllo a mano: il 61° click al minuto su `/api/go/…` porta all'avviso "troppi click". |
+| `NEXT_PUBLIC_SENTRY_DSN` | DSN del progetto Sentry (pubblico, va bene nel browser) | Senza, nessun SDK parte e nessuna richiesta esce verso Sentry. |
+| `SENTRY_DSN` | stesso DSN, solo server (facoltativo) | Serve solo se il server deve usare un DSN diverso. |
+| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | token di Sentry con permesso di caricare release e sourcemap; solo su Vercel, ambiente Production | Senza token le sourcemap non si caricano e il build non tocca Sentry. Con il token, il log del build riporta "Uploaded" per le sourcemap. Il token non va mai con prefisso `NEXT_PUBLIC_`. |
+
+Le origini ammesse dalla Content-Security-Policy sono quelle che il sito usa: Supabase (HTTP e realtime), Turnstile, tile e stile di OpenFreeMap, avatar di Google, e l'host di ingest di Sentry solo se c'è il DSN. Un nuovo servizio esterno va aggiunto in `buildContentSecurityPolicy` con il suo test, altrimenti il browser lo blocca.
+
+### 12.2 Uptime check
+
+`GET /api/health` risponde `200 {"ok":true,"db":"ok"}` quando il database risponde entro 3 secondi; altrimenti `503 {"ok":false,"db":"error"}`. Non ha cache e non mostra versioni né errori.
+
+Da configurare fuori dal codice, con UptimeRobot o Better Stack (piano gratuito sufficiente):
+
+- monitor HTTP(s) su `https://<dominio>/it`, ogni 5 minuti, con una parola che compare sempre in home;
+- monitor HTTP(s) su `https://<dominio>/api/health`, ogni 5 minuti, con parola chiave `"ok":true`;
+- avviso via email al titolare dopo due controlli falliti di fila, e messaggio di ripristino.
+
+### 12.3 Sentry: avvisi e scrub
+
+- Regola di avviso: "quando nasce un problema nuovo" con invio email a Ludovico (Alerts, progetto del sito).
+- Scrub: ogni evento e breadcrumb passa da `scrubSentryEvent` (`src/lib/observability/scrub.ts`), che toglie utente, cookie, intestazioni di autorizzazione, corpo della richiesta e query string, e sostituisce email e token JWT nelle stringhe. Replay e trace sono spenti.
+- Verifica dopo il primo deploy con DSN: in staging, provocare un errore con un indirizzo email nel testo e controllare nel dashboard che l'evento non contenga l'email, né cookie né query string.
+- Release: il commit del deploy (`VERCEL_GIT_COMMIT_SHA`), così ogni errore si collega al codice che lo produce.
+
+### 12.4 Backup e ripristino
+
+- Piano: Supabase Pro (o superiore), con backup giornalieri automatici. Il recupero a un istante preciso (PITR) è un add-on da attivare prima del lancio se si vuole poter tornare indietro di minuti. La durata dei backup dipende dal piano: va letta nella dashboard del progetto, non in questo documento.
+- Procedura di prova (da fare sul progetto di staging del passo 11.6, mai sulla produzione):
+  1. Dashboard Supabase, Database, Backups: scegliere l'ultimo backup giornaliero e ripristinarlo in un progetto nuovo di prova.
+  2. Nel progetto di prova, con `psql` o l'SQL editor, confrontare i conteggi con la produzione del giorno: `select count(*) from public.activities;`, `select count(*) from public.places;`, `select count(*) from public.itineraries;`, `select count(*) from public.orders;`. I numeri devono coincidere con il backup, con la differenza di un giorno al massimo.
+  3. Nel progetto di prova, verificare che l'app si colleghi: impostare le variabili del progetto di prova in un deploy di preview, aprire `/it` e `/api/health` (deve dare `{"ok":true,"db":"ok"}`).
+  4. Eliminare il progetto di prova dopo la verifica, e annotare la data, la durata e l'esito qui sotto.
+
+| Data | Backup usato | Durata | Esito |
+| --- | --- | --- | --- |
+| da compilare | | | prova non ancora eseguita |
+
+### 12.5 Dipendenze e segreti
+
+- Dependabot: `.github/dependabot.yml` apre ogni lunedì le PR per npm e per le GitHub Actions; le patch di npm arrivano raggruppate in un'unica PR. Nelle impostazioni del repository attivare anche "Dependabot alerts" e "Dependabot security updates".
+- Secret scanning: Settings, Code security, attivare "Secret scanning" e "Push protection" sul repository. Non si attiva dal codice.
+- `npm audit --audit-level=high` non è in CI perché oggi fallisce (12 vulnerabilità di gravità alta, quasi tutte nelle dipendenze di sviluppo, oltre a Next.js 16.3.6 che ha avvisi aperti). Quando il comando passa, aggiungerlo allo step di `checks` in `.github/workflows/ci.yml`. Il rimedio per Next.js è un aggiornamento separato, con la sua PR e la CI verde.

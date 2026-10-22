@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 const withNextIntl = createNextIntlPlugin("./src/lib/i18n/request.ts");
 
@@ -42,4 +43,21 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+const nextConfigWithIntl = withNextIntl(nextConfig);
+
+// Sourcemap a Sentry solo con SENTRY_AUTH_TOKEN (passo 11.5): il caricamento è la sola ragione di avvolgere
+// la configurazione. Senza token il build non tocca Sentry, e le sourcemap caricate vengono cancellate dal
+// build, così non sono pubbliche. Il runtime non dipende da questo: lo attiva il DSN in src/instrumentation*.
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN?.trim();
+
+export default sentryAuthToken
+  ? withSentryConfig(nextConfigWithIntl, {
+      authToken: sentryAuthToken,
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      silent: !process.env.CI,
+      release: { name: process.env.VERCEL_GIT_COMMIT_SHA },
+      sourcemaps: { deleteSourcemapsAfterUpload: true },
+      buildTimeInstrumentation: false,
+    })
+  : nextConfigWithIntl;

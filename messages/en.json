@@ -1341,6 +1341,7 @@
     "errors": {
       "invalid": "Some answers aren't valid. Reload the page and try again.",
       "captcha_failed": "We couldn't verify that you're a person. Reload the page and try again.",
+      "rate_limited": "You tried too many times in a short time. Try again in a few minutes.",
       "failed": "We couldn't save your answers. Please try again."
     },
     "tripTitle": "Your next trip",
@@ -1463,6 +1464,7 @@
     "errors": {
       "invalid": "Check the details and try again.",
       "captcha_failed": "We couldn't verify you're not a robot. Please try again.",
+      "rate_limited": "You made too many attempts in a short time. Try again in a few minutes.",
       "not_found": "This trip is no longer available.",
       "failed": "Something went wrong. Please try again shortly.",
       "day_limit": "A trip can have at most 60 days.",
@@ -2139,6 +2141,7 @@
       "activity_not_available": "This activity is no longer available.",
       "not_eligible": "You can review the activities in your trip and the ones you opened an offer for.",
       "cannot_report_own": "You cannot report your own review.",
+      "rate_limited": "You have written or reported too many times today. Try again tomorrow.",
       "failed": "We could not save. Try again."
     },
     "deletedUser": "Deleted user"

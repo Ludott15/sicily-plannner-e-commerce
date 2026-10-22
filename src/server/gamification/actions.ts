@@ -5,6 +5,7 @@ import { z } from "zod";
 import { routing } from "@/lib/i18n/routing";
 import { requireUser } from "@/server/auth";
 import { setConsent } from "@/server/privacy/consents";
+import { checkRate, REVIEW_RULES } from "@/server/security/rate-limit";
 import { REPORT_REASONS, type ReportReason } from "./config";
 import { recordCheckIn, reportReview, submitReview } from "./core";
 import type { CheckInResult, ReportReviewState, ReviewFormState } from "./types";
@@ -61,6 +62,7 @@ export async function submitReviewAction(
     return { status: "error", code: "invalid" };
   }
   const user = await requireUser();
+  if ((await checkRate(REVIEW_RULES.submit, user.id)) === "limited") return { status: "error", code: "rate_limited" };
   const result = await submitReview(user, {
     activityId: parsed.data.activityId,
     rating: parsed.data.rating,
@@ -80,5 +82,6 @@ export async function reportReviewAction(
   const parsed = reportSchema.safeParse(input);
   if (!parsed.success) return { status: "error", code: "invalid" };
   const user = await requireUser();
+  if ((await checkRate(REVIEW_RULES.report, user.id)) === "limited") return { status: "error", code: "rate_limited" };
   return reportReview(user, parsed.data);
 }
