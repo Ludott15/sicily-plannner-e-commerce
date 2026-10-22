@@ -1351,6 +1351,7 @@
     "errors": {
       "invalid": "Qualche risposta non è valida. Ricarica la pagina e riprova.",
       "captcha_failed": "Non siamo riusciti a verificare che sei una persona. Ricarica la pagina e riprova.",
+      "rate_limited": "Hai provato troppe volte in poco tempo. Riprova tra qualche minuto.",
       "failed": "Non siamo riusciti a salvare le risposte. Riprova."
     },
     "tripTitle": "Il tuo prossimo viaggio",
@@ -1473,6 +1474,7 @@
     "errors": {
       "invalid": "Controlla i dati e riprova.",
       "captcha_failed": "Non siamo riusciti a verificare che non sei un robot. Riprova.",
+      "rate_limited": "Hai fatto troppi tentativi in poco tempo. Riprova tra qualche minuto.",
       "not_found": "Questo viaggio non è più disponibile.",
       "failed": "Qualcosa non ha funzionato. Riprova tra poco.",
       "day_limit": "Un viaggio può avere al massimo 60 giorni.",
@@ -1622,6 +1624,7 @@
     "originNoResults": "Nessun aeroporto trovato. Prova con la città o il codice IATA.",
     "originSearching": "Cerco gli aeroporti…",
     "originSearchError": "Non riusciamo a cercare gli aeroporti in questo momento. Riprova tra poco.",
+    "originSearchLimited": "Troppe ricerche in poco tempo. Riprova tra un minuto.",
     "originSicily": "Sei già in Sicilia: scegli un aeroporto di partenza fuori dall'isola.",
     "originRequired": "Scegli un aeroporto di partenza dalla lista.",
     "destination": "Arrivo in Sicilia",
@@ -2149,6 +2152,7 @@
       "activity_not_available": "Questa attività non è più disponibile.",
       "not_eligible": "Puoi recensire le attività del tuo viaggio e quelle per cui hai aperto un'offerta.",
       "cannot_report_own": "Non puoi segnalare una tua recensione.",
+      "rate_limited": "Hai scritto o segnalato troppe volte oggi. Riprova domani.",
       "failed": "Non è stato possibile salvare. Riprova."
     },
     "deletedUser": "Utente eliminato"

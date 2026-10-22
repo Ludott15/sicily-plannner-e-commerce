@@ -270,24 +270,39 @@ select is(
 -- RATE LIMIT
 ----------------------------------------------------------------------------
 select tests.as_anon();
-select is(public.hit_rate_limit('pgtap-rl-bucket-01', 3, 3600), true, 'rate limit: primo hit consentito');
-select is(public.hit_rate_limit('pgtap-rl-bucket-01', 3, 3600), true, 'rate limit: secondo hit consentito');
-select is(public.hit_rate_limit('pgtap-rl-bucket-01', 3, 3600), true, 'rate limit: terzo hit consentito (al limite)');
-select is(public.hit_rate_limit('pgtap-rl-bucket-01', 3, 3600), false, 'rate limit: quarto hit oltre il limite');
+-- hit_rate_limit è riservata al ruolo rate_limiter (migrazione rate_limiter_role): anonimo la vede negata.
+select throws_ok($$select public.hit_rate_limit('pgtap-rl-bucket-01', 3, 3600)$$, '42501', null, 'anonimo: hit_rate_limit negata');
 select throws_ok($$select * from public.rate_limit_hits$$, '42501', null, 'anonimo: rate_limit_hits non leggibile');
 select throws_ok(
   $$insert into public.rate_limit_hits (bucket, window_start, hits) values ('pgtap-rl-bucket-99', now(), 0)$$,
   '42501', null, 'anonimo: rate_limit_hits non scrivibile'
 );
+reset role;
+
+-- Il ruolo rate_limiter non ha USAGE sullo schema extensions (pgTAP): il risultato di ogni chiamata
+-- va in una tabella temporanea, e le asserzioni girano dopo reset role.
+create temp table rl_result (k text primary key, v boolean);
+grant all on rl_result to rate_limiter;
+set local role rate_limiter;
+insert into rl_result values ('p1', public.hit_rate_limit('pgtap-rl-bucket-01', 3, 3600));
+insert into rl_result values ('p2', public.hit_rate_limit('pgtap-rl-bucket-01', 3, 3600));
+insert into rl_result values ('p3', public.hit_rate_limit('pgtap-rl-bucket-01', 3, 3600));
+insert into rl_result values ('p4', public.hit_rate_limit('pgtap-rl-bucket-01', 3, 3600));
+insert into rl_result values ('u1', public.hit_rate_limit('pgtap-rl-bucket-03', 1, 3600));
+insert into rl_result values ('u2', public.hit_rate_limit('pgtap-rl-bucket-03', 1, 3600));
+reset role;
+select is((select v from rl_result where k = 'p1'), true, 'rate limit: primo hit consentito');
+select is((select v from rl_result where k = 'p2'), true, 'rate limit: secondo hit consentito');
+select is((select v from rl_result where k = 'p3'), true, 'rate limit: terzo hit consentito (al limite)');
+select is((select v from rl_result where k = 'p4'), false, 'rate limit: quarto hit oltre il limite');
+select is((select v from rl_result where k = 'u1'), true, 'rate limit: utente, primo hit');
+select is((select v from rl_result where k = 'u2'), false, 'rate limit: utente, oltre il limite');
+
+-- La validazione dei parametri non dipende dal ruolo: si verifica come postgres.
 select throws_ok($$select public.hit_rate_limit('corto', 3, 3600)$$, 'P0001', 'invalid_rate_limit', 'rate limit: bucket con formato errato');
 select throws_ok($$select public.hit_rate_limit('pgtap-rl-bucket-02', 0, 3600)$$, 'P0001', 'invalid_rate_limit', 'rate limit: limite a zero');
 select throws_ok($$select public.hit_rate_limit('pgtap-rl-bucket-02', 3, 0)$$, 'P0001', 'invalid_rate_limit', 'rate limit: finestra a zero');
 
-select tests.authenticate_as('alice');
-select is(public.hit_rate_limit('pgtap-rl-bucket-03', 1, 3600), true, 'rate limit: utente, primo hit');
-select is(public.hit_rate_limit('pgtap-rl-bucket-03', 1, 3600), false, 'rate limit: utente, oltre il limite');
-
-reset role;
 select is(
   (select hits from public.rate_limit_hits where bucket = 'pgtap-rl-bucket-01'),
   4,

@@ -52,7 +52,7 @@ function cityLabel(airport: DepartureAirport, lang: Lang): string {
 }
 
 // Risultato dell'ultima ricerca: vale solo per il testo `text` che l'ha chiesta.
-type OriginSearch = { text: string; airports: DepartureAirport[]; failed: boolean };
+type OriginSearch = { text: string; airports: DepartureAirport[]; failed: boolean; limited: boolean };
 
 // La ricerca corrisponde a un aeroporto siciliano (codice, città o nome) da tre lettere in su.
 function isSicilianQuery(query: string): boolean {
@@ -88,7 +88,7 @@ export function FlightSearch({ variant, initial }: FlightSearchProps) {
   const initialOrigin = initial.origin;
   const [origin, setOrigin] = useState<DepartureAirport | null>(initialOrigin);
   const [query, setQuery] = useState(initialOrigin ? cityLabel(initialOrigin, lang) : "");
-  const [search, setSearch] = useState<OriginSearch>({ text: "", airports: [], failed: false });
+  const [search, setSearch] = useState<OriginSearch>({ text: "", airports: [], failed: false, limited: false });
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [destination, setDestination] = useState<SicilyAirportCode>(initial.destination ?? DEFAULT_DESTINATION);
@@ -104,11 +104,13 @@ export function FlightSearch({ variant, initial }: FlightSearchProps) {
   const matches = origin === null && answered && !search.failed ? search.airports : [];
   const searching = origin === null && trimmed !== "" && !answered;
   const failed = origin === null && answered && search.failed;
+  const limited = origin === null && answered && search.limited;
   const sicilian = origin === null && isSicilianQuery(query);
   const showList = open && origin === null && matches.length > 0;
   const showSearching = open && searching;
   const showFailed = open && failed;
-  const showEmpty = open && origin === null && answered && !failed && matches.length === 0 && trimmed !== "" && !sicilian;
+  const showLimited = open && limited;
+  const showEmpty = open && origin === null && answered && !failed && !limited && matches.length === 0 && trimmed !== "" && !sicilian;
   const optionId = (index: number) => `${listId}-option-${index}`;
 
   useEffect(() => {
@@ -118,14 +120,19 @@ export function FlightSearch({ variant, initial }: FlightSearchProps) {
       const params = new URLSearchParams({ q: trimmed });
       fetch(`/api/flights/airports?${params.toString()}`, { signal: controller.signal, headers: { Accept: "application/json" } })
         .then(async (res) => {
+          // 429: troppe ricerche in poco tempo. Non è un guasto: messaggio dedicato, niente elenco.
+          if (res.status === 429) {
+            setSearch({ text: trimmed, airports: [], failed: false, limited: true });
+            return;
+          }
           if (!res.ok) throw new Error(`status ${res.status}`);
           const parsed = airportsResponseSchema.safeParse(await res.json());
           if (!parsed.success) throw new Error("invalid_response");
-          setSearch({ text: trimmed, airports: parsed.data.airports, failed: false });
+          setSearch({ text: trimmed, airports: parsed.data.airports, failed: false, limited: false });
         })
         .catch(() => {
           if (controller.signal.aborted) return;
-          setSearch({ text: trimmed, airports: [], failed: true });
+          setSearch({ text: trimmed, airports: [], failed: true, limited: false });
         });
     }, SEARCH_DEBOUNCE_MS);
     return () => {
@@ -285,6 +292,11 @@ export function FlightSearch({ variant, initial }: FlightSearchProps) {
           {showSearching && (
             <p role="status" className="text-body-s text-lava-muted">
               {t("originSearching")}
+            </p>
+          )}
+          {showLimited && (
+            <p role="status" className="text-body-s text-lava-muted">
+              {t("originSearchLimited")}
             </p>
           )}
           {showFailed && (

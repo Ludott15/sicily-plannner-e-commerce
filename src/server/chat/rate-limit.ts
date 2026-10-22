@@ -1,9 +1,8 @@
 import "server-only";
 import { createHmac } from "node:crypto";
-import { sql } from "drizzle-orm";
 import { rateLimitSecret } from "@/server/affiliates/config";
 import { clientIp } from "@/server/affiliates/rate-key";
-import { dbPublic } from "@/server/db/public";
+import { hitRateLimit } from "@/server/db/rate-limiter";
 import type { DbUser } from "@/server/db/user";
 import { CHAT_DAY_SECONDS, CHAT_IP_LIMIT, dailyLimitFor } from "./config";
 
@@ -56,15 +55,7 @@ export async function decideChatLimit(input: {
   }
 }
 
-const databaseCounter: HitCounter = async (bucket, limit, windowSeconds) => {
-  const [row] = await dbPublic((tx) =>
-    tx.execute<{ allowed: boolean }>(
-      sql`select public.hit_rate_limit(${bucket}, ${limit}, ${windowSeconds}) as allowed`,
-    ),
-  );
-  if (row?.allowed !== true && row?.allowed !== false) throw new Error("rate_counter_invalid");
-  return row.allowed;
-};
+const databaseCounter: HitCounter = (bucket, limit, windowSeconds) => hitRateLimit(bucket, limit, windowSeconds);
 
 export async function checkChatRateLimit(user: DbUser, headers: Headers): Promise<RateDecision> {
   const secret = rateLimitSecret();

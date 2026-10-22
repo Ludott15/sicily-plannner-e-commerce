@@ -16,6 +16,7 @@ import { itineraries, itineraryItems } from "@/server/db/schema";
 import { dbAsUser, type DbUser, type UserTx } from "@/server/db/user";
 import { areaNames, driveTimesBySlug, engineCatalog, getSavedPreferences, personalProfile } from "@/server/personalization/data";
 import { proposeTrips } from "@/server/personalization/engine";
+import { guestSessionDecision } from "@/server/security/guest-limit";
 import { createClient } from "@/server/supabase/server";
 import { proposalErrorCodeOf, type ProposalErrorCode } from "@/server/groups/proposal-state";
 import {
@@ -44,7 +45,7 @@ import { addStopTx, removeStopTx, writeOrder, type AddOutcome } from "./stops";
 
 export type TripActionError = {
   status: "error";
-  code: BuilderErrorCode | "captcha_failed" | "failed" | ProposalErrorCode;
+  code: BuilderErrorCode | "captcha_failed" | "rate_limited" | "failed" | ProposalErrorCode;
 };
 
 export type TripFormState = TripActionError | { status: "ok" };
@@ -83,6 +84,8 @@ async function sessionUser(captchaToken: string | undefined): Promise<User | Tri
   const user = await getUser();
   if (user) return user;
   if (!captchaToken) return { status: "error", code: "captcha_failed" };
+  const guest = await guestSessionDecision();
+  if (guest !== "allowed") return { status: "error", code: guest === "limited" ? "rate_limited" : "failed" };
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInAnonymously({ options: { captchaToken } });
   if (error || !data.user) return { status: "error", code: error?.code === "captcha_failed" ? "captcha_failed" : "failed" };

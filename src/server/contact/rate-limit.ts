@@ -1,8 +1,7 @@
 import "server-only";
 import { createHmac } from "node:crypto";
-import { sql } from "drizzle-orm";
 import { rateLimitSecret } from "@/server/affiliates/config";
-import { dbPublic } from "@/server/db/public";
+import { hitRateLimit } from "@/server/db/rate-limiter";
 
 // Limite del modulo di contatto (passo 8.3): 5 messaggi l'ora per IP, con la stessa funzione SQL
 // hit_rate_limit dei click affiliati. È fail closed: se il contatore non risponde o la chiave manca
@@ -33,14 +32,8 @@ export async function checkContactRateLimit(ip: string | null): Promise<ContactR
   const secret = bucketSecret();
   if (!secret) return "unavailable";
   try {
-    const [row] = await dbPublic((tx) =>
-      tx.execute<{ allowed: boolean | null }>(
-        sql`select public.hit_rate_limit(${contactBucket(ip, secret)}, ${CONTACT_RATE_LIMIT.limit}, ${CONTACT_RATE_LIMIT.windowSeconds}) as allowed`,
-      ),
-    );
-    if (row?.allowed === true) return "allowed";
-    if (row?.allowed === false) return "limited";
-    return "unavailable";
+    const allowed = await hitRateLimit(contactBucket(ip, secret), CONTACT_RATE_LIMIT.limit, CONTACT_RATE_LIMIT.windowSeconds);
+    return allowed ? "allowed" : "limited";
   } catch {
     return "unavailable";
   }

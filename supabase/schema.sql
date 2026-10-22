@@ -7421,6 +7421,7 @@ GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
+GRANT USAGE ON SCHEMA "public" TO "rate_limiter";
 
 
 
@@ -7674,9 +7675,8 @@ GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
 
 
 REVOKE ALL ON FUNCTION "public"."hit_rate_limit"("p_bucket" "text", "p_limit" integer, "p_window_seconds" integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."hit_rate_limit"("p_bucket" "text", "p_limit" integer, "p_window_seconds" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."hit_rate_limit"("p_bucket" "text", "p_limit" integer, "p_window_seconds" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."hit_rate_limit"("p_bucket" "text", "p_limit" integer, "p_window_seconds" integer) TO "service_role";
+GRANT ALL ON FUNCTION "public"."hit_rate_limit"("p_bucket" "text", "p_limit" integer, "p_window_seconds" integer) TO "rate_limiter";
 
 
 

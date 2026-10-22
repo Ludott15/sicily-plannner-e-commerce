@@ -23,6 +23,7 @@ export type ReviewErrorCode =
   | "invalid_text"
   | "activity_not_available"
   | "not_eligible"
+  | "rate_limited"
   | "failed";
 
 export type ReviewFormState =
@@ -33,7 +34,7 @@ export type ReviewFormState =
 export type ReportReviewState =
   | { status: "idle" }
   | { status: "reported" }
-  | { status: "error"; code: "invalid" | "guest_not_allowed" | "cannot_report_own" | "failed" };
+  | { status: "error"; code: "invalid" | "guest_not_allowed" | "cannot_report_own" | "rate_limited" | "failed" };
 
 export type PointMovement = {
   id: string;

@@ -8,6 +8,7 @@ import { routing } from "@/lib/i18n/routing";
 import { getUser, requireUser } from "@/server/auth";
 import { safeNextPath } from "@/server/auth/redirect";
 import { setConsent, withdrawConsent } from "@/server/privacy/consents";
+import { guestSessionDecision } from "@/server/security/guest-limit";
 import { createClient } from "@/server/supabase/server";
 import { clearSensitivePreferences, getSavedPreferences, saveAnswers, saveExtraPreferences, saveTastes, saveTrip } from "./data";
 
@@ -50,7 +51,7 @@ const onboardingSchema = z.object({
 
 // La lingua arriva come stringa dal client: la valida Zod.
 export type OnboardingInput = Omit<z.input<typeof onboardingSchema>, "locale"> & { locale: string };
-export type ActionError = { status: "error"; code: "invalid" | "captcha_failed" | "failed" };
+export type ActionError = { status: "error"; code: "invalid" | "captcha_failed" | "rate_limited" | "failed" };
 
 export async function submitOnboarding(input: OnboardingInput): Promise<ActionError> {
   const parsed = onboardingSchema.safeParse(input);
@@ -60,6 +61,8 @@ export async function submitOnboarding(input: OnboardingInput): Promise<ActionEr
   let user = await getUser();
   if (!user) {
     if (!captchaToken) return { status: "error", code: "captcha_failed" };
+    const guest = await guestSessionDecision();
+    if (guest !== "allowed") return { status: "error", code: guest === "limited" ? "rate_limited" : "failed" };
     const supabase = await createClient();
     const { data, error } = await supabase.auth.signInAnonymously({ options: { captchaToken } });
     if (error || !data.user) return { status: "error", code: error?.code === "captcha_failed" ? "captcha_failed" : "failed" };

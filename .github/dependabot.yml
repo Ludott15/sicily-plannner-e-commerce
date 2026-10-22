@@ -1,0 +1,35 @@
+# Aggiornamenti settimanali (passo 11.5). Le patch di npm si raggruppano in un'unica PR, così il lavoro di
+# revisione resta piccolo. Le minor e le major arrivano una per una, da esaminare.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Rome
+    open-pull-requests-limit: 10
+    groups:
+      patch-npm:
+        update-types:
+          - patch
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Rome
+    groups:
+      actions:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: "chore(ci)"

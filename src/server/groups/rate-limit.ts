@@ -1,8 +1,7 @@
 import "server-only";
 import { createHmac } from "node:crypto";
-import { sql } from "drizzle-orm";
 import { rateLimitSecret } from "@/server/affiliates/config";
-import { dbPublic } from "@/server/db/public";
+import { hitRateLimit } from "@/server/db/rate-limiter";
 import { EMAIL_INVITE_DAILY_LIMIT } from "./state";
 
 // Limite delle email di invito per utente al giorno (passo 4.1), con hit_rate_limit. Il bucket è
@@ -21,12 +20,7 @@ export async function allowEmailInvite(userId: string): Promise<boolean> {
   const secret = rateLimitSecret();
   if (!secret) return false;
   const bucket = emailInviteBucket(userId, secret);
-  const [row] = await dbPublic((tx) =>
-    tx.execute<{ allowed: boolean }>(
-      sql`select public.hit_rate_limit(${bucket}, ${EMAIL_INVITE_DAILY_LIMIT}, ${DAY_SECONDS}) as allowed`,
-    ),
-  );
-  return row?.allowed === true;
+  return hitRateLimit(bucket, EMAIL_INVITE_DAILY_LIMIT, DAY_SECONDS);
 }
 
 export function inviteEmailLimitConfigured(): boolean {

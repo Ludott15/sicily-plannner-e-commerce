@@ -1,9 +1,8 @@
 import "server-only";
 import { createHmac } from "node:crypto";
-import { sql } from "drizzle-orm";
 import { rateLimitSecret } from "@/server/affiliates/config";
 import { clientIp } from "@/server/affiliates/rate-key";
-import { dbPublic } from "@/server/db/public";
+import { hitRateLimit } from "@/server/db/rate-limiter";
 
 // Limiti della ricerca (passo 11.2) per IP, con la funzione SQL hit_rate_limit. Il bucket ha un
 // prefisso proprio ("search:"): non condivide il contatore con /api/go ("go:"). Senza
@@ -28,12 +27,7 @@ export async function allowSearchRequest(headers: Headers, rule: SearchRateRule)
   if (!secret) return true;
   const bucket = searchRateBucket(rule, clientIp(headers) ?? "unknown", secret);
   try {
-    const [row] = await dbPublic((tx) =>
-      tx.execute<{ allowed: boolean }>(
-        sql`select public.hit_rate_limit(${bucket}, ${rule.limit}, ${rule.windowSeconds}) as allowed`,
-      ),
-    );
-    return row?.allowed !== false;
+    return await hitRateLimit(bucket, rule.limit, rule.windowSeconds);
   } catch {
     return true;
   }
