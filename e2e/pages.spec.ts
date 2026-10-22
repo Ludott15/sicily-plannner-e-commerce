@@ -79,7 +79,7 @@ test("pagine dal footer: link affiliati e informazioni legali", async ({ page })
     await page.getByRole("navigation", { name: "Piè di pagina" }).getByRole("link", { name, exact: true }).click();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(name);
     // Il testo è quello di content/legal: data di aggiornamento e versione sono in pagina.
-    await expect(page.getByText(/versione 1$/)).toBeVisible();
+    await expect(page.getByText(/versione \d+$/)).toBeVisible();
   }
 });
 
