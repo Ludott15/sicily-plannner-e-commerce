@@ -51,11 +51,16 @@ test("Account › Privacy: il consenso alla profilazione si attiva e si revoca, 
   await expect(profiling).toHaveAttribute("aria-checked", "false");
 
   const { withDb } = await import("./db.mjs");
-  const rows = await withDb(
-    (sql) => sql`select granted from public.user_consents where user_id = ${id} and kind = 'profiling' order by id`,
-  );
-  // Ogni scelta è una riga nuova: il registro non si modifica.
-  expect(rows.map((row) => row.granted)).toEqual([true, false]);
+  // Ogni scelta è una riga nuova: il registro non si modifica. L'interruttore si aggiorna subito,
+  // la riga della revoca arriva quando l'azione finisce: si attende il registro.
+  await expect
+    .poll(async () => {
+      const rows = await withDb(
+        (sql) => sql`select granted from public.user_consents where user_id = ${id} and kind = 'profiling' order by id`,
+      );
+      return rows.map((row) => row.granted);
+    })
+    .toEqual([true, false]);
 });
 
 test("scarico dei dati: JSON con i dati dell'utente, CSV dei punti", async ({ page, request }) => {
