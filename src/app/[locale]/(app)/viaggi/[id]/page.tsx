@@ -19,6 +19,7 @@ import { TRIP_TABS, type TripTab } from "@/lib/trip-tabs";
 import { tripDayIndex } from "@/lib/trip-today";
 import { formatDuration } from "@/lib/format";
 import { flightSearchPath, MAX_PASSENGERS } from "@/lib/flights/search-params";
+import { consecutiveLegPairs } from "@/lib/maps/legs";
 import { activeTab } from "@/lib/tabs";
 import { bookingEntries } from "@/lib/trips";
 import { partnerName, type Partner } from "@/server/affiliates/links";
@@ -27,6 +28,7 @@ import { requireUser } from "@/server/auth";
 import { getGroup } from "@/server/groups/queries";
 import { getTripGroupState } from "@/server/groups/trip-group";
 import { chatStatus } from "@/server/chat/queries";
+import { getLegs } from "@/server/maps/legs";
 import { getTrip, getTripVerticalChips, type VerticalChip } from "@/server/trips/queries";
 
 // Pagina del viaggio (M5, 1.4; riprogettata in 6.1). Solo il proprietario o i membri del gruppo la aprono:
@@ -58,8 +60,15 @@ export default async function TripPage({ params, searchParams }: Props) {
     chatStatus(user),
   ]);
   if (!trip) notFound();
-  // Gruppo del viaggio (4.1): il nome serve al link. Il viaggio è di chi lo apre, o di un membro.
-  const group = trip.groupId ? await getGroup(user, trip.groupId) : null;
+  // Gruppo del viaggio (4.1) e tratte stradali delle tappe consecutive (place_legs), in parallelo: le
+  // tratte mancanti non compaiono e la mappa le disegna come arco "in calcolo".
+  const legPairs = Array.from({ length: trip.days }, (_, d) =>
+    consecutiveLegPairs(trip.stops.filter((s) => s.dayIndex === d).map((s) => s.placeId)),
+  );
+  const [group, legs] = await Promise.all([
+    trip.groupId ? getGroup(user, trip.groupId) : null,
+    getLegs(legPairs.flat()),
+  ]);
   // Stato del gruppo (4.2): voti, alternative, proposte e modifiche di questo viaggio.
   const groupState = group ? await getTripGroupState(user, id, group.id) : null;
 
@@ -122,6 +131,7 @@ export default async function TripPage({ params, searchParams }: Props) {
         // Coordinate del luogo, per la mappa del giorno (6.2).
         lat: s.lat,
         lng: s.lng,
+        placeId: s.placeId,
         // Miniatura della foto assegnata alla tappa (vedi sopra).
         thumbUrl: thumbFor(s.id),
       })),
@@ -277,6 +287,7 @@ export default async function TripPage({ params, searchParams }: Props) {
         <TripBuilder
           tripId={trip.id}
           days={days}
+          legs={legs}
           warnings={trip.warnings}
           initialDay={(Number(giorno) || 1) - 1}
           bookings={bookings}

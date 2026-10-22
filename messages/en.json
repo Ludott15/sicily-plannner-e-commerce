@@ -2298,7 +2298,17 @@
     "viewList": "List",
     "viewMap": "Map",
     "activitiesMapLabel": "Map of the places of the activities",
-    "canvasTitle": "Map"
+    "canvasTitle": "Map",
+    "showOnMap": "Show on map",
+    "navLabel": "Navigation between stops",
+    "prevStop": "Previous stop",
+    "nextStop": "Next stop",
+    "stopOf": "Stop {n} of {total} · {name}",
+    "showAll": "Show the whole day",
+    "routeEta": "{duration} · {distance} by car",
+    "routePending": "Route being calculated",
+    "sameSpot": "Same place",
+    "legendPending": "Dashed line: route being calculated. Time and distance follow the calculation."
   },
   "Email": {
     "layout": {

@@ -7,12 +7,14 @@ import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
 import { ActionBar, ButtonLink } from "@/components/design";
 import { formatDuration } from "@/lib/format";
+import { consecutiveLegPairs, legsForPairs } from "@/lib/maps/legs";
 import { assignStopPhotos } from "@/lib/itinerary-photos";
 import { coverThumbUrl, type CoverMedia } from "@/lib/media";
 import { canonicalFor } from "@/lib/seo";
 import { breadcrumbList, touristTrip } from "@/lib/structured-data";
 import { getTemplate } from "@/server/catalog/queries";
 import { listTipsFor } from "@/server/catalog/tips";
+import { getLegs } from "@/server/maps/legs";
 
 // Itinerario pronto (mockup ItinerarioProntoMobile.html; su desktop la foto sta accanto al testo).
 // Hero: eyebrow, titolo, sottotitolo, autore, "Usa questo itinerario" e Condividi. Sotto, i fatti
@@ -85,7 +87,7 @@ export default async function ItineraryPage({ params }: Props) {
   };
 
   // Nome del giorno: il titolo editoriale; senza titolo, i luoghi delle tappe di quel giorno.
-  const days: Day[] = Array.from({ length: itinerary.days }, (_, day) => {
+  const outline: Omit<Day, "legs">[] = Array.from({ length: itinerary.days }, (_, day) => {
     const items = itinerary.items.filter((item) => item.dayIndex === day);
     const places = [...new Set(items.flatMap((i) => (i.placeName ? [i.placeName] : [])))];
     const tipItem = items.find((i) => tipFor(i));
@@ -105,6 +107,7 @@ export default async function ItineraryPage({ params }: Props) {
       // Coordinate del luogo della tappa, per la mappa del giorno (6.2).
       lat: item.lat,
       lng: item.lng,
+      placeId: item.placeId,
       tip: item === tipItem ? tipFor(item) : null,
     }));
     return {
@@ -114,6 +117,12 @@ export default async function ItineraryPage({ params }: Props) {
       stops,
     };
   });
+
+  // Tratte stradali: una sola lettura per tutti i giorni, poi ogni giorno prende solo le sue coppie
+  // consecutive (le mancanti non compaiono e la mappa le disegna come arco "in calcolo").
+  const pairsByDay = outline.map((day) => consecutiveLegPairs(day.stops.map((stop) => stop.placeId)));
+  const allLegs = await getLegs(pairsByDay.flat());
+  const days: Day[] = outline.map((day, index) => ({ ...day, legs: legsForPairs(allLegs, pairsByDay[index] ?? []) }));
 
   const areaNames = itinerary.facts.areas.map(areaName);
   const firstPlace = itinerary.items.find((i) => i.placeName);

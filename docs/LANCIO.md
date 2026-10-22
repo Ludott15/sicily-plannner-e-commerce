@@ -130,6 +130,9 @@ Le mappe (itinerari, viaggi, luoghi, lista delle attività) usano lo stile base 
 | --- | --- | --- |
 | Tile | Richieste a `tiles.openfreemap.org` solo quando la mappa entra nello schermo | A mano: itinerario pronto con la mappa, DevTools → Rete: la prima richiesta ai tile parte dopo lo scroll, e lo stato è 200. |
 | Attribuzione | "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors" leggibile in ogni mappa | A mano su 390 e 1280, nei due temi. |
+| Tratte stradali (`ROUTING_URL`) | Il cron `/api/cron/route-legs` (ogni ora, minuto 15) calcola con OSRM le tratte mancanti e le salva in `place_legs`. Le coppie vengono prima dalle tappe consecutive degli itinerari modello, poi da tutte le coppie di luoghi attivi del catalogo a meno di 150 km in linea d'aria. I viaggi degli utenti non entrano nel calcolo: trovano le tratte già pronte, senza che i loro dati finiscano in `place_legs`. Una coppia che il router non risolve (per esempio un'isola) va in `place_leg_failures` e si riprova dopo sette giorni. Il cron si ferma dopo 240 s, sotto il tempo massimo della funzione Il default è la demo pubblica `https://router.project-osrm.org`: solo per uso leggero, senza garanzie. Per la produzione con traffico serve un servizio di routing con licenza adeguata (OSRM self-hosted, Openrouteservice, GraphHopper) e la sua URL in `ROUTING_URL` su Vercel | Vercel → Cron Jobs: `/api/cron/route-legs` risulta pianificato. `GET https://<dominio>/api/cron/route-legs` con `CRON_SECRET` risponde 200 con `{"computed": n, "failed": m}`. Su un itinerario pronto con più tappe, la mappa mostra la strada e non una retta tratteggiata |
+
+Il server demo di OSRM accetta poche richieste al secondo: il cron ne fa al massimo 40 l'ora, con una pausa di 1100 ms tra una e l'altra. Per ricalcolare a mano in locale, con un limite più alto: `npm run maps:legs -- 200`.
 
 ## Verifica automatica
 

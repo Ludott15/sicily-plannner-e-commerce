@@ -2298,7 +2298,17 @@
     "viewList": "Elenco",
     "viewMap": "Mappa",
     "activitiesMapLabel": "Mappa dei luoghi delle attività",
-    "canvasTitle": "Mappa"
+    "canvasTitle": "Mappa",
+    "showOnMap": "Mostra sulla mappa",
+    "navLabel": "Navigazione tra le tappe",
+    "prevStop": "Tappa precedente",
+    "nextStop": "Tappa successiva",
+    "stopOf": "Tappa {n} di {total} · {name}",
+    "showAll": "Mostra tutto il giorno",
+    "routeEta": "{duration} · {distance} in auto",
+    "routePending": "Percorso in calcolo",
+    "sameSpot": "Stesso luogo",
+    "legendPending": "Linea tratteggiata: percorso in calcolo. Tempo e distanza arrivano dopo il calcolo."
   },
   "Email": {
     "layout": {

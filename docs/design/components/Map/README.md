@@ -4,8 +4,9 @@ Mappa dei punti di un giorno o di una pagina: marker numerati come le tappe, una
 
 - **Provider:** MapLibre GL JS (`maplibre-gl`) con lo stile base di OpenFreeMap (`liberty`). Nessuna chiave, nessun cookie. Attribuzione "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors" in un controllo non compatto, sempre leggibile.
 - **Colori dai token:** i colori dello stile (acqua, terra, strade, etichette, linea del percorso) si leggono dalle variabili CSS del contenitore al montaggio e al cambio di tema (`data-theme` o preferenza di sistema). Nessun colore scritto nel codice.
-- **Marker:** cerchio `lava` con il numero in `calce`, come il numero di tappa. Senza numero, un punto `coccio`. I marker sono nascosti allo screen reader: vale l'elenco numerato.
-- **Linea del percorso:** una sola linea per giorno, tratteggiata in `lava-muted` (2px, tratti 2 e spazi 6, come nel manuale). Solo con `route`.
+- **Marker:** cerchio `lava` con il numero in `calce`, come il numero di tappa. Senza numero, un punto `coccio`. Ogni tappa ha il suo marker: le tappe nello stesso luogo non si fondono, si dispongono a raggiera attorno al punto reale, con una linea sottile di collegamento (raggio in pixel che dipende dallo zoom). La tappa attiva è più grande, con anello `coccio`; una tappa già visitata (check-in di oggi) è attenuata. I marker sono nascosti allo screen reader: vale l'elenco numerato.
+- **Percorso:** solo con `route`. Se la tratta stradale tra due tappe consecutive esiste (`legs`), la linea segue la strada, continua, con una freccia a metà tratto. Se non esiste, un arco curvo tratteggiato in `lava-muted` (2px, tratti 2 e spazi 6, come nel manuale), mai una retta, con la nota "Percorso in calcolo" nella legenda. Il tratto della tappa attiva è più spesso e in `lava`.
+- **Navigazione:** con `route` e più di una tappa, una barra sotto il riquadro: "Tappa precedente", "Tappa n di N · nome", "Tappa successiva", il tempo e la distanza verso la successiva ("≈ 25 min · 18 km in auto"), "Mostra tutto il giorno". Il click cambia la tappa attiva e centra la mappa con `flyTo` (con `prefers-reduced-motion` salto immediato). Tastiera: frecce sinistra e destra quando la barra ha il focus; il nome della tappa va all'area `aria-live` polite. La tappa attiva può essere controllata dal genitore, così l'elenco delle tappe si evidenzia insieme alla mappa.
 - **Vista:** `fitBounds` sui punti con margine, zoom massimo 13. Con `prefers-reduced-motion` il movimento è istantaneo. Senza punti, il centro della Sicilia.
 - **Interazione:** lo scroll della pagina non si blocca. Lo zoom con la rotella richiede Ctrl (o Cmd); su touch servono due dita per spostare la mappa. Controlli di zoom con etichette.
 - **Caricamento:** il canvas si monta solo quando il riquadro entra nello schermo (IntersectionObserver, con 200 px di anticipo). Il codice di MapLibre e il suo CSS sono in un import dinamico: non entrano nel bundle iniziale. Finché non si vede, nessuna richiesta al provider.
@@ -20,13 +21,22 @@ Mappa dei punti di un giorno o di una pagina: marker numerati come le tappe, una
 
 | Prop | Tipo | Note |
 | --- | --- | --- |
-| `points` | `{ id: string; lat: number; lng: number; label: string; number?: number }[]` | Con `number` il marker è numerato. Il riferimento cambia solo quando cambia il contenuto. |
-| `route` | `boolean` | Linea tra i punti nell'ordine dato. Predefinito `false`. |
+| `points` | `{ id: string; lat: number; lng: number; label: string; number?: number; placeId?: string \| null; visited?: boolean }[]` | Con `number` il marker è numerato. `placeId` serve a trovare la tratta stradale. `visited` attenua il marker. Il riferimento cambia solo quando cambia il contenuto. |
+| `route` | `boolean` | Percorso tra i punti nell'ordine dato (tratte stradali o archi) e barra di navigazione. Predefinito `false`. |
+| `legs` | `RouteLeg[]` | Tratte stradali da `place_legs` (`src/lib/maps/legs.ts`). Usate solo con `route`; le coppie senza tratta sono archi. Predefinito `[]`. |
+| `activeId` | `string \| null` | Tappa attiva controllata dal genitore. Senza, la mappa tiene la sua (la prima tappa). |
+| `onActiveChange` | `(id: string) => void` | Chiamata al cambio di tappa attiva (barra, click su un marker). |
 | `ariaLabel` | `string` | Nome della sezione (obbligatorio). |
 | `listed` | `boolean` | Elenco numerato dei punti. Predefinito `true`. |
 | `className` | `string` | Classe di utilità sullo stesso elemento: vince sul componente. |
+
+## Struttura
+
+La sezione esterna (`aria-label`, `data-state`, `className`) contiene il riquadro `.is-map` (canvas, elenco, attribuzione) e, con `route`, la barra `.is-map-nav`. L'altezza fissa è sul riquadro, non sulla sezione.
 
 ## Attenzione
 
 - Un punto senza `lat` o `lng` non si disegna: la tappa resta nell'elenco della pagina, senza marker.
 - Il numero del marker è quello della tappa nel giorno, anche se una tappa precedente non ha coordinate.
+- La barra conta le tappe con coordinate: "Tappa n di N" usa quel conteggio, il numero sul marker resta quello della tappa nel giorno.
+- Una coppia senza tratta calcolata è un arco tratteggiato: non si mostra mai una retta piatta tra due tappe.
