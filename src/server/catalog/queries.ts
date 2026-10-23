@@ -437,6 +437,7 @@ export const getTemplate = cache((slug: string) =>
         days: itineraries.days,
         dayTitles: itineraries.dayTitles,
         dayIntros: itineraries.dayIntros,
+        tips: itineraries.tips,
         pace: itineraries.pace,
         suitableFor: itineraries.suitableFor,
         seasonMonths: itineraries.seasonMonths,

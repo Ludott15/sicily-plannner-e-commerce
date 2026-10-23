@@ -13,14 +13,14 @@ test("shop: il filtro per categoria mostra solo i dolci demo", async ({ page }) 
   await expect(page).toHaveURL(/\/it\/shop\?.*categoria=dolci/);
 
   const list = page.getByRole("list", { name: "Shop" });
-  await expect(list.getByRole("link", { name: "[DEMO] Crema di pistacchio" })).toBeVisible();
-  await expect(list.getByRole("link", { name: "[DEMO] Cannolo alla ricotta" })).toBeVisible();
-  await expect(list.getByRole("link", { name: "[DEMO] Olio extravergine iblea" })).toHaveCount(0);
+  await expect(list.getByRole("link", { name: "Crema di pistacchio" })).toBeVisible();
+  await expect(list.getByRole("link", { name: "Cannolo alla ricotta" })).toBeVisible();
+  await expect(list.getByRole("link", { name: "Olio extravergine iblea" })).toHaveCount(0);
 });
 
 test("pagina prodotto: allergeni in evidenza, prezzo IVA inclusa e tempi di spedizione", async ({ page }) => {
   await page.goto("/it/prodotti/demo-crema-pistacchio");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("[DEMO] Crema di pistacchio");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Crema di pistacchio");
   await expect(page.getByText("IVA inclusa", { exact: true })).toBeVisible();
   await expect(page.getByText("Spedito dal nostro fornitore in 3 giorni lavorativi")).toBeVisible();
 
@@ -51,24 +51,24 @@ test("pagina prodotto deperibile: avviso sul recesso e scadenza minima", async (
 test("pagina prodotto della box: i componenti con le quantità", async ({ page }) => {
   await page.goto("/it/prodotti/demo-box-sicilia");
   const box = page.locator('section[aria-labelledby="dentro-la-box"]');
-  await expect(box.getByRole("link", { name: "[DEMO] Pasta di grano antico" })).toBeVisible();
+  await expect(box.getByRole("link", { name: "Pasta di grano antico" })).toBeVisible();
   await expect(box.getByText("2 ×")).toBeVisible();
 });
 
 test("pagina produttore: storia e prodotti del produttore", async ({ page }) => {
   await page.goto("/it/produttori/demo-pistacchi-bronte");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("[DEMO] Pistacchi di Bronte");
-  await expect(page.getByText("[DEMO] Storia di prova di un produttore di pistacchio.")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Produttore di pistacchi di Bronte");
+  await expect(page.getByText("Produttore di pistacchio verde di Bronte: la raccolta si fa a mano tra fine agosto e inizio ottobre.")).toBeVisible();
   const products = page.locator('section[aria-labelledby="prodotti-produttore"]');
-  await expect(products.getByRole("link", { name: "[DEMO] Crema di pistacchio" })).toBeVisible();
-  await expect(products.getByRole("link", { name: "[DEMO] Formaggio ragusano" })).toHaveCount(0);
+  await expect(products.getByRole("link", { name: "Crema di pistacchio" })).toBeVisible();
+  await expect(products.getByRole("link", { name: "Formaggio ragusano" })).toHaveCount(0);
 });
 
 test("Dal territorio: il luogo collegato mostra i suoi prodotti, il luogo senza collegamenti no", async ({ page, request }) => {
   await page.goto("/it/luoghi/demo-bronte");
   const section = page.locator('section[aria-labelledby="dal-territorio-luogo"]');
   await expect(section.getByRole("heading", { name: "Dal territorio" })).toBeVisible();
-  await expect(section.getByRole("link", { name: "[DEMO] Crema di pistacchio" })).toBeVisible();
+  await expect(section.getByRole("link", { name: "Crema di pistacchio" })).toBeVisible();
 
   expect((await request.get("/it/luoghi/demo-cefalu")).status()).toBe(200);
   await page.goto("/it/luoghi/demo-cefalu");
@@ -94,8 +94,8 @@ test("admin: crea un prodotto; attivo senza allergeni verificati non si salva", 
   await page.goto("/it/admin/prodotti/nuovo");
   await page.getByLabel("Nome (italiano)", { exact: true }).fill(title);
   await page.getByLabel("Slug", { exact: true }).fill(slug);
-  await page.getByLabel("Produttore", { exact: true }).selectOption({ label: "[DEMO] Pistacchi di Bronte" });
-  await page.getByLabel("Fornitore", { exact: true }).selectOption({ label: "[DEMO] Fornitore" });
+  await page.getByLabel("Produttore", { exact: true }).selectOption({ label: "Produttore di pistacchi di Bronte" });
+  await page.getByLabel("Fornitore", { exact: true }).selectOption({ label: "Fornitore di prova" });
   await page.getByLabel("Prezzo di vendita (€)").fill("9,90");
   await page.getByLabel("Attivo", { exact: true }).check();
 

@@ -29,6 +29,8 @@ Design system, manuale del brand ("Isula", nome di lavoro), schemi e mockup: [do
 - `npm run db:test` — test RLS in pgTAP (`supabase/tests/*.test.sql`); gli helper (`tests.create_user`, `tests.authenticate_as`, `tests.as_anon`) si includono con `\ir helpers/setup.psql` dopo `begin;`
 - `npm run db:snapshot` — aggiorna `supabase/schema.sql` dopo ogni migrazione
 - `npm run media:demo` — immagini demo nello storage locale (dopo `db:reset`: il seed non carica file); regole delle immagini in [docs/IMMAGINI.md](docs/IMMAGINI.md)
+- `npm run content:catalog` — importa i testi di `content/catalog/` nelle righe esistenti (luoghi, attività, itinerari, consigli); `-- --dry-run` per il piano senza scrivere, `-- --slug-prefix=demo-` solo verso un database locale
+- `npm run content:guides` — importa le guide di `content/guide/`; `-- --slug-prefix=demo-` solo verso un database locale (come `content:catalog`)
 - `npm run db:drift` — lo stesso controllo della CI
 
 ## Design system
@@ -75,7 +77,7 @@ Design system, manuale del brand ("Isula", nome di lavoro), schemi e mockup: [do
 
 ## Seed
 
-- `supabase/seed.sql` contiene **solo dati demo** per sviluppo locale, CI ed e2e: slug con prefisso `demo-`, descrizioni con `[DEMO]`. Non caricarlo mai in produzione: `supabase db push` non esegue il seed, e non si usa `--include-seed` verso il progetto di produzione. Il catalogo reale lo inserisce Ludovico dall'admin.
+- `supabase/seed.sql` contiene **solo dati demo** per sviluppo locale, CI ed e2e: slug con prefisso `demo-` e intestazione del file come marcatore (i testi non portano più `[DEMO]`). I testi di luoghi, attività, itinerari e consigli sono quelli di `content/catalog/`: `scripts/content/catalog-seed.test.ts` controlla che seed e catalogo non divergano. Non caricarlo mai in produzione: `supabase db push` non esegue il seed, e non si usa `--include-seed` verso il progetto di produzione. Il catalogo reale si importa con `npm run content:catalog` (senza prefisso; `--slug-prefix=demo-` solo verso un database locale) o lo inserisce Ludovico dall'admin. Il marcatore `[DEMO]` resta solo nelle immagini demo (`scripts/media/demo-images.mjs`), che il controllo di lancio continua a cercare.
 - I test pgTAP e di integrazione non devono dipendere dal seed; gli e2e possono usarlo.
 - Tutto ciò che un test crea fuori da una transazione annullata usa il prefisso `int-` (integrazione) o `e2e-` (Playwright), in slug, titoli ed email: `scripts/db/clean-test-data.mjs` lo elimina. Le righe di `admin_audit_log` scritte dagli e2e restano (il registro è immutabile): i test che lo leggono filtrano sui propri utenti.
 - Gli e2e che devono leggere o preparare il database usano `withDb` da `e2e/db.mjs` con `await import("./db.mjs")`: Playwright compila gli spec in CommonJS e non importa staticamente un modulo ES.

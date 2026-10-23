@@ -4,7 +4,7 @@ title: Etna: come visitare il vulcano in sicurezza
 summary: Versante sud e versante nord, quote, guide e abbigliamento: tutto quello che serve sapere prima di salire.
 author: Redazione di Isula
 links:
-  - place: etna-versante-sud
+  - place: etna-sud
   - place: catania
   - place: bronte
 ---

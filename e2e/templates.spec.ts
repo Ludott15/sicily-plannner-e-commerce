@@ -39,6 +39,9 @@ test("admin: senza ritmo l'itinerario non si pubblica, e il controllo sparisce c
   await page.getByRole("button", { name: "Salva", exact: true }).click();
 
   // Con lo slug e senza ritmo, l'itinerario resta in bozza e la pagina elenca il controllo.
+  // Il test crea il proprio itinerario (il ritmo del form è vuoto): non dipende dal seed né dal delta.
+  // Prima si verifica il redirect alla scheda con ?controlli=1, così un fallimento dice dove si ferma.
+  await expect(page).toHaveURL(/\/admin\/itinerari\/[0-9a-f-]{36}\?controlli=1/);
   await expect(page.getByText("Scegli il ritmo del viaggio.")).toBeVisible();
   expect((await request.get(`/it/itinerari/${slug}`)).status()).toBe(404);
 

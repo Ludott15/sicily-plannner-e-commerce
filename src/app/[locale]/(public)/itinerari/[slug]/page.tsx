@@ -182,6 +182,28 @@ export default async function ItineraryPage({ params }: Props) {
 
         <ItineraryDays days={days} />
 
+        {itinerary.tips.length > 0 && (
+          // Stessa superficie di LocalTip (is-localtip): decisione del 2026-10-21, vedi docs/design/components/LocalTip/README.md.
+          <aside aria-labelledby="itinerary-tips-title" className="is-localtip max-w-[680px]">
+            <span id="itinerary-tips-title" className="is-localtip__label">
+              {t("tipsTitle")}
+            </span>
+            {itinerary.tips.map((tip) => (
+              <p key={tip} className="is-localtip__text">
+                {tip}
+              </p>
+            ))}
+            <div className="is-byline">
+              <span className="is-byline__photo" aria-hidden="true">
+                {tDesign("editorialMonogram")}
+              </span>
+              <div>
+                <div className="is-byline__name">{tDesign("editorial")}</div>
+              </div>
+            </div>
+          </aside>
+        )}
+
         <JsonLd
           data={breadcrumbList(
             [

@@ -1,6 +1,6 @@
 // Immagini demo per sviluppo locale, CI ed e2e: file generati qui (tinta unita con il nome),
-// mai foto vere né immagini generate da modelli. Nome file e testo alternativo hanno il
-// prefisso "demo-" / "[DEMO]": il controllo di lancio sui dati demo (e2e/launch-db.mjs) li
+// mai foto vere né immagini generate da modelli. Il nome del file ha il
+// prefisso "demo-" (il testo alternativo è "Immagine di prova: …", senza segnaposto): il controllo di lancio sui dati demo (e2e/launch-db.mjs) li
 // blocca in produzione, e lo script rifiuta di girare fuori da Supabase locale.
 //
 //   npm run media:demo     dopo npm run db:reset (il seed non può caricare file nello storage)
@@ -109,8 +109,8 @@ async function createPhoto(sql, name, filename) {
   await sql`
     insert into public.media (id, storage_path, width, height, alt_it, alt_en, kind, source_type, author, license,
                               modified, blur_data_url, variants_version, original_filename)
-    values (${id}, ${`${id}/master.jpg`}, ${width}, ${height}, ${`[DEMO] Immagine di prova: ${name}`},
-            ${`[DEMO] Test image: ${name}`}, 'photo', 'own', 'Immagine di prova', 'Solo sviluppo', false,
+    values (${id}, ${`${id}/master.jpg`}, ${width}, ${height}, ${`Immagine di prova: ${name}`},
+            ${`Test image: ${name}`}, 'photo', 'own', 'Immagine di prova', 'Solo sviluppo', false,
             ${`data:image/webp;base64,${blur.toString("base64")}`}, 1, ${filename})`;
   return id;
 }
@@ -120,8 +120,8 @@ async function createIllustration(sql, name, filename) {
   await upload(`${id}/illustration.svg`, Buffer.from(illustrationSvg(name)), "image/svg+xml");
   await sql`
     insert into public.media (id, storage_path, width, height, alt_it, alt_en, kind, source_type, original_filename)
-    values (${id}, ${`${id}/illustration.svg`}, 1600, 1000, ${`[DEMO] Illustrazione di prova: ${name}`},
-            ${`[DEMO] Test illustration: ${name}`}, 'illustration', 'illustration', ${filename})`;
+    values (${id}, ${`${id}/illustration.svg`}, 1600, 1000, ${`Illustrazione di prova: ${name}`},
+            ${`Test illustration: ${name}`}, 'illustration', 'illustration', ${filename})`;
   return id;
 }
 

@@ -214,7 +214,8 @@
     "v2": {
       "filtersToggle": "Filters"
     },
-    "sameItinerary": "In the same itinerary"
+    "sameItinerary": "In the same itinerary",
+    "tipsTitle": "Editors' tips"
   },
   "Design": {
     "forYou": "For you",

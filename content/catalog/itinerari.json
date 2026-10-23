@@ -1,0 +1,178 @@
+[
+  {
+    "slug": "agrigento-scala",
+    "title_it": "Agrigento e la Scala dei Turchi in tre giorni",
+    "subtitle_it": "La Valle dei Templi e la scogliera di marna bianca",
+    "description_it": "Tre giorni tra i templi dorici di Agrigento, la Scala dei Turchi e le botteghe di ceramica di Sciacca, con Eraclea Minoa sul mare. La Valle dei Templi è il cuore del viaggio ed è patrimonio UNESCO dal 1997; la Kolymbethra, un giardino di agrumi gestito dal FAI, offre una pausa nel verde. La Scala dei Turchi, scogliera di marna bianca sulla costa, ha regole d’accesso che cambiano nel tempo: va programmata con attenzione, e la stagione più adatta va da maggio a ottobre. Il ritmo è bilanciato, con il caldo dell’estate da mettere in conto.",
+    "day_intros": [
+      "Valle dei Templi al mattino, la Kolymbethra a pranzo, la casa natale di Pirandello nel pomeriggio.",
+      "La Scala dei Turchi al mattino, poi le botteghe di ceramica di Sciacca.",
+      "Eraclea Minoa: la spiaggia e gli scavi sul mare."
+    ],
+    "day_notes": [
+      "Per la Valle dei Templi conviene arrivare presto o nel tardo pomeriggio, quando il caldo cala. Il tempio della Concordia è il monumento più noto del parco.",
+      "L’accesso alla Scala dei Turchi è regolato e cambia nel tempo, con chiusure in alcune estati. Verifica il giorno prima con il Comune di Realmonte e porta scarpe con suola morbida, perché la marna è scivolosa.",
+      "Eraclea Minoa è sulla costa: il teatro greco è stato al centro di lavori e di polemiche sulla copertura provvisoria. Verifica quali aree sono aperte prima di andare."
+    ],
+    "consigli": [
+      "L’auto è quasi indispensabile: la Scala dei Turchi ed Eraclea Minoa non sono raggiungibili con i mezzi pubblici, e lungo la costa ci sono parcheggi a pagamento.",
+      "A Sciacca le botteghe di ceramica sono nel centro: chiedi in anticipo se è possibile un laboratorio con il ceramista, perché non tutte le botteghe lo offrono.",
+      "In estate il caldo è forte: porta acqua e un cappello, e fai le visite all’aperto nelle ore più fresche."
+    ],
+    "fonti": [
+      "https://en.wikipedia.org/wiki/Scala_dei_Turchi",
+      "https://www.visititaly.eu/it/tickets/valle-dei-templi",
+      "https://www.nomadotravel.app/it/attractions/eraclea-minoa"
+    ],
+    "note": "Il seed dice ‘adatto tutto l’anno’, ma Scala dei Turchi ed Eraclea spiaggia sono indicate solo da maggio a ottobre: la descrizione del seed va rivista. Nella prima giornata la Valle dei Templi è nel seed al mattino con la nota sul tramonto: da allineare. Stato di accesso della Scala dei Turchi: fonti discordanti."
+  },
+  {
+    "slug": "entroterra-enna",
+    "title_it": "Entroterra ennese in sette giorni",
+    "subtitle_it": "Enna, Piazza Armerina e Caltagirone con calma",
+    "description_it": "Sette giorni nell’entroterra siciliano: il castello e il duomo di Enna, la Villa Romana del Casale e il centro di Piazza Armerina, gli scavi di Morgantina e il museo di Aidone, la scalinata di maiolica e i laboratori di Caltagirone. Il ritmo è rilassato: ogni giorno ha una o due tappe, con pause per il pranzo in masseria e per le passeggiate tra le colline. Il viaggio ruota intorno a Enna, con basi in città diverse per non fare sempre la stessa strada. Adatto a chi viaggia da solo o con amici e vuole una Sicilia diversa dalla costa.",
+    "day_intros": [
+      "Il castello di Lombardia e il duomo di Enna, con vista sull’Etna.",
+      "Villa Romana del Casale al mattino, il centro di Piazza Armerina nel pomeriggio.",
+      "Gli scavi di Morgantina e il museo di Aidone.",
+      "Scalinata di maiolica e laboratorio di ceramica a Caltagirone.",
+      "Il sentiero del monte Altesina, tra bosco e resti antichi.",
+      "Calascibetta e le tombe a grotticella di Realmese.",
+      "Pranzo in masseria e museo della ceramica a Caltagirone."
+    ],
+    "day_notes": [
+      "Il castello è sulla cima della città: parti dal duomo e sali a piedi, con scarpe comode. Gli orari dei castelli vanno verificati con l’ufficio turistico, perché le fonti non concordano.",
+      "Per la Villa del Casale conviene la visita al mattino, con il sito meno affollato. Verifica prima se serve la prenotazione: le fonti non concordano.",
+      "Visitare il museo prima del parco rende più chiari i resti di Morgantina. L’auto è la soluzione più semplice per spostarsi tra Piazza Armerina e Aidone.",
+      "La scalinata di Santa Maria del Monte ha 142 gradini rivestiti di maiolica: va vista al mattino. Per il laboratorio chiedi se serve la prenotazione.",
+      "Per il monte Altesina porta acqua, una mappa e informazioni aggiornate sull’accesso alla riserva. Le fonti non danno una lunghezza precisa del percorso.",
+      "Calascibetta e Realmese sono su pendii ripidi: scarpe chiuse e tempo per le soste. La necropoli è a qualche chilometro dal borgo: l’auto è la scelta più pratica.",
+      "Le masserie lavorano spesso su prenotazione, con il pranzo a orari fissi: prenota in anticipo. Per il museo della ceramica verifica gli orari sul sito, che possono variare nel corso dell’anno."
+    ],
+    "consigli": [
+      "Il percorso va fatto in auto: i borghi e i siti sono distanti tra loro, e il trasporto pubblico è limitato. Lascia spazio per le soste, perché l’interno si gode con calma.",
+      "Le temperature cambiano tra Enna, a circa 930 metri, e la costa: porta una giacca anche in estate per le sere in quota.",
+      "Fai le prenotazioni dove servono, come la villa, le masserie e i laboratori di ceramica. Orari e prezzi cambiano: verifica sul sito o all’ufficio turistico."
+    ],
+    "fonti": [
+      "https://it.wikivoyage.org/wiki/Enna",
+      "https://www.visititaly.eu/it/unesco/piazza-armerina-la-villa-romana-del-casale-patrimonio-mondiale-unesco-dal-1997",
+      "https://www.visitsicily.info/en/attrazione/parco-archeologico-di-morgantina/"
+    ],
+    "note": "Itinerario senza stagione nel seed, ma il monte Altesina è indicato solo in parte dell’anno (da marzo a giugno e da settembre a novembre): il giorno 5 va spostato. Luoghi di Sperlinga e Calascibetta da correggere (vedi attività). Il titolo del giorno 5 nel seed è indicativo."
+  },
+  {
+    "slug": "madonie-cefalu",
+    "title_it": "Madonie e Cefalù in cinque giorni",
+    "subtitle_it": "Cefalù, le Madonie e i borghi in cima",
+    "description_it": "Cinque giorni tra il mare di Cefalù e le Madonie: il duomo normanno, il santuario di Gibilmanna, i borghi di Castelbuono e Polizzi Generosa, le faggete di Piano Battaglia e la salita a Pizzo Carbonara, il punto più alto del massiccio. Il ritmo è bilanciato: la prima parte è tra i borghi e la seconda tra la montagna e il mare. Alcune tappe, come la salita e il giro in barca, dipendono dal meteo e dalla stagione, e vanno fatte tra primavera e autunno. Per gran parte delle tappe serve l’auto.",
+    "day_intros": [
+      "Il duomo normanno di Cefalù al mattino, il santuario di Gibilmanna a pranzo, il lavatoio nel centro.",
+      "Castelbuono e il suo castello, poi il caseificio delle Madonie nel pomeriggio.",
+      "Le faggete di Piano Battaglia: un anello tra gli alberi.",
+      "La salita a Pizzo Carbonara: giornata lunga, si parte presto.",
+      "Calette in barca al mattino, la Rocca di Cefalù nel pomeriggio."
+    ],
+    "day_notes": [
+      "Il duomo di Cefalù è in centro e si visita con calma al mattino. Gibilmanna si raggiunge in auto, con una strada in salita tra i boschi.",
+      "Castelbuono è un borgo arroccato, con il castello dei Ventimiglia che ospita il museo civico. Chiedi in anticipo se il caseificio richiede una prenotazione.",
+      "Piano Battaglia è in quota e ha rifugi per chi vuole fermarsi a dormire. L’anello nella faggeta richiede scarpe da trekking e una giacca, anche d’estate.",
+      "La salita a Pizzo Carbonara è lunga: le fonti danno tempi tra due ore e mezza e sette ore, a seconda del ritmo. Parti presto, porta acqua e controlla il meteo.",
+      "Il giro in barca dipende dal mare e dalla stagione: verifica il giorno prima con l’operatore. Dopo il pranzo, la Rocca di Cefalù si sale per il sentiero dal centro."
+    ],
+    "consigli": [
+      "Le Madonie sono un parco con sentieri in quota: in primavera e autunno le temperature sono più miti, mentre in estate conviene partire presto. In inverno la neve può interessare Piano Battaglia.",
+      "Un’auto è quasi indispensabile: le tappe sono in borghi e aree di montagna con poco trasporto pubblico. Porta acqua e cibo per la giornata in quota.",
+      "Pizzo Carbonara e il giro in barca sono da fare da maggio a ottobre: se viaggi in altri mesi, scambia l’ordine dei giorni o sostituisci le tappe."
+    ],
+    "fonti": [
+      "https://it.wikivoyage.org/wiki/Parco_delle_Madonie",
+      "https://travel.thewom.it/italia/sicilia/trekking-nel-parco-delle-madonie-guida-2025.html",
+      "https://www.balarm.it/eventi/e-la-seconda-vetta-piu-alta-della-sicilia-escursione-ad-alta-quota-a-pizzo-carbonara-137356"
+    ],
+    "note": "Il seed dice ‘tutto l’anno’, ma Pizzo Carbonara e la barca sono indicate solo da maggio a ottobre e le faggete da aprile a ottobre: la descrizione va rivista. Tempi e dislivello di Pizzo Carbonara discordanti tra le fonti: non riportati. Datazione del Tempio di Diana discordante."
+  },
+  {
+    "slug": "sicilia-orientale",
+    "title_it": "Sicilia orientale in cinque giorni",
+    "subtitle_it": "Catania, l’Etna, Taormina e Siracusa in cinque giorni",
+    "description_it": "Il giro della costa orientale con l’Etna al centro, da Catania a Noto passando per Taormina e Ortigia. Il percorso è pensato per la bella stagione, da maggio a ottobre: l’escursione ai crateri dell’Etna e il kayak alla Isola Bella dipendono dal tempo, dalle condizioni del vulcano e del mare. Il ritmo è intenso, con giornate lunghe e un giorno all’aperto in riserva, dove l’acqua e il cappello sono indispensabili. Si può accorciare, lasciando fuori Noto o Taormina, senza perdere il filo del viaggio.",
+    "day_intros": [
+      "Il mercato del pesce a Catania nelle prime ore del mattino, poi la città barocca a piedi.",
+      "L’Etna in mattinata con una guida autorizzata, e una cantina nel tardo pomeriggio.",
+      "Il teatro antico di Taormina al mattino, la baia di Isola Bella nel pomeriggio.",
+      "Ortigia a piedi con il duomo e la Fonte Aretusa, poi il parco della Neapolis.",
+      "Noto e la riserva di Vendicari: giornata lunga, con acqua e cappello."
+    ],
+    "day_notes": [
+      "Arriva al mercato nelle prime ore, quando l’offerta è più ampia. Per la città barocca conviene un paio d’ore a piedi, con pause nelle piazze.",
+      "Le escursioni ai crateri dell’Etna si fanno con guida autorizzata e dipendono dalle condizioni del vulcano: verifica con la guida il giorno prima. In quota fa freddo anche d’estate, porta una giacca.",
+      "Il teatro è più tranquillo al mattino. Per Isola Bella l’accesso è a piedi lungo un istmo di ciottoli, percorribile con mare calmo: controlla le condizioni del mare e il biglietto.",
+      "La Neapolis apre presto e il caldo arriva a mezzogiorno: il pomeriggio presto è più comodo, con acqua. Il parco si visita in circa due ore e mezza.",
+      "A Vendicari il percorso è all’aperto e con poca tappa all’ombra: porta acqua e cappello. Nei pantani possono esserci fenicotteri, ma dipende dalla stagione."
+    ],
+    "consigli": [
+      "Il giro è pensato per la stagione da maggio a ottobre. Prenota con anticipo le escursioni in quota e le guide dei crateri, perché i posti sono limitati e le condizioni del vulcano cambiano.",
+      "Le distanze tra le tappe sono notevoli: usa l’auto per Etna, Noto e Vendicari, e il treno o il bus solo dove sono collegati. Calcola più tempo del previsto per gli spostamenti.",
+      "Se il ritmo è troppo serrato, togli una tappa per giornata: il filo del viaggio resta la costa orientale, con l’Etna e Ortigia."
+    ],
+    "fonti": [
+      "https://www.nomadotravel.app/it/attractions/etna-volcano-trails",
+      "https://en.wikipedia.org/wiki/Isola_Bella_(Sicily)",
+      "https://www.touringclub.it/destinazioni/noto/vedere/287198-riserva-naturale-di-vendicari"
+    ],
+    "note": "Stagione 5-10 e ritmo intenso come nel seed. Quota e ordinanze dell’Etna non verificate. Il teatro di Taormina è datato dalle fonti tra il III secolo a.C. (origine greca) e il II secolo d.C. (rifacimento romano): la data non è riportata nel testo. Tempi di spostamento non indicati."
+  },
+  {
+    "slug": "trapani-erice",
+    "title_it": "Trapani, Erice e Segesta in due giorni",
+    "subtitle_it": "Saline, borghi sul monte e il tempio dorico",
+    "description_it": "Due giorni nella Sicilia occidentale: le saline di Trapani, il borgo medievale di Erice in cima al monte e il tempio dorico di Segesta. La prima giornata è tra le saline, con il tramonto come momento migliore, e una cena di cous cous trapanese. La seconda inizia presto a Segesta, dove il tempio è in basso e il teatro sta in cima al monte Barbaro, e prosegue nel pomeriggio a Erice. Il percorso è pensato per la stagione da maggio a settembre, con un ritmo bilanciato.",
+    "day_intros": [
+      "Le saline di Trapani nel pomeriggio, con il tramonto, e una cena di cous cous.",
+      "Il tempio dorico di Segesta al mattino, Erice nel primo pomeriggio."
+    ],
+    "day_notes": [
+      "Le saline si visitano a piedi o in bici: la riserva è vasta e i mulini sono sparsi tra le vasche. Il Museo del sale di Nubia è nel baglio con il mulino: verifica gli orari prima.",
+      "A Segesta il tempio è in basso e il teatro in cima al monte Barbaro, a circa un centinaio di metri più in alto: il collegamento è con navetta o a piedi lungo una salita. Porta acqua e cappello."
+    ],
+    "consigli": [
+      "Erice si raggiunge con la funivia da Trapani: bastano pochi minuti di salita, con vista sul golfo e sulle Egadi, e così il pomeriggio inizia dall’alto.",
+      "Per Segesta prevedi tempo per entrambe le parti del sito, perché il tempio e il teatro sono separati da un tratto di strada. Scarpe comode e acqua.",
+      "Il cous cous trapanese è legato al mare: nei mesi estivi conviene prenotare la cena in anticipo."
+    ],
+    "fonti": [
+      "https://www.italia.it/it/sicilia/trapani/saline-di-trapani",
+      "https://www.frommers.com/destinations/segesta/attractions/overview",
+      "https://travel.thewom.it/italia/sicilia/erice.html"
+    ],
+    "note": "Stagione 5-9 come nel seed; le fonti non indicano una stagione precisa. Tempi di spostamento tra Segesta ed Erice non verificati. Il cous cous è un’indicazione generica."
+  },
+  {
+    "slug": "weekend-palermo",
+    "title_it": "Weekend a Palermo e dintorni",
+    "subtitle_it": "Mercati, mosaici e mare in tre giorni",
+    "description_it": "Tre giorni tra Palermo, Monreale e Cefalù. Il primo giorno è nel centro storico: il mercato di Ballarò al mattino, la Cappella Palatina nel palazzo dei Normanni nel pomeriggio e, la sera, i locali della Vucciria. Il secondo giorno porta a Monreale, con il duomo e i mosaici dorati, e al Teatro Massimo nel pomeriggio. Il terzo giorno è a Cefalù: la salita alla Rocca presto, quando è fresco, e il mare nel pomeriggio. Il ritmo è intenso, quindi conviene scegliere con calma cosa lasciare per una prossima volta.",
+    "day_intros": [
+      "Il mercato di Ballarò al mattino, il palazzo dei Normanni con la Cappella Palatina nel pomeriggio, la Vucciria la sera.",
+      "Monreale e il suo duomo con i mosaici dorati, poi il Teatro Massimo nel pomeriggio.",
+      "Cefalù in un giorno: la Rocca presto, il mare nel pomeriggio."
+    ],
+    "day_notes": [
+      "Arriva al mercato di buon mattino, quando l’offerta è più ampia. Per la Cappella Palatina controlla in anticipo gli orari, che possono variare con la stagione.",
+      "Dedica un’ora al chiostro benedettino accanto al duomo di Monreale. Per il Teatro Massimo le visite guidate hanno durata e prezzi variabili e vanno prenotate: controlla sul sito del teatro.",
+      "La salita alla Rocca richiede tempi molto diversi a seconda delle fonti, da circa un’ora e mezza a tre ore: parti presto, porta acqua e scarpe chiuse."
+    ],
+    "consigli": [
+      "Cefalù è sulla costa e Monreale sulla collina sopra Palermo: pianifica gli spostamenti con i mezzi o con l’auto, e lascia margine per il rientro serale.",
+      "Porta acqua e un cappello per la Rocca e per le ore di mezzogiorno in città. Verifica online gli orari delle visite prima di partire, perché sono cambiati nel tempo.",
+      "Il ritmo è intenso: se preferisci un passo più lento, scegli due tappe per giorno e lascia spazio alle soste."
+    ],
+    "fonti": [
+      "https://www.visititaly.eu/it/visit-monreale",
+      "https://travel.thewom.it/italia/sicilia/palermo/itinerario-arabo-normanno.html",
+      "https://www.italia.it/it/sicilia/palermo/cosa-fare/street-food-palermo-cosa-mangiare-mercati-storici"
+    ],
+    "note": "Tappe e fasce orarie come nel seed. Orari e prezzi di Teatro Massimo e Cappella Palatina non verificati: non inseriti. Nessun tempo di spostamento indicato, perché non verificato. La Vucciria è un’indicazione generica della zona."
+  }
+]

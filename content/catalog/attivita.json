@@ -1,0 +1,994 @@
+[
+  {
+    "slug": "altesina",
+    "title_it": "Sentiero di Monte Altesina",
+    "title_en": "Monte Altesina trail",
+    "description_it": "Monte Altesina è la cima più alta dei monti Erei, a circa 1.190 metri, nel cuore dell’isola. La riserva naturale orientata che porta il suo nome protegge un bosco relitto di leccio sulla vetta, con sorbi e lentisco. L’area è anche ricca di storia: scavi avviati nel 2020 hanno individuato un insediamento greco su almeno undici ettari, e la cima è frequentata dall’età del Bronzo, con tombe scavate nella roccia. La riserva è amministrata da Piazza Armerina. Le fonti consultate non descrivono un percorso con lunghezza e dislivello precisi, quindi conviene chiedere informazioni sul posto prima di partire.",
+    "consigli": [
+      "Le fonti consultate non danno un percorso segnato con precisione: porta una mappa scaricata in anticipo, acqua e scarpe da trekking, e chiedi all’ente che gestisce la riserva come raggiungere il punto di partenza.",
+      "In quota fa più fresco che a valle, anche d’estate: porta una giacca leggera. Evita il pieno inverno, quando il freddo e il maltempo rendono la salita meno sicura."
+    ],
+    "fonti": [
+      "https://parks.it/riserva.monte.altesina/Eindex.php",
+      "https://mammasicily.com/sites-of-interest-in-sicily/monte-altesina-naturalistic-reserve.html"
+    ],
+    "note": "Il seed lo colloca a Enna, ma la fonte indica l’accesso dal lato di Nicosia: il luogo va verificato. Il seed dice ‘al centro dell’isola’: riformulato. Lunghezza e dislivello non verificati."
+  },
+  {
+    "slug": "barca-cefalu",
+    "title_it": "Costa di Cefalù in barca",
+    "title_en": "Cefalù coast by boat",
+    "description_it": "Dal mare Cefalù si vede dal lato più scenografico: la rocca e il duomo dominano il paese. Il giro in barca tocca calette e tratti di costa, con soste per il bagno. È un’uscita per i mesi con mare calmo, di norma da maggio a ottobre, e richiede prenotazione. È adatta a famiglie e gruppi di amici, con attenzione a chi soffre il mal di mare. Il programma dipende dal meteo e dal mare del giorno, quindi conviene avere un margine nella giornata.",
+    "consigli": [
+      "Porta acqua, un cappello e una crema solare: in barca il sole si sente anche con il vento. Se soffri il mal di mare, scegli le ore del mattino, quando il mare è spesso più calmo.",
+      "Chiedi in anticipo quali calette saranno visitate e per quanto tempo, perché il programma varia con il vento. Porta un telo e un sacchetto per i rifiuti."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Cefal%C3%B9"
+    ],
+    "note": "Il seed non indica un operatore: l’attività è descritta come esperienza tipica, senza azienda."
+  },
+  {
+    "slug": "barca-ortigia",
+    "title_it": "Giro in barca intorno a Ortigia",
+    "title_en": "Boat trip around Ortigia",
+    "description_it": "Un giro in barca intorno all’isola di Ortigia, dal porto, lungo la costa e le grotte del litorale. Il tour si ferma per il bagno in mare in punti dove l’acqua è trasparente, e permette di vedere la città dal mare. La stagione va di solito da maggio a ottobre, quando le uscite sono regolari e il mare è più calmo. Per chi è: chi vuole vedere la costa e la città dal mare senza fare molta strada. Impegno: basso, si sta seduti. La durata indicativa è di un’ora e mezza.",
+    "consigli": [
+      "Il giro in barca conviene al mattino, quando il mare è più calmo. Porta un telo, una maglietta e una crema solare resistente all’acqua, perché sulla barca il sole si sente anche quando c’è vento.",
+      "Chiedi all’operatore il percorso preciso e la durata, perché le uscite cambiano con il vento e lo stato del mare. Se il mare è mosso il giro può essere annullato o accorciato: conviene verificare il giorno prima."
+    ],
+    "fonti": [
+      "https://travel.thewom.it/italia/sicilia/ortigia.html",
+      "https://www.finestresullarte.info/viaggi/ortigia-cosa-vedere-10-luoghi-nel-cuore-di-siracusa"
+    ],
+    "note": "Stagione e durata dal seed, non verificate con gli operatori: fonti di riferimento sono generiche. Nessun operatore citato."
+  },
+  {
+    "slug": "calascibetta",
+    "title_it": "Calascibetta e necropoli di Realmese",
+    "title_en": "Calascibetta and the Realmese necropolis",
+    "description_it": "Calascibetta è un borgo medievale sulle alture a ridosso di Enna. A circa tre chilometri dal paese, la necropoli di Realmese scende lungo i pendii del Cozzo San Giuseppe, con un gruppo fitto di tombe a grotticella scavate nella roccia. Le campagne di scavo tra il 1949 e il 1951 hanno portato alla luce 288 tombe. Le fonti datano l’uso del sito tra il IX e il VI secolo a.C., con qualche divergenza, e non hanno ancora individuato l’abitato a cui apparteneva. Nel territorio comunale c’è anche il villaggio bizantino del Canalotto.",
+    "consigli": [
+      "Il sito è su pendii ripidi, con tombe da raggiungere a piedi: scarpe chiuse con suola antiscivolo e tempo per le soste, senza fretta.",
+      "La necropoli è a qualche chilometro dal borgo: l’auto è la scelta più pratica. Prima della visita chiedi all’ufficio turistico di Enna se il sito è aperto e se servono accompagnatori."
+    ],
+    "fonti": [
+      "https://fondoambiente.it/luoghi/necropoli-di-realmese",
+      "https://siviaggia.it/borghi/calascibetta-sicilia/595229/"
+    ],
+    "note": "Problema di luogo: nel seed l’attività è legata a Enna, ma la necropoli è nel territorio di Calascibetta, comune autonomo a circa tre chilometri. Da correggere con un luogo dedicato. Titolo mantenuto."
+  },
+  {
+    "slug": "cantina-entroterra",
+    "title_it": "Cantina nell’entroterra",
+    "title_en": "Winery in the hinterland",
+    "description_it": "Nell’entroterra siciliano, tra colline e campi di grano, molte aziende vitivinicole e olearie piccole aprono la cantina per una degustazione con visita al vigneto e alla zona di produzione. Le degustazioni raccontano il territorio: vini di collina, spesso da uve del posto, e olio extravergine da cultivar locali. Di solito la visita dura un paio d’ore e può includere l’assaggio di pane, formaggi e prodotti stagionali. Il servizio è spesso su appuntamento e le cantine sono fuori dai centri, quindi conviene pianificare il rientro. È un’esperienza adatta a chi vuole capire il paesaggio attraverso il cibo e il vino.",
+    "consigli": [
+      "Prenota la degustazione in anticipo: le cantine piccole lavorano spesso su appuntamento e non accolgono visite in ogni periodo dell’anno. Chiedi anche se la visita è disponibile in inglese.",
+      "Se guidi, scegli una degustazione con pochi assaggi, oppure lascia l’auto e pianifica il rientro con un taxi. Le cantine sono in campagna, lontano dai servizi."
+    ],
+    "fonti": [
+      "https://www.italia.it/it/sicilia/enna",
+      "https://it.wikivoyage.org/wiki/Enna"
+    ],
+    "note": "Attività generica: descritta come esperienza tipica della zona, senza azienda. Il seed la colloca ad Aidone: il luogo è corretto come area."
+  },
+  {
+    "slug": "cantina-etna",
+    "title_it": "Degustazione in una cantina dell’Etna",
+    "title_en": "Tasting at an Etna winery",
+    "description_it": "Degustazione in una cantina del versante sud dell’Etna, tra vigneti su suoli vulcanici. La DOC Etna, la prima denominazione siciliana, è stata riconosciuta nel 1968: i bianchi si fanno con il carricante, i rossi e i rosati con il nerello mascalese. Durante la visita si assaggiano vini di contrada, cioè di singoli appezzamenti, spesso accompagnati da olio e prodotti locali. Per chi è: chi vuole capire il vino di vulcano, anche senza conoscenze da sommelier. Impegno: basso, si sta seduti. La durata indicativa è di due ore.",
+    "consigli": [
+      "Prenota la degustazione in anticipo, soprattutto in alta stagione, e chiedi se è compresa la visita della cantina o solo l’assaggio. Chiedi anche quali vini si assaggiano, per capire le differenze tra bianchi e rossi.",
+      "Se guidi, lascia il volante a chi non assaggia. Per tornare in città considera un taxi o un autista: i vigneti sono in campagna, con strade secondarie e poche indicazioni."
+    ],
+    "fonti": [
+      "https://portusonline.org/etna-a-volcano-of-wines-in-continuous-evolution/",
+      "https://www.winetourism.com/it/denominazione-vino/etna/"
+    ],
+    "note": "Cantina generica, nessuna azienda citata. Le fonti sui vigneti del versante sud sono scarse. Mesi dal seed, non verificati."
+  },
+  {
+    "slug": "casa-pirandello",
+    "title_it": "Casa natale di Pirandello",
+    "title_en": "Birthplace of Luigi Pirandello",
+    "description_it": "La casa natale di Luigi Pirandello si trova in contrada Caos, a circa quattro chilometri da Agrigento, lungo la strada verso Porto Empedocle. È una casa rurale della fine del Settecento, dove lo scrittore nacque nel 1867, mentre la famiglia si era rifugiata dall’epidemia di colera. Il museo è nella casa dal 1949, con un percorso di sale con fotografie, oggetti e materiali multimediali. Le ceneri dello scrittore riposano ai piedi di un pino nel giardino. È adatta a chi ama la letteratura e vuole vedere il luogo da cui parte la sua storia, con una visita breve.",
+    "consigli": [
+      "Gli orari e i giorni di apertura non sono uniformi tra le fonti: controlla prima di partire con le informazioni aggiornate del museo e, se viaggi da lontano, chiedi conferma prima di muoverti.",
+      "La casa è sulla strada verso Porto Empedocle: arrivarci in auto è più pratico che con i mezzi pubblici, soprattutto se si visitano anche la Valle dei Templi o Eraclea Minoa."
+    ],
+    "fonti": [
+      "https://www.balarm.it/news/pirandello-e-le-sue-ceneri-vicino-al-pino-solitario-riapre-al-pubblico-la-casa-del-poeta-127104",
+      "https://www.italia.it/it/sicilia/agrigento/luoghi-della-cultura/casa-natale-di-luigi-pirandello-e-tomba"
+    ],
+    "note": "Orari e biglietti non inseriti: le fonti si contraddicono (una indica aperture quotidiane, il portale nazionale dei beni culturali indica chiusura). Da verificare con il museo."
+  },
+  {
+    "slug": "castelbuono-borgo",
+    "title_it": "Castelbuono e il castello dei Ventimiglia",
+    "title_en": "Castelbuono and the Ventimiglia castle",
+    "description_it": "Castelbuono è un borgo delle Madonie a circa 420 metri di quota, con il castello dei Ventimiglia, la cui costruzione risale al 1317. La cappella di Sant’Anna, con le decorazioni dei Serpotta, è collegata al Museo civico. Il castello fu danneggiato dai terremoti tra il 1820 e il 1828 e in parte ricostruito. Il centro storico si percorre a piedi, tra palazzi e chiese, e la visita è adatta a chi vuole unire arte, storia e un po’ di cammino. È un buon punto di partenza per il Parco delle Madonie.",
+    "consigli": [
+      "Il castello e il museo civico condividono il complesso: chiedi in biglietteria quali spazi sono visitabili in quel momento, perché l’apertura può cambiare.",
+      "La manna di Castelbuono è un prodotto stagionale: se vuoi comprarla, chiedi quando è stata raccolta, perché la qualità varia con la lavorazione."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Castelbuono",
+      "https://www.fondazioneslowfood.com/it/presidi-slow-food/manna-delle-madonie/"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "castello-enna",
+    "title_it": "Castello di Lombardia e Rocca di Cerere",
+    "title_en": "Castello di Lombardia and Rocca di Cerere",
+    "description_it": "Il Castello di Lombardia occupa il punto più alto di Enna, a circa 990 metri. Le fonti lo collocano nell’epoca normanna, quando sorse su una fortezza precedente, e ricordano che in età sveva vi furono aggiunte torri: è uno dei castelli medievali più grandi d’Italia. Dalle torri il panorama si apre sulla città e sul territorio circostante, con l’Etna sullo sfondo nelle giornate limpide. Più in basso, la Rocca di Cerere conserva i resti di un santuario dedicato alla dea Cerere, descritto da Cicerone, ed è a ingresso gratuito. Per la visita conviene una mattina, con calma.",
+    "consigli": [
+      "Gli orari del castello cambiano da una fonte all’altra: prima di salire verifica l’apertura presso l’ufficio turistico di Enna o sul sito del Comune, perché le informazioni online non sono tutte aggiornate.",
+      "Il castello è in quota, oltre i novecento metri: anche in estate porta una giacca leggera per le ore serali. Scegli scarpe chiuse, perché i percorsi sono in salita."
+    ],
+    "fonti": [
+      "https://it.wikivoyage.org/wiki/Enna",
+      "https://www.greenme.it/viaggi/italia/il-capoluogo-piu-alto-deuropa-non-e-sulle-alpi-e-in-sicilia-e-ha-un-castello-medievale-con-vista-sulletna/"
+    ],
+    "note": "Il luogo nel seed è Enna: corretto. Il titolo unisce castello e Rocca di Cerere, come nel seed. Orari non inseriti: fonti discordanti."
+  },
+  {
+    "slug": "catacombe-cappuccini",
+    "title_it": "Catacombe dei Cappuccini",
+    "title_en": "Capuchin Catacombs",
+    "description_it": "Le Catacombe dei Cappuccini di Palermo sono un cimitero sotterraneo nato nei sotterranei del convento dei frati cappuccini, con inizio alla fine del Cinquecento secondo le fonti più diffuse. I corridoi a volta formano una specie di griglia, e i corpi erano disposti per gruppi: bambini, donne e uomini in sezioni separate, con categorie come clero e professionisti. Prima dell’esposizione i corpi restavano per circa un anno in locali accanto ai corridoi, dove avveniva la mummificazione. Le sepolture proseguirono fino al 1920. È una visita breve e intensa, adatta a chi vuole capire la storia sociale della città.",
+    "consigli": [
+      "Il percorso è sotterraneo, con corridoi stretti e poca luce: porta una felpa leggera, perché sotto terra la temperatura è più bassa che in strada. Scegli scarpe chiuse con buona suola.",
+      "Visita con rispetto: sono resti umani, e il sito è anche un luogo di memoria. Evita il flash sui corpi e segui le indicazioni del personale durante il percorso."
+    ],
+    "fonti": [
+      "https://www.italia.it/it/sicilia/palermo/chiese-luoghi-di-culto/catacombe-dei-cappuccini",
+      "https://www.tripexpert.com/palermo/attractions/catacombe-dei-cappuccini"
+    ],
+    "note": "Le fonti danno numeri di corpi molto diversi (da circa duemila a oltre ottomila): nel testo non ne scrivo. Data di inizio: 1599 secondo alcune fonti, fine Cinquecento nel testo."
+  },
+  {
+    "slug": "catania-barocca",
+    "title_it": "Catania barocca a piedi",
+    "title_en": "Baroque Catania on foot",
+    "description_it": "Un giro a piedi nel centro di Catania, tra piazza Duomo con la fontana dell’Elefante, via dei Crociferi con le sue chiese e i conventi, e la zona della pescheria. Il percorso è in piano, su strade pavimentate con pietra lavica, e la durata indicativa è di due ore e mezza. Non è un tour guidato: si fa con una mappa, o con una guida se preferisci. Per chi è: chi ama l’architettura e la storia, anche con poco tempo a disposizione. Impegno: basso.",
+    "consigli": [
+      "Il percorso parte da piazza Duomo: dalla piazza si arriva in pochi minuti a via dei Crociferi e alla pescheria. Conviene partire presto, quando le strade sono ancora poco trafficate e la luce è migliore per le facciate.",
+      "Le chiese del percorso hanno orari di apertura non fissi: se vuoi entrare, controlla sul posto e non dare per scontato l’ingresso libero. Le strade sono in pietra lavica, quindi meglio scarpe con suola piatta e comoda."
+    ],
+    "fonti": [
+      "https://www.eroicafenice.com/viaggi/cosa-vedere-a-catania/",
+      "https://worldcitytrail.com/2025/07/14/via-dei-crociferi-in-catania/",
+      "https://www.italia.it/it/sicilia/catania/via-crociferi"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "ceramica-caltagirone",
+    "title_it": "Laboratorio di ceramica a Caltagirone",
+    "title_en": "Ceramics workshop in Caltagirone",
+    "description_it": "Un laboratorio di ceramica a Caltagirone, dove un ceramista mostra come si decora la maiolica: la terracotta viene smaltata e dipinta a mano, con i colori tradizionali del territorio. La ceramica di Caltagirone ha una lunga storia, con l’influenza araba sull’invetriatura e sulla policromia, secondo le fonti più diffuse. Il lavoro è la decorazione di un pezzo, guidata dal ceramista. Per chi è: famiglie, coppie e chi vuole provare un mestiere. Impegno: basso, si siede al tavolo e si lavora con le mani. La durata indicativa è di due ore e mezza.",
+    "consigli": [
+      "Chiedi in anticipo quanto dura la sessione e se il laboratorio accetta gruppi piccoli. I pezzi devono asciugare e cuocere prima di essere portati via, quindi chiedi i tempi di consegna.",
+      "Indossa abiti che non temono le macchie: smalti e colori lasciano segni sui tessuti. Se vuoi comprare ceramica in città, distingui il pezzo dipinto a mano da quello stampato guardando il retro e i bordi."
+    ],
+    "fonti": [
+      "https://travel.thewom.it/italia/sicilia/cosa-vedere-a-caltagirone.html",
+      "https://it.wikivoyage.org/wiki/Caltagirone"
+    ],
+    "note": "Laboratorio generico, nessuna bottega citata. Storia della ceramica: le fonti discordano sulle origini, nel testo solo l’influenza araba, indicata come la più diffusa."
+  },
+  {
+    "slug": "ceramiche-sciacca",
+    "title_it": "Botteghe di ceramica a Sciacca",
+    "title_en": "Ceramic workshops in Sciacca",
+    "description_it": "Sciacca è una delle città della maiolica siciliana: la produzione è attestata dal tardo Quattrocento, e oggi una trentina di ceramisti lavora nella tradizione. Le botteghe si trovano per lo più nel centro storico, con piatti, vasi, piastrelle e statue dipinte a mano nei colori tradizionali giallo paglia, arancio, turchese, blu e verde ramina. Il laboratorio con un ceramista permette di vedere la decorazione a mano e, dove previsto, di provare a dipingere un pezzo. È un’attività per chi ama l’artigianato, con un ritmo lento e un ricordo da portare a casa. Il tempo richiesto dipende dal percorso scelto.",
+    "consigli": [
+      "Chiedi se il laboratorio è aperto alle visite e se puoi provare la decorazione: molti ceramisti lavorano in piccole botteghe e vanno avvisati in anticipo. Il prezzo dei pezzi riflette il tempo della pittura a mano.",
+      "Chiedi ai ceramisti quali forme sono tradizionali: il Comune ha avviato nel 2026 il percorso per la tutela IGP della ceramica di Sciacca, quindi chiedi al banco se il pezzo è prodotto in città."
+    ],
+    "fonti": [
+      "https://www.buongiornoceramica.it/wp-content/uploads/2016/01/38_Sciacca_TCI.pdf",
+      "https://it.wikipedia.org/wiki/Sciacca",
+      "https://www.lasicilia.it/news/attualita/3056911/ceramica-di-sciacca-igp-al-via-il-piano-per-il-marchio-ue.html"
+    ],
+    "note": "Il seed parla di botteghe generiche: nel testo sono descritte come esperienza tipica, senza citare una bottega. La via Campidoglio non è verificata: non citata."
+  },
+  {
+    "slug": "cous-cous",
+    "title_it": "Corso di cous cous trapanese",
+    "title_en": "Trapani-style couscous class",
+    "description_it": "Il cous cous alla trapanese è un piatto di origine maghrebina che la tradizione più diffusa fa arrivare in Sicilia in età araba; le origini restano incerte. Si cuoce a bagnomaria con pesce azzurro, pomodorini e cipolla, e il sugo è aromatizzato con coriandolo e cumino. Il corso è una lezione di cucina, adatta a chi vuole imparare a prepararlo e a chi ama il cibo tradizionale. Dura circa tre ore, tra preparazione e assaggio finale, in una cucina del territorio. Il piatto ha varianti: a San Vito si serve con brodo di pesce di scoglio.",
+    "consigli": [
+      "Il corso dura circa tre ore e il cous cous è un piatto che richiede tempo: non programmarlo a ridosso di un’altra attività. Se puoi, porta un grembiule.",
+      "Chiedi all’inizio quali ingredienti sono previsti: il pesce cambia in base alla pesca del giorno. Se segui una dieta particolare, chiedi alternative prima del corso."
+    ],
+    "fonti": [
+      "https://www.gamberorosso.it/notizie/cous-cous-ricette-storia-e-tipologie",
+      "https://www.voloscontato.it/guide-per-viaggiatori/cous-cous-di-pesce-a-san-vito-lo-capo-i-locali-da-provare-almeno-una-volta.php"
+    ],
+    "note": "Il seed colloca il corso a Trapani e descrive una famiglia locale: nel testo è un corso generico, senza famiglia. Il festival del cuscus è a San Vito, non a Trapani. Le origini del piatto restano incerte nelle fonti."
+  },
+  {
+    "slug": "crateri-etna",
+    "title_it": "Escursione ai crateri sommitali dell’Etna",
+    "title_en": "Summit craters of Etna hike",
+    "description_it": "Un’escursione con guida ai crateri sommitali dell’Etna, che partono dal versante sud: dal Rifugio Sapienza si sale in funivia e il resto si fa a piedi o con mezzi autorizzati. L’accesso alle quote più alte è regolato: si sale solo con una guida abilitata, e possono essere previsti limiti di persone per guida o zone chiuse, che cambiano con l’attività del vulcano. Il terreno è di cenere e roccia vulcanica, con dislivello e quota. Per chi è: chi cerca un trekking in quota e ha già camminato in montagna. Impegno: medio-alto. La durata indicativa è di sei ore.",
+    "consigli": [
+      "Controlla l’ordinanza in vigore prima di prenotare: quote e divieti vengono aggiornati in base all’attività del vulcano, e in alcuni periodi l’accesso alle cime può essere interdetto del tutto. La guida o l’operatore sono la fonte più affidabile sul giorno.",
+      "Porta giacca, guanti e scarpe da trekking chiuse: in quota fa freddo e il vento può essere forte anche in estate. Acqua e uno zaino leggero bastano, ma il tempo di discesa e l’ultima corsa della funivia vanno messi in conto."
+    ],
+    "fonti": [
+      "https://www.etnatracking.com/images/attachments/etna-fruizione-quote-sommitali.pdf",
+      "https://in3giorni.com/faq/come-si-arriva-in-cima-alletna",
+      "https://www.balarm.it/news/trekking-jeep-o-mountain-bike-tutti-i-modi-per-arrivare-alla-piu-alta-bocca-dell-etna-20840"
+    ],
+    "note": "Limiti di quota e divieti variano per ordinanza: fonti regionali e del parco confermano il principio della guida obbligatoria, ma le quote precise sono discordanti (fonti non ufficiali). Mesi di stagione dal seed, non verificati; tariffe non riportate."
+  },
+  {
+    "slug": "duomo-cefalu",
+    "title_it": "Duomo normanno di Cefalù",
+    "title_en": "Norman cathedral of Cefalù",
+    "description_it": "Il duomo di Cefalù fu avviato da Ruggero II nel 1131, con un progetto che unisce il romanico ai tratti siculo-normanni e bizantini. L’interno è a croce latina, con colonne antiche di recupero, e nell’abside c’è il mosaico del Cristo Pantocratore, eseguito nel XII secolo da maestranze bizantine. Il completamento avvenne in età sveva, e la consacrazione ufficiale è del 1267. La chiesa fa parte dal 2015 del sito UNESCO arabo-normanno. Per la visita basta un’ora, con una pausa in silenzio dentro la cattedrale.",
+    "consigli": [
+      "In cattedrale si entra con spalle e ginocchia coperte e in silenzio. Controlla gli orari di apertura prima di arrivare, perché durante le funzioni la visita può essere limitata.",
+      "Per osservare i mosaici con calma arriva nelle ore meno affollate e usa un binocolo o lo zoom della fotocamera, perché le figure sono in alto e il dettaglio si perde a occhio nudo."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Duomo_di_Cefal%C3%B9",
+      "https://it.wikipedia.org/wiki/Cefal%C3%B9"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "duomo-enna",
+    "title_it": "Duomo e museo di Enna",
+    "title_en": "Enna Cathedral and museum",
+    "description_it": "Il duomo di Enna, dedicato alla Madonna della Visitazione, è un edificio di origine medievale che mescola stili diversi. All’interno si trovano strutture gotiche di influsso catalano, affreschi di Borremans e colonne scure con graffiti lasciati da viaggiatori e pellegrini. Il soffitto ligneo della navata centrale, in noce, è attribuito al Cinquecento. Il tesoro della cattedrale è esposto al Museo Alessi, a poca distanza dal duomo, con oreficerie siciliane dal Duecento all’Ottocento e la corona d’oro della Madonna. Nella scheda consultata il museo risulta chiuso: la visita va verificata prima di programmarla.",
+    "consigli": [
+      "Il duomo è a ingresso gratuito, ma secondo una fonte è chiuso il lunedì e a metà giornata: controlla gli orari sul posto, perché le informazioni trovate online sono discordanti.",
+      "Se hai poco tempo, dai la precedenza al duomo e al castello: sono nel centro e si raggiungono a piedi, e il tesoro del Museo Alessi si può inserire tra le due visite."
+    ],
+    "fonti": [
+      "https://it.wikivoyage.org/wiki/Enna",
+      "https://www.italia.it/it/sicilia/enna/duomo"
+    ],
+    "note": "Il seed chiama l’attività ‘Duomo e museo’: il museo è il Museo Alessi, che custodisce il tesoro. Nella scheda consultata il museo risulta chiuso: da verificare prima della pubblicazione. Orari non verificati."
+  },
+  {
+    "slug": "duomo-monreale",
+    "title_it": "Duomo e chiostro di Monreale",
+    "title_en": "Monreale Cathedral and cloister",
+    "description_it": "Il duomo di Monreale fu voluto da Guglielmo II di Sicilia e legato a un monastero benedettino, con i lavori avviati intorno al 1172. I mosaici ricoprono l’interno per circa 7.600 metri quadrati e raccontano la storia del cristianesimo, fino a ciò che seguì la risurrezione, con il Cristo Pantocratore nel catino absidale. Il chiostro, coevo al duomo, ha 228 colonnine gemine con decorazioni diverse, capitelli intagliati e archi di gusto arabo. La visita richiede circa un’ora e mezza tra chiesa e chiostro, ed è adatta a chi ama l’arte medievale e la storia normanna. Il complesso è a pochi chilometri dal centro di Palermo, sulle pendici del Monte Caputo.",
+    "consigli": [
+      "Per il chiostro dedica il tempo necessario alle colonnine: ognuna ha decorazioni diverse, e il chiostro da solo richiede un’ora buona. Non lasciarlo per ultimo, quando la visita si affretta.",
+      "Per entrare nel duomo copri spalle e ginocchia, perché è un luogo di culto e le regole valgono anche per i visitatori. Nei giorni di festa gli orari di apertura possono cambiare: controllali prima di partire."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Monreale",
+      "https://it.wikipedia.org/wiki/Palermo"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "egadi-barca",
+    "title_it": "Favignana e Levanzo in barca",
+    "title_en": "Favignana and Levanzo by boat",
+    "description_it": "Le Egadi sono un arcipelago a circa 12 chilometri a sud di Trapani, con Favignana, Levanzo e Marettimo. Il mare dell’arcipelago è riserva marina dal 1991, con zone a tutela diversa tra pesca e turismo. Favignana ha l’ex stabilimento Florio della tonnara, oggi museo della pesca del tonno, e a Levanzo si trova la Grotta del Genovese, con incisioni e pitture paleolitiche e neolitiche. La giornata in barca tocca grotte e calette, con pranzo a bordo, ed è pensata per chi vuole vedere il mare da vicino. Le partenze dipendono dal meteo, e la grotta richiede prenotazione anticipata.",
+    "consigli": [
+      "Per la Grotta del Genovese prenota con anticipo: le visite sono guidate e i posti sono limitati. Controlla i giorni di apertura prima di organizzare il giro in barca.",
+      "Porta un telo, acqua e crema, perché il giro in barca si svolge in pieno sole. Le condizioni del mare possono cambiare il programma, quindi se puoi tieni un giorno di riserva."
+    ],
+    "fonti": [
+      "https://it.wikivoyage.org/wiki/Isole_Egadi",
+      "https://mase.gov.it/sites/default/files/dm_27_12_1991_amp_egadi.pdf"
+    ],
+    "note": "Le fonti sulla Grotta del Genovese indicano una prenotazione con almeno 48 ore di anticipo: da verificare sul sito ufficiale. Le fonti turistiche sono in parte blog."
+  },
+  {
+    "slug": "eraclea-spiaggia",
+    "title_it": "Eraclea Minoa, spiaggia e scavi",
+    "title_en": "Eraclea Minoa, beach and excavations",
+    "description_it": "Eraclea Minoa è un’antica città greca fondata dai Selinuntini, sul promontorio di Capo Bianco. Il teatro greco, costruito alla fine del V secolo a.C., ha la cavea divisa in nove settori e si affaccia sul mare, e accanto ci sono le case ellenistiche e romane. Gli scavi sistematici iniziarono nel 1950. Lungo il litorale c’è una spiaggia poco distante dal sito, che si può unire alla visita nella stessa giornata. È un’esperienza di storia e di mare, adatta a chi vuole vedere un sito archeologico all’aperto e fare un bagno. Il sito è esposto al sole, quindi conviene la mattina.",
+    "consigli": [
+      "Per arrivare l’auto è praticamente necessaria: la fermata del bus più vicina è a diversi chilometri. Organizza il trasporto prima di partire.",
+      "Porta acqua e cappello per il percorso tra i resti. Controlla vento e mare prima del bagno, perché la costa è aperta e le condizioni cambiano in fretta."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Eraclea_Minoa",
+      "https://www.balarm.it/luoghi/teatro-greco-di-eraclea-minoa-cattolica-eraclea-2414"
+    ],
+    "note": "Il seed parla di pineta: non trovata nelle fonti, quindi non l’ho scritta. Il seed parla di parco archeologico; la fonte dice area archeologica. Orari e biglietti variano tra le fonti: non inseriti."
+  },
+  {
+    "slug": "erice-borgo",
+    "title_it": "Erice e dolci di badia",
+    "title_en": "Erice and dolci di badia",
+    "description_it": "Erice è un borgo medievale sulla vetta del Monte Erice, a circa 750 metri, con mura ciclopiche, il Castello di Venere e la Chiesa Madre. Il centro conserva le case signorili e i vicoli, e nel passato ha avuto molti conventi di clausura. Da questa tradizione vengono i dolci tipici: i bocconcini di pasta reale con cedro, la genovese alla crema e i dolci di badia, preparati nei conventi con ricette tenute riservate. La visita è una passeggiata tra i vicoli e le pasticcerie, adatta a chi cerca un borgo tranquillo e un assaggio della tradizione. È una giornata che si può abbinare a Trapani e alle saline.",
+    "consigli": [
+      "Per i dolci cerca le pasticcerie del centro e chiedi cosa è preparato in giornata. I dolci di Erice sono a base di mandorla e cedro, e le ricette tradizionali sono legate alla clausura.",
+      "La strada per il centro è stretta e in salita: valuta un parcheggio fuori dal borgo e prosegui a piedi tra i vicoli. In cima fa più fresco che a valle, quindi porta un capo leggero."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Erice",
+      "https://travel.thewom.it/italia/sicilia/erice.html",
+      "https://www.frommers.com/destinations/erice/"
+    ],
+    "note": "Le fonti non spiegano l’origine del nome ‘dolci di badia’ né una data documentata: il testo non la indica. Non cito pasticcerie private."
+  },
+  {
+    "slug": "fontane-bianche",
+    "title_it": "Mare a Fontane Bianche",
+    "title_en": "Beach day at Fontane Bianche",
+    "description_it": "Una giornata di mare sulla spiaggia di Fontane Bianche, con sabbia chiara e fondale basso. Il lido offre sdraio, ombrelloni e cabine, e ci sono anche tratti di spiaggia libera. Il mare è adatto ai bambini, perché il fondale resta basso per un lungo tratto. Il promontorio a nord della spiaggia è un punto dove affiorano sorgenti d’acqua dolce, secondo le fonti locali. Per chi è: famiglie e chi cerca mare senza grandi spostamenti. Impegno: nessuno. La durata indicativa è di cinque ore.",
+    "consigli": [
+      "Porta acqua e cibo dalla città: i servizi del lido sono in un’area limitata, e in alta stagione conviene arrivare presto per trovare posto all’ombra.",
+      "Con bambini piccoli scegli il tratto con il fondale più basso e tieni d’occhio la riva. Il fondo di sabbia chiara rende l’acqua più chiara di quanto non appaia, quindi la profondità va verificata con gli occhi."
+    ],
+    "fonti": [
+      "https://www.spiagge.it/stabilimenti-balneari/15744-lido-fontane-bianche/",
+      "https://travel.thewom.it/italia/sicilia/siracusa/spiaggia-fontane-bianche.html"
+    ],
+    "note": "Storia del lido non verificata: nessuna fonte trovata. Lunghezza della spiaggia discordante tra fonti: non riportata."
+  },
+  {
+    "slug": "formaggi-madonie",
+    "title_it": "Caseificio delle Madonie",
+    "title_en": "Madonie dairy visit",
+    "description_it": "Nelle Madonie l’allevamento e la lavorazione del latte sono una tradizione di montagna. Pastori e casari producono formaggi freschi e a pasta filata, come la provola delle Madonie, un formaggio semiduro a base di latte vaccino, prodotto tutto l’anno nei comuni del parco. Una visita a un caseificio permette di vedere la lavorazione, l’affinamento in ambienti freschi e ventilati, e di assaggiare formaggi e ricotta della zona. L’esperienza è adatta a famiglie e a chi ama i prodotti di territorio, con un ritmo calmo. Orari e modalità dipendono dalle singole aziende, quindi conviene chiedere prima.",
+    "consigli": [
+      "Chiedi se il caseificio fa visite con degustazione e prenota prima: molte aziende sono piccole e lavorano secondo gli orari della mungitura. Per il viaggio di ritorno porta un contenitore termico, perché i formaggi freschi vanno tenuti al fresco.",
+      "Tra i formaggi della zona trovi anche i caci figurati, piccoli formaggi semiduri stagionati da uno a tre mesi, e la caciotta madonita. Chiedi al banco quale è stagionato e quale è fresco."
+    ],
+    "fonti": [
+      "https://www.onaf.it/uploads/public/14897_provola-delle-madonie.pdf",
+      "https://www.onaf.it/uploads/public/14789_caci-figurati.pdf"
+    ],
+    "note": "Il seed indica un caseificio con un nome da azienda: nel testo è trattato come esperienza tipica, senza citare un’azienda."
+  },
+  {
+    "slug": "gibilmanna",
+    "title_it": "Santuario di Gibilmanna",
+    "title_en": "Sanctuary of Gibilmanna",
+    "description_it": "Il Santuario di Gibilmanna è un santuario mariano affidato ai frati cappuccini, sul versante delle Madonie sopra Cefalù, a circa 800 metri di quota. La prima chiesa risale al medioevo, e nel Cinquecento il convento e la chiesa furono rifondati, quando la statua della Madonna fu collocata nella cappella rinnovata. Il santuario ha un museo e una biblioteca, e nei dintorni i boschi di querce e castagni cambiano colore in autunno. La visita si può fare in un’ora, abbinata a una passeggiata nel bosco. È adatto a chi cerca natura e silenzio, anche in famiglia.",
+    "consigli": [
+      "La strada per il santuario sale da Cefalù con curve: va percorsa con calma, soprattutto in autunno, quando le foglie possono rendere il fondo scivoloso.",
+      "Il santuario è un luogo di culto e di pellegrinaggio: dentro si entra con abbigliamento adeguato e in silenzio. Se visiti in giornata, abbina la salita alla visita del duomo di Cefalù."
+    ],
+    "fonti": [
+      "https://en.wikipedia.org/wiki/Gibilmanna",
+      "https://www.cefalumadoniehimera.it/santuario-maria-ss-di-gibilmanna/?lang=en"
+    ],
+    "note": "Le fonti non concordano sulle date della ricostruzione (1535, 1623, 1625): nel testo scrivo solo Cinquecento."
+  },
+  {
+    "slug": "grotta-etna",
+    "title_it": "Grotte di scorrimento lavico",
+    "title_en": "Lava tube caves",
+    "description_it": "Le grotte di scorrimento lavico si formano quando una colata si raffredda in superficie mentre il lava all’interno continua a scorrere, lasciando un tunnel vuoto. Sull’Etna ce ne sono diverse, e la visita si fa con caschetto e torcia, perché dentro il buio è completo. Il tragitto per arrivarci è a piedi, di solito per un’ora o più, tra boschi e campi di lava. Per chi è: chi vuole vedere un aspetto del vulcano che non si coglie dal cratere, con buona resistenza e senza difficoltà con gli spazi stretti. Impegno: medio. La durata indicativa è di tre ore.",
+    "consigli": [
+      "Porta un caschetto con luce o una torcia frontale, più una lampada di scorta: dentro la grotta il buio è completo e il fondo è irregolare. Il sentiero non è sempre segnalato, quindi conviene farsi accompagnare da una guida.",
+      "Il tragitto è in quota: l’aria dentro la grotta può essere più fredda di fuori, quindi porta una giacca anche in estate. Verifica con la guida il percorso e il tempo di rientro prima di entrare."
+    ],
+    "fonti": [
+      "https://www.balarm.it/news/in-sicilia-c-e-un-tunnel-che-ti-porta-nel-ventre-della-terra-tra-giochi-di-luce-e-scenari-unici-159077",
+      "https://www.etnatracking.com/en/serracozzo-cave",
+      "https://www.weroad.it/blog/trekking-etna"
+    ],
+    "note": "La grotta citata come esempio nelle fonti (Serracozzo) è sul versante orientale: da verificare che rientri nel versante sud del luogo. Nessun nome di grotta nel testo. Mesi di stagione dal seed, non verificati."
+  },
+  {
+    "slug": "ibla-cioccolato",
+    "title_it": "Ibla e cioccolato di Modica",
+    "title_en": "Ibla and Modica chocolate",
+    "description_it": "Una passeggiata nel centro di Ibla, il borgo barocco sulla collina di Ragusa, con un assaggio di cioccolato di Modica. Il cioccolato di Modica, con il marchio IGP, si lavora a freddo: lo zucchero resta cristallino e il risultato ha una grana granulosa, diversa dal cioccolato a fusione. Il percorso attraversa le strade in salita e le piazze barocche, fino alla cattedrale di San Giorgio. Per chi è: chi ama il cibo e l’architettura, anche con bambini. Impegno: medio, per via delle salite. La durata indicativa è di tre ore.",
+    "consigli": [
+      "Il cioccolato di Modica si riconosce dalla grana: cerca la dicitura IGP sulla confezione e chiedi come è stato lavorato. Un assaggio in bottega è il modo più semplice per capire la differenza con il cioccolato industriale.",
+      "Le strade di Ibla salgono e scendono: porta scarpe comode e prevedi pause nelle piazze. Il giro è più piacevole nelle ore fresche, prima che il sole sia alto."
+    ],
+    "fonti": [
+      "https://www.dissapore.com/notizie/il-cioccolato-di-modica-marchio-igp/",
+      "https://www.quotidianodiragusa.it/2026/08/09/cucina/cioccolato-modica-igp-ricetta-prodotti-tipici/",
+      "https://reidsguides.com/italy/destinations/sicily/southeast_sicily/ragusa/sights.html"
+    ],
+    "note": "Il titolo unisce Ibla e Modica: il cioccolato si produce a Modica, la tappa è a Ibla. Il laboratorio di cioccolato di Ibla non è identificato nel seed né nelle fonti: da confermare prima di pubblicare il titolo. Data del riconoscimento IGP discordante (2018 o 2010 come inizio pratica)."
+  },
+  {
+    "slug": "isola-bella",
+    "title_it": "Isola Bella in kayak",
+    "title_en": "Isola Bella by kayak",
+    "description_it": "Un giro in kayak lungo la costa di Taormina, tra l’Isola Bella, piccola isola che con le maree cambia aspetto, e le grotte marine. La riserva naturale di Isola Bella comprende l’isola e i promontori di Capo Sant’Andrea e Capo Taormina, con grotte sommerse e fondali ricchi di coralli e spugne. Le uscite di solito partono da Giardini Naxos o da Mazzarò, e con l’attrezzatura inclusa durano circa due ore. Per chi è: chi sa nuotare e ama il mare. Impegno: medio, con il remo e l’acqua aperta. Gli operatori indicano spesso un’età minima di otto anni.",
+    "consigli": [
+      "Scegli la mattina presto o il tardo pomeriggio: il mare è più calmo e ci sono meno barche. Chiedi all’operatore se il giro passa dalla grotta blu, che si trova vicino a Capo Sant’Andrea.",
+      "Porta una crema solare resistente all’acqua e una maglietta tecnica, e lascia il telefono in una busta impermeabile. Se il mare è mosso l’uscita può essere annullata o accorciata: chiedi la politica di rimborso prima di prenotare."
+    ],
+    "fonti": [
+      "https://en.wikipedia.org/wiki/Isola_Bella_(Sicily)",
+      "https://turismoecultura.cittametropolitana.me.it/turismo/itinerari/parchi-e-riserve-naturali/riserva-naturale-isola-bella/",
+      "https://siviaggia.it/idee-di-viaggio/isola-bella-sicilia/535860/"
+    ],
+    "note": "Superficie della riserva discordante (10,49 e 11 ettari): non riportata. Prezzi e durate dei tour non verificati con gli operatori; tour da operatori, non da fonti ufficiali."
+  },
+  {
+    "slug": "kolymbethra",
+    "title_it": "Giardino della Kolymbethra",
+    "title_en": "Kolymbethra Garden",
+    "description_it": "La Kolymbethra è un giardino della Valle dei Templi, nell’antico bacino idrico fatto costruire, secondo le fonti, sotto il tiranno Terone di Agrigento. Oggi l’area è gestita dal FAI come giardino, con agrumi e un percorso tra le vasche. Per entrare serve il biglietto della Valle dei Templi, e il giardino ha orari propri, con visite guidate e aperture serali in alcune date. Il sito è adatto a chi vuole una pausa tra i templi, con un ritmo lento, più che a chi cerca la sola archeologia. Una visita guidata permette di conoscere la storia del bacino e del suo sistema di cisterne e canali.",
+    "consigli": [
+      "Il biglietto del giardino non è separato da quello della Valle dei Templi: compra prima il biglietto del parco e controlla gli orari sul sito del FAI, che cambiano tra inverno ed estate.",
+      "Per le visite guidate o le aperture serali prenota in anticipo, perché le date sono limitate. Il tunnel sotterraneo che porta fino a Porta Quinta si visita con prenotazione separata."
+    ],
+    "fonti": [
+      "https://fondoambiente.it/luoghi/giardino-della-kolymbethra/visita",
+      "https://it.wikipedia.org/wiki/Valle_dei_Templi"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "lavatoio-cefalu",
+    "title_it": "Lavatoio medievale e vicoli di Cefalù",
+    "title_en": "Medieval washhouse and alleys of Cefalù",
+    "description_it": "Il Lavatoio medievale di Cefalù si trova in via Vittorio Emanuele, presso il palazzo Martino, ed è un complesso di vasche alimentate da 22 bocche di ghisa. Il fiume che lo attraversava fu coperto nel XVII secolo, e il lavatoio fu demolito e ricostruito più arretrato nel 1514, con il restauro completato nel 1991. La scalinata in pietra lumachella scende fino a un antro da cui l’acqua arriva al mare. La passeggiata è breve e si fa nel centro storico, tra botteghe e chiese del borgo.",
+    "consigli": [
+      "Scendi la scalinata con calma: i gradini in pietra possono essere bagnati. Scegli scarpe con suola antiscivolo, perché nel centro storico si sale e si scende continuamente.",
+      "Il lavatoio si può unire alla salita alla Rocca o alla visita del duomo nella stessa mattinata: sono tutti nel centro storico, a passo di passeggiata."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Cefal%C3%B9"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "madonie-faggete",
+    "title_it": "Faggete delle Madonie",
+    "title_en": "Beech woods of the Madonie",
+    "description_it": "Le faggete delle Madonie si trovano intorno a Piano Battaglia, sopra i mille metri, e formano un bosco di faggi affiancato all’altopiano. Il sentiero ad anello attraversa il bosco con vedute sull’altopiano. È una camminata adatta a chi cammina con regolarità e vuole un’esperienza nel bosco, senza attrezzature particolari. In estate l’aria è più fresca che in pianura, mentre in autunno i colori sono intensi. La durata dipende dal percorso scelto, quindi conviene informarsi sul sentiero prima di partire.",
+    "consigli": [
+      "Porta una giacca leggera anche in estate: tra i faggi la temperatura è più bassa che in paese, e il sentiero può essere umido nei tratti più ombrosi.",
+      "Porta acqua e controlla la segnaletica del Parco prima di partire, perché i sentieri sull’altopiano hanno lunghezze diverse e alcuni tratti sono poco frequentati."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Piano_Battaglia"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "manna-castelbuono",
+    "title_it": "Manna e dolci a Castelbuono",
+    "title_en": "Manna and sweets in Castelbuono",
+    "description_it": "La manna è la linfa dolce dei frassini delle Madonie, raccolta nei comuni di Castelbuono e Pollina: in estate si incide la corteccia e la linfa si rapprende al sole in stalattiti bianche. È un prodotto Presidio Slow Food, usato tradizionalmente come dolcificante e in cosmetica, e che oggi entra in dolci e preparazioni di pasticceria. Qui si assaggiano dolci e prodotti con la manna, accompagnati dal racconto della raccolta. L’attività è adatta a chi vuole capire un prodotto che rischia di sparire: le piante sono in calo e la superficie di raccolta si è ridotta a circa 250 ettari.",
+    "consigli": [
+      "Chiedi l’origine della manna che assaggi: la qualità più pura è quella raccolta senza toccare la corteccia, mentre la manna raschiata contiene più impurità.",
+      "Se vuoi acquistare manna da portare a casa, scegli un produttore che indichi il luogo e l’anno di raccolta. Il prodotto è in calo, quindi il prezzo può cambiare molto da una stagione all’altra."
+    ],
+    "fonti": [
+      "https://www.fondazioneslowfood.com/it/presidi-slow-food/manna-delle-madonie/",
+      "https://www.linkiesta.it/2025/05/ce-sempre-meno-manna/"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "marina-ragusa",
+    "title_it": "Spiaggia di Marina di Ragusa",
+    "title_en": "Beach at Marina di Ragusa",
+    "description_it": "Una giornata di mare sulla spiaggia di Marina di Ragusa, con sabbia e lungomare. La località è sul litorale sud della provincia, con tratti attrezzati e tratti liberi. Il lungomare è il punto di partenza per una passeggiata, e nei dintorni ci sono i tratti di costa verso Punta Secca e Punta Braccetto. La giornata si può abbinare a una visita al barocco di Ragusa Ibla o di Scicli, a poca distanza in auto. Per chi è: famiglie e chi cerca mare senza organizzazione. Impegno: nessuno. La durata indicativa è di cinque ore.",
+    "consigli": [
+      "Porta un ombrellone o un telo: non tutti i tratti sono attrezzati. Nei mesi estivi il mattino è il momento migliore per trovare posto.",
+      "Per la giornata in città lascia l’auto ai margini del centro storico di Ragusa Ibla o di Scicli: i borghi barocchi si visitano meglio a piedi, con scarpe comode."
+    ],
+    "fonti": [
+      "https://en.wikipedia.org/wiki/Marina_di_Ragusa",
+      "https://www.balarm.it/news/il-piccolo-porto-delle-meraviglie-e-in-sicilia-sei-nel-borgo-dalle-spiagge-pazzesche-157565"
+    ],
+    "note": "Durata indicativa dal seed. Nessun operatore o stabilimento citato."
+  },
+  {
+    "slug": "marzamemi-borgo",
+    "title_it": "Marzamemi e la tonnara",
+    "title_en": "Marzamemi and the tuna fishery",
+    "description_it": "Una passeggiata nel borgo di Marzamemi, con la piazza Regina Margherita, il palazzo del principe di Villadorata e la chiesa della tonnara, ormai sconsacrata. La tonnara ha dato per secoli lavoro al paese, legato alla pesca del tonno; oggi non è più in attività e il borgo vive di turismo. Le case dei pescatori sono diventate negozi, ristoranti e bar. Il borgo si gira a piedi in circa un’ora e mezza. Per chi è: chi vuole un borgo di mare tranquillo e una passeggiata breve. Impegno: basso.",
+    "consigli": [
+      "La piazza è il punto di partenza: arriva nel tardo pomeriggio, quando la luce sulle facciate è più calda e i locali sono aperti.",
+      "Il tonno resta nella tradizione del borgo, ma la tonnara non è più in attività: chiedi al ristoratore da dove arriva il pesce che ti propone. Per il resto il borgo è tranquillo e si presta a una visita senza fretta."
+    ],
+    "fonti": [
+      "https://siviaggia.it/wanderlust/marzamemi-ti-fa-innamorare/362344/",
+      "https://www.balarm.it/news/se-ci-vai-ti-lascia-a-bocca-aperta-cosa-fare-e-vedere-nell-antico-borgo-di-marzamemi-120788"
+    ],
+    "note": "Date di fondazione della tonnara discordanti (1642 o epoca araba): non riportate. Origine araba del nome non riportata."
+  },
+  {
+    "slug": "masseria-enna",
+    "title_it": "Pranzo in masseria nell’ennese",
+    "title_en": "Lunch at a farmhouse in the Enna area",
+    "description_it": "Nell’ennese il pranzo in masseria è il modo più diretto per assaggiare la cucina di campagna. La zona è tradizionalmente legata alla coltivazione del grano, e molte aziende agricole preparano pasta, pane, legumi e formaggi con i prodotti della casa o del territorio. Il pasto è in genere un pranzo lungo, con piatti di stagione e menu che cambiano secondo la disponibilità. Le masserie si trovano in campagna, lontano dai centri, e il servizio è spesso su prenotazione. È un’esperienza adatta a chi vuole fermarsi per ore, con calma, e vedere da vicino la campagna.",
+    "consigli": [
+      "Prenota con qualche giorno di anticipo e chiedi il menu del giorno: nelle masserie il pranzo è spesso servito a orari fissi e con un numero limitato di coperti.",
+      "Le masserie sono fuori dai centri: arriva in auto o concorda il rientro in anticipo, perché i collegamenti con i mezzi pubblici in campagna sono limitati e in alcuni casi assenti."
+    ],
+    "fonti": [
+      "https://www.italia.it/it/sicilia/enna",
+      "https://it.wikivoyage.org/wiki/Enna"
+    ],
+    "note": "Attività generica: descritta come esperienza tipica della zona, senza una masseria specifica. Il titolo del seed è mantenuto. La nota del seed (grano antico) non è verificata per una masseria precisa."
+  },
+  {
+    "slug": "mercato-ballaro",
+    "title_it": "Street food al mercato di Ballarò",
+    "title_en": "Street food at the Ballarò market",
+    "description_it": "Il mercato di Ballarò è uno dei più antichi di Palermo e si estende per le vie del quartiere, tra banchi di frutta, verdura, pesce e spezie. Qui si mangia in piedi e a piccoli assaggi: panelle, frittelle di farina di ceci servite nel panino, arancine e sfincione, la pizza alta con pomodoro, cipolla, acciughe e caciocavallo. Il percorso guidato serve a capire quali banchi scegliere e a raccontare i nomi dei piatti e il mercato. È adatto a chi ama il cibo di strada e non teme la folla, perché i passaggi tra i banchi sono stretti e frequentati. Il percorso dura circa due ore e mezza.",
+    "consigli": [
+      "Arriva nelle prime ore del mattino: il mercato è più pieno e i banchi di pesce e verdura sono ben forniti. Nel pomeriggio il mercato si svuota e molti banchi chiudono.",
+      "Panelle e arancine si mangiano calde: scegli un assaggio alla volta, perché il cibo di strada qui si consuma in piedi. Se sei vegetariano, molti piatti da banco sono di farina di ceci o di verdura, ma controlla il ragù delle arancine."
+    ],
+    "fonti": [
+      "https://doeatbetterexperience.com/it/blog/street-food-palermo-guida-mercati/",
+      "https://www.gamberorosso.it/?p=167561",
+      "https://it.wikipedia.org/wiki/Palermo"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "modica-barocca",
+    "title_it": "Modica barocca a piedi",
+    "title_en": "Baroque Modica on foot",
+    "description_it": "Un giro a piedi tra la città alta e la città bassa di Modica, divise da una valle. Il percorso sale per la scalinata del Duomo di San Giorgio, progettato in gran parte da Rosario Gagliardi, e passa per le chiese e i palazzi del centro. Le scalinate sono ripide e la durata indicativa è di due ore e mezza. Il giro si fa interamente a piedi. Per chi è: chi ama l’architettura barocca e le città di collina. Impegno: medio, per le scale.",
+    "consigli": [
+      "Il Duomo di San Giorgio si raggiunge dalla scalinata: fai la salita con calma e prevedi una sosta. Il numero di gradini cambia da una fonte all’altra, quindi non fidarti di una cifra precisa.",
+      "Il giro si fa bene nel tardo pomeriggio, con la luce che illumina la facciata del Duomo. Porta scarpe con suola antiscivolo: alcune scalinate sono in pietra e in pendenza."
+    ],
+    "fonti": [
+      "https://it.wikivoyage.org/wiki/Modica",
+      "https://siviaggia.it/idee-di-viaggio/modica-cosa-vedere/532298/"
+    ],
+    "note": "Numero di gradini discordante tra fonti (164, 181, circa 250): non riportato. Durata indicativa dal seed."
+  },
+  {
+    "slug": "mondello-spiaggia",
+    "title_it": "Spiaggia di Mondello",
+    "title_en": "Mondello beach",
+    "description_it": "La spiaggia di Mondello, conosciuta come Mondello-Valdesi, è la più celebre di Palermo: sabbia bianca e fine, con sfumature rosate in primavera dovute a un foraminifero marino. Dagli anni Sessanta è la spiaggia dei palermitani, con un lungomare di stabilimenti e villini in stile liberty alle spalle. La baia è protetta dai monti Pellegrino e Gallo. È un’esperienza semplice, adatta a famiglie, coppie e amici, da fare senza un programma fisso. Il bagno si fa soprattutto nei mesi estivi.",
+    "consigli": [
+      "Nei weekend d’estate la spiaggia si riempie presto: arriva al mattino per trovare posto. Il lungomare ha stabilimenti e tratti liberi, quindi scegli in base a come vuoi passare la giornata.",
+      "Per il pranzo il lungomare offre diversi locali: controlla se il servizio è incluso nell’affitto dell’ombrellone. Porta acqua e crema, perché nelle zone libere l’ombra è poca."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Mondello"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "morgantina",
+    "title_it": "Scavi di Morgantina e museo di Aidone",
+    "title_en": "Morgantina excavations and Aidone museum",
+    "description_it": "Morgantina è una città di origine sicula, poi colonizzata dai greci, che occupò le colline intorno ad Aidone dall’età del Bronzo fino all’epoca ellenistica. Il parco archeologico conserva l’agorà, il teatro ellenistico, case signorili con pavimenti a mosaico e le fornaci per la ceramica; parte dello scavo è ancora in corso. Il Museo archeologico regionale di Aidone si trova nell’ex convento dei cappuccini, vicino al sito, e custodisce la Dea di Morgantina, gli acroliti di Demetra e Kore e il tesoro d’argento ellenistico. Per la visita al sito si cammina molto, mentre il museo si visita a parte.",
+    "consigli": [
+      "Comincia dal museo e poi visita il parco: le sale spiegano la città e rendono più chiari i resti che vedrai tra gli scavi, dalle case con mosaici alle fornaci.",
+      "Una fonte indica un biglietto unico per la Villa del Casale, il museo e il sito: non è verificato, quindi controlla prima sul sito dei parchi archeologici della Regione Siciliana."
+    ],
+    "fonti": [
+      "https://www.visitsicily.info/en/attrazione/parco-archeologico-di-morgantina/",
+      "https://www.isprambiente.gov.it/it/attivita/museo/regioni/musei/museo-archeologico-di-aidone"
+    ],
+    "note": "Il luogo del seed (Aidone) è corretto. Titolo mantenuto. Tariffe e orari non inseriti: le fonti non concordano."
+  },
+  {
+    "slug": "museo-ceramica",
+    "title_it": "Museo della ceramica di Caltagirone",
+    "title_en": "Caltagirone Ceramics Museum",
+    "description_it": "Il Museo regionale della ceramica di Caltagirone, in via Giardini Pubblici, raccoglie la ceramica siciliana in un arco di tempo molto lungo, dalla preistoria ai primi decenni del Novecento secondo le fonti turistiche. La collezione è dedicata soprattutto alla produzione locale, con i pezzi più antichi e le botteghe della città. Il museo ha aperto nel 1965, in un edificio costruito negli anni Cinquanta. È un buon punto di partenza prima di visitare la scalinata e le botteghe. Per chi è: chi vuole capire le tecniche e lo stile della ceramica siciliana. Impegno: basso. La durata indicativa è di un’ora e mezza.",
+    "consigli": [
+      "Visita il museo prima della scalinata: le spiegazioni sulle tecniche aiutano a riconoscere le decorazioni che vedrai dal vivo.",
+      "Controlla orari e biglietto prima di andare: le fonti non concordano, e possono cambiare con le stagioni. Il museo è in una zona con giardini, quindi conviene arrivare con un po’ di tempo."
+    ],
+    "fonti": [
+      "https://www.italia.it/it/sicilia/caltagirone/luoghi-della-cultura/museo-regionale-della-ceramica",
+      "https://www.smarteducationunescosicilia.it/en/val-di-noto/a-museum-to-save-a-tradition/"
+    ],
+    "note": "Il nome ufficiale è Museo regionale della ceramica. Periodo della collezione discordante (il seed dice 'dal medioevo a oggi'): nel testo si usa la versione delle fonti turistiche. Orari non riportati."
+  },
+  {
+    "slug": "neapolis",
+    "title_it": "Parco archeologico della Neapolis",
+    "title_en": "Neapolis Archaeological Park",
+    "description_it": "Il Parco archeologico della Neapolis, a Siracusa, raccoglie il teatro greco scavato nel colle Temenite, l’anfiteatro romano e l’altare di Ierone II. Il teatro risale al V secolo avanti Cristo, e intorno c’è la latomia del Paradiso, un’antica cava di pietra con l’Orecchio di Dionisio, dalla forma a S e dall’acustica molto nota. Il nome della grotta è legato a una leggenda sul tiranno Dionisio, non a un fatto documentato. Il parco si trova sulla terraferma, non su Ortigia. Per chi è: chi ama il teatro antico e l’archeologia. Impegno: basso, con sentieri e gradinate.",
+    "consigli": [
+      "Il sole batte forte sulle gradinate del teatro: scegli le prime ore del giorno e porta acqua e un cappello. Il parco si gira a piedi, ma le distanze tra teatro, anfiteatro e grotta non sono brevi.",
+      "Dal centro di Ortigia il parco si raggiunge in auto o con un tragitto a piedi più lungo: controlla il percorso prima di partire. Verifica anche orari e biglietti sul sito del parco, perché possono cambiare."
+    ],
+    "fonti": [
+      "https://www.civitatis.com/it/siracusa/visita-guidata-parco-archeologico-neapolis/",
+      "https://www.alpitour.it/racconti/parco-archeologico-siracusa"
+    ],
+    "note": "Il parco è sulla terraferma, non su Ortigia: il collegamento con il luogo ortigia è mantenuto per vicinanza. Dimensioni dell’Orecchio di Dionisio discordanti tra fonti: non riportate. La leggenda su Caravaggio non è riportata. Fonti turistiche: controllare le date con il sito del parco."
+  },
+  {
+    "slug": "noto-barocco",
+    "title_it": "Noto barocca e granita",
+    "title_en": "Baroque Noto and granita",
+    "description_it": "Un giro a piedi nel centro di Noto, tra palazzi e chiese barocche ricostruiti dopo il terremoto del 1693. Il percorso passa per il corso principale e per la cattedrale di San Nicolò, costruita tra il 1694 e il 1703, crollata nel 1996 e riaperta nel 2007 dopo un lungo restauro. Il giro si chiude con una granita, la colazione o la merenda siciliana per eccellenza. Il percorso è in piano, e la durata indicativa è di due ore. Per chi è: chi vuole vedere il barocco di Noto in poche ore, con famiglia o amici. Impegno: basso.",
+    "consigli": [
+      "Fai il giro nelle ore più fresche e lascia la pausa per la granita a metà percorso, all’ombra di un portico o di un bar. Il sole in piazza si sente anche in primavera.",
+      "Chiedi sul posto quali parti della cattedrale sono visitabili e in quali orari, perché la cattedrale è stata restaurata da poco e alcune parti possono essere chiuse. Nel centro le distanze sono brevi: si fa tutto a piedi."
+    ],
+    "fonti": [
+      "https://www.vatican.va/content/benedict-xvi/it/letters/2007/documents/hf_ben-xvi_let_20070615_cattedrale-noto.html",
+      "https://www.visititaly.eu/it/unesco/sicilia-le-citta-tardo-barocche-del-val-di-noto-unesco-dal-2002"
+    ],
+    "note": "Data del crollo della cattedrale: le fonti danno cause diverse, nel testo solo l’anno 1996 (dato dal comunicato della Santa Sede). Il titolo 'capitale del barocco' non è verificato."
+  },
+  {
+    "slug": "ortigia-tour",
+    "title_it": "Ortigia a piedi",
+    "title_en": "Ortigia on foot",
+    "description_it": "Un giro a piedi nel centro antico di Ortigia: il Duomo, con il tempio di Atena inglobato nella chiesa, la Fonte Aretusa, con il papiro che cresce vicino al mare, e il mercato. Il percorso è breve e si fa in gran parte a piedi, in circa due ore e mezza. Il tempio di Apollo, tra i più antichi templi dorici della Sicilia, si può inserire nel giro. Per chi è: chi vuole capire la storia di Siracusa in una giornata, anche con bambini. Impegno: basso.",
+    "consigli": [
+      "Nelle ore centrali le piazze sono esposte al sole: conviene partire presto o nel tardo pomeriggio, e portare acqua. Le strade dell’isola sono brevi, ma spesso in pietra: scarpe con suola antiscivolo sono la scelta più sicura.",
+      "Controlla sul posto orari e modalità di ingresso ai singoli monumenti, che possono cambiare. Il Duomo e la Fonte Aretusa si possono vedere nella stessa mattinata, ma conviene decidere in anticipo quali visitare dentro."
+    ],
+    "fonti": [
+      "https://www.finestresullarte.info/viaggi/ortigia-cosa-vedere-10-luoghi-nel-cuore-di-siracusa",
+      "https://travel.thewom.it/italia/sicilia/ortigia.html"
+    ],
+    "note": "Date del tempio di Atena e del tempio di Apollo discordanti tra fonti: nel testo solo 'tra i più antichi'. Il percorso può includere il Parco della Neapolis solo con mezzo, perché è sulla terraferma."
+  },
+  {
+    "slug": "palazzo-normanni",
+    "title_it": "Palazzo dei Normanni e Cappella Palatina",
+    "title_en": "Palazzo dei Normanni and Palatine Chapel",
+    "description_it": "Il Palazzo dei Normanni ospita l’Assemblea regionale siciliana e custodisce la Cappella Palatina, fatta costruire da Ruggero II intorno al 1130. La chiesa unisce elementi latini, bizantini e arabi: i mosaici dorati coprono le pareti e le decorazioni hanno gusto islamico. La visita comprende la cappella e gli appartamenti reali, al secondo piano del palazzo, tra scale e sale. È adatta a chi si interessa di storia e di arte, anche con poco tempo: una visita con guida dura di solito circa novanta minuti. Se hai poco tempo, dai la priorità alla cappella, che è il nucleo della visita.",
+    "consigli": [
+      "Prenota la visita in anticipo sul sito ufficiale della Cappella Palatina e controlla gli orari, che cambiano tra giorni feriali e domenica. La domenica la cappella può restare chiusa durante le funzioni.",
+      "Gli orari e le tariffe delle fonti non sempre coincidono: confronta il sito ufficiale prima di organizzare la giornata, e lascia un margine per i controlli all’ingresso e per la fila nelle ore di punta."
+    ],
+    "fonti": [
+      "https://www.balarm.it/luoghi/cappella-palatina-palermo-palermo-1517",
+      "https://www.travel365.it/visita-palazzo-normanni-cappella-palatina-palermo.htm",
+      "https://it.wikipedia.org/wiki/Palermo"
+    ],
+    "note": "Prezzi e orari non inseriti perché le fonti non concordano. Le visite sono quelle guidate e del percorso ufficiale: da confermare sul sito della Cappella Palatina."
+  },
+  {
+    "slug": "palermo-notte",
+    "title_it": "Aperitivo e vita notturna alla Vucciria",
+    "title_en": "Aperitivo and nightlife at the Vucciria",
+    "description_it": "La Vucciria è il mercato storico del quartiere della Loggia, con piazza Caracciolo come centro e una rete di vicoli intorno. Secondo alcune fonti il nome deriva dal francese boucherie, cioè macelleria. Di giorno il mercato ha perso gran parte del commercio mattutino; la sera è diventata un punto di ritrovo per i giovani palermitani, con tavolini per l’aperitivo tra i vicoli. Il percorso è pensato per chi vuole capire il quartiere dopo il tramonto, senza un locale in particolare. Le strade sono strette e piene di gente, quindi l’esperienza è più adatta a un gruppo di amici o a una coppia che ama la vita di strada.",
+    "consigli": [
+      "Per l’aperitivo scegli i locali in base a quello che trovi aperto la sera: l’offerta del quartiere cambia nel tempo, quindi controlla le recensioni aggiornate prima di sederti.",
+      "Di sera le strade della Vucciria sono strette e i pedoni occupano la carreggiata. Porta con te solo il necessario e tieni d’occhio gli oggetti personali in mezzo alla folla."
+    ],
+    "fonti": [
+      "https://travel.thewom.it/italia/sicilia/palermo/guida-alla-vucciria-di-palermo.html",
+      "https://italoamericano.org/vucciria-palermo/"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "pantalica-trekking",
+    "title_it": "Necropoli e gole di Pantalica",
+    "title_en": "Pantalica necropolis and gorges",
+    "description_it": "Un sentiero tra le tombe rupestri di Pantalica e le gole del fiume Anapo. Il percorso passa vicino alla necropoli di Filiporto e alla cappella di San Micidiario, ricavata da una tomba antica. Il sentiero si fa a piedi, con discese e risalite su fondo sterrato. Per chi è: chi ama il trekking e l’archeologia, con una buona forma fisica. Impegno: medio, con dislivello. La durata indicativa è di quattro ore.",
+    "consigli": [
+      "Parti presto: nelle ore centrali il sole è forte e l’ombra è poca. Porta acqua in abbondanza, scarpe da trekking e un bastone per le discese.",
+      "Informati sulle condizioni del sentiero prima di partire, soprattutto dopo le piogge, perché il fondo può essere scivoloso. Gli accessi principali sono da Ferla e da Sortino: scegli il punto di partenza in base al giro che vuoi fare."
+    ],
+    "fonti": [
+      "https://travel.thewom.it/italia/sicilia/pantalica-necropoli.html",
+      "https://siviaggia.it/vacanze-natura/pantalica-sicilia-natura-archeologia-fascino-unico/449639/"
+    ],
+    "note": "Nome della necropoli di Filiporto (anche Filipporto) come nelle fonti; la forma 'Filiciusa' non è stata trovata. Mesi di stagione dal seed, non verificati."
+  },
+  {
+    "slug": "pergusa",
+    "title_it": "Lago di Pergusa",
+    "title_en": "Lake Pergusa",
+    "description_it": "Il Lago di Pergusa è un bacino naturale nei pressi di Enna, tutelato come riserva naturale regionale dal 1995 e riconosciuto come sito di importanza comunitaria. Nel periodo invernale vi sostano fenicotteri, e accanto al lago c’è un autodromo, con attività motoristiche consentite solo in alcuni mesi dell’anno. Negli ultimi anni il livello dell’acqua è sceso molto: nell’estate del 2024 il bacino si era quasi asciugato, e le analisi più recenti indicano il rischio di un prosciugamento. Prima di partire conviene controllare lo stato dell’acqua presso l’ente che gestisce la riserva.",
+    "consigli": [
+      "Prima di programmare la visita verifica lo stato del lago presso il Libero Consorzio Comunale di Enna, che gestisce la riserva: il livello è cambiato molto e le foto online possono risalire ad anni diversi.",
+      "Da aprile a ottobre il clima è caldo: porta acqua e un cappello e scegli le ore del mattino. In inverno la presenza dei fenicotteri dipende dal livello dell’acqua, quindi non è garantita."
+    ],
+    "fonti": [
+      "https://orbs.regione.sicilia.it/images/73_-_Lago_di_Pergusa_-_01_-_ISTITUZIONE.pdf",
+      "https://www.balarm.it/news/nel-lago-di-pergusa-l-acqua-c-e-ma-non-basta-vi-spieghiamo-cosa-succede-davvero-147643"
+    ],
+    "note": "Il seed indica una riserva con auto necessaria: confermato dal decreto istitutivo. Lo stato attuale dell’acqua non è verificato: da aggiornare alla data di pubblicazione."
+  },
+  {
+    "slug": "pescheria-catania",
+    "title_it": "Colazione alla pescheria di Catania",
+    "title_en": "Breakfast at Catania’s fish market",
+    "description_it": "La pescheria è il mercato del pesce del centro di Catania, che si estende sotto il Palazzo del Seminario e le mura di Carlo V e si articola in tre zone, tra piazza Pardo e piazza Alonzo di Benedetto. La galleria del mercato è stata restaurata nel 2022. Al mattino i banchi vendono pesce e frutti di mare, e i venditori usano le vanniate, le grida con cui attirano i compratori. Accanto al mercato ci sono bar dove si fa colazione con granita e brioche, la colazione tipica della città. Per chi è: chi vuole vedere la vita del mercato al mattino. Impegno: basso, si cammina tra i banchi.",
+    "consigli": [
+      "Arriva presto: il mercato lavora soprattutto al mattino, e i banchi del pesce si svuotano nel corso della mattinata. Se vuoi comprare, porta una borsa termica per il tragitto verso casa o verso il luogo dove mangi.",
+      "Chiedi il prezzo al chilo prima di scegliere il pesce o di ordinarlo al banco, e fatti spiegare come viene preparato. Le vanniate sono una tradizione viva: non sono uno spettacolo, quindi osserva senza fotografare da vicino i venditori."
+    ],
+    "fonti": [
+      "https://catania.liveuniversity.it/2022/11/30/pescheria-catania-galleria-riqualificata/amp/",
+      "https://www.gamberorosso.it/notizie/rubriche/miniguide/mercato-ottocentesco-catania/",
+      "https://catania.liveuniversity.it/2021/03/04/pescheria-catania-cosa-comprare-di-tipico/amp/"
+    ],
+    "note": "Origine e sede storica del mercato discordanti tra fonti (piazza Mazzini o sede attuale dall’Ottocento): non riportate. Nessuna fonte ufficiale del Comune trovata."
+  },
+  {
+    "slug": "piazza-armerina-borgo",
+    "title_it": "Centro storico di Piazza Armerina",
+    "title_en": "Historic centre of Piazza Armerina",
+    "description_it": "Il centro storico di Piazza Armerina si percorre a piedi in un pomeriggio. Il punto di partenza è la parte alta della città, dove sorge la cattedrale di Maria Santissima delle Vittorie: iniziata nel 1604 e completata nel 1719, con la cupola aggiunta nel 1768, mescola elementi gotici e barocchi. Poco distante, il palazzo Trigona della Floresta, del 1690, ospita il museo archeologico. Il tessuto urbano è diviso in quattro quartieri, Monte, Canali, Castellina e Casalotto, con vicoli medievali che scendono verso valle. Il centro si combina bene con la visita alla Villa del Casale nello stesso giorno.",
+    "consigli": [
+      "Parti dalla cattedrale, nella parte più alta: da lì si scende verso i quartieri, con più soste lungo i vicoli. Il castello aragonese sul monte Mira si vede solo dall’esterno, secondo le guide consultate.",
+      "Porta scarpe comode per i vicoli in salita e acqua, soprattutto in estate. Se il giro è nel pomeriggio, controlla gli orari dei musei del centro, che cambiano nel corso dell’anno."
+    ],
+    "fonti": [
+      "https://en.wikipedia.org/wiki/Piazza_Armerina_Cathedral",
+      "https://travel.thewom.it/italia/sicilia/piazza-armerina.html"
+    ],
+    "note": "Le date di fondazione della città non concordano tra le fonti: non riportate. Il luogo è corretto."
+  },
+  {
+    "slug": "pistacchio-bronte",
+    "title_it": "Pistacchieti e laboratorio a Bronte",
+    "title_en": "Pistachio groves and workshop in Bronte",
+    "description_it": "Visita a un pistacchieto nel periodo della raccolta e a un laboratorio dove si lavora il pistacchio verde di Bronte. Il frutto si raccoglie a mano, tra fine agosto e inizio ottobre, su terreni spesso in pendenza, e la produzione cambia da un anno all’altro. Si assaggia il pistacchio tostato e si vedono i prodotti che se ne ricavano. Per chi è: chi ama il cibo e i prodotti della terra, e vuole capire da dove viene il pistacchio venduto nei negozi. Impegno: basso, con qualche tratto in pendenza tra gli alberi. La durata indicativa è di tre ore.",
+    "consigli": [
+      "La raccolta si vede tra fine agosto e inizio ottobre: è il periodo in cui i pistacchieti sono in lavoro. Fuori da quei mesi la visita è diversa, e il laboratorio può avere meno da mostrare.",
+      "Il pistacchio verde di Bronte ha la denominazione DOP: sulla confezione cerca la dicitura DOP e la provenienza precisa, prima di acquistare. Conserva la confezione chiusa, in un luogo asciutto e lontano dalla luce."
+    ],
+    "fonti": [
+      "https://www.linkiesta.it/2025/02/pistacchio-bronte-dop-oro-verde-world-pistachio-day/",
+      "https://www.greenme.it/salute-e-alimentazione/mangiare-sostenibile/pistacchio-di-bronte/"
+    ],
+    "note": "Laboratorio generico, nessuna azienda citata. Mesi dal seed (agosto-ottobre), coerenti con la raccolta verificata. Nell’attività il pistacchio non è indicato con un prezzo."
+  },
+  {
+    "slug": "pizzo-carbonara",
+    "title_it": "Salita a Pizzo Carbonara",
+    "title_en": "Climb to Pizzo Carbonara",
+    "description_it": "Pizzo Carbonara, a 1.979 metri, è la vetta più alta delle Madonie e la seconda montagna della Sicilia dopo l’Etna. Il giro più comune parte da Piano Battaglia e attraversa il polje della Battaglietta, una valle carsica con inghiottitoi, fino alla cima; il ritorno passa per Pizzo Scalonazzo. Il dislivello è di circa 380 metri, e la difficoltà è da escursionista (E) secondo la maggior parte delle fonti. Dalla vetta, nelle giornate limpide, si vedono le isole Eolie, i Nebrodi e l’Etna.",
+    "consigli": [
+      "Parti presto e porta acqua: il percorso è lungo e in quota il clima può cambiare rapidamente. Pianifica una giornata intera tra andata, cima e ritorno, con soste.",
+      "Le uscite con guida spesso richiedono prenotazione, e alcune non sono consigliate ai bambini sotto una certa età. Controlla il percorso e il grado di difficoltà prima di partire, perché le fonti non concordano su lunghezza e tempi."
+    ],
+    "fonti": [
+      "https://www.montagna.tv/165330/esplorando-nuovi-sentieri-con-il-club-alpino-italiano/",
+      "https://www.balarm.it/eventi/e-la-seconda-vetta-piu-alta-della-sicilia-escursione-ad-alta-quota-a-pizzo-carbonara-137356"
+    ],
+    "note": "Il seed colloca l’attività a Polizzi, ma il punto di partenza è Piano Battaglia (Petralia Sottana). Il luogo resta invariato. Le fonti danno lunghezze e tempi molto diversi."
+  },
+  {
+    "slug": "polizzi-borgo",
+    "title_it": "Polizzi Generosa e lo sfoglio",
+    "title_en": "Polizzi Generosa and the sfoglio",
+    "description_it": "Polizzi Generosa è un comune di circa 2.700 abitanti a 920 metri di quota, nel Parco delle Madonie. Il paese fu un centro prospero già in età islamica e conserva la chiesa di Santa Maria Assunta, dell’XI secolo, e l’abbazia di Santa Croce, con affreschi bizantini. Il dolce tipico è lo sfoglio, una torta ripiena di tuma, formaggio fresco della zona, riconosciuta come prodotto agroalimentare tradizionale. Il borgo si visita a piedi, tra palazzi e chiese, con una passeggiata di qualche ora. È adatto a chi viaggia nelle Madonie con calma e vuole assaggiare un dolce poco diffuso fuori dalla zona.",
+    "consigli": [
+      "Lo sfoglio si trova nelle pasticcerie del paese e può essere condiviso con alcuni paesi vicini: chiedi come lo preparano e da quale formaggio è composto, per capirne le differenze.",
+      "Polizzi è un buon punto di partenza per le Madonie, ma le strade di montagna richiedono più tempo di quanto suggeriscano le mappe. Pianifica la giornata con margine, soprattutto per il ritorno."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Polizzi_Generosa"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "rocca-cefalu",
+    "title_it": "Salita alla Rocca di Cefalù",
+    "title_en": "Climb to the Rock of Cefalù",
+    "description_it": "La Rocca di Cefalù è il promontorio che domina il paese: il nucleo medievale si stende ai suoi piedi, con il duomo. Il sentiero sale verso il Tempio di Diana, un santuario megalitico di età preellenica con una cisterna del IX secolo a.C. La salita è panoramica e si affaccia sul mare, ma richiede gambe e un po’ di fiato, soprattutto nelle ore calde. Il percorso è adatto a chi cammina volentieri e vuole una vista dall’alto sulla costa, senza attrezzature particolari. Nei punti panoramici conviene fare una sosta e lasciare il passo ai più lenti.",
+    "consigli": [
+      "Parti presto la mattina nei mesi caldi: il sentiero è esposto al sole e i punti d’ombra sono pochi. Porta acqua, scarpe chiuse e un cappello, e tieni conto del tempo per la discesa.",
+      "Il Tempio di Diana è un sito archeologico: non arrampicarti sulle pietre e segui il percorso segnato. Le regole di accesso possono cambiare, quindi controlla le indicazioni sul posto."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Cefal%C3%B9"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "saline-trapani",
+    "title_it": "Saline e mulini di Trapani",
+    "title_en": "Salt pans and windmills of Trapani",
+    "description_it": "Le Saline di Trapani e Paceco sono una riserva naturale di circa mille ettari, istituita nel 1995 e gestita dal WWF, con vasche di evaporazione e mulini a vento che pompano l’acqua e macinano il sale. La riserva è un habitat per uccelli migratori, tra cui il fenicottero rosa, e il sale prodotto ha l’Indicazione Geografica Protetta. Il percorso tra le vasche si fa a piedi o in bici, con soste ai mulini e al Museo del sale di Nubia, in un baglio del Seicento con mulino annesso. Il tramonto è il momento più adatto per le foto, con la luce che si riflette sul sale. Adatta a famiglie, coppie e a chi cerca natura e paesaggio.",
+    "consigli": [
+      "Il tramonto è l’ora migliore per le saline: la luce radente rende visibili le vasche e il sale. Porta un cappello e acqua, perché i percorsi sono all’aperto e con poco riparo.",
+      "Le visite partono di solito dal centro visitatori WWF e dal museo: controlla orari e disponibilità sul sito della riserva, perché le modalità cambiano. Alcuni mulini sono in restauro e non sempre sono in funzione."
+    ],
+    "fonti": [
+      "https://en.wikipedia.org/wiki/Salt_pans_of_Trapani_and_Paceco",
+      "https://www.balarm.it/news/il-bianco-ottico-i-profumi-e-il-silenzio-la-riserva-tra-le-piu-amate-in-sicilia-fa-30-anni-155179"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "san-vito-relax",
+    "title_it": "Giornata di relax a San Vito",
+    "title_en": "A relaxing day in San Vito Lo Capo",
+    "description_it": "San Vito Lo Capo ha una spiaggia di sabbia dorata lunga circa tre chilometri, all’estremità occidentale del golfo di Castellammare. Il centro è a pochi passi dal mare, e la giornata è semplice: lettino, bagno e un pranzo di pesce in un locale del paese. È adatta a coppie, famiglie e a chi cerca un ritmo lento, senza un programma fisso. In alta stagione la spiaggia si riempie nelle ore centrali, quindi conviene arrivare presto. Nei mesi più caldi la giornata si può chiudere con una passeggiata nel centro.",
+    "consigli": [
+      "Per la spiaggia arriva nelle prime ore del mattino nei mesi estivi, quando c’è ancora posto. Porta un ombrellone leggero o informati prima sulle condizioni del servizio.",
+      "Il cous cous di pesce è il piatto da assaggiare a San Vito: si serve con un brodo di pesce di scoglio e le versioni cambiano da un locale all’altro. Nei weekend estivi conviene prenotare."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/San_Vito_Lo_Capo",
+      "https://www.voloscontato.it/guide-per-viaggiatori/cous-cous-di-pesce-a-san-vito-lo-capo-i-locali-da-provare-almeno-una-volta.php"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "scala-caltagirone",
+    "title_it": "Scala di Santa Maria del Monte",
+    "title_en": "Santa Maria del Monte staircase",
+    "description_it": "La scalinata di Santa Maria del Monte collega la parte bassa di Caltagirone alla chiesa in alto. I suoi 142 gradini sono rivestiti di maioliche dipinte, con disegni che cambiano da un gradino all’altro, e la decorazione risale in gran parte agli anni Cinquanta. Ogni anno la scalinata ospita un’infiorata a maggio e viene illuminata con piccole lampade in occasione delle feste di luglio e agosto. È il simbolo della ceramica di Caltagirone. Per chi è: chi vuole vedere la ceramica nel suo contesto urbano. Impegno: medio, per la salita. La visita dura circa un’ora.",
+    "consigli": [
+      "Sali presto o nel tardo pomeriggio: i gradini sono esposti al sole e in estate la salita pesa. Fermati a metà per guardare le maioliche da vicino.",
+      "Se vuoi vedere la scalinata illuminata, le date sono quelle delle feste di luglio e agosto: controlla il programma del Comune prima di partire."
+    ],
+    "fonti": [
+      "https://www.greenme.it/?p=524077",
+      "https://livesicilia.it/?p=505735",
+      "https://travel.thewom.it/italia/sicilia/scalinata-santa-maria-del-monte-caltagirone.html"
+    ],
+    "note": "Date della decorazione in maiolica discordanti (anni Cinquanta, 1954 in una fonte): nel testo 'in gran parte negli anni Cinquanta'. Data della scalinata (1606) riportata da più fonti: non compare nel testo."
+  },
+  {
+    "slug": "scala-turchi",
+    "title_it": "Scala dei Turchi",
+    "title_en": "Scala dei Turchi",
+    "description_it": "La Scala dei Turchi è una falesia di marna bianca lungo la costa di Realmonte, nell’agrigentino. Il bianco della roccia è netto, e la scogliera si raggiunge dal litorale salendo una scalinata naturale di pietra calcarea. Dalla sommità si vede la costa fino a Capo Rossello, e la spiaggia è fra due tratti di sabbia fine. Il sito è soggetto a erosione e frane, ed è stato chiuso più volte. Dal 2023 è bene pubblico con accesso regolato, con ingressi contingentati e biglietto. È adatto a chi cerca un paesaggio particolare e può camminare su un percorso sassoso.",
+    "consigli": [
+      "Per la scalinata servono scarpe chiuse con suola antiscivolo: la marna diventa scivolosa con l’umidità e il vento. Porta con te solo l’essenziale.",
+      "Prima di partire verifica lo stato di accesso sui canali ufficiali del Comune di Realmonte e del Parco archeologico, perché le regole sono cambiate più volte. In alta stagione conviene arrivare presto."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Scala_dei_Turchi",
+      "https://www.lasicilia.it/news/cronaca/3037934/scala-dei-turchi-cambia-tutto-addio-prenotazioni-online-ingresso-a-6-euro-e-accessi-contingentati-per-salvare-la-falesia-bianca.html"
+    ],
+    "note": "Il seed indica il bagno al tramonto: non verificato, e le regole sul bagno non sono note, quindi non lo scrivo. Prezzi e orari non inseriti perché cambiano. Accessi regolati da maggio 2026 secondo La Sicilia."
+  },
+  {
+    "slug": "scicli-chiese",
+    "title_it": "Scicli e via Mormino Penna",
+    "title_en": "Scicli and Via Mormino Penna",
+    "description_it": "Un giro a piedi tra le chiese e i palazzi barocchi di Scicli, partendo da via Mormino Penna, la via principale del centro. La chiesa di San Matteo, sul colle omonimo, è la più antica della città e il suo luogo di culto principale fino al 1874. Il centro è piccolo e si gira in mezza giornata, con qualche salita verso San Matteo. Il riconoscimento UNESCO del 2002 riguarda il barocco della Val di Noto, di cui Scicli fa parte. Per chi è: chi cerca il barocco con un ritmo più raccolto. Impegno: basso.",
+    "consigli": [
+      "Per salire a San Matteo, parti dal centro con calma: la salita è in pendenza e conviene farla nelle ore fresche. Controlla gli orari di apertura della chiesa sul posto, perché cambiano.",
+      "Via Mormino Penna è il punto di ritrovo serale del centro: lascia la passeggiata alla sera, dopo la visita alle chiese durante il giorno."
+    ],
+    "fonti": [
+      "https://siviaggia.it/viaggi/scicli-cosa-vedere-cosa-visitare/277955/",
+      "https://www.balarm.it/eventi/a-scicli-tra-stucchi-intarsi-e-decori-rococo-con-le-vie-dei-tesori-nel-gioiello-barocco-127841"
+    ],
+    "note": "La data 1874 è riportata da una fonte: da confermare. Le fonti non indicano l’indirizzo esatto della chiesa."
+  },
+  {
+    "slug": "segesta-tempio",
+    "title_it": "Tempio e teatro di Segesta",
+    "title_en": "Temple and theatre of Segesta",
+    "description_it": "Il tempio di Segesta, dorico e periptero, è stato costruito nell’ultimo trentennio del V secolo a.C. su una collina a ovest della città, fuori dalle mura. Ha 36 colonne e il colonnato è conservato per intero, probabilmente perché il tempio non ebbe mai un tetto. Il teatro, più in alto sul monte Barbaro, fu costruito alla fine del III secolo a.C. ed è ancora usato per eventi e rievocazioni all’alba e al tramonto. La visita è adatta a chi ama l’archeologia greca: il teatro richiede più tempo e una salita più impegnativa del tempio. Il sito è all’aperto e con poca ombra, quindi conviene la mattina presto.",
+    "consigli": [
+      "Il teatro è sulla cima del monte e la salita è più impegnativa del tempio: se viaggi con bambini piccoli o hai difficoltà a camminare, valuta con calma cosa vedere. Porta acqua e un cappello.",
+      "Per le rievocazioni e gli eventi nel teatro controlla il calendario del sito prima di partire, perché la programmazione varia da un anno all’altro."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Segesta"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "sperlinga",
+    "title_it": "Castello di Sperlinga",
+    "title_en": "Castle of Sperlinga",
+    "description_it": "Il castello di Sperlinga sorge su uno sperone di arenaria, nel piccolo comune di Sperlinga, poco più di seicento abitanti tra i Nebrodi e le Madonie. In parte il castello è scavato nella roccia, e il borgo conta decine di grotte artificiali. Il paese è citato già in un privilegio del conte Ruggero del 1082, e il castello compare come castrum in un documento del 1239. Durante i Vespri siciliani del 1282 la guarnigione angioina resistette per oltre un anno, e un motto latino sull’arco d’ingresso ricorda l’episodio. La salita avviene per una scalinata ricavata nella pietra, con un tratto ripido.",
+    "consigli": [
+      "Il castello è in un borgo in salita, con una scalinata ricavata nella roccia: scarpe comode con suola antiscivolo e tempo per salire senza fretta, soprattutto con la pioggia.",
+      "Una fonte indica un biglietto che comprende il borgo rupestre e un museo etnografico, ma l’informazione è datata. Chiedi all’ufficio turistico del Comune prima di andare, perché orari e tariffe cambiano."
+    ],
+    "fonti": [
+      "https://siviaggia.it/borghi/sperlinga-enna-sicilia/594632/",
+      "https://travel.thewom.it/italia/sicilia/sperlinga.html"
+    ],
+    "note": "Problema di luogo: nel seed l’attività è legata a Enna, ma il castello è nel comune di Sperlinga, che non compare tra i luoghi del catalogo: va creato il luogo e corretto il collegamento. Prezzo del seed non verificato."
+  },
+  {
+    "slug": "spiaggia-cefalu",
+    "title_it": "Mare e borgo di Cefalù",
+    "title_en": "Sea and old town of Cefalù",
+    "description_it": "Cefalù si affaccia sul Tirreno, con la spiaggia sabbiosa a pochi passi dal centro storico. La giornata unisce il bagno con una passeggiata tra i vicoli, il lavatoio medievale e il duomo normanno, con i mosaici dell’abside. È un’esperienza rilassata, adatta a famiglie, coppie e gruppi di amici: si può scegliere quanto stare in spiaggia e quanto visitare, in base al tempo che hai. In alta stagione la spiaggia si riempie nelle ore centrali, quindi conviene arrivare in mattinata e tenere il pomeriggio per il borgo.",
+    "consigli": [
+      "Per il bagno scegli le ore del mattino: in alta stagione la spiaggia si riempie nelle ore centrali e anche il centro storico diventa più affollato.",
+      "Se vuoi visitare il duomo e il lavatoio, fallo prima del bagno o in tarda mattinata, così eviti il caldo del pomeriggio. Per entrare in chiesa porta un telo leggero da mettere sulle spalle."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Cefal%C3%B9"
+    ],
+    "note": ""
+  },
+  {
+    "slug": "teatro-massimo",
+    "title_it": "Visita al Teatro Massimo",
+    "title_en": "Visit to the Teatro Massimo",
+    "description_it": "Il Teatro Massimo di Palermo è il più grande teatro lirico d’Italia, progettato da Giovan Battista Filippo Basile e costruito tra il 1875 e il 1897 sul sito di un antico convento. La visita guidata accompagna nella sala principale, nel salone del palco reale, nella sala pompeiana e nel foyer, con le stanze decorate con gli stemmi. In alcune edizioni è possibile vedere anche il dietro le quinte, mentre la terrazza ha un biglietto a parte. È un’esperienza breve, pensata per chi ama l’architettura e l’opera, e si può inserire in una mattina o in un pomeriggio. Le visite sono a gruppi, con orari fissi e posti limitati.",
+    "consigli": [
+      "La visita standard dura circa mezz’ora: se il tuo itinerario è fitto, programmala tra un’attività e l’altra senza schiacciarla. Controlla gli orari sul sito del teatro, perché le fasce cambiano con gli spettacoli.",
+      "Se vuoi vedere uno spettacolo, il teatro ha una propria programmazione di opera e balletto: il biglietto per la serata è un’altra cosa rispetto alla visita. Scegli la data dal programma ufficiale e prenota con anticipo."
+    ],
+    "fonti": [
+      "https://www.balarm.it/eventi/visite-itinerari-ed-escursioni/visita-guidata-al-teatro-massimo-di-palermo-dietro-il-sipario-del-tempio-della-lirica-75357",
+      "https://it.wikipedia.org/wiki/Palermo"
+    ],
+    "note": "Il seed indica 45 minuti, le fonti circa 30: nel testo scrivo circa mezz’ora. Prezzi e orari variano tra le fonti: non inseriti. Da confermare sul sito del teatro."
+  },
+  {
+    "slug": "teatro-taormina",
+    "title_it": "Teatro Antico di Taormina",
+    "title_en": "Ancient Theatre of Taormina",
+    "description_it": "Il Teatro Antico è il monumento più noto di Taormina: un teatro di origine greca, rimaneggiato in età romana, con un diametro di circa 107 metri e una capienza di circa diecimila spettatori. Le gradinate si affacciano sul mare Ionio e, sullo sfondo, sull’Etna. Il sito è gestito dal Parco archeologico Naxos Taormina e si visita con un biglietto. Per chi è: chi ama l’archeologia e la vista, anche con poco tempo a disposizione. Impegno: basso, ma le gradinate sono in salita e il sole è forte in estate. La visita dura circa un’ora e mezza.",
+    "consigli": [
+      "Arriva al mattino presto o nel tardo pomeriggio: il sole sulle gradinate è forte in estate, e la luce è migliore per la vista sulla costa. Porta acqua e un cappello.",
+      "Gli orari e i prezzi cambiano spesso, e le fonti trovate non concordano: controlla il sito del Parco archeologico Naxos Taormina prima di partire, e informati se ci sono spettacoli in programma nei giorni della visita."
+    ],
+    "fonti": [
+      "https://en.wikipedia.org/wiki/Ancient_theatre_of_Taormina",
+      "https://www.italia.it/it/sicilia/taormina/guida-storia-curiosita"
+    ],
+    "note": "Fonti discordanti su orari e biglietto: nessun prezzo o orario riportato. Età del teatro greco e romano discussa: il testo dice 'di origine greca, rimaneggiato in età romana'."
+  },
+  {
+    "slug": "valle-templi",
+    "title_it": "Valle dei Templi",
+    "title_en": "Valley of the Temples",
+    "description_it": "La visita guidata alla Valle dei Templi attraversa il parco dei templi dorici della città greca di Akragas, tra il tempio della Concordia, il tempio di Giunone e il tempio di Giove, mai completato. Il parco è di circa 1.300 ettari, patrimonio UNESCO dal 1997, e si percorre in buona parte a piedi. La guida racconta la storia della città e la costruzione dei templi, che è al centro della visita. È adatta a chi vuole capire il luogo con un racconto e richiede circa tre ore. Il periodo più adatto è la primavera o l’autunno, quando il caldo non pesa sul percorso.",
+    "consigli": [
+      "Il tramonto è un’ora piacevole per la luce sui templi, ma le aperture serali sono limitate a periodi precisi: verifica il programma del parco prima di organizzare la visita.",
+      "Scegli scarpe comode e porta acqua, perché il percorso è all’aperto. In estate la visita del mattino presto evita le ore più calde."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Valle_dei_Templi",
+      "https://it.wikipedia.org/wiki/Agrigento"
+    ],
+    "note": "Titolo ‘al tramonto’ non verificato: nessuna fonte trovata conferma visite o aperture al tramonto. Da confermare col parco prima di pubblicare, o cambiare titolo. Il seed la colloca ad Agrigento, non alla scheda Valle dei Templi."
+  },
+  {
+    "slug": "vendicari",
+    "title_it": "Riserva di Vendicari",
+    "title_en": "Vendicari Nature Reserve",
+    "description_it": "La riserva naturale orientata di Vendicari, nel territorio di Noto, comprende un litorale di sabbia e calette, saline e stagni dove si fermano uccelli migratori, tra cui i fenicotteri. Parte del percorso si fa a piedi, e lungo la costa ci sono la torre di Vendicari e i resti della tonnara. Per chi è: chi ama la natura, il birdwatching e il mare calmo. Impegno: medio, con lunghi tratti a piedi, sole e poca ombra. La durata indicativa è di quattro ore.",
+    "consigli": [
+      "Porta acqua, cappello e scarpe da passeggio: l’ombra è poca e in estate il sole pesa. Alcuni tratti sono sabbiosi, quindi meglio evitare le ciabatte.",
+      "Gli ingressi sono più di uno e sono distanti tra loro: scegli quello in base al punto che vuoi raggiungere. Controlla orari e biglietto sul sito della riserva prima di partire, perché le fonti non concordano."
+    ],
+    "fonti": [
+      "https://www.touringclub.it/destinazioni/noto/vedere/287198-riserva-naturale-di-vendicari",
+      "https://siviaggia.it/vacanze-natura/sicilia-selvaggia-riserva-vendicari-mare-storia-natura/550761/"
+    ],
+    "note": "Orari e biglietti da fonte secondaria, non riportati. Numero degli ingressi discordante (4 o 5). Stagione dei fenicotteri discordante (il seed dice settembre-marzo): il testo non indica mesi."
+  },
+  {
+    "slug": "villa-casale",
+    "title_it": "Villa Romana del Casale",
+    "title_en": "Villa Romana del Casale",
+    "description_it": "La Villa Romana del Casale è una grande residenza di età tardoantica alle porte di Piazza Armerina. Fu scoperta nel 1950 e nel 1957 ricevette una copertura protettiva. Gli ambienti, numerati fino a 55, sono decorati da pavimenti a mosaico con scene di caccia, mitologia e vita quotidiana: i più noti sono la Grande Caccia nel lungo corridoio, il mosaico delle ragazze in tenuta sportiva e le Fatiche di Ercole. Il sito è iscritto nella lista UNESCO dal 1997. Per chi ama l’arte antica è una visita da fare con calma, in circa due ore e mezza, con scarpe comode perché il percorso è lungo.",
+    "consigli": [
+      "Verifica prima di partire se serve la prenotazione: le fonti non concordano, e nei fine settimana e in alta stagione conviene arrivare al mattino, quando il sito è meno affollato.",
+      "Il sito è fuori dal centro: l’auto è la soluzione più semplice. Se pensi al servizio di navetta dal centro, controlla gli orari della stagione, perché cambiano spesso e non tutte le fonti sono aggiornate."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Villa_romana_del_Casale",
+      "https://unesco.cultura.gov.it/en/projects/piazza-armerina-villa-romana-del-casale/"
+    ],
+    "note": "Il seed indica il luogo a Piazza Armerina: corretto. Tariffe e orari non inseriti: le fonti non concordano."
+  },
+  {
+    "slug": "zingaro",
+    "title_it": "Riserva dello Zingaro",
+    "title_en": "Zingaro Nature Reserve",
+    "description_it": "La Riserva dello Zingaro è la prima riserva naturale della Sicilia, istituita nel 1981 e affidata all’Azienda Regionale Foreste Demaniali. Il sentiero costiero di circa sette chilometri collega i due ingressi, quello di Scopello e quello di San Vito Lo Capo, attraversando calette di ciottoli e tratti di macchia mediterranea. Per il tratto costiero servono circa due ore; esistono anche sentieri più lunghi e più alti, più impegnativi. È un’esperienza di costa selvaggia, adatta a chi cammina con regolarità e vuole vedere il paesaggio da vicino. Per il bagno, le calette sono raggiungibili lungo il percorso.",
+    "consigli": [
+      "Per il sentiero costiero scegli scarpe da trekking e porta acqua e un cappello, perché il percorso è esposto al sole in più tratti. Parti presto, soprattutto in estate.",
+      "Dall’ingresso di Scopello c’è il centro visitatori: chiedi lì quali tratti conviene percorrere in base al tempo a disposizione. Organizza il rientro in anticipo, perché il sentiero collega due ingressi diversi."
+    ],
+    "fonti": [
+      "https://it.wikipedia.org/wiki/Riserva_naturale_orientata_dello_Zingaro"
+    ],
+    "note": "Nel seed l’attività è sotto San Vito, mentre la scheda Riserva dello Zingaro non ha attività: la riserva ha sede amministrativa a Castellammare del Golfo. Il mare e la sicurezza del bagno non sono verificati: non li scrivo. Titolo invariato."
+  }
+]

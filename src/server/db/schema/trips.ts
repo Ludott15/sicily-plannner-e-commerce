@@ -69,6 +69,9 @@ export const itineraries = pgTable(
     pace: tripPace("pace"),
     // Introduzione di ogni giorno, per indice, come i titoli. Massimo 280 caratteri ciascuna.
     dayIntros: text("day_intros").array().notNull().default(sql`'{}'`),
+    // Consigli generali dell'itinerario pronto (content/catalog), mostrati nella pagina come
+    // "Consigli della redazione". Scritti dall'import dei contenuti, mai dal client.
+    tips: text("tips").array().notNull().default(sql`'{}'`),
     status: itineraryStatus("status").notNull().default("draft"),
     // Copertina degli itinerari pronti; senza, quella del luogo della prima tappa.
     coverMediaId: uuid("cover_media_id").references(() => media.id, { onDelete: "set null" }),
@@ -93,6 +96,8 @@ export const itineraries = pgTable(
     ),
     check("itineraries_day_intros_within_days", sql`cardinality(${t.dayIntros}) <= ${t.days}`),
     check("itineraries_day_intros_length", sql`public.text_array_max_length(${t.dayIntros}) <= 280`),
+    check("itineraries_tips_length", sql`public.text_array_max_length(${t.tips}) <= 260`),
+    check("itineraries_tips_count", sql`cardinality(${t.tips}) <= 3`),
   ],
 );
 

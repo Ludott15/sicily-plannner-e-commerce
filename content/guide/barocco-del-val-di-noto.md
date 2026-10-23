@@ -6,7 +6,7 @@ author: Redazione di Isula
 links:
   - place: noto
   - place: modica
-  - place: ragusa
+  - place: ragusa-ibla
   - place: catania
 ---
 

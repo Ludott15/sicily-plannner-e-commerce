@@ -1,5 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { isLocalDatabase, parseGuideSource, planGuideImport } from "./import-guides.mjs";
+import { checkPrefix, isGuideFile, isLocalDatabase, parseGuideSource, planGuideImport } from "./import-guides.mjs";
+
+const LOCAL = "postgresql://u:p@127.0.0.1:55322/postgres";
+const REMOTE = "postgresql://u:p@db.example.supabase.co:5432/postgres";
+
+describe("checkPrefix", () => {
+  it("ammette i prefissi di prova (demo-, e2e-, int-) solo verso un database locale", () => {
+    for (const prefix of ["demo-", "e2e-", "int-"]) {
+      expect(() => checkPrefix(prefix, LOCAL)).not.toThrow();
+      expect(() => checkPrefix(prefix, REMOTE)).toThrow("ammesso solo con un database locale");
+    }
+  });
+
+  it("accetta nessun prefisso verso qualsiasi host, e prefissi diversi da quelli di prova verso un host remoto", () => {
+    expect(() => checkPrefix("", REMOTE)).not.toThrow();
+    expect(() => checkPrefix("guida-", REMOTE)).not.toThrow();
+  });
+
+  it("rifiuta prefissi con caratteri non ammessi", () => {
+    expect(() => checkPrefix("Demo_", LOCAL)).toThrow("non valido");
+  });
+});
+
+describe("isGuideFile", () => {
+  it("considera guide solo i file con nome in minuscolo, e non FONTI.md", () => {
+    expect(isGuideFile("cosa-mangiare-in-sicilia.md")).toBe(true);
+    expect(isGuideFile("FONTI.md")).toBe(false);
+    expect(isGuideFile("fonti.md.bak")).toBe(false);
+    expect(isGuideFile("Guida.md")).toBe(false);
+  });
+});
 
 const source = [
   "---",
