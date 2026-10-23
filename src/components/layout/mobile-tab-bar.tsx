@@ -10,7 +10,7 @@ import { usePathname } from "@/lib/i18n/navigation";
 // Il carrello (passo 7.2) sta sotto Esplora, dove vive lo shop: il suo numero di articoli è sulla voce Esplora.
 // Il carrello è anche nell'intestazione, a tutte le larghezze: la barra non ha una quinta voce.
 const SECTIONS: { key: TabKey; pattern: RegExp }[] = [
-  { key: "explore", pattern: /^\/(attivita|itinerari|voli|dove-dormire|noleggio-auto|luoghi|shop|prodotti|carrello)(\/|$)/ },
+  { key: "explore", pattern: /^\/(esplora|attivita|itinerari|guide|servizi|voli|dove-dormire|noleggio-auto|luoghi|shop|prodotti|carrello)(\/|$)/ },
   { key: "trips", pattern: /^\/(viaggi|viaggio)(\/|$)/ },
   { key: "groups", pattern: /^\/gruppi(\/|$)/ },
   { key: "profile", pattern: /^\/(profilo|punti|classifica|notifiche|preferenze|chat)(\/|$)/ },
