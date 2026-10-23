@@ -1,25 +1,22 @@
 // Azioni dei mockup non ancora attive, marcate con data-pending="<milestone>" e
 // data-pending-id="<id>". Di solito sono visibili e disabilitate (PendingButton), per giudicare
-// la gerarchia reale; quelle che non devono comparire affatto (punti, offerte) sono solo un
-// segnaposto nascosto (PendingMarker). I testi che scrive Ludovico (Chi siamo) e i testi legali
-// sono un segnaposto visibile (PendingText): bloccano il lancio come le azioni.
+// la gerarchia reale; quelle che non devono comparire affatto sono solo un segnaposto nascosto
+// (PendingMarker).
 // Ogni milestone che implementa un'azione la toglie da qui: il test e2e
 // (e2e/pending-actions.spec.ts) confronta questo elenco con quello che trova nelle pagine.
 // Prima del lancio l'elenco deve essere vuoto (controllo attivo con PRE_LAUNCH=1).
+// I testi legali, Chi siamo, il regolamento dei punti e l'informativa in onboarding non sono più
+// qui: sono scritti, e la loro prontezza si verifica a runtime con isLegalReady()
+// (src/lib/legal-entity.ts): finché mancano i dati del titolare le pagine restano noindex.
 // "vertical.*": alloggi e noleggi restano "in arrivo" finché il partner non ha il proprio ID
 // nell'ambiente (M6-partner, passo 3.1).
 
 export const PENDING_ACTIONS = {
-  "points.rules": "legale",
-  "about.editorial": "testi",
-  "about.founder": "testi",
-  "onboarding.privacy": "testi",
-  "preferences.consent": "testi",
   "vertical.lodging": "M6-partner",
   "vertical.car": "M6-partner",
-  "legal.privacy": "legale",
-  "legal.cookie": "legale",
-  "legal.terms": "legale",
+  // Pagamento (passo 7.2): in sospeso solo senza provider (né STRIPE_SECRET_KEY né CHECKOUT_TEST_PROVIDER=fake).
+  // La pagina del carrello lo mostra in quel caso; con il provider il pulsante è attivo.
+  "checkout.pay": "7.2-stripe",
 } as const;
 
 export type PendingId = keyof typeof PENDING_ACTIONS;
@@ -33,8 +30,7 @@ export function pendingAttributes(id: PendingId) {
   } as const;
 }
 
-// Una pagina con testi in sospeso non si indicizza (robots noindex) e non sta nella sitemap:
-// togliendo l'id dall'elenco quando il testo è scritto, la pagina si apre ai motori di ricerca.
+// Una pagina con azioni in sospeso non si indicizza (robots noindex) e non sta nella sitemap.
 export function isPending(...ids: PendingId[]): boolean {
   return ids.some((id) => id in PENDING_ACTIONS);
 }

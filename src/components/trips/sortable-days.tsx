@@ -31,7 +31,8 @@ export function DayDropZone({ id, className, children }: { id: string; className
 export function DayDropZones({ className, children }: { className?: string; children: ReactNode }) {
   const { active } = useDndContext();
   return (
-    <div className={cn(className, "transition-opacity motion-reduce:transition-none", active ? "opacity-100" : "opacity-50 text-body-s")}>
+    // A riposo il testo è attenuato con il colore (lava-muted), non con l'opacità: l'opacità abbassa il contrasto sotto 4,5:1.
+    <div className={cn(className, "transition-colors motion-reduce:transition-none", active ? "text-lava" : "text-body-s text-lava-muted")}>
       {children}
     </div>
   );

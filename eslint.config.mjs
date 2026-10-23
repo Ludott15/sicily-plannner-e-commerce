@@ -76,6 +76,8 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    // Worker di MapLibre copiato dal pacchetto (scripts/vendor/copy-maplibre-worker.mjs).
+    "public/vendor/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

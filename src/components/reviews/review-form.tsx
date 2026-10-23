@@ -3,7 +3,7 @@
 import { startTransition, useActionState, useEffect, useId, useState, type FormEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/design";
-import { useRouter } from "@/lib/i18n/navigation";
+import { Link, useRouter } from "@/lib/i18n/navigation";
 import { submitReviewAction } from "@/server/gamification/actions";
 
 // Modulo della recensione (passo 5.1): voto 1-5, testo, contatore con la soglia del premio.
@@ -110,6 +110,16 @@ export function ReviewForm({
           </p>
         )}
       </div>
+
+      <p className="text-body-s text-lava-muted">
+        {t.rich("form.termsNotice", {
+          terms: (chunks) => (
+            <Link href="/termini" className="font-semibold text-coccio-text underline underline-offset-4">
+              {chunks}
+            </Link>
+          ),
+        })}
+      </p>
 
       <div>
         <Button type="submit" variant="primary" disabled={pending || rating === 0 || length === 0}>

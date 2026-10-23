@@ -1,0 +1,19 @@
+{
+  "name": "Isula",
+  "viewBox": 32,
+  "tile": {
+    "radius": 3.5,
+    "appRadius": 0
+  },
+  "rosette": {
+    "center": [16, 16],
+    "rotate": 8,
+    "petals": 3,
+    "hub": 2.6,
+    "length": 12.8,
+    "width": 5.1,
+    "bend": 30,
+    "margin": 0.12,
+    "appMargin": 0.14
+  }
+}

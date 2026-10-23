@@ -8,6 +8,7 @@ import { CatalogLocalTip } from "@/components/catalog/catalog-local-tip";
 import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
 import { ReviewsSection, type ReviewViewer } from "@/components/reviews/reviews-section";
+import { TerritoryProducts } from "@/components/shop/territory-products";
 import {
   AffiliateOffer,
   affiliateHref,
@@ -16,16 +17,19 @@ import {
   ButtonLink,
   interestDomain,
 } from "@/components/design";
-import { publicEnv } from "@/lib/env";
+import { Link } from "@/lib/i18n/navigation";
 import { formatDuration, formatEur, formatSeason } from "@/lib/format";
 import { provinceName } from "@/lib/provinces";
-import { localizedAlternates, truncate } from "@/lib/seo";
+import { canonicalFor, truncate } from "@/lib/seo";
+import { breadcrumbList, touristAttraction } from "@/lib/structured-data";
 import { getUser } from "@/server/auth";
 import { interestLabels } from "@/server/catalog/labels";
 import { partnerName, type Partner } from "@/server/affiliates/links";
 import { getActivity, listActivityOffers, listNearbyActivities } from "@/server/catalog/queries";
+import { itinerariesWithActivity } from "@/server/catalog/area-queries";
 import { getActivityTip } from "@/server/catalog/tips";
 import { getActivityReviews } from "@/server/gamification/queries";
+import { productsForActivity } from "@/server/shop/queries";
 
 // Scheda attività (mockup Attivita.html e AttivitaMobile.html).
 // Non ancora in pagina, perché mancano dati o funzioni: galleria (una sola foto o il
@@ -44,14 +48,14 @@ type Props = {
 
 export async function generateMetadata({ params }: Omit<Props, "searchParams">): Promise<Metadata> {
   const { locale, slug } = await params;
-  const activity = await getActivity(slug);
+  const activity = await getActivity(slug, locale);
   if (!activity) return {};
 
   const description = truncate(activity.description) ?? `${activity.title} · ${activity.placeName}`;
   return {
     title: `${activity.title} · ${activity.placeName}`,
     description,
-    alternates: localizedAlternates(locale, `/attivita/${activity.slug}`),
+    alternates: canonicalFor(locale, `/attivita/${activity.slug}`),
     openGraph: { title: activity.title, description, type: "article" },
   };
 }
@@ -60,11 +64,11 @@ export default async function ActivityPage({ params, searchParams }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const activity = await getActivity(slug);
+  const activity = await getActivity(slug, locale);
   if (!activity) notFound();
 
   const user = await getUser();
-  const [t, labels, nearby, offerRows, tip, { avviso }, reviewState] = await Promise.all([
+  const [t, labels, nearby, offerRows, tip, { avviso }, reviewState, itineraries, territoryProducts] = await Promise.all([
     getTranslations("Catalog"),
     interestLabels(locale),
     listNearbyActivities(activity.id, activity.placeId, activity.placeProvince),
@@ -72,6 +76,8 @@ export default async function ActivityPage({ params, searchParams }: Props) {
     getActivityTip(activity.id, activity.placeId),
     searchParams,
     getActivityReviews(activity.id, user),
+    itinerariesWithActivity(activity.id, locale),
+    productsForActivity(activity.id, locale),
   ]);
   const viewer: ReviewViewer = !user ? "visitor" : user.is_anonymous ? "guest" : "user";
 
@@ -107,7 +113,6 @@ export default async function ActivityPage({ params, searchParams }: Props) {
 
   const price = formatEur(activity.onSitePriceEur, locale);
   const season = formatSeason(activity.seasonMonths, locale);
-  const url = `${publicEnv.NEXT_PUBLIC_SITE_URL}/${locale}/attivita/${activity.slug}`;
 
   // Metadati del titolo: numeri concreti, compreso il prezzo in loco.
   const meta = [
@@ -140,7 +145,11 @@ export default async function ActivityPage({ params, searchParams }: Props) {
           <Breadcrumb
             items={[
               { label: t("breadcrumbRoot") },
-              { label: provinceName(activity.placeProvince), href: `/luoghi/${activity.placeSlug}` },
+              // Sicilia › Area › Luogo › Attività (senza area: la provincia al posto dell'area).
+              activity.area
+                ? { label: activity.area.name, href: `/sicilia/${activity.area.slug}` }
+                : { label: provinceName(activity.placeProvince) },
+              { label: activity.placeName, href: `/luoghi/${activity.placeSlug}` },
               { label: activity.title },
             ]}
           />
@@ -218,6 +227,26 @@ export default async function ActivityPage({ params, searchParams }: Props) {
           </aside>
         </div>
 
+        {itineraries.length > 0 && (
+          <section aria-labelledby="stesso-itinerario" className="mt-16">
+            <h2 id="stesso-itinerario" className="is-display text-heading-1">
+              {t("sameItinerary")}
+            </h2>
+            <ul className="mt-6 flex flex-col divide-y divide-divider">
+              {itineraries.map((itinerary) => (
+                <li key={itinerary.slug} className="flex flex-wrap items-baseline justify-between gap-2 py-4">
+                  <Link href={`/itinerari/${itinerary.slug}`} className="text-body-l font-semibold text-lava underline-offset-4 hover:underline">
+                    {itinerary.title}
+                  </Link>
+                  <span className="text-body-s text-lava-muted">{t("days", { count: itinerary.days })}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <TerritoryProducts id="dal-territorio-attivita" products={territoryProducts} locale={locale} />
+
         <div className="mt-16">
           <ReviewsSection
             activityId={activity.id}
@@ -244,23 +273,28 @@ export default async function ActivityPage({ params, searchParams }: Props) {
         )}
 
         <JsonLd
-          data={{
-            "@context": "https://schema.org",
-            "@type": "TouristAttraction",
+          data={breadcrumbList(
+            [
+              { name: t("breadcrumbRoot"), path: "/" },
+              ...(activity.area ? [{ name: activity.area.name, path: `/sicilia/${activity.area.slug}` }] : []),
+              { name: activity.placeName, path: `/luoghi/${activity.placeSlug}` },
+              { name: activity.title, path: `/attivita/${activity.slug}` },
+            ],
+            locale,
+          )}
+        />
+        <JsonLd
+          data={touristAttraction({
             name: activity.title,
-            description: activity.description ?? undefined,
-            url,
-            isAccessibleForFree: Number(activity.onSitePriceEur) === 0,
-            ...(activity.rating !== null && {
-              aggregateRating: { "@type": "AggregateRating", ratingValue: activity.rating, bestRating: 5 },
-            }),
-            location: {
-              "@type": "Place",
-              name: activity.placeName,
-              address: { "@type": "PostalAddress", addressRegion: activity.placeProvince, addressCountry: "IT" },
-              geo: { "@type": "GeoCoordinates", latitude: activity.placeLat, longitude: activity.placeLng },
-            },
-          }}
+            description: activity.description,
+            path: `/attivita/${activity.slug}`,
+            locale,
+            placeName: activity.placeName,
+            province: activity.placeProvince,
+            latitude: activity.placeLat,
+            longitude: activity.placeLng,
+            isFree: activity.onSitePriceEur !== null && Number(activity.onSitePriceEur) === 0,
+          })}
         />
       </article>
 

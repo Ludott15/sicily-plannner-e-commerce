@@ -2,7 +2,13 @@
 
 La Sicilia di chi ci vive, su misura per te.
 
-Isula (in siciliano: isola) è un planner di viaggi in Sicilia e uno shop di prodotti spediti dai produttori, sotto un unico brand. "Isula" è un nome di lavoro: dominio e marchio sono da verificare prima del lancio. Non esiste ancora un logo; fino ad allora il marchio è la parola **Isula** composta in Fraunces 600 con colore `lava`.
+Isula (in siciliano: isola) è un planner di viaggi in Sicilia e uno shop di prodotti spediti dai produttori, sotto un unico brand. "Isula" è un nome di lavoro: dominio e marchio sono da verificare prima del lancio. Il marchio è una piastrella di maiolica con una rosetta a tre petali (il motivo di Caltagirone, con la simmetria dei tre capi dell'isola) accanto alla parola **Isula**, composta in Fraunces 600 con colore `lava`. Regole d'uso e file in [logo/README.md](logo/README.md).
+
+## Nome e marchio
+
+Il nome è **Isula**, siciliano per "isola". Motivazione: breve, siciliano, già in uso in tutto il sito, e cambiabile in un punto solo (`BRAND_NAME` in `src/lib/brand.ts`). Dominio e marchio registrato restano da verificare prima del lancio.
+
+Il simbolo (`docs/design/brand/logo/mark.svg`) prende la maiolica siciliana (Caltagirone, Santo Stefano di Camastra): una piastrella `coccio` con la rosetta a tre petali in `calce`, la simmetria di 120° dei tre capi della Sicilia senza figure né simboli religiosi. Deve restare leggibile a 16 px: niente testo nel simbolo, niente dettagli che si perdono in piccolo. Su sfondi scuri il monocromatico `calce`, su sfondi chiari `lava`. Il logotipo è la parola in Fraunces 600, come nella sezione "Fondamenta visive".
 
 ## Cosa promettiamo
 

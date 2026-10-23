@@ -4,7 +4,7 @@ import { buttonClass, ButtonAnchor, PendingButton } from "@/components/design";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { isIsoDate } from "@/lib/flights/search-params";
-import { localizedAlternates } from "@/lib/seo";
+import { canonicalFor } from "@/lib/seo";
 import { getPartnerConfig, VERTICAL_PARTNER } from "@/server/affiliates/partners";
 import {
   getLodgingPageData,
@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: t("title"),
     description: t("intro"),
-    alternates: localizedAlternates(locale, "/dove-dormire"),
+    alternates: canonicalFor(locale, "/dove-dormire"),
     ...(availability === "ready" ? {} : { robots: { index: false, follow: false } }),
   };
 }

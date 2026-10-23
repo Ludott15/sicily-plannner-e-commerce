@@ -1,0 +1,48 @@
+name: Chat eval
+
+# Valutazione manuale del chatbot (passo 9.1): 20 richieste con il modello vero. Non gira sulle PR:
+# costa token e dipende dalla chiave. Si avvia da Actions, con la chiave ANTHROPIC_API_KEY nei segreti.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chat-eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eval:
+    name: Valutazione delle risposte del chatbot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: Avvia Supabase locale (applica le migrazioni da zero)
+        run: npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta
+
+      - name: Dati demo per il catalogo (il seed non si carica al primo avvio)
+        run: npm run db:reset
+
+      - name: Variabili d'ambiente dallo stack locale
+        run: |
+          eval "$(npx supabase status -o env)"
+          {
+            echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000"
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+            echo "SUPABASE_SECRET_KEY=$SECRET_KEY"
+            echo "DATABASE_URL=$DB_URL"
+          } > .env.local
+
+      - name: Valutazione (evals/chat/requests.json)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npm run eval:chat

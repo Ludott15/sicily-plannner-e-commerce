@@ -6,10 +6,10 @@ import { ItineraryDays, type Day, type DayStop } from "@/components/catalog/itin
 import { JsonLd } from "@/components/catalog/json-ld";
 import { ShareButton } from "@/components/catalog/share-button";
 import { ActionBar, ButtonLink } from "@/components/design";
-import { publicEnv } from "@/lib/env";
 import { formatDuration } from "@/lib/format";
 import { mediaUrl, variantPath, type CoverMedia } from "@/lib/media";
-import { localizedAlternates } from "@/lib/seo";
+import { canonicalFor } from "@/lib/seo";
+import { breadcrumbList, touristTrip } from "@/lib/structured-data";
 import { getTemplate } from "@/server/catalog/queries";
 import { listTipsFor } from "@/server/catalog/tips";
 
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: itinerary.title,
     description,
-    alternates: localizedAlternates(locale, `/itinerari/${itinerary.slug}`),
+    alternates: canonicalFor(locale, `/itinerari/${itinerary.slug}`),
     openGraph: { title: itinerary.title, description, type: "article" },
   };
 }
@@ -87,6 +87,9 @@ export default async function ItineraryPage({ params }: Props) {
       note: item.notes,
       thumbUrl: stopThumb(item.placeCover),
       durationMin: item.activityDurationMin,
+      // Coordinate del luogo della tappa, per la mappa del giorno (6.2).
+      lat: item.lat,
+      lng: item.lng,
       tip: item === tipItem ? tipFor(item) : null,
     }));
     return {
@@ -99,7 +102,6 @@ export default async function ItineraryPage({ params }: Props) {
 
   const areaNames = itinerary.facts.areas.map(areaName);
   const firstPlace = itinerary.items.find((i) => i.placeName);
-  const base = publicEnv.NEXT_PUBLIC_SITE_URL;
   // Tappe con un nome: schema.org non accetta voci senza name.
   const listed = itinerary.items.flatMap((item) => {
     const name = item.activitySlug ? item.activityTitle : (item.customTitle ?? item.placeName);
@@ -181,24 +183,28 @@ export default async function ItineraryPage({ params }: Props) {
         <ItineraryDays days={days} />
 
         <JsonLd
-          data={{
-            "@context": "https://schema.org",
-            "@type": "TouristTrip",
+          data={breadcrumbList(
+            [
+              { name: t("breadcrumbRoot"), path: "/" },
+              { name: itinerary.title, path: `/itinerari/${itinerary.slug}` },
+            ],
+            locale,
+          )}
+        />
+        <JsonLd
+          data={touristTrip({
             name: itinerary.title,
-            description: itinerary.description ?? itinerary.subtitle ?? undefined,
-            inLanguage: locale,
-            url: `${base}/${locale}/itinerari/${itinerary.slug}`,
-            itinerary: {
-              "@type": "ItemList",
-              itemListElement: listed.map(({ item, name }, i) => ({
-                "@type": "ListItem",
-                position: i + 1,
-                item: item.activitySlug
-                  ? { "@type": "TouristAttraction", name, url: `${base}/${locale}/attivita/${item.activitySlug}` }
-                  : { "@type": "Place", name },
-              })),
-            },
-          }}
+            description: itinerary.description ?? itinerary.subtitle ?? null,
+            path: `/itinerari/${itinerary.slug}`,
+            locale,
+            stops: listed.flatMap(({ item, name }) =>
+              item.activitySlug
+                ? [{ name, path: `/attivita/${item.activitySlug}` }]
+                : item.placeSlug
+                  ? [{ name, path: `/luoghi/${item.placeSlug}` }]
+                  : [],
+            ),
+          })}
         />
       </article>
 

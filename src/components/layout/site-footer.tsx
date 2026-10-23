@@ -1,4 +1,6 @@
 import { getTranslations } from "next-intl/server";
+import { Logo } from "@/components/design";
+import { BRAND_NAME } from "@/lib/brand";
 import { Link } from "@/lib/i18n/navigation";
 import { CookiePreferencesButton } from "./cookie-banner";
 
@@ -15,9 +17,7 @@ export async function SiteFooter() {
     <footer className="border-t border-ink-edge bg-ink text-on-ink">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-8 px-4 py-12 md:flex-row md:items-start md:justify-between md:px-16 md:py-14">
         <div className="flex flex-col gap-2.5">
-          <span className="is-display text-[36px] leading-none tracking-[-0.02em]">
-            Isula
-          </span>
+          <Logo className="text-[36px]" />
           <span className="text-body-s text-on-ink-muted">
             {tMeta("tagline")}
           </span>
@@ -45,10 +45,31 @@ export async function SiteFooter() {
                   {tNav("activities")}
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/guide"
+                  className="text-on-ink-muted no-underline hover:underline"
+                >
+                  {tNav("guides")}
+                </Link>
+              </li>
             </ul>
           </div>
           <div>
-            <p className="font-semibold">Isula</p>
+            <p className="font-semibold">{tNav("shop")}</p>
+            <ul className="mt-1 flex flex-col leading-7">
+              <li>
+                <Link
+                  href="/shop"
+                  className="text-on-ink-muted no-underline hover:underline"
+                >
+                  {tNav("shopProducts")}
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p className="font-semibold">{BRAND_NAME}</p>
             <ul className="mt-1 flex flex-col leading-7">
               {(
                 [
@@ -75,7 +96,10 @@ export async function SiteFooter() {
                 [
                   ["/privacy", "privacy"],
                   ["/cookie", "cookie"],
+                  ["/termini", "termsOfUse"],
                   ["/condizioni-di-vendita", "terms"],
+                  ["/accessibilita", "accessibility"],
+                  ["/contatti", "contact"],
                 ] as const
               ).map(([href, key]) => (
                 <li key={href}>

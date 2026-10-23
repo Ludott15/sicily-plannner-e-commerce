@@ -5,7 +5,8 @@ import { useEffect, useOptimistic, useState, useTransition, type ReactNode } fro
 import { useTranslations } from "next-intl";
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type Announcements, type DragEndEvent, type DragStartEvent, type ScreenReaderInstructions, MeasuringStrategy } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { BookingList, Button, DayTabs, Route, type BookingItem } from "@/components/design";
+import { BookingList, Button, DayTabs, Route, TripMap, type BookingItem } from "@/components/design";
+import type { MapPoint } from "@/components/design/map/map-style";
 import type { TimeSlot } from "@/lib/itinerary-checks";
 import { useRouter } from "@/lib/i18n/navigation";
 import { MAX_TRIP_DAYS } from "@/lib/trip-days";
@@ -51,6 +52,9 @@ export type BuilderStop = {
   notes: string | null;
   /** Check-in della tappa: null se non c'è un luogo o chi guarda è ospite (passo 5.1). */
   checkIn: { checkedInToday: boolean } | null;
+  /** Coordinate del luogo della tappa (6.2): null se il luogo non ha un punto sulla mappa. */
+  lat: number | null;
+  lng: number | null;
 };
 
 export type BuilderDay = { name: string; note: string; stops: BuilderStop[] };
@@ -69,6 +73,8 @@ export type TripBuilderProps = {
   tab: TripTab;
   /** Contenuto della scheda Gruppo, reso dalla pagina (pannello del gruppo e sezioni). */
   groupTab: ReactNode;
+  /** "Oggi" (passo 11.3), reso dalla pagina solo se oggi cade nel viaggio: va in cima all'itinerario. */
+  today?: ReactNode;
 };
 
 const OK: TripFormState = { status: "ok" };
@@ -77,8 +83,9 @@ const NO_ALTERNATIVES: TripGroupState["alternatives"][string] = [];
 
 type Outcome = { status: "ok" } | TripActionError;
 
-export function TripBuilder({ tripId, days, warnings, initialDay, bookings, group, tab, groupTab }: TripBuilderProps) {
+export function TripBuilder({ tripId, days, warnings, initialDay, bookings, group, tab, groupTab, today }: TripBuilderProps) {
   const t = useTranslations("Trips");
+  const tMap = useTranslations("Map");
   const router = useRouter();
   const [picked, setPicked] = useState(initialDay);
   const [error, setError] = useState<TripActionError["code"] | null>(null);
@@ -242,6 +249,14 @@ export function TripBuilder({ tripId, days, warnings, initialDay, bookings, grou
   }
 
   const dayNames = days.map((day) => ({ name: day.name }));
+  // Punti della mappa: le tappe del giorno con coordinate, numerate come nell'elenco (anche se
+  // una tappa senza coordinate lascia un vuoto nella numerazione).
+  const mapPoints: MapPoint[] = (order[activeDay] ?? []).flatMap((id, index) => {
+    const stop = stopById.get(id);
+    if (!stop || stop.lat === null || stop.lng === null) return [];
+    return [{ id: stop.id, lat: stop.lat, lng: stop.lng, label: stop.title, number: index + 1 }];
+  });
+  const mapLabel = tMap("dayMap", { n: activeDay + 1 });
   const ids = tabIds("trip", tab);
 
   let content: ReactNode;
@@ -255,129 +270,144 @@ export function TripBuilder({ tripId, days, warnings, initialDay, bookings, grou
         <div className="is-trip-tools">
           <DayTabs days={dayNames} current={activeDay} onSelect={setPicked} />
         </div>
-        <FormAlert message={error ? t(`errors.${error}`) : null} />
-        <p aria-live="polite" className="text-body-s text-lava-muted">
-          {notice}
-        </p>
+        <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,360px)] md:items-start">
+          <div className="flex min-w-0 flex-col gap-8">
+            {today}
+            {/* Mobile: la mappa del giorno sta sotto le pillole, chiusa finché non la si apre. */}
+            <details className="is-map-details is-trip-tools md:hidden">
+              <summary>{tMap("showMap")}</summary>
+              <TripMap points={mapPoints} route ariaLabel={mapLabel} />
+            </details>
+            <FormAlert message={error ? t(`errors.${error}`) : null} />
+            <p aria-live="polite" className="text-body-s text-lava-muted">
+              {notice}
+            </p>
 
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragCancel={() => setActiveId(null)}
-          accessibility={{ announcements, screenReaderInstructions }}
-          // Le zone dei giorni cambiano aspetto durante il trascinamento: misurarle sempre.
-          measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
-        >
-          <SortableContext items={visibleIds} strategy={verticalListSortingStrategy}>
-            {visibleDays.map((d) => {
-              const day = days[d];
-              if (!day) return null;
-              const dayStops = (order[d] ?? []).flatMap((id) => {
-                const stop = stopById.get(id);
-                return stop ? [stop] : [];
-              });
-              const dayWarnings = warnings.filter((warning) => warningDayIndex(warning) === d);
-              return (
-                <section key={d} data-day-panel aria-labelledby={`day-title-${d}`} className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <h2 id={`day-title-${d}`} className="text-heading-3">
-                      {day.name}
-                    </h2>
-                    <DayNote tripId={tripId} dayIndex={d} note={day.note} />
-                  </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={() => setActiveId(null)}
+              accessibility={{ announcements, screenReaderInstructions }}
+              // Le zone dei giorni cambiano aspetto durante il trascinamento: misurarle sempre.
+              measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+            >
+              <SortableContext items={visibleIds} strategy={verticalListSortingStrategy}>
+                {visibleDays.map((d) => {
+                  const day = days[d];
+                  if (!day) return null;
+                  const dayStops = (order[d] ?? []).flatMap((id) => {
+                    const stop = stopById.get(id);
+                    return stop ? [stop] : [];
+                  });
+                  const dayWarnings = warnings.filter((warning) => warningDayIndex(warning) === d);
+                  return (
+                    <section key={d} data-day-panel aria-labelledby={`day-title-${d}`} className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-2">
+                        <h2 id={`day-title-${d}`} className="text-heading-3">
+                          {day.name}
+                        </h2>
+                        <DayNote tripId={tripId} dayIndex={d} note={day.note} />
+                      </div>
 
-                  {dayStops.length === 0 ? (
-                    <DayDropZone id={dayZoneId(d)} className="rounded-md border border-dashed border-border-control p-4 text-body text-lava-muted">
-                      {t("emptyDay")}
-                    </DayDropZone>
-                  ) : (
-                    <div className="max-md:[&_.is-route]:[--stop-time-w:80px]">
-                      <Route>
-                        {dayStops.map((stop, index) => (
-                          <StopItem
-                            key={stop.id}
-                            stop={stop}
-                            dayIndex={d}
-                            dayCount={dayCount}
-                            index={index}
-                            count={dayStops.length}
-                            pending={pending}
-                            onStep={(direction) => step(stop.id, direction)}
-                            onMoveToDay={(target) => moveToDay(stop.id, target)}
-                            onRemove={() => removeStopFromTrip(stop.id)}
-                            checkIn={
-                              stop.checkIn ? <CheckInButton itemId={stop.id} checkedInToday={stop.checkIn.checkedInToday} /> : undefined
-                            }
-                            votes={
-                              group ? (
-                                <GroupStopVotes
-                                  itemId={stop.id}
-                                  votes={group.votes[stop.id] ?? NO_VOTES}
-                                  members={group.members}
-                                  alternatives={group.alternatives[stop.id] ?? NO_ALTERNATIVES}
-                                  isGroupOwner={group.isGroupOwner}
-                                />
-                              ) : undefined
-                            }
-                          />
-                        ))}
-                      </Route>
-                    </div>
-                  )}
-
-                  {dayWarnings.length > 0 && (
-                    <ul className="flex flex-col gap-2">
-                      {dayWarnings.map((warning, i) => (
-                        <li key={`${warning.code}-${i}`}>
-                          <p role="note" className="rounded-sm border-[1.5px] border-border-control bg-calce-raised px-4 py-3 text-body">
-                            {warningText(warning)}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  {!printing && d === activeDay && dayCount > 1 && (
-                    <DayDropZones className="is-trip-tools hidden flex-col items-stretch gap-2 md:flex">
-                      {days.map((_other, k) =>
-                        k === d ? null : (
-                          <DayDropZone
-                            key={k}
-                            id={dayZoneId(k)}
-                            className="w-full rounded-md border-[1.5px] border-dashed border-border-control px-4 py-2 text-body-s text-lava"
-                          >
-                            {t("dropOnDay", { n: k + 1 })}
-                          </DayDropZone>
-                        ),
+                      {dayStops.length === 0 ? (
+                        <DayDropZone id={dayZoneId(d)} className="rounded-md border border-dashed border-border-control p-4 text-body text-lava-muted">
+                          {t("emptyDay")}
+                        </DayDropZone>
+                      ) : (
+                        <div className="max-md:[&_.is-route]:[--stop-time-w:80px]">
+                          <Route>
+                            {dayStops.map((stop, index) => (
+                              <StopItem
+                                key={stop.id}
+                                stop={stop}
+                                dayIndex={d}
+                                dayCount={dayCount}
+                                index={index}
+                                count={dayStops.length}
+                                pending={pending}
+                                onStep={(direction) => step(stop.id, direction)}
+                                onMoveToDay={(target) => moveToDay(stop.id, target)}
+                                onRemove={() => removeStopFromTrip(stop.id)}
+                                checkIn={
+                                  stop.checkIn ? <CheckInButton itemId={stop.id} checkedInToday={stop.checkIn.checkedInToday} /> : undefined
+                                }
+                                votes={
+                                  group ? (
+                                    <GroupStopVotes
+                                      itemId={stop.id}
+                                      votes={group.votes[stop.id] ?? NO_VOTES}
+                                      members={group.members}
+                                      alternatives={group.alternatives[stop.id] ?? NO_ALTERNATIVES}
+                                      isGroupOwner={group.isGroupOwner}
+                                    />
+                                  ) : undefined
+                                }
+                              />
+                            ))}
+                          </Route>
+                        </div>
                       )}
-                    </DayDropZones>
-                  )}
-                </section>
-              );
-            })}
-          </SortableContext>
-          <DragOverlay>
-            {activeId ? (
-              <div className="rounded-md border border-card-edge bg-calce-raised px-4 py-3 text-body shadow-card">{titleOf(activeId)}</div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
 
-        <div className="is-trip-tools flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <form onSubmit={addForm.submit}>
-              <input type="hidden" name="tripId" value={tripId} />
-              <Button type="submit" variant="secondary" disabled={addForm.pending || dayCount >= MAX_TRIP_DAYS}>
-                {t("addDay")}
-              </Button>
-            </form>
-            <Button variant="ghost" disabled={dayCount <= 1} onClick={() => setRemoveOpen(true)}>
-              {t("removeDay", { n: activeDay + 1 })}
-            </Button>
+                      {dayWarnings.length > 0 && (
+                        <ul className="flex flex-col gap-2">
+                          {dayWarnings.map((warning, i) => (
+                            <li key={`${warning.code}-${i}`}>
+                              <p role="note" className="rounded-sm border-[1.5px] border-border-control bg-calce-raised px-4 py-3 text-body">
+                                {warningText(warning)}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      {!printing && d === activeDay && dayCount > 1 && (
+                        <DayDropZones className="is-trip-tools hidden flex-col items-stretch gap-2 md:flex">
+                          {days.map((_other, k) =>
+                            k === d ? null : (
+                              <DayDropZone
+                                key={k}
+                                id={dayZoneId(k)}
+                                className="w-full rounded-md border-[1.5px] border-dashed border-border-control px-4 py-2 text-body-s"
+                              >
+                                {t("dropOnDay", { n: k + 1 })}
+                              </DayDropZone>
+                            ),
+                          )}
+                        </DayDropZones>
+                      )}
+                    </section>
+                  );
+                })}
+              </SortableContext>
+              <DragOverlay>
+                {activeId ? (
+                  <div className="rounded-md border border-card-edge bg-calce-raised px-4 py-3 text-body shadow-card">{titleOf(activeId)}</div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+
+            <div className="is-trip-tools flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <form onSubmit={addForm.submit}>
+                  <input type="hidden" name="tripId" value={tripId} />
+                  <Button type="submit" variant="secondary" disabled={addForm.pending || dayCount >= MAX_TRIP_DAYS}>
+                    {t("addDay")}
+                  </Button>
+                </form>
+                <Button variant="ghost" disabled={dayCount <= 1} onClick={() => setRemoveOpen(true)}>
+                  {t("removeDay", { n: activeDay + 1 })}
+                </Button>
+              </div>
+              <FormAlert message={addAlert} />
+            </div>
+
           </div>
-          <FormAlert message={addAlert} />
+        {/* Desktop: colonna laterale, che resta in vista mentre si scorre l'elenco. */}
+        <div className="is-trip-aside hidden md:sticky md:top-6 md:block">
+          <TripMap points={mapPoints} route ariaLabel={mapLabel} />
+        </div>
         </div>
 
         <ConfirmDialog open={removeOpen} title={t("removeDayTitle", { n: activeDay + 1 })} onClose={() => setRemoveOpen(false)}>

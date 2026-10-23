@@ -65,6 +65,8 @@ export type PublicReview = {
   displayName: string | null;
   avatarUrl: string | null;
   rewarded: boolean;
+  // Autore eliminato dal proprio account (passo 8.2): la recensione resta, senza nome.
+  authorDeleted: boolean;
 };
 
 export type ActivityReviews = {

@@ -9,7 +9,7 @@ import { SICILY_AIRPORTS } from "@/lib/flights/airports";
 import { getDeparture } from "@/lib/flights/departures";
 import { nextMonth } from "@/lib/flights/offers";
 import { findPopularRoute, type PopularRoute } from "@/lib/flights/routes";
-import { localizedAlternates } from "@/lib/seo";
+import { canonicalFor } from "@/lib/seo";
 import { monthCalendar, routeHasPrices } from "@/server/flights/search";
 
 // Pagina di coppia /voli/[coppia] (passo 2.1): città di partenza → aeroporto siciliano, solo per
@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: t("routeTitle", names),
     description: t("routeDescription", names),
-    alternates: localizedAlternates(locale, `/voli/${route.slug}`),
+    alternates: canonicalFor(locale, `/voli/${route.slug}`),
   };
 }
 

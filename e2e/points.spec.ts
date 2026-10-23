@@ -28,7 +28,9 @@ async function tripWithPlaces(ownerId: string) {
     const [other] = await sql`
       select a.id as "activityId", a.place_id as "placeId"
       from public.activities a
-      where a.slug <> ${ZINGARO} and a.place_id is not null and a.place_id <> ${zingaro!.placeId}
+      where a.slug <> ${ZINGARO} and a.slug like 'demo-%' and a.is_active
+        and a.place_id is not null and a.place_id <> ${zingaro!.placeId}
+      order by a.slug
       limit 1`;
     const [trip] = await sql`insert into public.itineraries (owner_id, title, days) values (${ownerId}, 'e2e- Punti', 1) returning id`;
     await sql`
@@ -49,11 +51,14 @@ test("la home mostra i punti e porta a /punti con saldo e regole", async ({ page
   await expect(page.getByRole("region", { name: "Come si guadagnano" }).getByText("Profilo completato")).toBeVisible();
 });
 
-test("il regolamento dei punti è in sospeso e non si apre", async ({ page, request }) => {
+test("il regolamento dei punti si apre dal link in /punti", async ({ page, request }) => {
+  // Compilazione a freddo di /punti e del regolamento in locale: più dei 30 secondi predefiniti.
+  test.setTimeout(120_000);
   await registeredUserWithPoints(page, request);
   await page.goto("/it/punti");
-  const rules = page.locator('[data-pending-id="points.rules"]');
-  await expect(rules).toHaveAttribute("aria-disabled", "true");
+  await page.getByRole("link", { name: "Regolamento dei punti" }).click();
+  await expect(page).toHaveURL(/\/it\/punti\/regolamento$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Regolamento dei punti");
 });
 
 test("recensione da 80 caratteri: etichetta Recensione con premio", async ({ page, request }) => {
@@ -84,7 +89,9 @@ test("check-in vicino al luogo: +10 punti; lontano: messaggio di distanza", asyn
   // il primo "Sono qui" rimasto è quello della seconda tappa.
   await expect(page.getByText("Check-in fatto oggi")).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.waitForLoadState("networkidle");
+  // Non networkidle: la mappa del viaggio scarica tasselli di continuo. Dopo l'aggiornamento resta
+  // un solo "Sono qui", quello della seconda tappa.
+  await expect(page.getByRole("button", { name: "Sono qui", exact: true })).toHaveCount(1);
 
   // Seconda tappa, con la posizione in mezzo all'oceano: il server risponde too_far.
   await context.setGeolocation({ latitude: 0, longitude: 0 });

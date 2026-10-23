@@ -15,6 +15,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const tReviews = await getTranslations("AdminReviews");
   const tBadges = await getTranslations("AdminBadges");
   const tSeasons = await getTranslations("AdminSeasons");
+  const tAi = await getTranslations("Admin.ai");
+  const tShop = await getTranslations("Admin.shop");
   // Banner sopra ogni pagina dell'area admin (anche la home, che reindirizza all'elenco attività):
   // avviso se un partner configurato ha due esecuzioni di fila fallite.
   const alertPartners = await adminImportAlertPartners();
@@ -35,8 +37,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <Link href="/admin/consigli" className="text-body font-semibold text-lava">
           {t("tips")}
         </Link>
+        <Link href="/admin/guide" className="text-body font-semibold text-lava">
+          {t("guides.nav")}
+        </Link>
+        <Link href="/admin/aree" className="text-body font-semibold text-lava">
+          {t("areas.nav")}
+        </Link>
         <Link href="/admin/media" className="text-body font-semibold text-lava">
           {t("media")}
+        </Link>
+        <Link href="/admin/contenuti" className="text-body font-semibold text-lava">
+          {t("content")}
         </Link>
         <Link href="/admin/copertura" className="text-body font-semibold text-lava">
           {t("coverage")}
@@ -46,6 +57,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </Link>
         <Link href="/admin/import-partner" className="text-body font-semibold text-lava">
           {t("importPartner")}
+        </Link>
+        <Link href="/admin/fornitori" className="text-body font-semibold text-lava">
+          {tShop("navSuppliers")}
+        </Link>
+        <Link href="/admin/produttori" className="text-body font-semibold text-lava">
+          {tShop("navProducers")}
+        </Link>
+        <Link href="/admin/prodotti" className="text-body font-semibold text-lava">
+          {tShop("navProducts")}
         </Link>
         <Link href="/admin/affiliati" className="text-body font-semibold text-lava">
           {tAffiliates("nav")}
@@ -61,6 +81,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </Link>
         <Link href="/admin/stagioni" className="text-body font-semibold text-lava">
           {tSeasons("nav")}
+        </Link>
+        <Link href="/admin/ai" className="text-body font-semibold text-lava">
+          {tAi("nav")}
+        </Link>
+        <Link href="/admin/ricerche" className="text-body font-semibold text-lava">
+          {t("searchMisses.nav")}
         </Link>
       </nav>
       {alertPartners.length > 0 && (

@@ -324,6 +324,122 @@ $$;
 ALTER FUNCTION "public"."affiliate_partner_config"("p_partner" "public"."partner") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."append_chat_message"("p_session" "uuid", "p_role" "text", "p_content" "jsonb", "p_tool_calls" "jsonb", "p_input_tokens" integer, "p_output_tokens" integer) RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_user uuid := (select auth.uid());
+  v_id uuid;
+begin
+  if v_user is null then
+    raise exception 'unauthenticated' using errcode = '42501';
+  end if;
+
+  if not exists (
+    select 1 from public.chat_sessions s
+    where s.id = p_session and s.user_id = v_user
+  ) then
+    raise exception 'chat_session_not_found' using errcode = 'P0001';
+  end if;
+
+  -- Limite di dimensione: un messaggio (testo e strumenti) non supera 64 KB.
+  if octet_length(p_content::text) > 65536 or coalesce(octet_length(p_tool_calls::text), 0) > 65536 then
+    raise exception 'chat_message_too_large' using errcode = 'P0001';
+  end if;
+
+  insert into public.chat_messages (session_id, role, content, tool_calls, input_tokens, output_tokens)
+  values (p_session, p_role, p_content, p_tool_calls, p_input_tokens, p_output_tokens)
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."append_chat_message"("p_session" "uuid", "p_role" "text", "p_content" "jsonb", "p_tool_calls" "jsonb", "p_input_tokens" integer, "p_output_tokens" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."apply_retention"("p_config" "jsonb") RETURNS TABLE("job_name" "text", "row_count_out" bigint)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_n bigint;
+  v_chat_cutoff timestamptz;
+  v_event_cutoff timestamptz;
+  v_click_cutoff timestamptz;
+  v_invite_cutoff timestamptz;
+  v_search_cutoff timestamptz;
+  v_notification_cutoff timestamptz;
+  v_order_cutoff timestamptz;
+begin
+  if p_config is null
+    or jsonb_typeof(p_config->'chatSessionMonths') is distinct from 'number'
+    or jsonb_typeof(p_config->'userEventMonths') is distinct from 'number'
+    or jsonb_typeof(p_config->'affiliateClickMonths') is distinct from 'number'
+    or jsonb_typeof(p_config->'groupInviteDays') is distinct from 'number'
+    or jsonb_typeof(p_config->'searchMissMonths') is distinct from 'number'
+    or jsonb_typeof(p_config->'notificationReadMonths') is distinct from 'number'
+    or jsonb_typeof(p_config->'orderDataYears') is distinct from 'number'
+  then
+    raise exception 'retention_config_invalid' using errcode = 'P0001';
+  end if;
+
+  v_chat_cutoff := now() - make_interval(months => (p_config->>'chatSessionMonths')::int);
+  v_event_cutoff := now() - make_interval(months => (p_config->>'userEventMonths')::int);
+  v_click_cutoff := now() - make_interval(months => (p_config->>'affiliateClickMonths')::int);
+  v_invite_cutoff := now() - make_interval(days => (p_config->>'groupInviteDays')::int);
+  v_search_cutoff := now() - make_interval(months => (p_config->>'searchMissMonths')::int);
+  v_notification_cutoff := now() - make_interval(months => (p_config->>'notificationReadMonths')::int);
+  v_order_cutoff := now() - make_interval(years => (p_config->>'orderDataYears')::int);
+
+  -- Chat senza messaggi da troppo tempo (l'attività è l'ultimo messaggio, o la creazione).
+  delete from public.chat_sessions s
+  where coalesce(
+    (select max(m.created_at) from public.chat_messages m where m.session_id = s.id),
+    s.created_at) < v_chat_cutoff;
+  get diagnostics v_n = row_count;
+  job_name := 'chat_sessions'; row_count_out := v_n; return next;
+
+  delete from public.user_events e where e.created_at < v_event_cutoff;
+  get diagnostics v_n = row_count;
+  job_name := 'user_events'; row_count_out := v_n; return next;
+
+  -- Le statistiche (partner, contesto, date, importi) restano: si tolgono solo i legami con la persona.
+  update public.affiliate_clicks c
+  set user_id = null, anon_id = null
+  where c.created_at < v_click_cutoff and (c.user_id is not null or c.anon_id is not null);
+  get diagnostics v_n = row_count;
+  job_name := 'affiliate_clicks'; row_count_out := v_n; return next;
+
+  delete from public.group_invites i where i.expires_at < v_invite_cutoff;
+  get diagnostics v_n = row_count;
+  job_name := 'group_invites'; row_count_out := v_n; return next;
+
+  delete from public.search_misses s where s.last_seen < v_search_cutoff;
+  get diagnostics v_n = row_count;
+  job_name := 'search_misses'; row_count_out := v_n; return next;
+
+  delete from public.notifications n where n.read_at is not null and n.read_at < v_notification_cutoff;
+  get diagnostics v_n = row_count;
+  job_name := 'notifications'; row_count_out := v_n; return next;
+
+  -- Ordini: email e indirizzo di spedizione si conservano per il termine fiscale (art. 2220 c.c.,
+  -- 10 anni), poi si anonimizzano. Importi, date e stato restano per l'obbligo contabile.
+  update public.orders o
+  set email = 'anonimizzato@invalid.local', shipping_address = null
+  where o.created_at < v_order_cutoff
+    and (o.shipping_address is not null or o.email <> 'anonimizzato@invalid.local');
+  get diagnostics v_n = row_count;
+  job_name := 'orders_personal_data'; row_count_out := v_n; return next;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."apply_retention"("p_config" "jsonb") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") RETURNS boolean
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -478,6 +594,22 @@ $$;
 ALTER FUNCTION "public"."badge_progress"("p_user" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."box_items_check_box"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if not exists (select 1 from public.products where id = new.box_id and is_box) then
+    raise exception 'box_not_box' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."box_items_check_box"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."can_access_itinerary"("iid" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -532,6 +664,33 @@ $$;
 
 
 ALTER FUNCTION "public"."can_vote_item"("item_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."chat_messages_today"() RETURNS integer
+    LANGUAGE "plpgsql" STABLE
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_user uuid := (select auth.uid());
+  v_count int;
+begin
+  if v_user is null then
+    raise exception 'unauthenticated' using errcode = '42501';
+  end if;
+
+  select count(*)::int into v_count
+  from public.chat_messages m
+  join public.chat_sessions s on s.id = m.session_id
+  where s.user_id = v_user
+    and m.role = 'user'
+    and m.created_at >= (date_trunc('day', now() at time zone 'Europe/Rome') at time zone 'Europe/Rome');
+
+  return v_count;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."chat_messages_today"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."check_activity_has_tags"() RETURNS "trigger"
@@ -610,6 +769,214 @@ $$;
 
 
 ALTER FUNCTION "public"."check_place_has_active_activities"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."checkout_attach_stripe_session"("p_checkout_id" "uuid", "p_token" "text", "p_stripe_session_id" "text") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_rows integer;
+begin
+  perform public.checkout_check_token(p_checkout_id, p_token);
+  update public.checkout_sessions
+     set stripe_session_id = p_stripe_session_id
+   where id = p_checkout_id and status = 'open' and stripe_session_id is null;
+  get diagnostics v_rows = row_count;
+  return v_rows = 1;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_attach_stripe_session"("p_checkout_id" "uuid", "p_token" "text", "p_stripe_session_id" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."checkout_check_token"("p_checkout_id" "uuid", "p_token" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if p_token is null or not exists (
+    select 1 from public.checkout_sessions cs
+    where cs.id = p_checkout_id
+      and cs.token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex')
+  ) then
+    raise exception 'checkout_token_invalid' using errcode = '42501';
+  end if;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_check_token"("p_checkout_id" "uuid", "p_token" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."checkout_close"("p_checkout_id" "uuid", "p_status" "text") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_user uuid;
+  v_points integer;
+begin
+  if p_status not in ('expired', 'failed') then
+    raise exception 'checkout_status_invalid' using errcode = 'P0001';
+  end if;
+
+  update public.checkout_sessions
+     set status = p_status
+   where id = p_checkout_id and status = 'open'
+   returning user_id, points_redeemed into v_user, v_points;
+  if not found then
+    return false;
+  end if;
+
+  if v_points > 0 and v_user is not null then
+    perform public.award_points(v_user, v_points, 'redeem_refund', 'checkout', p_checkout_id);
+  end if;
+  return true;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_close"("p_checkout_id" "uuid", "p_status" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_expires_at" timestamp with time zone, "p_token_hash" "text") RETURNS TABLE("discount_cents" integer, "points_redeemed" integer)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  c_points_per_euro constant integer := 100;
+  c_max_points_percent constant integer := 15;
+  v_user uuid := (select auth.uid());
+  v_account boolean := false;
+  v_balance integer := 0;
+  v_euros integer := 0;
+  v_discount integer := 0;
+  v_points integer := 0;
+  v_cart_total integer := 0;
+begin
+  if jsonb_typeof(p_cart) is distinct from 'array' or jsonb_array_length(p_cart) = 0 then
+    raise exception 'checkout_empty' using errcode = 'P0001';
+  end if;
+
+  select coalesce(sum((line->>'unitPriceCents')::integer * (line->>'quantity')::integer), 0)::integer
+    into v_cart_total
+    from jsonb_array_elements(p_cart) as line;
+  if v_cart_total <> p_subtotal_cents then
+    raise exception 'checkout_mismatch' using errcode = 'P0001';
+  end if;
+
+  v_account := v_user is not null
+    and not exists (select 1 from auth.users u where u.id = v_user and u.is_anonymous);
+
+  if p_use_points and v_account then
+    perform pg_advisory_xact_lock(hashtextextended(v_user::text, 0));
+    select coalesce(sum(l.delta), 0)::integer into v_balance
+      from public.points_ledger l where l.user_id = v_user;
+    v_euros := least(
+      greatest(v_balance, 0) / c_points_per_euro,
+      ((p_subtotal_cents::bigint * c_max_points_percent) / 10000)::integer
+    );
+    v_euros := greatest(v_euros, 0);
+    v_discount := v_euros * 100;
+    v_points := v_euros * c_points_per_euro;
+  end if;
+
+  insert into public.checkout_sessions (
+    id, user_id, cart, subtotal_cents, shipping_cents, discount_cents, points_redeemed, status, expires_at,
+    token_hash
+  ) values (
+    p_checkout_id, case when v_account then v_user end, p_cart, p_subtotal_cents, p_shipping_cents,
+    v_discount, v_points, 'open', p_expires_at, p_token_hash
+  );
+
+  if v_points > 0 then
+    if not public.award_points(v_user, -v_points, 'redeem', 'checkout', p_checkout_id) then
+      raise exception 'points_not_recorded' using errcode = 'P0001';
+    end if;
+  end if;
+
+  return query select v_discount, v_points;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_expires_at" timestamp with time zone, "p_token_hash" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."checkout_expire_from_stripe"("p_checkout_id" "uuid", "p_stripe_session_id" "text") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_id uuid;
+begin
+  select cs.id into v_id
+    from public.checkout_sessions cs
+   where cs.status = 'open'
+     and (cs.id = p_checkout_id or cs.stripe_session_id = p_stripe_session_id)
+   order by (cs.id = p_checkout_id) desc nulls last
+   limit 1;
+  if v_id is null then
+    return false;
+  end if;
+  return public.checkout_close(v_id, 'expired');
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_expire_from_stripe"("p_checkout_id" "uuid", "p_stripe_session_id" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") RETURNS boolean
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  perform public.checkout_check_token(p_checkout_id, p_token);
+  if exists (
+    select 1 from public.checkout_sessions cs
+    where cs.id = p_checkout_id and cs.stripe_session_id is not null
+  ) then
+    return false;
+  end if;
+  return public.checkout_close(p_checkout_id, 'failed');
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."checkout_sweep_stale"("p_older_than" interval DEFAULT '00:15:00'::interval) RETURNS integer
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_id uuid;
+  v_count integer := 0;
+begin
+  for v_id in
+    select cs.id
+      from public.checkout_sessions cs
+     where cs.status = 'open'
+       and cs.stripe_session_id is null
+       and cs.created_at < now() - p_older_than
+     order by cs.created_at
+     limit 500
+       for update skip locked
+  loop
+    if public.checkout_close(v_id, 'failed') then
+      v_count := v_count + 1;
+    end if;
+  end loop;
+  return v_count;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."checkout_sweep_stale"("p_older_than" interval) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."claim_onboarding_points"() RETURNS "void"
@@ -696,6 +1063,50 @@ $_$;
 ALTER FUNCTION "public"."close_season"("p_season" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."create_chat_proposal"("p_session" "uuid", "p_message" "uuid", "p_kind" "text", "p_payload" "jsonb") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_user uuid := (select auth.uid());
+  v_id uuid;
+begin
+  if v_user is null then
+    raise exception 'unauthenticated' using errcode = '42501';
+  end if;
+
+  if not exists (
+    select 1 from public.chat_sessions s
+    where s.id = p_session and s.user_id = v_user
+  ) then
+    raise exception 'chat_session_not_found' using errcode = 'P0001';
+  end if;
+
+  -- Il messaggio a cui si lega la proposta è una risposta dell'assistente della stessa sessione.
+  if not exists (
+    select 1 from public.chat_messages m
+    where m.id = p_message and m.session_id = p_session and m.role = 'assistant'
+  ) then
+    raise exception 'chat_message_not_found' using errcode = 'P0001';
+  end if;
+
+  -- Limite di dimensione: il payload di una proposta non supera 16 KB.
+  if coalesce(octet_length(p_payload::text), 0) > 16384 then
+    raise exception 'chat_proposal_too_large' using errcode = 'P0001';
+  end if;
+
+  insert into public.chat_proposals (session_id, message_id, kind, payload)
+  values (p_session, p_message, p_kind, p_payload)
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."create_chat_proposal"("p_session" "uuid", "p_message" "uuid", "p_kind" "text", "p_payload" "jsonb") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -734,6 +1145,87 @@ $$;
 
 
 ALTER FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."current_consent"("p_kind" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select c.granted
+  from public.user_consents c
+  where c.user_id = (select auth.uid()) and c.kind = p_kind
+  order by c.id desc
+  limit 1
+$$;
+
+
+ALTER FUNCTION "public"."current_consent"("p_kind" "text") OWNER TO "postgres";
+
+SET default_tablespace = '';
+
+SET default_table_access_method = "heap";
+
+
+CREATE TABLE IF NOT EXISTS "public"."chat_proposals" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "session_id" "uuid" NOT NULL,
+    "message_id" "uuid" NOT NULL,
+    "kind" "text" NOT NULL,
+    "payload" "jsonb" NOT NULL,
+    "status" "text" DEFAULT 'pending'::"text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "decided_at" timestamp with time zone,
+    CONSTRAINT "chat_proposals_decided_consistent" CHECK ((("status" = 'pending'::"text") = ("decided_at" IS NULL))),
+    CONSTRAINT "chat_proposals_kind_valid" CHECK (("kind" = ANY (ARRAY['itinerary'::"text", 'preference'::"text"]))),
+    CONSTRAINT "chat_proposals_payload_object" CHECK (("jsonb_typeof"("payload") = 'object'::"text")),
+    CONSTRAINT "chat_proposals_status_valid" CHECK (("status" = ANY (ARRAY['pending'::"text", 'accepted'::"text", 'rejected'::"text"])))
+);
+
+
+ALTER TABLE "public"."chat_proposals" OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."decide_chat_proposal"("p_id" "uuid", "p_status" "text") RETURNS "public"."chat_proposals"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_user uuid := (select auth.uid());
+  v_row public.chat_proposals;
+begin
+  if v_user is null then
+    raise exception 'unauthenticated' using errcode = '42501';
+  end if;
+
+  if p_status not in ('accepted', 'rejected') then
+    raise exception 'invalid_chat_status' using errcode = 'P0001';
+  end if;
+
+  select p.* into v_row
+  from public.chat_proposals p
+  join public.chat_sessions s on s.id = p.session_id
+  where p.id = p_id and s.user_id = v_user
+  for update of p;
+
+  if not found then
+    raise exception 'chat_proposal_not_found' using errcode = 'P0001';
+  end if;
+
+  if v_row.status <> 'pending' then
+    raise exception 'chat_proposal_decided' using errcode = 'P0001';
+  end if;
+
+  update public.chat_proposals
+  set status = p_status, decided_at = now()
+  where id = p_id
+  returning * into v_row;
+
+  return v_row;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."decide_chat_proposal"("p_id" "uuid", "p_status" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."decide_proposal"("p_proposal_id" "uuid", "p_accept" boolean) RETURNS "void"
@@ -863,6 +1355,56 @@ $$;
 ALTER FUNCTION "public"."delete_inactive_guests"("p_days" integer) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."delete_my_account"() RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_group record;
+  v_heir uuid;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+
+  for v_group in select g.id from public.groups g where g.owner_id = v_uid loop
+    select m.user_id into v_heir
+    from public.group_members m
+    where m.group_id = v_group.id and m.user_id <> v_uid
+    order by m.joined_at, m.user_id
+    limit 1;
+
+    if v_heir is not null then
+      perform public.transfer_group_ownership(v_group.id, v_heir);
+    else
+      delete from public.itineraries where group_id = v_group.id;
+      delete from public.groups where id = v_group.id;
+    end if;
+  end loop;
+
+  -- Autore di consigli locali (persona o redazione legata al profilo): firma anonima e autore
+  -- disattivato. La vista public_local_tips mostra solo gli autori attivi, quindi i consigli spariscono.
+  -- kind diventa 'editorial': il check local_tip_authors_person_consent esige il consenso per 'person',
+  -- che qui è stato ritirato.
+  update public.local_tip_authors
+  set display_name = 'Autore eliminato', bio = null, photo_url = null, consent_at = null,
+      is_active = false, profile_id = null, kind = 'editorial'
+  where profile_id = v_uid;
+
+  update public.reviews set user_id = null where user_id = v_uid;
+
+  -- Il legame dei click con la persona, anche attraverso l'identificativo anonimo del browser.
+  update public.affiliate_clicks set anon_id = null where user_id = v_uid;
+
+  delete from auth.users u where u.id = v_uid;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."delete_my_account"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."evaluate_badges"("p_user" "uuid") RETURNS SETOF "text"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -908,6 +1450,40 @@ $$;
 
 
 ALTER FUNCTION "public"."evaluate_badges"("p_user" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."export_profiling"() RETURNS "jsonb"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'type', e.type,
+        'activityId', e.activity_id,
+        'itineraryId', e.itinerary_id,
+        'createdAt', e.created_at
+      )
+      order by e.id
+    ),
+    '[]'::jsonb)
+  from public.user_events e
+  where e.user_id = (select auth.uid())
+$$;
+
+
+ALTER FUNCTION "public"."export_profiling"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."f_unaccent"("p_text" "text") RETURNS "text"
+    LANGUAGE "sql" IMMUTABLE STRICT PARALLEL SAFE
+    SET "search_path" TO ''
+    AS $$
+  select extensions.unaccent('extensions.unaccent'::regdictionary, p_text)
+$$;
+
+
+ALTER FUNCTION "public"."f_unaccent"("p_text" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."group_has_other_members"("gid" "uuid") RETURNS boolean
@@ -1156,11 +1732,17 @@ CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
     AS $$
+declare
+  v_full_name text := coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name');
 begin
   insert into public.profiles (id, display_name, avatar_url)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name'),
+    case
+      when new.raw_app_meta_data ->> 'provider' = 'google'
+        then nullif(split_part(btrim(v_full_name), ' ', 1), '')
+      else v_full_name
+    end,
     coalesce(new.raw_user_meta_data ->> 'avatar_url', new.raw_user_meta_data ->> 'picture')
   );
   return new;
@@ -1390,6 +1972,10 @@ CREATE OR REPLACE FUNCTION "public"."itinerary_bookings_stamp"() RETURNS "trigge
     SET "search_path" TO 'public', 'pg_temp'
     AS $$
 begin
+  if tg_op = 'UPDATE' and new.updated_by is null and old.updated_by is not null then
+    new.updated_at := now();
+    return new;
+  end if;
   new.updated_by := auth.uid();
   new.updated_at := now();
   return new;
@@ -1477,6 +2063,132 @@ $$;
 ALTER FUNCTION "public"."itinerary_realtime_notify"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."learn_event_delta"("p_config" "jsonb", "p_type" "public"."event_type", "p_user_id" "uuid", "p_activity_id" "uuid") RETURNS real
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO 'public', 'extensions', 'pg_temp'
+    AS $$
+  select case
+    when p_type = 'review' then coalesce(
+      (select (r.rating - (p_config->>'reviewBase')::real) * (p_config->>'reviewScale')::real
+       from public.reviews r
+       where r.user_id = p_user_id and r.activity_id = p_activity_id),
+      0::real)
+    else coalesce((p_config->'deltas'->>(p_type::text))::real, 0::real)
+  end
+$$;
+
+
+ALTER FUNCTION "public"."learn_event_delta"("p_config" "jsonb", "p_type" "public"."event_type", "p_user_id" "uuid", "p_activity_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."learn_from_events"("p_config" "jsonb", "p_limit" integer DEFAULT 5000) RETURNS TABLE("users" integer, "events" integer)
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public', 'extensions', 'pg_temp'
+    AS $$
+declare
+  v_range real := (p_config->>'range')::real;
+  v_decay real := (p_config->>'decay')::real;
+  v_strength_max real := (p_config->>'strengthMax')::real;
+begin
+  if not pg_try_advisory_xact_lock(hashtext('learn_from_events')) then
+    return query select 0, 0;
+    return;
+  end if;
+
+  if p_config is null or p_limit is null or p_limit < 1 then
+    raise exception 'learn_config_invalid' using errcode = 'P0001';
+  end if;
+
+  return query
+  with batch as (
+    select e.id, e.user_id, e.type, e.activity_id
+    from public.user_events e
+    where e.processed_at is null
+    order by e.id
+    limit p_limit
+  ),
+  batch_users as (
+    select distinct b.user_id
+    from batch b
+    where public.profiling_allowed(b.user_id)
+  ),
+  batch_deltas as (
+    select b.user_id, b.activity_id,
+      public.learn_event_delta(p_config, b.type, b.user_id, b.activity_id) as delta
+    from batch b
+    join batch_users bu on bu.user_id = b.user_id
+    where b.activity_id is not null
+  ),
+  changes as (
+    select d.user_id, ai.interest_key,
+      sum(d.delta * ai.strength::real / v_strength_max)::real as change
+    from batch_deltas d
+    join public.activity_interests ai on ai.activity_id = d.activity_id
+    group by d.user_id, ai.interest_key
+  ),
+  decayed as (
+    select pw.user_id, pw.interest_key, (pw.implicit * (1 - v_decay))::real as implicit
+    from public.preference_weights pw
+    where pw.user_id in (select user_id from batch_users)
+  ),
+  targets as (
+    select x.user_id, x.interest_key from decayed x
+    union
+    select y.user_id, y.interest_key from changes y
+  ),
+  written as (
+    insert into public.preference_weights (user_id, interest_key, explicit, implicit, updated_at)
+    select t.user_id, t.interest_key, 0,
+      greatest(-v_range, least(v_range, (coalesce(d.implicit, 0) + coalesce(c.change, 0))::real)),
+      now()
+    from targets t
+    left join decayed d on d.user_id = t.user_id and d.interest_key = t.interest_key
+    left join changes c on c.user_id = t.user_id and c.interest_key = t.interest_key
+    on conflict (user_id, interest_key) do update
+      set implicit = excluded.implicit, updated_at = excluded.updated_at
+    returning 1
+  ),
+  positive as (
+    select distinct e.user_id, e.activity_id
+    from public.user_events e
+    where e.user_id in (select user_id from batch_users)
+      and e.activity_id is not null
+      and e.created_at >= now() - make_interval(days => (p_config->>'tasteWindowDays')::int)
+      and public.learn_event_delta(p_config, e.type, e.user_id, e.activity_id) > 0
+  ),
+  taste as (
+    select p.user_id, avg(a.embedding) as embedding
+    from positive p
+    join public.activities a on a.id = p.activity_id
+    where a.embedding is not null
+    group by p.user_id
+  ),
+  taste_written as (
+    insert into public.user_taste (user_id, embedding, updated_at)
+    select u.user_id, t.embedding, now()
+    from batch_users u
+    left join taste t on t.user_id = u.user_id
+    on conflict (user_id) do update
+      set embedding = excluded.embedding, updated_at = excluded.updated_at
+    returning 1
+  ),
+  marked as (
+    update public.user_events e
+    set processed_at = now()
+    from batch b
+    where e.id = b.id
+    returning e.id
+  )
+  select
+    (select count(*)::int from batch_users),
+    (select count(*)::int from marked);
+end;
+$$;
+
+
+ALTER FUNCTION "public"."learn_from_events"("p_config" "jsonb", "p_limit" integer) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."leave_group"("p_group_id" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -1560,6 +2272,18 @@ CREATE OR REPLACE FUNCTION "public"."media_is_public"("p_media_id" "uuid") RETUR
     or exists (
       select 1 from public.itineraries
       where cover_media_id = p_media_id and is_template and slug is not null
+    )
+    or exists (
+      select 1 from public.producers
+      where cover_media_id = p_media_id and is_public and is_active
+    )
+    or exists (
+      select 1 from public.products
+      where cover_media_id = p_media_id and public.product_is_sellable(id)
+    )
+    or exists (
+      select 1 from public.product_media pm
+      where pm.media_id = p_media_id and public.product_is_sellable(pm.product_id)
     )
   );
 $$;
@@ -1646,6 +2370,24 @@ $$;
 
 
 ALTER FUNCTION "public"."my_badge_progress"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."my_event_count"() RETURNS integer
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := (select auth.uid());
+begin
+  if v_uid is null then
+    return 0;
+  end if;
+  return (select count(*)::int from public.user_events e where e.user_id = v_uid);
+end;
+$$;
+
+
+ALTER FUNCTION "public"."my_event_count"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."my_leaderboard_settings"() RETURNS TABLE("opt_out" boolean, "display_name" "text", "public_name" "text")
@@ -1759,6 +2501,63 @@ $$;
 
 
 ALTER FUNCTION "public"."prevent_mutation"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."product_is_sellable"("p_product_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select exists (
+    select 1
+    from public.products p
+    join public.producers pr on pr.id = p.producer_id
+    join public.suppliers s on s.id = p.supplier_id
+    where p.id = p_product_id
+      and p.is_active
+      and pr.is_public
+      and pr.is_active
+      and s.is_active
+  );
+$$;
+
+
+ALTER FUNCTION "public"."product_is_sellable"("p_product_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."product_links_check_target"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if new.kind = 'place' and not exists (select 1 from public.places where id = new.target_id) then
+    raise exception 'product_link_target_missing' using errcode = 'P0001';
+  end if;
+  if new.kind = 'activity' and not exists (select 1 from public.activities where id = new.target_id) then
+    raise exception 'product_link_target_missing' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."product_links_check_target"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."profiling_allowed"("p_user_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select coalesce(
+    (select c.granted
+     from public.user_consents c
+     where c.user_id = p_user_id and c.kind = 'profiling'
+     order by c.id desc
+     limit 1),
+    false)
+$$;
+
+
+ALTER FUNCTION "public"."profiling_allowed"("p_user_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."public_name_for"("p_display_name" "text", "p_fallback_name" "text") RETURNS "text"
@@ -1973,6 +2772,61 @@ $$;
 ALTER FUNCTION "public"."record_check_in"("p_itinerary_item_id" "uuid", "p_lat" double precision, "p_lng" double precision) OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."user_consents" (
+    "id" bigint NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "kind" "text" NOT NULL,
+    "granted" boolean NOT NULL,
+    "text_version" "text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "user_consents_kind_valid" CHECK (("kind" = ANY (ARRAY['profiling'::"text", 'location'::"text", 'sensitive'::"text", 'newsletter'::"text", 'cookies_analytics'::"text"]))),
+    CONSTRAINT "user_consents_text_version_length" CHECK ((("char_length"("text_version") >= 1) AND ("char_length"("text_version") <= 40)))
+);
+
+
+ALTER TABLE "public"."user_consents" OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."record_consent"("p_kind" "text", "p_granted" boolean, "p_text_version" "text") RETURNS "public"."user_consents"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+  v_row public.user_consents;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  if p_kind not in ('profiling', 'location', 'sensitive', 'newsletter', 'cookies_analytics') then
+    raise exception 'invalid_consent_kind' using errcode = 'P0001';
+  end if;
+  if p_granted is null then
+    raise exception 'invalid_consent' using errcode = 'P0001';
+  end if;
+  if p_text_version is null or char_length(p_text_version) not between 1 and 40 then
+    raise exception 'invalid_consent_version' using errcode = 'P0001';
+  end if;
+  if p_kind = 'newsletter' and coalesce((select (auth.jwt() ->> 'is_anonymous')::boolean), false) then
+    raise exception 'guest_not_allowed' using errcode = 'P0001';
+  end if;
+
+  insert into public.user_consents (user_id, kind, granted, text_version)
+  values (v_uid, p_kind, p_granted, p_text_version)
+  returning * into v_row;
+
+  if p_kind = 'profiling' and not p_granted then
+    perform public.revoke_profiling();
+  end if;
+
+  return v_row;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."record_consent"("p_kind" "text", "p_granted" boolean, "p_text_version" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."record_flight_click"("p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text" DEFAULT NULL::"text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "text"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -2016,6 +2870,31 @@ $_$;
 
 
 ALTER FUNCTION "public"."record_flight_click"("p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."record_search_miss"("p_query" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'extensions', 'pg_temp'
+    AS $$
+declare
+  v_norm text;
+begin
+  v_norm := btrim(left(btrim(regexp_replace(
+    public.f_unaccent(lower(left(coalesce(p_query, ''), 200))), '\s+', ' ', 'g')), 100));
+  if char_length(v_norm) < 2 then
+    return;
+  end if;
+
+  insert into public.search_misses as m (query_norm, misses, first_seen, last_seen)
+  values (v_norm, 1, now(), now())
+  on conflict (query_norm) do update
+    set misses = m.misses + 1,
+        last_seen = excluded.last_seen;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."record_search_miss"("p_query" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."record_vertical_click"("p_partner" "public"."partner", "p_vertical" "text", "p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text" DEFAULT NULL::"text", "p_itinerary_id" "uuid" DEFAULT NULL::"uuid") RETURNS "text"
@@ -2262,6 +3141,164 @@ $$;
 
 
 ALTER FUNCTION "public"."review_eligible"("p_activity_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."revoke_profiling"() RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  delete from public.user_events where user_id = v_uid;
+  update public.preference_weights
+  set implicit = 0, updated_at = now()
+  where user_id = v_uid and implicit <> 0;
+  delete from public.user_taste where user_id = v_uid;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."revoke_profiling"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."search_site"("p_query" "text", "p_locale" "text", "p_limit" integer DEFAULT 5) RETURNS TABLE("kind" "text", "slug" "text", "title" "text", "subtitle" "text", "rank" real)
+    LANGUAGE "plpgsql" STABLE
+    SET "search_path" TO 'public', 'extensions', 'pg_temp'
+    AS $$
+declare
+  v_raw text;
+  v_norm text;
+  v_tsq tsquery;
+  v_limit int;
+  v_en boolean;
+begin
+  v_raw := btrim(left(btrim(regexp_replace(coalesce(p_query, ''), '\s+', ' ', 'g')), 100));
+  if char_length(v_raw) < 2 then
+    return;
+  end if;
+
+  v_norm := public.f_unaccent(lower(v_raw));
+  v_tsq := websearch_to_tsquery('public.isula_it', v_raw);
+  v_limit := least(greatest(coalesce(p_limit, 5), 1), 20);
+  v_en := p_locale = 'en';
+
+  return query
+  select u.kind, u.slug, u.title, u.subtitle, u.score
+  from (
+    (
+      select 'place'::text as kind, x.slug, x.title, x.subtitle, x.score
+      from (
+        select
+          p.slug,
+          p.name as title,
+          p.province::text as subtitle,
+          (ts_rank(to_tsvector('public.isula_it', p.name || ' ' || coalesce(p.tagline_it, '')), v_tsq)
+            + extensions.similarity(public.f_unaccent(lower(p.name)), v_norm))::real as score
+        from public.places p
+        where p.is_active
+          and (
+            to_tsvector('public.isula_it', p.name || ' ' || coalesce(p.tagline_it, '')) @@ v_tsq
+            or public.f_unaccent(lower(p.name)) operator(extensions.%) v_norm
+          )
+      ) x
+      order by x.score desc, x.title
+      limit v_limit
+    )
+    union all
+    (
+      select 'activity'::text as kind, x.slug, x.title, x.subtitle, x.score
+      from (
+        select
+          a.slug,
+          case when v_en and a.title_en is not null then a.title_en else a.title end as title,
+          pl.name as subtitle,
+          (ts_rank(to_tsvector('public.isula_it', a.title || ' ' || coalesce(a.title_en, '')), v_tsq)
+            + extensions.similarity(public.f_unaccent(lower(a.title)), v_norm))::real as score
+        from public.activities a
+        join public.places pl on pl.id = a.place_id and pl.is_active
+        where a.is_active
+          and (
+            to_tsvector('public.isula_it', a.title || ' ' || coalesce(a.title_en, '')) @@ v_tsq
+            or public.f_unaccent(lower(a.title)) operator(extensions.%) v_norm
+          )
+      ) x
+      order by x.score desc, x.title
+      limit v_limit
+    )
+    union all
+    (
+      select 'itinerary'::text as kind, x.slug, x.title, x.subtitle, x.score
+      from (
+        select
+          i.slug,
+          i.title,
+          i.days::text as subtitle,
+          (ts_rank(to_tsvector('public.isula_it', i.title || ' ' || coalesce(i.subtitle, '')), v_tsq)
+            + extensions.similarity(public.f_unaccent(lower(i.title)), v_norm))::real as score
+        from public.itineraries i
+        where i.is_template and i.slug is not null
+          and (
+            to_tsvector('public.isula_it', i.title || ' ' || coalesce(i.subtitle, '')) @@ v_tsq
+            or public.f_unaccent(lower(i.title)) operator(extensions.%) v_norm
+          )
+      ) x
+      order by x.score desc, x.title
+      limit v_limit
+    )
+    union all
+    (
+      select 'guide'::text as kind, x.slug, x.title, x.subtitle, x.score
+      from (
+        select
+          g.slug,
+          case when v_en and g.title_en is not null then g.title_en else g.title_it end as title,
+          g.author_name as subtitle,
+          (ts_rank(
+              to_tsvector('public.isula_it', g.title_it || ' ' || coalesce(g.title_en, '') || ' ' || coalesce(g.summary_it, '')),
+              v_tsq
+            ) + extensions.similarity(public.f_unaccent(lower(g.title_it)), v_norm))::real as score
+        from public.guides g
+        where g.status = 'published'
+          and (
+            to_tsvector('public.isula_it', g.title_it || ' ' || coalesce(g.title_en, '') || ' ' || coalesce(g.summary_it, '')) @@ v_tsq
+            or public.f_unaccent(lower(g.title_it)) operator(extensions.%) v_norm
+          )
+      ) x
+      order by x.score desc, x.title
+      limit v_limit
+    )
+    union all
+    (
+      select 'product'::text as kind, x.slug, x.title, x.subtitle, x.score
+      from (
+        select
+          pr.slug,
+          case when v_en and pr.title_en is not null then pr.title_en else pr.title end as title,
+          pm.name as subtitle,
+          (ts_rank(to_tsvector('public.isula_it', pr.title), v_tsq)
+            + extensions.similarity(public.f_unaccent(lower(pr.title)), v_norm))::real as score
+        from public.products pr
+        join public.producers pm on pm.id = pr.producer_id
+        where public.product_is_sellable(pr.id)
+          and (
+            to_tsvector('public.isula_it', pr.title) @@ v_tsq
+            or public.f_unaccent(lower(pr.title)) operator(extensions.%) v_norm
+          )
+      ) x
+      order by x.score desc, x.title
+      limit v_limit
+    )
+  ) u
+  order by array_position(array['place', 'activity', 'itinerary', 'guide', 'product']::text[], u.kind), u.score desc;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."search_site"("p_query" "text", "p_locale" "text", "p_limit" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."season_for"("ts" timestamp with time zone) RETURNS "text"
@@ -2526,9 +3563,85 @@ $$;
 
 ALTER FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") OWNER TO "postgres";
 
-SET default_tablespace = '';
 
-SET default_table_access_method = "heap";
+CREATE OR REPLACE FUNCTION "public"."user_events_consent_guard"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if not public.profiling_allowed(new.user_id) then
+    return null;
+  end if;
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."user_events_consent_guard"() OWNER TO "postgres";
+
+
+CREATE TEXT SEARCH CONFIGURATION "public"."isula_it" (
+    PARSER = "pg_catalog"."default" );
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "asciiword" WITH "italian_stem";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "word" WITH "extensions"."unaccent", "italian_stem";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "numword" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "email" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "url" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "host" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "sfloat" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "version" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "hword_numpart" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "hword_part" WITH "extensions"."unaccent", "italian_stem";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "hword_asciipart" WITH "italian_stem";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "numhword" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "asciihword" WITH "italian_stem";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "hword" WITH "extensions"."unaccent", "italian_stem";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "url_path" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "file" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "float" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "int" WITH "simple";
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it"
+    ADD MAPPING FOR "uint" WITH "simple";
+
+
+ALTER TEXT SEARCH CONFIGURATION "public"."isula_it" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."activities" (
@@ -2749,6 +3862,9 @@ CREATE TABLE IF NOT EXISTS "public"."areas" (
     "sort" smallint DEFAULT 0 NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "cover_media_id" "uuid",
+    "description_it" "text",
+    "description_en" "text",
+    CONSTRAINT "areas_description_length" CHECK ((("char_length"("description_it") <= 1200) AND ("char_length"("description_en") <= 1200))),
     CONSTRAINT "areas_slug_format" CHECK (("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::"text"))
 );
 
@@ -2769,6 +3885,18 @@ CREATE TABLE IF NOT EXISTS "public"."badges" (
 
 
 ALTER TABLE "public"."badges" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."box_items" (
+    "box_id" "uuid" NOT NULL,
+    "product_id" "uuid" NOT NULL,
+    "quantity" smallint DEFAULT 1 NOT NULL,
+    CONSTRAINT "box_items_not_self" CHECK (("box_id" <> "product_id")),
+    CONSTRAINT "box_items_quantity_positive" CHECK (("quantity" > 0))
+);
+
+
+ALTER TABLE "public"."box_items" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."chat_messages" (
@@ -2811,6 +3939,32 @@ CREATE TABLE IF NOT EXISTS "public"."check_ins" (
 
 
 ALTER TABLE "public"."check_ins" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."checkout_sessions" (
+    "id" "uuid" NOT NULL,
+    "stripe_session_id" "text",
+    "user_id" "uuid",
+    "cart" "jsonb" NOT NULL,
+    "subtotal_cents" integer NOT NULL,
+    "shipping_cents" integer NOT NULL,
+    "discount_cents" integer DEFAULT 0 NOT NULL,
+    "points_redeemed" integer DEFAULT 0 NOT NULL,
+    "token_hash" "text" NOT NULL,
+    "status" "text" DEFAULT 'open'::"text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "expires_at" timestamp with time zone NOT NULL,
+    CONSTRAINT "checkout_sessions_amounts_non_negative" CHECK ((("subtotal_cents" >= 0) AND ("shipping_cents" >= 0) AND ("discount_cents" >= 0) AND ("points_redeemed" >= 0))),
+    CONSTRAINT "checkout_sessions_cart_is_array" CHECK (("jsonb_typeof"("cart") = 'array'::"text")),
+    CONSTRAINT "checkout_sessions_discount_max_15_percent" CHECK ((("discount_cents" * 100) <= ("subtotal_cents" * 15))),
+    CONSTRAINT "checkout_sessions_discount_whole_euros" CHECK ((("discount_cents" % 100) = 0)),
+    CONSTRAINT "checkout_sessions_status_valid" CHECK (("status" = ANY (ARRAY['open'::"text", 'completed'::"text", 'expired'::"text", 'failed'::"text"]))),
+    CONSTRAINT "checkout_sessions_stripe_id_format" CHECK ((("stripe_session_id" IS NULL) OR ("stripe_session_id" ~ '^cs_[A-Za-z0-9_]+$'::"text"))),
+    CONSTRAINT "checkout_sessions_token_hash_format" CHECK (("token_hash" ~ '^[0-9a-f]{64}$'::"text"))
+);
+
+
+ALTER TABLE "public"."checkout_sessions" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."group_invites" (
@@ -2891,6 +4045,49 @@ CREATE TABLE IF NOT EXISTS "public"."groups" (
 
 
 ALTER TABLE "public"."groups" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."guide_links" (
+    "guide_id" "uuid" NOT NULL,
+    "kind" "text" NOT NULL,
+    "target_id" "uuid" NOT NULL,
+    "position" smallint DEFAULT 0 NOT NULL,
+    CONSTRAINT "guide_links_kind_valid" CHECK (("kind" = ANY (ARRAY['place'::"text", 'activity'::"text", 'itinerary'::"text", 'product'::"text"]))),
+    CONSTRAINT "guide_links_position_range" CHECK ((("position" >= 0) AND ("position" <= 99)))
+);
+
+
+ALTER TABLE "public"."guide_links" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."guides" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "slug" "text" NOT NULL,
+    "title_it" "text" NOT NULL,
+    "title_en" "text",
+    "summary_it" "text",
+    "summary_en" "text",
+    "body_it" "text" NOT NULL,
+    "body_en" "text",
+    "author_name" "text" NOT NULL,
+    "cover_media_id" "uuid",
+    "status" "text" DEFAULT 'draft'::"text" NOT NULL,
+    "published_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "guides_author_name_length" CHECK ((("char_length"("btrim"("author_name")) >= 2) AND ("char_length"("btrim"("author_name")) <= 120))),
+    CONSTRAINT "guides_body_en_length" CHECK (("char_length"("body_en") <= 60000)),
+    CONSTRAINT "guides_body_it_length" CHECK ((("char_length"("btrim"("body_it")) >= 1) AND ("char_length"("btrim"("body_it")) <= 60000))),
+    CONSTRAINT "guides_published_at" CHECK ((("status" = 'draft'::"text") OR ("published_at" IS NOT NULL))),
+    CONSTRAINT "guides_slug_format" CHECK (("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::"text")),
+    CONSTRAINT "guides_status_valid" CHECK (("status" = ANY (ARRAY['draft'::"text", 'published'::"text"]))),
+    CONSTRAINT "guides_summary_length" CHECK ((("char_length"("summary_it") <= 300) AND ("char_length"("summary_en") <= 300))),
+    CONSTRAINT "guides_title_en_length" CHECK (("char_length"("title_en") <= 160)),
+    CONSTRAINT "guides_title_it_length" CHECK ((("char_length"("btrim"("title_it")) >= 1) AND ("char_length"("btrim"("title_it")) <= 160)))
+);
+
+
+ALTER TABLE "public"."guides" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."image_authorizations" (
@@ -3398,17 +4595,50 @@ ALTER TABLE "public"."preference_weights" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."producers" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" "text" NOT NULL,
-    "email" "text" NOT NULL,
+    "email" "text",
     "vat_number" "text",
     "address" "text",
-    "lead_time_days" smallint DEFAULT 3 NOT NULL,
     "is_active" boolean DEFAULT true NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "producers_lead_time_positive" CHECK (("lead_time_days" > 0))
+    "slug" "text" NOT NULL,
+    "story_it" "text",
+    "story_en" "text",
+    "area_id" "uuid",
+    "place_id" "uuid",
+    "cover_media_id" "uuid",
+    "is_public" boolean DEFAULT false NOT NULL,
+    CONSTRAINT "producers_name_length" CHECK ((("char_length"("btrim"("name")) >= 1) AND ("char_length"("btrim"("name")) <= 200))),
+    CONSTRAINT "producers_slug_format" CHECK (("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::"text")),
+    CONSTRAINT "producers_story_length" CHECK ((("char_length"("story_it") <= 4000) AND ("char_length"("story_en") <= 4000)))
 );
 
 
 ALTER TABLE "public"."producers" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."product_links" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "product_id" "uuid" NOT NULL,
+    "kind" "text" NOT NULL,
+    "target_id" "uuid" NOT NULL,
+    "position" smallint DEFAULT 0 NOT NULL,
+    CONSTRAINT "product_links_kind_valid" CHECK (("kind" = ANY (ARRAY['place'::"text", 'activity'::"text"]))),
+    CONSTRAINT "product_links_position_non_negative" CHECK (("position" >= 0))
+);
+
+
+ALTER TABLE "public"."product_links" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."product_media" (
+    "product_id" "uuid" NOT NULL,
+    "media_id" "uuid" NOT NULL,
+    "position" smallint DEFAULT 0 NOT NULL,
+    CONSTRAINT "product_media_position_non_negative" CHECK (("position" >= 0))
+);
+
+
+ALTER TABLE "public"."product_media" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."products" (
@@ -3418,14 +4648,48 @@ CREATE TABLE IF NOT EXISTS "public"."products" (
     "title" "text" NOT NULL,
     "description" "text",
     "price_cents" integer NOT NULL,
-    "weight_g" integer NOT NULL,
+    "weight_g" integer,
     "images" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
     "is_box" boolean DEFAULT false NOT NULL,
-    "is_active" boolean DEFAULT true NOT NULL,
+    "is_active" boolean DEFAULT false NOT NULL,
     "stripe_price_id" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "supplier_id" "uuid" NOT NULL,
+    "supplier_sku" "text",
+    "title_en" "text",
+    "description_en" "text",
+    "category" "text" NOT NULL,
+    "format_label" "text",
+    "cost_cents" integer,
+    "vat_rate" smallint NOT NULL,
+    "ingredients_it" "text",
+    "ingredients_en" "text",
+    "allergens" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "allergens_declared" boolean DEFAULT false NOT NULL,
+    "storage_it" "text",
+    "storage_en" "text",
+    "min_shelf_life_days" smallint,
+    "is_perishable" boolean DEFAULT false NOT NULL,
+    "stock_status" "text" DEFAULT 'available'::"text" NOT NULL,
+    "lead_time_days" smallint DEFAULT 3 NOT NULL,
+    "area_id" "uuid",
+    "place_id" "uuid",
+    "cover_media_id" "uuid",
+    CONSTRAINT "products_active_requires_allergens_declared" CHECK (((NOT "is_active") OR "allergens_declared")),
+    CONSTRAINT "products_active_requires_label_info" CHECK (((NOT "is_active") OR "is_box" OR (("ingredients_it" IS NOT NULL) AND ("format_label" IS NOT NULL)))),
+    CONSTRAINT "products_allergens_valid" CHECK (("allergens" <@ ARRAY['gluten'::"text", 'crustaceans'::"text", 'eggs'::"text", 'fish'::"text", 'peanuts'::"text", 'soybeans'::"text", 'milk'::"text", 'nuts'::"text", 'celery'::"text", 'mustard'::"text", 'sesame'::"text", 'sulphites'::"text", 'lupin'::"text", 'molluscs'::"text"])),
+    CONSTRAINT "products_category_valid" CHECK (("category" = ANY (ARRAY['dolci'::"text", 'conserve'::"text", 'olio'::"text", 'vino'::"text", 'pasta'::"text", 'formaggi'::"text", 'spezie'::"text", 'box'::"text", 'altro'::"text"]))),
+    CONSTRAINT "products_cost_non_negative" CHECK ((("cost_cents" IS NULL) OR ("cost_cents" >= 0))),
+    CONSTRAINT "products_description_length" CHECK ((("char_length"("description") <= 2000) AND ("char_length"("description_en") <= 2000))),
+    CONSTRAINT "products_lead_time_positive" CHECK (("lead_time_days" > 0)),
+    CONSTRAINT "products_min_shelf_life_positive" CHECK ((("min_shelf_life_days" IS NULL) OR ("min_shelf_life_days" > 0))),
     CONSTRAINT "products_price_non_negative" CHECK (("price_cents" >= 0)),
-    CONSTRAINT "products_weight_positive" CHECK (("weight_g" > 0))
+    CONSTRAINT "products_slug_format" CHECK (("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::"text")),
+    CONSTRAINT "products_stock_status_valid" CHECK (("stock_status" = ANY (ARRAY['available'::"text", 'on_request'::"text", 'unavailable'::"text"]))),
+    CONSTRAINT "products_supplier_sku_length" CHECK ((("char_length"("btrim"("supplier_sku")) >= 1) AND ("char_length"("btrim"("supplier_sku")) <= 80))),
+    CONSTRAINT "products_title_length" CHECK ((("char_length"("btrim"("title")) >= 1) AND ("char_length"("btrim"("title")) <= 200))),
+    CONSTRAINT "products_vat_rate_valid" CHECK (("vat_rate" = ANY (ARRAY[4, 10, 22]))),
+    CONSTRAINT "products_weight_positive" CHECK ((("weight_g" IS NULL) OR ("weight_g" > 0)))
 );
 
 
@@ -3453,7 +4717,7 @@ ALTER VIEW "public"."public_local_tips" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."reviews" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "user_id" "uuid" NOT NULL,
+    "user_id" "uuid",
     "activity_id" "uuid" NOT NULL,
     "rating" smallint NOT NULL,
     "body" "text",
@@ -3479,10 +4743,11 @@ CREATE OR REPLACE VIEW "public"."public_reviews" WITH ("security_barrier"='true'
     "p"."avatar_url",
     (EXISTS ( SELECT 1
            FROM "public"."points_ledger" "l"
-          WHERE (("l"."user_id" = "r"."user_id") AND ("l"."reason" = 'review'::"public"."point_reason") AND ("l"."ref_id" = "r"."activity_id")))) AS "rewarded"
+          WHERE (("l"."user_id" = "r"."user_id") AND ("l"."reason" = 'review'::"public"."point_reason") AND ("l"."ref_id" = "r"."activity_id")))) AS "rewarded",
+    ("r"."user_id" IS NULL) AS "author_deleted"
    FROM (("public"."reviews" "r"
      JOIN "public"."activities" "a" ON ((("a"."id" = "r"."activity_id") AND "a"."is_active")))
-     JOIN "public"."profiles" "p" ON (("p"."id" = "r"."user_id")))
+     LEFT JOIN "public"."profiles" "p" ON (("p"."id" = "r"."user_id")))
   WHERE ("r"."hidden_at" IS NULL);
 
 
@@ -3512,6 +4777,19 @@ CREATE TABLE IF NOT EXISTS "public"."review_reports" (
 ALTER TABLE "public"."review_reports" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."search_misses" (
+    "query_norm" "text" NOT NULL,
+    "misses" integer DEFAULT 1 NOT NULL,
+    "first_seen" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "last_seen" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "search_misses_misses_positive" CHECK (("misses" > 0)),
+    CONSTRAINT "search_misses_query_norm_length" CHECK ((("char_length"("query_norm") >= 2) AND ("char_length"("query_norm") <= 100)))
+);
+
+
+ALTER TABLE "public"."search_misses" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."season_awards" (
     "season" "text" NOT NULL,
     "rank" smallint NOT NULL,
@@ -3529,6 +4807,37 @@ CREATE TABLE IF NOT EXISTS "public"."season_awards" (
 ALTER TABLE "public"."season_awards" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."stripe_events" (
+    "id" "text" NOT NULL,
+    "type" "text" NOT NULL,
+    "received_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."stripe_events" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."suppliers" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" "text" NOT NULL,
+    "kind" "text" DEFAULT 'manual'::"text" NOT NULL,
+    "contact_email" "text" NOT NULL,
+    "portal_url" "text",
+    "adapter_key" "text",
+    "notes" "text",
+    "is_active" boolean DEFAULT true NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "suppliers_api_has_adapter" CHECK ((("kind" = 'manual'::"text") OR ("adapter_key" IS NOT NULL))),
+    CONSTRAINT "suppliers_contact_email_format" CHECK (("contact_email" ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$'::"text")),
+    CONSTRAINT "suppliers_kind_valid" CHECK (("kind" = ANY (ARRAY['manual'::"text", 'api'::"text"]))),
+    CONSTRAINT "suppliers_name_length" CHECK ((("char_length"("btrim"("name")) >= 1) AND ("char_length"("btrim"("name")) <= 200))),
+    CONSTRAINT "suppliers_portal_url_https" CHECK ((("portal_url" IS NULL) OR ("portal_url" ~ '^https://'::"text")))
+);
+
+
+ALTER TABLE "public"."suppliers" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."user_badges" (
     "user_id" "uuid" NOT NULL,
     "badge_key" "text" NOT NULL,
@@ -3538,6 +4847,21 @@ CREATE TABLE IF NOT EXISTS "public"."user_badges" (
 
 
 ALTER TABLE "public"."user_badges" OWNER TO "postgres";
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."user_consents_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."user_consents_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."user_consents_id_seq" OWNED BY "public"."user_consents"."id";
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."user_constraints" (
@@ -3614,6 +4938,10 @@ ALTER TABLE ONLY "public"."admin_audit_log" ALTER COLUMN "id" SET DEFAULT "nextv
 
 
 ALTER TABLE ONLY "public"."points_ledger" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."points_ledger_id_seq"'::"regclass");
+
+
+
+ALTER TABLE ONLY "public"."user_consents" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."user_consents_id_seq"'::"regclass");
 
 
 
@@ -3706,8 +5034,18 @@ ALTER TABLE ONLY "public"."badges"
 
 
 
+ALTER TABLE ONLY "public"."box_items"
+    ADD CONSTRAINT "box_items_box_id_product_id_pk" PRIMARY KEY ("box_id", "product_id");
+
+
+
 ALTER TABLE ONLY "public"."chat_messages"
     ADD CONSTRAINT "chat_messages_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."chat_proposals"
+    ADD CONSTRAINT "chat_proposals_pkey" PRIMARY KEY ("id");
 
 
 
@@ -3723,6 +5061,16 @@ ALTER TABLE ONLY "public"."check_ins"
 
 ALTER TABLE ONLY "public"."check_ins"
     ADD CONSTRAINT "check_ins_user_place_day_unique" UNIQUE ("user_id", "place_id", "local_date");
+
+
+
+ALTER TABLE ONLY "public"."checkout_sessions"
+    ADD CONSTRAINT "checkout_sessions_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."checkout_sessions"
+    ADD CONSTRAINT "checkout_sessions_stripe_session_id_unique" UNIQUE ("stripe_session_id");
 
 
 
@@ -3743,6 +5091,21 @@ ALTER TABLE ONLY "public"."group_members"
 
 ALTER TABLE ONLY "public"."groups"
     ADD CONSTRAINT "groups_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."guide_links"
+    ADD CONSTRAINT "guide_links_guide_id_kind_target_id_pk" PRIMARY KEY ("guide_id", "kind", "target_id");
+
+
+
+ALTER TABLE ONLY "public"."guides"
+    ADD CONSTRAINT "guides_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."guides"
+    ADD CONSTRAINT "guides_slug_unique" UNIQUE ("slug");
 
 
 
@@ -3901,6 +5264,21 @@ ALTER TABLE ONLY "public"."producers"
 
 
 
+ALTER TABLE ONLY "public"."producers"
+    ADD CONSTRAINT "producers_slug_unique" UNIQUE ("slug");
+
+
+
+ALTER TABLE ONLY "public"."product_links"
+    ADD CONSTRAINT "product_links_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."product_media"
+    ADD CONSTRAINT "product_media_product_id_media_id_pk" PRIMARY KEY ("product_id", "media_id");
+
+
+
 ALTER TABLE ONLY "public"."products"
     ADD CONSTRAINT "products_pkey" PRIMARY KEY ("id");
 
@@ -3941,13 +5319,33 @@ ALTER TABLE ONLY "public"."reviews"
 
 
 
+ALTER TABLE ONLY "public"."search_misses"
+    ADD CONSTRAINT "search_misses_pkey" PRIMARY KEY ("query_norm");
+
+
+
 ALTER TABLE ONLY "public"."season_awards"
     ADD CONSTRAINT "season_awards_season_rank_pk" PRIMARY KEY ("season", "rank");
 
 
 
+ALTER TABLE ONLY "public"."stripe_events"
+    ADD CONSTRAINT "stripe_events_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."suppliers"
+    ADD CONSTRAINT "suppliers_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."user_badges"
     ADD CONSTRAINT "user_badges_user_id_badge_key_pk" PRIMARY KEY ("user_id", "badge_key");
+
+
+
+ALTER TABLE ONLY "public"."user_consents"
+    ADD CONSTRAINT "user_consents_pkey" PRIMARY KEY ("id");
 
 
 
@@ -3982,6 +5380,14 @@ CREATE INDEX "activities_place_id_idx" ON "public"."activities" USING "btree" ("
 
 
 
+CREATE INDEX "activities_search_fts_idx" ON "public"."activities" USING "gin" ("to_tsvector"('"public"."isula_it"'::"regconfig", (("title" || ' '::"text") || COALESCE("title_en", ''::"text")))) WHERE "is_active";
+
+
+
+CREATE INDEX "activities_search_trgm_idx" ON "public"."activities" USING "gin" ("public"."f_unaccent"("lower"("title")) "extensions"."gin_trgm_ops") WHERE "is_active";
+
+
+
 CREATE INDEX "activity_interests_interest_key_idx" ON "public"."activity_interests" USING "btree" ("interest_key");
 
 
@@ -4010,7 +5416,19 @@ CREATE INDEX "affiliate_conversions_subid_idx" ON "public"."affiliate_conversion
 
 
 
+CREATE INDEX "box_items_product_id_idx" ON "public"."box_items" USING "btree" ("product_id");
+
+
+
 CREATE INDEX "chat_messages_session_created_idx" ON "public"."chat_messages" USING "btree" ("session_id", "created_at");
+
+
+
+CREATE INDEX "chat_proposals_message_id_idx" ON "public"."chat_proposals" USING "btree" ("message_id");
+
+
+
+CREATE INDEX "chat_proposals_session_created_idx" ON "public"."chat_proposals" USING "btree" ("session_id", "created_at");
 
 
 
@@ -4019,6 +5437,14 @@ CREATE INDEX "chat_sessions_user_id_idx" ON "public"."chat_sessions" USING "btre
 
 
 CREATE INDEX "check_ins_user_date_idx" ON "public"."check_ins" USING "btree" ("user_id", "local_date");
+
+
+
+CREATE INDEX "checkout_sessions_status_idx" ON "public"."checkout_sessions" USING "btree" ("status");
+
+
+
+CREATE INDEX "checkout_sessions_user_id_idx" ON "public"."checkout_sessions" USING "btree" ("user_id");
 
 
 
@@ -4031,6 +5457,26 @@ CREATE INDEX "group_members_user_id_idx" ON "public"."group_members" USING "btre
 
 
 CREATE INDEX "groups_owner_id_idx" ON "public"."groups" USING "btree" ("owner_id");
+
+
+
+CREATE INDEX "guide_links_target_idx" ON "public"."guide_links" USING "btree" ("kind", "target_id");
+
+
+
+CREATE INDEX "guides_cover_media_id_idx" ON "public"."guides" USING "btree" ("cover_media_id");
+
+
+
+CREATE INDEX "guides_published_at_idx" ON "public"."guides" USING "btree" ("published_at") WHERE ("status" = 'published'::"text");
+
+
+
+CREATE INDEX "guides_search_fts_idx" ON "public"."guides" USING "gin" ("to_tsvector"('"public"."isula_it"'::"regconfig", (((("title_it" || ' '::"text") || COALESCE("title_en", ''::"text")) || ' '::"text") || COALESCE("summary_it", ''::"text")))) WHERE ("status" = 'published'::"text");
+
+
+
+CREATE INDEX "guides_search_trgm_idx" ON "public"."guides" USING "gin" ("public"."f_unaccent"("lower"("title_it")) "extensions"."gin_trgm_ops") WHERE ("status" = 'published'::"text");
 
 
 
@@ -4051,6 +5497,14 @@ CREATE INDEX "itineraries_group_id_idx" ON "public"."itineraries" USING "btree" 
 
 
 CREATE INDEX "itineraries_owner_id_idx" ON "public"."itineraries" USING "btree" ("owner_id");
+
+
+
+CREATE INDEX "itineraries_search_fts_idx" ON "public"."itineraries" USING "gin" ("to_tsvector"('"public"."isula_it"'::"regconfig", (("title" || ' '::"text") || COALESCE("subtitle", ''::"text")))) WHERE ("is_template" AND ("slug" IS NOT NULL));
+
+
+
+CREATE INDEX "itineraries_search_trgm_idx" ON "public"."itineraries" USING "gin" ("public"."f_unaccent"("lower"("title")) "extensions"."gin_trgm_ops") WHERE ("is_template" AND ("slug" IS NOT NULL));
 
 
 
@@ -4138,6 +5592,14 @@ CREATE INDEX "places_cover_media_id_idx" ON "public"."places" USING "btree" ("co
 
 
 
+CREATE INDEX "places_search_fts_idx" ON "public"."places" USING "gin" ("to_tsvector"('"public"."isula_it"'::"regconfig", (("name" || ' '::"text") || COALESCE("tagline_it", ''::"text")))) WHERE "is_active";
+
+
+
+CREATE INDEX "places_search_trgm_idx" ON "public"."places" USING "gin" ("public"."f_unaccent"("lower"("name")) "extensions"."gin_trgm_ops") WHERE "is_active";
+
+
+
 CREATE UNIQUE INDEX "places_single_home_hero" ON "public"."places" USING "btree" ("is_home_hero") WHERE "is_home_hero";
 
 
@@ -4146,11 +5608,67 @@ CREATE INDEX "points_ledger_season_user_idx" ON "public"."points_ledger" USING "
 
 
 
+CREATE INDEX "producers_area_id_idx" ON "public"."producers" USING "btree" ("area_id");
+
+
+
+CREATE INDEX "producers_cover_media_id_idx" ON "public"."producers" USING "btree" ("cover_media_id");
+
+
+
+CREATE INDEX "producers_place_id_idx" ON "public"."producers" USING "btree" ("place_id");
+
+
+
+CREATE INDEX "product_links_target_idx" ON "public"."product_links" USING "btree" ("kind", "target_id");
+
+
+
+CREATE UNIQUE INDEX "product_links_unique" ON "public"."product_links" USING "btree" ("product_id", "kind", "target_id");
+
+
+
+CREATE INDEX "product_media_media_id_idx" ON "public"."product_media" USING "btree" ("media_id");
+
+
+
+CREATE INDEX "products_area_id_idx" ON "public"."products" USING "btree" ("area_id");
+
+
+
+CREATE INDEX "products_cover_media_id_idx" ON "public"."products" USING "btree" ("cover_media_id");
+
+
+
+CREATE INDEX "products_place_id_idx" ON "public"."products" USING "btree" ("place_id");
+
+
+
 CREATE INDEX "products_producer_id_idx" ON "public"."products" USING "btree" ("producer_id");
 
 
 
+CREATE INDEX "products_search_fts_idx" ON "public"."products" USING "gin" ("to_tsvector"('"public"."isula_it"'::"regconfig", "title")) WHERE "is_active";
+
+
+
+CREATE INDEX "products_search_trgm_idx" ON "public"."products" USING "gin" ("public"."f_unaccent"("lower"("title")) "extensions"."gin_trgm_ops") WHERE "is_active";
+
+
+
+CREATE INDEX "products_supplier_id_idx" ON "public"."products" USING "btree" ("supplier_id");
+
+
+
+CREATE UNIQUE INDEX "products_supplier_sku_unique" ON "public"."products" USING "btree" ("supplier_id", "supplier_sku") WHERE ("supplier_sku" IS NOT NULL);
+
+
+
 CREATE INDEX "reviews_activity_id_idx" ON "public"."reviews" USING "btree" ("activity_id");
+
+
+
+CREATE INDEX "user_consents_user_kind_idx" ON "public"."user_consents" USING "btree" ("user_id", "kind", "id");
 
 
 
@@ -4179,6 +5697,10 @@ CREATE OR REPLACE TRIGGER "admin_audit_log_immutable" BEFORE DELETE OR UPDATE ON
 
 
 CREATE OR REPLACE TRIGGER "admin_audit_log_no_truncate" BEFORE TRUNCATE ON "public"."admin_audit_log" FOR EACH STATEMENT EXECUTE FUNCTION "public"."prevent_mutation"();
+
+
+
+CREATE OR REPLACE TRIGGER "box_items_box_is_box" BEFORE INSERT OR UPDATE ON "public"."box_items" FOR EACH ROW EXECUTE FUNCTION "public"."box_items_check_box"();
 
 
 
@@ -4250,11 +5772,27 @@ CREATE OR REPLACE TRIGGER "points_ledger_no_truncate" BEFORE TRUNCATE ON "public
 
 
 
+CREATE OR REPLACE TRIGGER "product_links_target_exists" BEFORE INSERT OR UPDATE ON "public"."product_links" FOR EACH ROW EXECUTE FUNCTION "public"."product_links_check_target"();
+
+
+
 CREATE OR REPLACE TRIGGER "user_badges_immutable" BEFORE DELETE OR UPDATE ON "public"."user_badges" FOR EACH ROW EXECUTE FUNCTION "public"."prevent_mutation"();
 
 
 
 CREATE OR REPLACE TRIGGER "user_badges_no_truncate" BEFORE TRUNCATE ON "public"."user_badges" FOR EACH STATEMENT EXECUTE FUNCTION "public"."prevent_mutation"();
+
+
+
+CREATE OR REPLACE TRIGGER "user_consents_immutable" BEFORE DELETE OR UPDATE ON "public"."user_consents" FOR EACH ROW EXECUTE FUNCTION "public"."prevent_mutation"();
+
+
+
+CREATE OR REPLACE TRIGGER "user_consents_no_truncate" BEFORE TRUNCATE ON "public"."user_consents" FOR EACH STATEMENT EXECUTE FUNCTION "public"."prevent_mutation"();
+
+
+
+CREATE OR REPLACE TRIGGER "user_events_consent_guard" BEFORE INSERT ON "public"."user_events" FOR EACH ROW EXECUTE FUNCTION "public"."user_events_consent_guard"();
 
 
 
@@ -4338,8 +5876,28 @@ ALTER TABLE ONLY "public"."areas"
 
 
 
+ALTER TABLE ONLY "public"."box_items"
+    ADD CONSTRAINT "box_items_box_id_products_id_fk" FOREIGN KEY ("box_id") REFERENCES "public"."products"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."box_items"
+    ADD CONSTRAINT "box_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE RESTRICT;
+
+
+
 ALTER TABLE ONLY "public"."chat_messages"
     ADD CONSTRAINT "chat_messages_session_id_chat_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."chat_sessions"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."chat_proposals"
+    ADD CONSTRAINT "chat_proposals_message_id_chat_messages_id_fk" FOREIGN KEY ("message_id") REFERENCES "public"."chat_messages"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."chat_proposals"
+    ADD CONSTRAINT "chat_proposals_session_id_chat_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."chat_sessions"("id") ON DELETE CASCADE;
 
 
 
@@ -4365,6 +5923,11 @@ ALTER TABLE ONLY "public"."check_ins"
 
 ALTER TABLE ONLY "public"."check_ins"
     ADD CONSTRAINT "check_ins_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."checkout_sessions"
+    ADD CONSTRAINT "checkout_sessions_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
 
@@ -4400,6 +5963,16 @@ ALTER TABLE ONLY "public"."groups"
 
 ALTER TABLE ONLY "public"."groups"
     ADD CONSTRAINT "groups_owner_id_profiles_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."guide_links"
+    ADD CONSTRAINT "guide_links_guide_id_guides_id_fk" FOREIGN KEY ("guide_id") REFERENCES "public"."guides"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."guides"
+    ADD CONSTRAINT "guides_cover_media_id_media_id_fk" FOREIGN KEY ("cover_media_id") REFERENCES "public"."media"("id") ON DELETE SET NULL;
 
 
 
@@ -4613,8 +6186,58 @@ ALTER TABLE ONLY "public"."preference_weights"
 
 
 
+ALTER TABLE ONLY "public"."producers"
+    ADD CONSTRAINT "producers_area_id_areas_id_fk" FOREIGN KEY ("area_id") REFERENCES "public"."areas"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."producers"
+    ADD CONSTRAINT "producers_cover_media_id_media_id_fk" FOREIGN KEY ("cover_media_id") REFERENCES "public"."media"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."producers"
+    ADD CONSTRAINT "producers_place_id_places_id_fk" FOREIGN KEY ("place_id") REFERENCES "public"."places"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."product_links"
+    ADD CONSTRAINT "product_links_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."product_media"
+    ADD CONSTRAINT "product_media_media_id_media_id_fk" FOREIGN KEY ("media_id") REFERENCES "public"."media"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."product_media"
+    ADD CONSTRAINT "product_media_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."products"
+    ADD CONSTRAINT "products_area_id_areas_id_fk" FOREIGN KEY ("area_id") REFERENCES "public"."areas"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."products"
+    ADD CONSTRAINT "products_cover_media_id_media_id_fk" FOREIGN KEY ("cover_media_id") REFERENCES "public"."media"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."products"
+    ADD CONSTRAINT "products_place_id_places_id_fk" FOREIGN KEY ("place_id") REFERENCES "public"."places"("id") ON DELETE SET NULL;
+
+
+
 ALTER TABLE ONLY "public"."products"
     ADD CONSTRAINT "products_producer_id_producers_id_fk" FOREIGN KEY ("producer_id") REFERENCES "public"."producers"("id") ON DELETE RESTRICT;
+
+
+
+ALTER TABLE ONLY "public"."products"
+    ADD CONSTRAINT "products_supplier_id_suppliers_id_fk" FOREIGN KEY ("supplier_id") REFERENCES "public"."suppliers"("id") ON DELETE RESTRICT;
 
 
 
@@ -4660,6 +6283,11 @@ ALTER TABLE ONLY "public"."user_badges"
 
 ALTER TABLE ONLY "public"."user_badges"
     ADD CONSTRAINT "user_badges_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."user_consents"
+    ADD CONSTRAINT "user_consents_user_id_profiles_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -4872,12 +6500,32 @@ CREATE POLICY "badges_update_admin" ON "public"."badges" FOR UPDATE TO "authenti
 
 
 
+ALTER TABLE "public"."box_items" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "box_items_select" ON "public"."box_items" FOR SELECT TO "authenticated", "anon" USING ((( SELECT "public"."is_admin"() AS "is_admin") OR ("public"."product_is_sellable"("box_id") AND "public"."product_is_sellable"("product_id"))));
+
+
+
+CREATE POLICY "box_items_write_admin" ON "public"."box_items" TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
 ALTER TABLE "public"."chat_messages" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "chat_messages_select_own" ON "public"."chat_messages" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."chat_sessions" "s"
   WHERE (("s"."id" = "chat_messages"."session_id") AND ("s"."user_id" = ( SELECT "auth"."uid"() AS "uid"))))));
+
+
+
+ALTER TABLE "public"."chat_proposals" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "chat_proposals_select_own" ON "public"."chat_proposals" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."chat_sessions" "s"
+  WHERE (("s"."id" = "chat_proposals"."session_id") AND ("s"."user_id" = ( SELECT "auth"."uid"() AS "uid"))))));
 
 
 
@@ -4904,6 +6552,17 @@ ALTER TABLE "public"."check_ins" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "check_ins_select_own" ON "public"."check_ins" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+ALTER TABLE "public"."checkout_sessions" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "checkout_sessions_select_admin" ON "public"."checkout_sessions" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "checkout_sessions_select_own" ON "public"."checkout_sessions" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -4949,6 +6608,54 @@ CREATE POLICY "groups_select_members" ON "public"."groups" FOR SELECT TO "authen
 
 
 CREATE POLICY "groups_update_owner" ON "public"."groups" FOR UPDATE TO "authenticated" USING (("owner_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("owner_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+ALTER TABLE "public"."guide_links" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "guide_links_delete_admin" ON "public"."guide_links" FOR DELETE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "guide_links_insert_admin" ON "public"."guide_links" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "guide_links_select_admin" ON "public"."guide_links" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "guide_links_select_published" ON "public"."guide_links" FOR SELECT TO "authenticated", "anon" USING ((EXISTS ( SELECT 1
+   FROM "public"."guides" "g"
+  WHERE (("g"."id" = "guide_links"."guide_id") AND ("g"."status" = 'published'::"text")))));
+
+
+
+CREATE POLICY "guide_links_update_admin" ON "public"."guide_links" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."guides" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "guides_delete_admin" ON "public"."guides" FOR DELETE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "guides_insert_admin" ON "public"."guides" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "guides_select_admin" ON "public"."guides" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "guides_select_published" ON "public"."guides" FOR SELECT TO "authenticated", "anon" USING (("status" = 'published'::"text"));
+
+
+
+CREATE POLICY "guides_update_admin" ON "public"."guides" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
 
 
 
@@ -5277,7 +6984,37 @@ CREATE POLICY "producers_select_admin" ON "public"."producers" FOR SELECT TO "au
 
 
 
+CREATE POLICY "producers_select_public" ON "public"."producers" FOR SELECT TO "authenticated", "anon" USING (("is_public" AND "is_active"));
+
+
+
 CREATE POLICY "producers_update_admin" ON "public"."producers" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."product_links" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "product_links_select" ON "public"."product_links" FOR SELECT TO "authenticated", "anon" USING ((( SELECT "public"."is_admin"() AS "is_admin") OR ("public"."product_is_sellable"("product_id") AND ((("kind" = 'place'::"text") AND (EXISTS ( SELECT 1
+   FROM "public"."places" "pl"
+  WHERE (("pl"."id" = "product_links"."target_id") AND "pl"."is_active")))) OR (("kind" = 'activity'::"text") AND (EXISTS ( SELECT 1
+   FROM "public"."activities" "a"
+  WHERE (("a"."id" = "product_links"."target_id") AND "a"."is_active"))))))));
+
+
+
+CREATE POLICY "product_links_write_admin" ON "public"."product_links" TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."product_media" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "product_media_select" ON "public"."product_media" FOR SELECT TO "authenticated", "anon" USING (("public"."product_is_sellable"("product_id") OR ( SELECT "public"."is_admin"() AS "is_admin")));
+
+
+
+CREATE POLICY "product_media_write_admin" ON "public"."product_media" TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
 
 
 
@@ -5292,11 +7029,11 @@ CREATE POLICY "products_insert_admin" ON "public"."products" FOR INSERT TO "auth
 
 
 
-CREATE POLICY "products_select_active_anon" ON "public"."products" FOR SELECT TO "anon" USING ("is_active");
+CREATE POLICY "products_select_admin" ON "public"."products" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
 
 
 
-CREATE POLICY "products_select_active_or_admin" ON "public"."products" FOR SELECT TO "authenticated" USING (("is_active" OR ( SELECT "public"."is_admin"() AS "is_admin")));
+CREATE POLICY "products_select_sellable" ON "public"."products" FOR SELECT TO "authenticated", "anon" USING (("is_active" AND "public"."product_is_sellable"("id")));
 
 
 
@@ -5336,6 +7073,13 @@ CREATE POLICY "reviews_select_own" ON "public"."reviews" FOR SELECT TO "authenti
 
 
 
+ALTER TABLE "public"."search_misses" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "search_misses_select_admin" ON "public"."search_misses" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
 ALTER TABLE "public"."season_awards" ENABLE ROW LEVEL SECURITY;
 
 
@@ -5343,10 +7087,43 @@ CREATE POLICY "season_awards_select_admin" ON "public"."season_awards" FOR SELEC
 
 
 
+ALTER TABLE "public"."stripe_events" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "stripe_events_select_admin" ON "public"."stripe_events" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+ALTER TABLE "public"."suppliers" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "suppliers_delete_admin" ON "public"."suppliers" FOR DELETE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "suppliers_insert_admin" ON "public"."suppliers" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "suppliers_select_admin" ON "public"."suppliers" FOR SELECT TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
+CREATE POLICY "suppliers_update_admin" ON "public"."suppliers" FOR UPDATE TO "authenticated" USING (( SELECT "public"."is_admin"() AS "is_admin")) WITH CHECK (( SELECT "public"."is_admin"() AS "is_admin"));
+
+
+
 ALTER TABLE "public"."user_badges" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "user_badges_select_own" ON "public"."user_badges" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+ALTER TABLE "public"."user_consents" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "user_consents_select_own" ON "public"."user_consents" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -5409,6 +7186,17 @@ GRANT ALL ON FUNCTION "public"."affiliate_partner_config"("p_partner" "public"."
 
 
 
+REVOKE ALL ON FUNCTION "public"."append_chat_message"("p_session" "uuid", "p_role" "text", "p_content" "jsonb", "p_tool_calls" "jsonb", "p_input_tokens" integer, "p_output_tokens" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."append_chat_message"("p_session" "uuid", "p_role" "text", "p_content" "jsonb", "p_tool_calls" "jsonb", "p_input_tokens" integer, "p_output_tokens" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."append_chat_message"("p_session" "uuid", "p_role" "text", "p_content" "jsonb", "p_tool_calls" "jsonb", "p_input_tokens" integer, "p_output_tokens" integer) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."apply_retention"("p_config" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."apply_retention"("p_config" "jsonb") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."award_points"("p_user_id" "uuid", "p_delta" integer, "p_reason" "public"."point_reason", "p_ref_type" "text", "p_ref_id" "uuid") TO "service_role";
 
@@ -5427,6 +7215,12 @@ GRANT ALL ON FUNCTION "public"."badge_criterion_value"("p_user" "uuid", "p_crite
 
 REVOKE ALL ON FUNCTION "public"."badge_progress"("p_user" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."badge_progress"("p_user" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."box_items_check_box"() TO "anon";
+GRANT ALL ON FUNCTION "public"."box_items_check_box"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."box_items_check_box"() TO "service_role";
 
 
 
@@ -5451,6 +7245,12 @@ GRANT ALL ON FUNCTION "public"."can_vote_item"("item_id" "uuid") TO "service_rol
 
 
 
+REVOKE ALL ON FUNCTION "public"."chat_messages_today"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."chat_messages_today"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."chat_messages_today"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."check_activity_has_tags"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."check_activity_has_tags"() TO "service_role";
 
@@ -5466,6 +7266,47 @@ GRANT ALL ON FUNCTION "public"."check_place_has_active_activities"() TO "service
 
 
 
+REVOKE ALL ON FUNCTION "public"."checkout_attach_stripe_session"("p_checkout_id" "uuid", "p_token" "text", "p_stripe_session_id" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_attach_stripe_session"("p_checkout_id" "uuid", "p_token" "text", "p_stripe_session_id" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."checkout_attach_stripe_session"("p_checkout_id" "uuid", "p_token" "text", "p_stripe_session_id" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."checkout_attach_stripe_session"("p_checkout_id" "uuid", "p_token" "text", "p_stripe_session_id" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."checkout_check_token"("p_checkout_id" "uuid", "p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_check_token"("p_checkout_id" "uuid", "p_token" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."checkout_close"("p_checkout_id" "uuid", "p_status" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_close"("p_checkout_id" "uuid", "p_status" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_expires_at" timestamp with time zone, "p_token_hash" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_expires_at" timestamp with time zone, "p_token_hash" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_expires_at" timestamp with time zone, "p_token_hash" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."checkout_create"("p_checkout_id" "uuid", "p_cart" "jsonb", "p_subtotal_cents" integer, "p_shipping_cents" integer, "p_use_points" boolean, "p_expires_at" timestamp with time zone, "p_token_hash" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."checkout_expire_from_stripe"("p_checkout_id" "uuid", "p_stripe_session_id" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_expire_from_stripe"("p_checkout_id" "uuid", "p_stripe_session_id" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."checkout_release"("p_checkout_id" "uuid", "p_token" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."checkout_sweep_stale"("p_older_than" interval) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."checkout_sweep_stale"("p_older_than" interval) TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."claim_onboarding_points"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."claim_onboarding_points"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."claim_onboarding_points"() TO "service_role";
@@ -5477,10 +7318,33 @@ GRANT ALL ON FUNCTION "public"."close_season"("p_season" "text") TO "service_rol
 
 
 
+REVOKE ALL ON FUNCTION "public"."create_chat_proposal"("p_session" "uuid", "p_message" "uuid", "p_kind" "text", "p_payload" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."create_chat_proposal"("p_session" "uuid", "p_message" "uuid", "p_kind" "text", "p_payload" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_chat_proposal"("p_session" "uuid", "p_message" "uuid", "p_kind" "text", "p_payload" "jsonb") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_group"("p_name" "text", "p_itinerary_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."current_consent"("p_kind" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."current_consent"("p_kind" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."current_consent"("p_kind" "text") TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."chat_proposals" TO "service_role";
+GRANT SELECT ON TABLE "public"."chat_proposals" TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."decide_chat_proposal"("p_id" "uuid", "p_status" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."decide_chat_proposal"("p_id" "uuid", "p_status" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."decide_chat_proposal"("p_id" "uuid", "p_status" "text") TO "service_role";
 
 
 
@@ -5495,8 +7359,26 @@ GRANT ALL ON FUNCTION "public"."delete_inactive_guests"("p_days" integer) TO "se
 
 
 
+REVOKE ALL ON FUNCTION "public"."delete_my_account"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."delete_my_account"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."delete_my_account"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."evaluate_badges"("p_user" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."evaluate_badges"("p_user" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."export_profiling"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."export_profiling"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."export_profiling"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."f_unaccent"("p_text" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."f_unaccent"("p_text" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."f_unaccent"("p_text" "text") TO "service_role";
 
 
 
@@ -5611,6 +7493,14 @@ GRANT ALL ON FUNCTION "public"."itinerary_realtime_notify"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."learn_event_delta"("p_config" "jsonb", "p_type" "public"."event_type", "p_user_id" "uuid", "p_activity_id" "uuid") FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "public"."learn_from_events"("p_config" "jsonb", "p_limit" integer) FROM PUBLIC;
+
+
+
 REVOKE ALL ON FUNCTION "public"."leave_group"("p_group_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."leave_group"("p_group_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."leave_group"("p_group_id" "uuid") TO "service_role";
@@ -5662,6 +7552,12 @@ GRANT ALL ON FUNCTION "public"."my_badge_progress"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."my_event_count"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."my_event_count"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."my_event_count"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."my_leaderboard_settings"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."my_leaderboard_settings"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."my_leaderboard_settings"() TO "authenticated";
@@ -5690,6 +7586,24 @@ GRANT ALL ON FUNCTION "public"."prevent_mutation"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."product_is_sellable"("p_product_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."product_is_sellable"("p_product_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."product_is_sellable"("p_product_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."product_is_sellable"("p_product_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."product_links_check_target"() TO "anon";
+GRANT ALL ON FUNCTION "public"."product_links_check_target"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."product_links_check_target"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."profiling_allowed"("p_user_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."profiling_allowed"("p_user_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."public_name_for"("p_display_name" "text", "p_fallback_name" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."public_name_for"("p_display_name" "text", "p_fallback_name" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."public_name_for"("p_display_name" "text", "p_fallback_name" "text") TO "service_role";
@@ -5709,10 +7623,51 @@ GRANT ALL ON FUNCTION "public"."record_check_in"("p_itinerary_item_id" "uuid", "
 
 
 
+GRANT ALL ON TABLE "public"."user_consents" TO "service_role";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."user_consents" TO "authenticated";
+
+
+
+GRANT SELECT("user_id") ON TABLE "public"."user_consents" TO "authenticated";
+
+
+
+GRANT SELECT("kind") ON TABLE "public"."user_consents" TO "authenticated";
+
+
+
+GRANT SELECT("granted") ON TABLE "public"."user_consents" TO "authenticated";
+
+
+
+GRANT SELECT("text_version") ON TABLE "public"."user_consents" TO "authenticated";
+
+
+
+GRANT SELECT("created_at") ON TABLE "public"."user_consents" TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."record_consent"("p_kind" "text", "p_granted" boolean, "p_text_version" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."record_consent"("p_kind" "text", "p_granted" boolean, "p_text_version" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."record_consent"("p_kind" "text", "p_granted" boolean, "p_text_version" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."record_flight_click"("p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."record_flight_click"("p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."record_flight_click"("p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."record_flight_click"("p_subid" "text", "p_context" "text", "p_target_url" "text", "p_anon_id" "text", "p_itinerary_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."record_search_miss"("p_query" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."record_search_miss"("p_query" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."record_search_miss"("p_query" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."record_search_miss"("p_query" "text") TO "service_role";
 
 
 
@@ -5749,6 +7704,18 @@ GRANT ALL ON FUNCTION "public"."report_review"("p_review_id" "uuid", "p_reason" 
 REVOKE ALL ON FUNCTION "public"."review_eligible"("p_activity_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."review_eligible"("p_activity_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."review_eligible"("p_activity_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."revoke_profiling"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."revoke_profiling"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."search_site"("p_query" "text", "p_locale" "text", "p_limit" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."search_site"("p_query" "text", "p_locale" "text", "p_limit" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."search_site"("p_query" "text", "p_locale" "text", "p_limit" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."search_site"("p_query" "text", "p_locale" "text", "p_limit" integer) TO "service_role";
 
 
 
@@ -5800,6 +7767,11 @@ REVOKE ALL ON FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", 
 GRANT ALL ON FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."transfer_group_ownership"("p_group_id" "uuid", "p_new_owner" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."user_events_consent_guard"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."user_events_consent_guard"() TO "service_role";
 
 
 
@@ -5998,6 +7970,12 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."badges" TO "authenticated";
 
 
 
+GRANT ALL ON TABLE "public"."box_items" TO "service_role";
+GRANT SELECT ON TABLE "public"."box_items" TO "anon";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."box_items" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."chat_messages" TO "service_role";
 GRANT SELECT ON TABLE "public"."chat_messages" TO "authenticated";
 
@@ -6026,6 +8004,54 @@ GRANT INSERT("title"),UPDATE("title") ON TABLE "public"."chat_sessions" TO "auth
 
 GRANT ALL ON TABLE "public"."check_ins" TO "service_role";
 GRANT SELECT ON TABLE "public"."check_ins" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."checkout_sessions" TO "service_role";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("stripe_session_id") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("user_id") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("cart") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("subtotal_cents") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("shipping_cents") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("discount_cents") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("points_redeemed") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("status") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("created_at") ON TABLE "public"."checkout_sessions" TO "authenticated";
+
+
+
+GRANT SELECT("expires_at") ON TABLE "public"."checkout_sessions" TO "authenticated";
 
 
 
@@ -6111,6 +8137,86 @@ GRANT SELECT,DELETE ON TABLE "public"."groups" TO "authenticated";
 
 
 GRANT UPDATE("name") ON TABLE "public"."groups" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."guide_links" TO "service_role";
+GRANT SELECT ON TABLE "public"."guide_links" TO "anon";
+GRANT SELECT,DELETE ON TABLE "public"."guide_links" TO "authenticated";
+
+
+
+GRANT INSERT("guide_id") ON TABLE "public"."guide_links" TO "authenticated";
+
+
+
+GRANT INSERT("kind") ON TABLE "public"."guide_links" TO "authenticated";
+
+
+
+GRANT INSERT("target_id") ON TABLE "public"."guide_links" TO "authenticated";
+
+
+
+GRANT INSERT("position"),UPDATE("position") ON TABLE "public"."guide_links" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."guides" TO "service_role";
+GRANT SELECT ON TABLE "public"."guides" TO "anon";
+GRANT SELECT,DELETE ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("id") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("slug"),UPDATE("slug") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("title_it"),UPDATE("title_it") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("title_en"),UPDATE("title_en") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("summary_it"),UPDATE("summary_it") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("summary_en"),UPDATE("summary_en") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("body_it"),UPDATE("body_it") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("body_en"),UPDATE("body_en") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("author_name"),UPDATE("author_name") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("cover_media_id"),UPDATE("cover_media_id") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("status"),UPDATE("status") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT INSERT("published_at"),UPDATE("published_at") ON TABLE "public"."guides" TO "authenticated";
+
+
+
+GRANT UPDATE("updated_at") ON TABLE "public"."guides" TO "authenticated";
 
 
 
@@ -6604,13 +8710,219 @@ GRANT UPDATE("updated_at") ON TABLE "public"."preference_weights" TO "authentica
 
 
 GRANT ALL ON TABLE "public"."producers" TO "service_role";
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."producers" TO "authenticated";
+GRANT INSERT,DELETE,UPDATE ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("id") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("name") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("name") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("is_active") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("is_active") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("created_at") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("created_at") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("slug") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("slug") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("story_it") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("story_it") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("story_en") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("story_en") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("area_id") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("area_id") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("place_id") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("place_id") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("cover_media_id") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("cover_media_id") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT SELECT("is_public") ON TABLE "public"."producers" TO "anon";
+GRANT SELECT("is_public") ON TABLE "public"."producers" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."product_links" TO "service_role";
+GRANT SELECT ON TABLE "public"."product_links" TO "anon";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."product_links" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."product_media" TO "service_role";
+GRANT SELECT ON TABLE "public"."product_media" TO "anon";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."product_media" TO "authenticated";
 
 
 
 GRANT ALL ON TABLE "public"."products" TO "service_role";
-GRANT SELECT ON TABLE "public"."products" TO "anon";
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."products" TO "authenticated";
+GRANT INSERT,DELETE,UPDATE ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("id") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("id") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("slug") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("slug") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("producer_id") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("producer_id") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("title") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("title") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("description") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("description") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("price_cents") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("price_cents") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("weight_g") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("weight_g") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("is_box") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("is_box") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("is_active") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("is_active") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("created_at") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("created_at") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("title_en") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("title_en") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("description_en") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("description_en") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("category") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("category") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("format_label") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("format_label") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("vat_rate") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("vat_rate") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("ingredients_it") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("ingredients_it") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("ingredients_en") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("ingredients_en") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("allergens") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("allergens") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("allergens_declared") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("allergens_declared") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("storage_it") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("storage_it") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("storage_en") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("storage_en") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("min_shelf_life_days") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("min_shelf_life_days") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("is_perishable") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("is_perishable") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("stock_status") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("stock_status") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("lead_time_days") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("lead_time_days") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("area_id") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("area_id") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("place_id") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("place_id") ON TABLE "public"."products" TO "authenticated";
+
+
+
+GRANT SELECT("cover_media_id") ON TABLE "public"."products" TO "anon";
+GRANT SELECT("cover_media_id") ON TABLE "public"."products" TO "authenticated";
 
 
 
@@ -6640,13 +8952,34 @@ GRANT SELECT ON TABLE "public"."review_reports" TO "authenticated";
 
 
 
+GRANT ALL ON TABLE "public"."search_misses" TO "service_role";
+GRANT SELECT ON TABLE "public"."search_misses" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."season_awards" TO "service_role";
 GRANT SELECT ON TABLE "public"."season_awards" TO "authenticated";
 
 
 
+GRANT ALL ON TABLE "public"."stripe_events" TO "service_role";
+GRANT SELECT ON TABLE "public"."stripe_events" TO "authenticated";
+
+
+
+GRANT ALL ON TABLE "public"."suppliers" TO "service_role";
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."suppliers" TO "authenticated";
+
+
+
 GRANT ALL ON TABLE "public"."user_badges" TO "service_role";
 GRANT SELECT ON TABLE "public"."user_badges" TO "authenticated";
+
+
+
+GRANT ALL ON SEQUENCE "public"."user_consents_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."user_consents_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."user_consents_id_seq" TO "service_role";
 
 
 

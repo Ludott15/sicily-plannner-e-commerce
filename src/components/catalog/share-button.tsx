@@ -30,7 +30,12 @@ export function ShareButton({
       }
       return;
     }
-    await navigator.clipboard.writeText(url);
+    // Nei browser interni delle app gli appunti possono non essere disponibili: nessun errore a schermo.
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }

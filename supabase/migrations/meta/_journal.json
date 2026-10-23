@@ -351,6 +351,104 @@
       "when": 1792089624373,
       "tag": "20261015184024_classifiche",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1792162308753,
+      "tag": "20261016145148_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1792162322678,
+      "tag": "20261016145202_chat_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1792166678515,
+      "tag": "20261016160438_learn",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1792169243605,
+      "tag": "20261016164723_seo_guide",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1792169248493,
+      "tag": "20261016164728_seo_guide_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1792171221883,
+      "tag": "20261016172021_search",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1792171229820,
+      "tag": "20261016172029_search_fts",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1792182358651,
+      "tag": "20261016202558_shop_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1792182376749,
+      "tag": "20261016202616_shop_catalog_drop",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1792182412333,
+      "tag": "20261016202652_shop_catalog_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1792187957449,
+      "tag": "20261016215917_gdpr",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1792187976315,
+      "tag": "20261016215936_gdpr_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1792354864832,
+      "tag": "20261018202104_checkout",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1792354880207,
+      "tag": "20261018202120_checkout_rls",
+      "breakpoints": true
     }
   ]
 }

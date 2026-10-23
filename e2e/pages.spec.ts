@@ -4,23 +4,31 @@ import { expect, test } from "@playwright/test";
 // 404 e banner dei cookie.
 
 test("sitemap: affiliazioni nelle due lingue; pagine con testi in sospeso, admin e profilo no", async ({ request }) => {
-  const sitemap = await (await request.get("/sitemap.xml")).text();
+  // Le pagine statiche stanno nella sitemap "pagine"; le altre sitemap per tipo non contengono admin né profilo.
+  const sitemap = await (await request.get("/sitemap/pagine.xml")).text();
   expect(sitemap).toContain("http://localhost:3000/it/affiliazioni");
   expect(sitemap).toContain("http://localhost:3000/en/affiliazioni");
   expect(sitemap).not.toContain("/link-affiliati");
-  // Chi siamo e pagine legali hanno ancora il segnaposto: fuori dalla sitemap finché non sono scritte.
-  for (const path of ["/chi-siamo", "/privacy", "/cookie", "/condizioni-di-vendita"]) {
+  // Senza dati del titolare (isLegalReady, il caso di CI) Chi siamo e le pagine legali stanno fuori
+  // dalla sitemap; il contatto invece c'è sempre.
+  expect(sitemap).toContain("http://localhost:3000/it/contatti");
+  for (const path of ["/chi-siamo", "/privacy", "/cookie", "/condizioni-di-vendita", "/termini", "/punti/regolamento"]) {
     expect(sitemap, path).not.toContain(path);
   }
-  expect(sitemap).not.toContain("/admin");
-  expect(sitemap).not.toContain("/profilo");
+  for (const id of ["pagine", "luoghi", "attivita", "itinerari", "aree", "guide", "voli"]) {
+    const xml = await (await request.get(`/sitemap/${id}.xml`)).text();
+    expect(xml, id).not.toContain("/admin");
+    expect(xml, id).not.toContain("/profilo");
+  }
 });
 
-test("pagine con testi in sospeso: noindex, \"Testo in preparazione\" e nessuna chiave di traduzione", async ({ page }) => {
-  for (const path of ["/it/privacy", "/it/cookie", "/it/condizioni-di-vendita", "/it/chi-siamo", "/en/privacy"]) {
+test("pagine legali senza dati del titolare: noindex, avviso di preparazione e nessuna chiave di traduzione", async ({ page }) => {
+  // Sette pagine: in locale la prima visita a ciascuna la compila (come in onboarding.spec.ts).
+  test.setTimeout(120_000);
+  for (const path of ["/it/privacy", "/it/cookie", "/it/condizioni-di-vendita", "/it/termini", "/it/punti/regolamento", "/it/chi-siamo", "/en/privacy"]) {
     await page.goto(path);
     await expect(page.locator('meta[name="robots"]'), path).toHaveAttribute("content", /noindex/);
-    await expect(page.locator("main")).toContainText(/Testo in preparazione|Text in preparation/);
+    await expect(page.locator('[data-legal-entity="missing"]'), path).toContainText(/Pagina in preparazione|Page in preparation/);
     // Mai identificativi interni (legal.privacy, about.editorial…) né chiavi mancanti di next-intl.
     const text = (await page.locator("main").innerText()) + (await page.locator("footer").innerText());
     expect(text, path).not.toMatch(/\b(legal|about|home|activity)\.[a-z-]+\b/);
@@ -58,18 +66,20 @@ test("Chi siamo dalla firma della redazione e dalla firma del fondatore in home"
   await expect(page).toHaveURL(/\/it\/chi-siamo$/);
 });
 
-test("pagine dal footer: link affiliati e informazioni legali in preparazione", async ({ page }) => {
+test("pagine dal footer: link affiliati e informazioni legali", async ({ page }) => {
+  // Più pagine in un solo test: in locale la compilazione a freddo supera i 30 secondi predefiniti.
+  test.setTimeout(120_000);
   await page.goto("/it");
   const footer = page.getByRole("navigation", { name: "Piè di pagina" });
   await footer.getByRole("link", { name: "Link affiliati" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Come funzionano i link affiliati");
 
-  for (const name of ["Privacy", "Cookie", "Condizioni di vendita"]) {
+  for (const name of ["Privacy", "Cookie", "Condizioni di vendita", "Termini d'uso"]) {
     await page.goto("/it");
     await page.getByRole("navigation", { name: "Piè di pagina" }).getByRole("link", { name, exact: true }).click();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(name);
-    // Testo legale non ancora scritto: segnaposto in sospeso che blocca il lancio.
-    await expect(page.locator('[data-pending="legale"]')).toHaveText(/Testo in preparazione/);
+    // Il testo è quello di content/legal: data di aggiornamento e versione sono in pagina.
+    await expect(page.getByText(/versione \d+$/)).toBeVisible();
   }
 });
 
@@ -117,4 +127,18 @@ test.describe("banner dei cookie", () => {
     await page.getByRole("region", { name: "Cookie" }).getByRole("button", { name: "Accetta" }).click();
     expect((await context.cookies()).find((c) => c.name === "cookie_consent")?.value).toBe("accepted");
   });
+});
+
+test("dichiarazione di accessibilità: indicizzabile, nella sitemap, con stato e contatto", async ({ page, request }) => {
+  const sitemap = await (await request.get("/sitemap/pagine.xml")).text();
+  expect(sitemap).toContain("http://localhost:3000/it/accessibilita");
+  await page.goto("/it");
+  await page.getByRole("navigation", { name: "Piè di pagina" }).getByRole("link", { name: "Dichiarazione di accessibilità", exact: true }).click();
+  await expect(page).toHaveURL(/\/it\/accessibilita$/);
+  await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Dichiarazione di accessibilità");
+  await expect(page.getByRole("heading", { name: "Stato di conformità" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Metodo di verifica" })).toBeVisible();
+  // Nessun contatto inventato: finché CONTACT_EMAIL è vuoto la pagina dice che sarà indicato.
+  await expect(page.locator("main a[href^='mailto:']")).toHaveCount(0);
 });

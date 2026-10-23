@@ -53,7 +53,9 @@ export async function ReviewsSection({
                     {review.displayName?.trim().charAt(0).toUpperCase() || "?"}
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <p className="text-body font-semibold">{review.displayName ?? t("anonymous")}</p>
+                    <p className="text-body font-semibold">
+                      {review.authorDeleted ? t("deletedUser") : (review.displayName ?? t("anonymous"))}
+                    </p>
                     <p className="text-body-s font-semibold">{t("doneThis")}</p>
                   </div>
                   <p className="text-body-s font-semibold">{t("ratingValue", { n: review.rating })}</p>

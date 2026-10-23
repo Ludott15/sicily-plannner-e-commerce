@@ -19,16 +19,36 @@ const TABS: { key: TabKey; href: string; label: "tabExplore" | "tabTrips" | "tab
 ];
 
 // pending: voci le cui pagine non esistono ancora (src/lib/pending-actions.ts).
-export function TabBar({ current, pending = {} }: { current?: TabKey; pending?: Partial<Record<TabKey, PendingId>> }) {
+// badges: numero su una voce (per il carrello, sulla voce Esplora); count 0 non mostra nulla.
+export type TabBadge = { count: number; label: string };
+
+export function TabBar({
+  current,
+  pending = {},
+  badges = {},
+}: {
+  current?: TabKey;
+  pending?: Partial<Record<TabKey, PendingId>>;
+  badges?: Partial<Record<TabKey, TabBadge>>;
+}) {
   const t = useTranslations("Design");
   return (
     <nav className="is-tabbar" aria-label={t("tabNav")}>
       {TABS.map(({ key, href, label, icon: Icon }) => {
         const pendingId = pending[key];
+        const badge = badges[key];
         const content = (
           <>
-            <Icon size={24} strokeWidth={1.5} aria-hidden="true" />
+            <span className="is-tabbar__icon">
+              <Icon size={24} strokeWidth={1.5} aria-hidden="true" />
+              {badge && badge.count > 0 && (
+                <span aria-hidden="true" className="is-tabbar__badge">
+                  {badge.count > 9 ? "9+" : badge.count}
+                </span>
+              )}
+            </span>
             {t(label)}
+            {badge && badge.count > 0 && <span className="sr-only">{badge.label}</span>}
           </>
         );
         return pendingId ? (

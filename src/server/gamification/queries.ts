@@ -71,6 +71,7 @@ type PublicReviewRow = {
   displayName: string | null;
   avatarUrl: string | null;
   rewarded: boolean;
+  authorDeleted: boolean;
 };
 
 // Recensioni pubbliche di un'attività, la propria recensione e se l'utente può recensire.
@@ -87,7 +88,8 @@ export async function getActivityReviews(activityId: string, user: DbUser | null
         created_at as "createdAt",
         display_name as "displayName",
         avatar_url as "avatarUrl",
-        rewarded
+        rewarded,
+        author_deleted as "authorDeleted"
       from public.public_reviews
       where activity_id = ${activityId}::uuid
       order by created_at desc
@@ -101,6 +103,7 @@ export async function getActivityReviews(activityId: string, user: DbUser | null
       displayName: r.displayName,
       avatarUrl: r.avatarUrl,
       rewarded: r.rewarded,
+      authorDeleted: r.authorDeleted,
     }));
 
     if (!user) return { reviews: reviewsList, mine: null, eligible: false };

@@ -10,6 +10,7 @@ import {
   InterestChip,
   ItineraryStop,
   LocalTip,
+  Logo,
   PointsPill,
   PreferenceScale,
   ProductCard,
@@ -20,6 +21,7 @@ import {
   StopVotes,
   TabBar,
   TransferStop,
+  TripMap,
   interestDomain,
   type BookingItem,
 } from "@/components/design";
@@ -314,9 +316,46 @@ export function DesignShowcase({ themeId, themeLabel }: { themeId: string; theme
         </div>
       </Block>
 
+      <Block title="Logo" readme="Logo">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div className="flex flex-col items-start gap-6 rounded-lg bg-calce-raised p-6 shadow-card">
+            <Logo className="text-[36px]" />
+            <Logo variant="mark" className="text-[48px]" />
+            <Logo variant="mark" className="text-[16px]" />
+          </div>
+          <div className="flex flex-col items-start gap-6 rounded-lg bg-ink p-6 text-on-ink">
+            <Logo className="text-[36px]" />
+            <Logo variant="mark" tone="mono" className="text-[48px]" />
+            <Logo variant="mark" tone="mono" className="text-[16px]" />
+          </div>
+        </div>
+      </Block>
+
       <Block title="TabBar" readme="TabBar">
         <div className="max-w-[390px]">
           <TabBar current="trips" />
+        </div>
+      </Block>
+
+      <Block title="Map" readme="Map">
+        <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
+          <TripMap
+            points={[
+              { id: "mappa-1", lat: 38.0274, lng: 12.5105, label: "Saline di Trapani", number: 1 },
+              { id: "mappa-2", lat: 38.0425, lng: 12.3978, label: "Erice", number: 2 },
+              { id: "mappa-3", lat: 38.0382, lng: 12.6244, label: "Marsala", number: 3 },
+            ]}
+            route
+            ariaLabel="Mappa del giorno di esempio"
+          />
+          <TripMap
+            points={[
+              { id: "luogo-1", lat: 36.9247, lng: 14.7329, label: "Vendicari" },
+              { id: "luogo-2", lat: 36.8839, lng: 14.7114, label: "Noto" },
+            ]}
+            ariaLabel="Punti senza numero"
+            listed={false}
+          />
         </div>
       </Block>
     </div>

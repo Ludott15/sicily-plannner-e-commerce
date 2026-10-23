@@ -1,20 +1,32 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { Bell } from "lucide-react";
-import { ButtonLink } from "@/components/design";
+import { Bell, Search } from "lucide-react";
+import { ButtonLink, Logo } from "@/components/design";
+import { CartButton } from "@/components/cart/cart-button";
 import { ActionMenu, type ActionMenuItem } from "@/components/layout/action-menu";
 import { AvatarMenu } from "@/components/layout/avatar-menu";
+import { SiteSearch } from "@/components/search/site-search";
 import { Link } from "@/lib/i18n/navigation";
 import { signOut } from "@/server/auth/actions";
 import { getHeaderUser } from "@/server/auth/header-user";
+import { emptyCartView, readCart, readCartCount } from "@/server/shop/cart";
 
 // Intestazione (brief 6.1, navigazione a due livelli).
 // Desktop: logo, Esplora (menu: Attività, Itinerari pronti, Noleggio auto), Voli, Dove dormire.
 // A destra: senza sessione "Accedi"; con account la campanella e il menu personale (avatar con le iniziali).
 // Mobile: logo, campanella e avatar; la navigazione sta nella barra in basso (MobileTabBar).
 // Ospite (sessione anonima): solo il menu personale, con I miei viaggi, Preferenze, Crea l'account ed Esci.
+// Carrello: icona con il numero di articoli, a tutte le larghezze (drawer da md, pagina su mobile).
 // Il bottone principale della pagina sta nella pagina, non qui.
 export async function SiteHeader() {
-  const [user, locale, t] = await Promise.all([getHeaderUser(), getLocale(), getTranslations("Nav")]);
+  const [user, locale, t, tSearch] = await Promise.all([
+    getHeaderUser(),
+    getLocale(),
+    getTranslations("Nav"),
+    getTranslations("Search"),
+  ]);
+  // Carrello (passo 7.2): il conteggio viene dal cookie; la vista (con i prezzi) solo se c'è almeno un articolo.
+  const cartCount = await readCartCount();
+  const cartView = cartCount > 0 ? await readCart() : emptyCartView();
 
   const signOutItem: ActionMenuItem = {
     kind: "form",
@@ -27,11 +39,14 @@ export async function SiteHeader() {
   const exploreItems: ActionMenuItem[] = [
     { kind: "link", href: "/attivita", label: t("activities"), icon: "compass" },
     { kind: "link", href: "/itinerari", label: t("itineraries"), icon: "map" },
+    { kind: "link", href: "/guide", label: t("guides"), icon: "book" },
     { kind: "link", href: "/noleggio-auto", label: t("car"), icon: "car" },
+    { kind: "link", href: "/shop", label: t("shop") },
   ];
 
   const memberItems: ActionMenuItem[] = [
     { kind: "link", href: "/viaggi", label: t("trips"), icon: "map" },
+    { kind: "link", href: "/chat", label: t("assistant"), icon: "message" },
     { kind: "link", href: "/gruppi", label: t("groups"), icon: "users" },
     { kind: "link", href: "/punti", label: t("points"), icon: "star" },
     { kind: "link", href: "/classifica", label: t("leaderboard"), icon: "trophy" },
@@ -44,6 +59,7 @@ export async function SiteHeader() {
 
   const guestItems: ActionMenuItem[] = [
     { kind: "link", href: "/viaggi", label: t("trips"), icon: "map" },
+    { kind: "link", href: "/chat", label: t("assistant"), icon: "message" },
     { kind: "link", href: "/preferenze", label: t("preferences"), icon: "settings" },
     { kind: "link", href: "/profilo", label: t("createAccount"), icon: "user" },
     { kind: "separator" },
@@ -59,9 +75,9 @@ export async function SiteHeader() {
           <Link
             href="/"
             aria-label={t("home")}
-            className="is-display text-[26px] leading-none tracking-[-0.02em] text-lava no-underline md:text-[30px]"
+            className="text-[26px] leading-none text-lava no-underline md:text-[30px]"
           >
-            Isula
+            <Logo />
           </Link>
           <nav aria-label={t("main")} className="hidden items-center gap-6 text-[15px] font-medium md:flex">
             <ActionMenu variant="text" text={t("explore")} items={exploreItems} align="start" />
@@ -74,7 +90,20 @@ export async function SiteHeader() {
           </nav>
         </div>
 
+        {/* Campo di ricerca da lg (nel tablet la navigazione ha bisogno dello spazio): sotto, l'icona. */}
+        <div className="hidden min-w-0 flex-1 justify-end lg:flex">
+          <div className="w-56 xl:w-72">
+            <SiteSearch variant="header" />
+          </div>
+        </div>
+
         <div className="flex items-center gap-1">
+          <ButtonLink href="/cerca" variant="ghost" size="sm" className="lg:hidden" aria-label={tSearch("openSearch")}>
+            <Search size={20} strokeWidth={1.5} aria-hidden="true" />
+          </ButtonLink>
+
+          <CartButton count={cartCount} view={cartView} />
+
           {user?.kind === "member" && (
             <ButtonLink
               href="/notifiche"

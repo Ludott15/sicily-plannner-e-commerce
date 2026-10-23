@@ -110,9 +110,8 @@ export const reviews = pgTable(
   "reviews",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => profiles.id, { onDelete: "cascade" }),
+    // Null dopo l'eliminazione dell'account (passo 8.2): la recensione resta, senza autore.
+    userId: uuid("user_id").references(() => profiles.id, { onDelete: "cascade" }),
     activityId: uuid("activity_id")
       .notNull()
       .references(() => activities.id, { onDelete: "cascade" }),

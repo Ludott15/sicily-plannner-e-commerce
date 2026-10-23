@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useId, useState, useTransition, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Turnstile } from "@/components/auth/turnstile";
-import { Button, PendingText } from "@/components/design";
+import { Button } from "@/components/design";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { NEUTRAL, QUESTIONS, type Question } from "@/lib/onboarding";
 import { submitOnboarding, type ActionError } from "@/server/personalization/actions";
@@ -82,6 +82,8 @@ export function OnboardingFlow({
   const [answers, setAnswers] = useState<OnboardingAnswers>(initial);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaKey, setCaptchaKey] = useState(0);
+  // Consenso alla profilazione (passo 8.2): non fa parte della bozza. undefined = nessuna scelta.
+  const [profiling, setProfiling] = useState<boolean | undefined>(undefined);
   const [error, setError] = useState<ActionError["code"] | null>(null);
   const [pending, startTransition] = useTransition();
   const last = step === TOTAL - 1;
@@ -115,6 +117,7 @@ export function OnboardingFlow({
         ...final,
         captchaToken: captchaToken ?? undefined,
         next: nextPath,
+        profilingConsent: profiling,
       });
       // In caso di successo l'azione porta ai tre viaggi, che tolgono la bozza (ClearDraft).
       if (result?.status === "error") {
@@ -192,6 +195,8 @@ export function OnboardingFlow({
 
       {screen.body}
 
+      {last && <ProfilingQuestion value={profiling} onChange={setProfiling} />}
+
       {last && needsSession && (
         <Turnstile key={captchaKey} locale={locale} onToken={setCaptchaToken} onError={() => setError("captcha_failed")} />
       )}
@@ -221,12 +226,55 @@ export function OnboardingFlow({
           </Button>
         </div>
         {step === 0 && (
-          // Informativa sotto i pulsanti della prima domanda: il testo lo scrive Ludovico.
+          // Informativa sotto i pulsanti della prima domanda.
           <p className="text-caption text-lava-muted">
-            <PendingText id="onboarding.privacy" inline />{" "}
-            <Link href="/privacy">{t("privacyLink")}</Link>
+            {t.rich("privacyNote", {
+              privacy: (chunks) => <Link href="/privacy" className="underline underline-offset-4">{chunks}</Link>,
+            })}
           </p>
         )}
+      </div>
+    </section>
+  );
+}
+
+// Ultima domanda, separata dalle altre: il consenso alla profilazione. Nessuna risposta
+// preselezionata; "Salta" o nessuna scelta non registrano nulla nel registro dei consensi.
+function ProfilingQuestion({ value, onChange }: { value: boolean | undefined; onChange: (next: boolean) => void }) {
+  const t = useTranslations("Onboarding");
+  const id = useId();
+  const headingId = `${id}-profiling`;
+  const options = [
+    { granted: true, label: t("profilingYes") },
+    { granted: false, label: t("profilingNo") },
+  ] as const;
+
+  return (
+    <section aria-labelledby={headingId} className="flex flex-col gap-4 border-t border-divider pt-8">
+      <div className="flex flex-col gap-3">
+        <h2 id={headingId} className="is-display text-heading-2 text-balance">
+          {t("profilingTitle")}
+        </h2>
+        <p className="text-body text-pretty text-lava-muted">
+          {t("profilingHint")}{" "}
+          <Link href="/privacy" className="underline underline-offset-4">
+            {t("privacyLink")}
+          </Link>
+        </p>
+      </div>
+      <div role="radiogroup" aria-labelledby={headingId} className="flex flex-col gap-3">
+        {options.map((option) => (
+          <label key={String(option.granted)} className="flex min-h-11 items-center gap-3 text-body">
+            <input
+              type="radio"
+              name={`${id}-profiling`}
+              className="size-5 shrink-0 accent-lava"
+              checked={value === option.granted}
+              onChange={() => onChange(option.granted)}
+            />
+            {option.label}
+          </label>
+        ))}
       </div>
     </section>
   );

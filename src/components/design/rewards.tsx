@@ -51,7 +51,7 @@ export function PointsPill({ points }: { points: number }) {
   }, [points]);
 
   return (
-    <span className={cn("is-points", gain !== null && "is-points--earned")} aria-label={t("pointsAria", { points })}>
+    <span className={cn("is-points", gain !== null && "is-points--earned")} role="img" aria-label={t("pointsAria", { points })}>
       <span className="is-points__coin" aria-hidden="true" />
       <span aria-hidden="true">{format.number(shown, GROUPING)}</span>
       {gain !== null && (

@@ -2,14 +2,19 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { z } from "zod";
+import { ChatLauncher } from "@/components/chat/chat-launcher";
 import { TripGroupPanel } from "@/components/groups/trip-group-panel";
 import { TripGroupSections } from "@/components/groups/trip-group-sections";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { Tabs } from "@/components/layout/tabs";
+import { AnnounceOnLoad } from "@/components/trips/announce-on-load";
 import { TripActions } from "@/components/trips/trip-actions";
 import { TripBuilder, type BuilderBooking, type BuilderDay } from "@/components/trips/trip-builder";
+import { TodayPanel } from "@/components/trips/today-panel";
+import { romeToday } from "@/lib/trip-days";
 import { TRIP_TABS, type TripTab } from "@/lib/trip-tabs";
+import { tripDayIndex } from "@/lib/trip-today";
 import { formatDuration } from "@/lib/format";
 import { flightSearchPath, MAX_PASSENGERS } from "@/lib/flights/search-params";
 import { activeTab } from "@/lib/tabs";
@@ -19,6 +24,7 @@ import { getPartnerConfig, VERTICAL_PARTNER } from "@/server/affiliates/partners
 import { requireUser } from "@/server/auth";
 import { getGroup } from "@/server/groups/queries";
 import { getTripGroupState } from "@/server/groups/trip-group";
+import { chatStatus } from "@/server/chat/queries";
 import { getTrip, getTripVerticalChips, type VerticalChip } from "@/server/trips/queries";
 
 // Pagina del viaggio (M5, 1.4; riprogettata in 6.1). Solo il proprietario o i membri del gruppo la aprono:
@@ -37,7 +43,7 @@ export default async function TripPage({ params, searchParams }: Props) {
   setRequestLocale(locale);
   if (!z.uuid().safeParse(id).success) notFound();
   const user = await requireUser();
-  const [trip, t, tAff, tVert, format, { giorno, scheda }, chips, lodgingPartner, carPartner] = await Promise.all([
+  const [trip, t, tAff, tVert, format, { giorno, scheda }, chips, lodgingPartner, carPartner, chat] = await Promise.all([
     getTrip(user, id),
     getTranslations("Trips"),
     getTranslations("Affiliates"),
@@ -47,6 +53,7 @@ export default async function TripPage({ params, searchParams }: Props) {
     getTripVerticalChips(user, id, locale),
     getPartnerConfig(VERTICAL_PARTNER.lodging),
     getPartnerConfig(VERTICAL_PARTNER.car),
+    chatStatus(user),
   ]);
   if (!trip) notFound();
   // Gruppo del viaggio (4.1): il nome serve al link. Il viaggio è di chi lo apre, o di un membro.
@@ -55,6 +62,28 @@ export default async function TripPage({ params, searchParams }: Props) {
   const groupState = group ? await getTripGroupState(user, id, group.id) : null;
 
   const tab = activeTab(TRIP_TABS, scheda) as TripTab;
+
+  // "Oggi" (passo 11.3): le tappe di tutti i giorni vanno al client, che sceglie il giorno con la data
+  // di oggi del browser. Il server calcola lo stesso giorno per il primo render (initialDayIndex).
+  const todayStops = trip.stops.map((s) => ({
+    id: s.id,
+    dayIndex: s.dayIndex,
+    position: s.position,
+    title: s.title,
+    placeName: s.placeName,
+    timeSlot: s.timeSlot,
+    lat: s.lat,
+    lng: s.lng,
+    checkIn: s.placeId !== null && !user.is_anonymous ? { checkedInToday: s.checkedInToday } : null,
+  }));
+  const today = (
+    <TodayPanel
+      startDate={trip.startDate}
+      days={trip.days}
+      initialDayIndex={tripDayIndex(trip.startDate, trip.days, romeToday(new Date()))}
+      stops={todayStops}
+    />
+  );
 
   const days: BuilderDay[] = Array.from({ length: trip.days }, (_, d) => {
     const stops = trip.stops.filter((s) => s.dayIndex === d);
@@ -71,6 +100,9 @@ export default async function TripPage({ params, searchParams }: Props) {
         notes: s.notes,
         // "Sono qui" (passo 5.1): solo tappe con un luogo, mai per gli ospiti.
         checkIn: s.placeId !== null && !user.is_anonymous ? { checkedInToday: s.checkedInToday } : null,
+        // Coordinate del luogo, per la mappa del giorno (6.2).
+        lat: s.lat,
+        lng: s.lng,
       })),
     };
   });
@@ -195,19 +227,29 @@ export default async function TripPage({ params, searchParams }: Props) {
         eyebrow={t("eyebrow")}
         meta={meta.join(" · ")}
         menu={
-          <TripActions
-            locale={locale}
-            tripId={trip.id}
-            title={trip.title}
-            startDate={trip.startDate}
-            travelers={trip.travelers}
-            pace={trip.pace}
-            sharedSince={sharedSince}
-          />
+          <>
+            <ChatLauncher
+              itineraryId={trip.id}
+              title={trip.title}
+              enabled={chat.enabled}
+              remainingToday={chat.remainingToday}
+              limit={chat.limit}
+            />
+            <TripActions
+              locale={locale}
+              tripId={trip.id}
+              title={trip.title}
+              startDate={trip.startDate}
+              travelers={trip.travelers}
+              pace={trip.pace}
+              sharedSince={sharedSince}
+            />
+          </>
         }
         {...crumbs}
       />
       <div className="flex flex-col gap-6">
+        <AnnounceOnLoad />
         <div className="is-trip-tools">
           <Tabs idPrefix="trip" label={t("v2.tabsLabel")} tabs={tabs} value={tab} />
         </div>
@@ -220,6 +262,7 @@ export default async function TripPage({ params, searchParams }: Props) {
           group={groupState}
           tab={tab}
           groupTab={groupTab}
+          today={today}
         />
       </div>
     </PageContainer>

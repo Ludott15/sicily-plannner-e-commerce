@@ -41,9 +41,16 @@ export const areas = pgTable(
     sort: smallint("sort").notNull().default(0),
     // Copertina dell'area: un'illustrazione, ultimo anello della catena di ripiego delle immagini.
     coverMediaId: uuid("cover_media_id").references(() => media.id, { onDelete: "set null" }),
+    // Testo di presentazione dell'area (pagina /sicilia/<slug>): se manca, la sezione non compare.
+    // Nessun testo di default: lo scrive l'admin, lingua per lingua.
+    descriptionIt: text("description_it"),
+    descriptionEn: text("description_en"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [check("areas_slug_format", sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`)],
+  (t) => [
+    check("areas_slug_format", sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
+    check("areas_description_length", sql`char_length(${t.descriptionIt}) <= 1200 and char_length(${t.descriptionEn}) <= 1200`),
+  ],
 );
 
 export const places = pgTable(

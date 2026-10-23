@@ -3,7 +3,8 @@
 import { Fragment, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { CatalogLocalTip } from "@/components/catalog/catalog-local-tip";
-import { DayTabs, ItineraryStop, Route } from "@/components/design";
+import { DayTabs, ItineraryStop, Route, TripMap } from "@/components/design";
+import type { MapPoint } from "@/components/design/map/map-style";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { PublicTip } from "@/server/catalog/tips";
@@ -12,7 +13,8 @@ import type { PublicTip } from "@/server/catalog/tips";
 // percorso (con fascia oraria, nota e foto) e la notte dopo il giorno. Tutti i giorni restano nel
 // DOM: si nasconde quello non scelto, e in stampa (isula.css, @media print) li escono tutti.
 // La linea si disegna solo alla prima apertura (movimento.md). Accanto, su desktop, il riepilogo
-// del giorno con dati veri (numero di tappe e durata delle attività).
+// del giorno con dati veri (numero di tappe e durata delle attività). La mappa del giorno (6.2): su
+// mobile un <details> chiuso sotto le pillole, su desktop nella colonna laterale; in stampa, l'elenco.
 
 export type DayStop = {
   id: string;
@@ -23,6 +25,9 @@ export type DayStop = {
   note: string | null;
   thumbUrl: string | null;
   durationMin: number | null;
+  // Coordinate del luogo della tappa: senza, la tappa non ha un punto sulla mappa.
+  lat: number | null;
+  lng: number | null;
   // Consiglio locale da mostrare accanto alla tappa (al massimo uno per giorno).
   tip?: PublicTip | null;
 };
@@ -40,6 +45,7 @@ export function ItineraryDays({ days }: { days: Day[] }) {
   const locale = useLocale();
   const [current, setCurrent] = useState(0);
   const [firstOpen, setFirstOpen] = useState(true);
+  const tMap = useTranslations("Map");
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,13 +59,24 @@ export function ItineraryDays({ days }: { days: Day[] }) {
       />
       {days.map((day, index) => {
         const minutes = day.stops.reduce((sum, s) => sum + (s.durationMin ?? 0), 0);
+        // Punti della mappa: tappe con coordinate, numerate come nell'elenco del giorno.
+        const points: MapPoint[] = day.stops.flatMap((stop, i) =>
+          stop.lat === null || stop.lng === null ? [] : [{ id: stop.id, lat: stop.lat, lng: stop.lng, label: stop.title, number: i + 1 }],
+        );
+        const mapLabel = tMap("dayMap", { n: index + 1 });
         return (
           <div
             key={index}
             data-day-panel
             className={cn("grid gap-10 md:grid-cols-12 md:gap-12", index !== current && "hidden")}
           >
-            <div className="flex flex-col gap-8 md:col-span-8">
+            <div className="flex min-w-0 flex-col gap-8 md:col-span-8">
+              {points.length > 0 && (
+                <details className="is-map-details is-map-printable md:hidden">
+                  <summary>{tMap("showMap")}</summary>
+                  <TripMap points={points} route ariaLabel={mapLabel} />
+                </details>
+              )}
               {day.intro && <p className="text-body-l">{day.intro}</p>}
               {day.stops.length === 0 ? (
                 <p className="text-body text-lava-muted">{t("dayNoStops")}</p>
@@ -99,7 +116,12 @@ export function ItineraryDays({ days }: { days: Day[] }) {
               )}
             </div>
             <aside className="hidden md:col-span-4 md:block">
-              <div className="sticky top-6 flex flex-col gap-4 border-l border-divider pl-8">
+              <div className="sticky top-6 flex flex-col gap-6 border-l border-divider pl-8">
+                {points.length > 0 && (
+                  <div className="is-map-desktop">
+                    <TripMap points={points} route ariaLabel={mapLabel} />
+                  </div>
+                )}
                 <h2 className="text-heading-3">{t("dayInBrief")}</h2>
                 <dl className="grid grid-cols-2 gap-6">
                   <div>

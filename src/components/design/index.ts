@@ -9,6 +9,8 @@ export { interestDomain, type Domain } from "./domains";
 export { InterestChip } from "./interest-chip";
 export { ItineraryStop, TransferStop } from "./itinerary-stop";
 export { LocalTip, type LocalTipAuthor } from "./local-tip";
+export { Logo, type LogoTone, type LogoVariant } from "./logo";
+export { TripMap, type TripMapProps } from "./map/trip-map";
 export { PendingButton } from "./pending-button";
 export { PendingMarker } from "./pending-marker";
 export { PendingText } from "./pending-text";

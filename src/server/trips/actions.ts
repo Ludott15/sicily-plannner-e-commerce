@@ -12,13 +12,12 @@ import { PACES, TIME_SLOTS } from "@/lib/itinerary-checks";
 import { MAX_TRIP_DAYS } from "@/lib/trip-days";
 import { moveInDay } from "@/lib/trips";
 import { getUser, requireUser } from "@/server/auth";
-import { groups, itineraries, itineraryItems } from "@/server/db/schema";
+import { itineraries, itineraryItems } from "@/server/db/schema";
 import { dbAsUser, type DbUser, type UserTx } from "@/server/db/user";
-import { areaNames, driveTimesBySlug, engineCatalog, getSavedPreferences, toProfile } from "@/server/personalization/data";
+import { areaNames, driveTimesBySlug, engineCatalog, getSavedPreferences, personalProfile } from "@/server/personalization/data";
 import { proposeTrips } from "@/server/personalization/engine";
 import { createClient } from "@/server/supabase/server";
-import { proposalErrorCodeOf, type ProposalErrorCode, type ProposalFormState } from "@/server/groups/proposal-state";
-import { proposeStopTx } from "@/server/groups/proposals";
+import { proposalErrorCodeOf, type ProposalErrorCode } from "@/server/groups/proposal-state";
 import {
   addDayTx,
   createShareLinkTx,
@@ -32,12 +31,12 @@ import {
   saveDayNoteTx,
   saveStopNoteTx,
   updateTripSettingsTx,
-  writePlacements,
   type BuilderErrorCode,
   type BuilderResult,
   type Placement,
 } from "./builder";
-import { activityTitleTx, logItineraryChanges, stopSnapshotTx, tripStopsTx } from "./changes";
+import { logItineraryChanges, stopSnapshotTx, tripStopsTx } from "./changes";
+import { addStopTx, removeStopTx, writeOrder, type AddOutcome } from "./stops";
 
 // Builder (M5): Zod → utente (o nuova sessione ospite, protetta da Turnstile, per chi parte da
 // un itinerario pronto senza account) → scrittura con dbAsUser. La RLS è la seconda difesa:
@@ -207,7 +206,7 @@ export async function startTrip(input: StartTripInput): Promise<TripActionError>
         getTranslations({ locale, namespace: "Trips" }),
         driveTimesBySlug(),
       ]);
-      const { proposals } = proposeTrips(catalog, toProfile(saved), driveTimes);
+      const { proposals } = proposeTrips(catalog, await personalProfile(user, saved), driveTimes);
       const proposal = proposals.find((p) => p.area === source.area && p.variant === source.variant);
       if (!proposal) return { status: "error", code: "not_found" };
       const items: NewItem[] = proposal.days.flatMap((day, d) =>
@@ -246,45 +245,13 @@ export async function startTrip(input: StartTripInput): Promise<TripActionError>
 
 const stopSchema = z.object({ itineraryId: z.uuid(), itemId: z.uuid() });
 
-async function recordEvent(tx: UserTx, userId: string, type: "add_to_itinerary" | "remove_from_itinerary", activityId: string, itineraryId: string) {
-  // user_events: solo scrittura dal client (il cron della M11 li elabora).
-  await tx.execute(sql`
-    insert into public.user_events (user_id, type, activity_id, itinerary_id)
-    values (${userId}, ${type}, ${activityId}, ${itineraryId})`);
-}
-
-// Riscrive le posizioni di una giornata nell'ordine dato (0, 1, 2…).
-async function writeOrder(tx: UserTx, itineraryId: string, dayIndex: number, ids: string[]) {
-  await writePlacements(
-    tx,
-    itineraryId,
-    ids.map((id, position) => ({ id, dayIndex, position })),
-  );
-}
-
 export async function removeStop(input: z.input<typeof stopSchema>): Promise<TripActionError | { status: "ok" }> {
   const parsed = stopSchema.safeParse(input);
   if (!parsed.success) return { status: "error", code: "invalid" };
   const user = await requireUser();
   const { itineraryId, itemId } = parsed.data;
   try {
-    const found = await dbAsUser(user, async (tx) => {
-      const snapshot = await stopSnapshotTx(tx, itemId);
-      if (!snapshot || snapshot.itineraryId !== itineraryId) return false;
-      const [item] = await tx
-        .delete(itineraryItems)
-        .where(and(eq(itineraryItems.id, itemId), eq(itineraryItems.itineraryId, itineraryId)))
-        .returning({ dayIndex: itineraryItems.dayIndex, activityId: itineraryItems.activityId });
-      if (!item) return false;
-      await writeOrder(tx, itineraryId, item.dayIndex, await dayStopIds(tx, itineraryId, item.dayIndex));
-      if (item.activityId) await recordEvent(tx, user.id, "remove_from_itinerary", item.activityId, itineraryId);
-      await logItineraryChanges(tx, {
-        itineraryId,
-        actorId: user.id,
-        changes: [{ kind: "stop_removed", payload: { title: snapshot.title, day: item.dayIndex + 1 } }],
-      });
-      return true;
-    });
+    const found = await dbAsUser(user, (tx) => removeStopTx(tx, user, itineraryId, itemId));
     if (!found) return { status: "error", code: "not_found" };
   } catch {
     return { status: "error", code: "failed" };
@@ -323,8 +290,6 @@ const addSchema = z.object({ locale: localeSchema, itineraryId: z.uuid(), activi
 // "Aggiungi al viaggio" dalla scheda attività: in fondo al giorno scelto. Se il viaggio è di un gruppo
 // e chi aggiunge non ne è il proprietario, l'aggiunta diventa una proposta (proposeStopTx) e l'esito
 // è { status: "proposed" }: niente redirect, il frontend mostra la conferma della proposta.
-type AddOutcome = { kind: "added" } | { kind: "proposed"; state: ProposalFormState } | { kind: "missing" };
-
 export async function addToTrip(
   input: Omit<z.input<typeof addSchema>, "locale"> & { locale: string },
 ): Promise<TripActionError | { status: "proposed" }> {
@@ -334,36 +299,7 @@ export async function addToTrip(
   const { locale, itineraryId, activityId, dayIndex } = parsed.data;
   let outcome: AddOutcome;
   try {
-    outcome = await dbAsUser(user, async (tx): Promise<AddOutcome> => {
-      const [trip] = await tx
-        .select({ days: itineraries.days, groupId: itineraries.groupId })
-        .from(itineraries)
-        .where(eq(itineraries.id, itineraryId));
-      if (!trip || dayIndex >= trip.days) return { kind: "missing" };
-
-      if (trip.groupId !== null) {
-        const [group] = await tx
-          .select({ ownerId: groups.ownerId })
-          .from(groups)
-          .where(eq(groups.id, trip.groupId));
-        if (group && group.ownerId !== user.id) {
-          return { kind: "proposed", state: await proposeStopTx(tx, user, { itineraryId, activityId, dayIndex }) };
-        }
-      }
-
-      const position = (await dayStopIds(tx, itineraryId, dayIndex)).length;
-      await tx.execute(sql`
-        insert into public.itinerary_items (itinerary_id, day_index, position, activity_id)
-        values (${itineraryId}, ${dayIndex}, ${position}, ${activityId})`);
-      await recordEvent(tx, user.id, "add_to_itinerary", activityId, itineraryId);
-      const title = await activityTitleTx(tx, activityId);
-      await logItineraryChanges(tx, {
-        itineraryId,
-        actorId: user.id,
-        changes: [{ kind: "stop_added", payload: { title, day: dayIndex + 1 } }],
-      });
-      return { kind: "added" };
-    });
+    outcome = await dbAsUser(user, (tx) => addStopTx(tx, user, { itineraryId, activityId, dayIndex }));
   } catch (error) {
     return { status: "error", code: proposalErrorCodeOf(error) };
   }

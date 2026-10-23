@@ -1,6 +1,6 @@
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { CloseSeasonForm, PrizeStatusForm } from "@/components/admin/season-forms";
-import { ButtonLink, PendingButton } from "@/components/design";
+import { ButtonLink } from "@/components/design";
 import { currentSeasonKey, isSeasonKey, isSeasonOver, seasonParts, shiftSeason } from "@/lib/season-nav";
 import { closeSeason, listSeasonAwards, setPrizeStatus } from "@/server/gamification/seasons.admin";
 
@@ -116,9 +116,9 @@ export default async function AdminSeasonsPage({ params, searchParams }: Props) 
       </section>
 
       <div>
-        <PendingButton id="points.rules" variant="secondary">
+        <ButtonLink href="/punti/regolamento" variant="secondary">
           {t("prizeRules")}
-        </PendingButton>
+        </ButtonLink>
       </div>
     </section>
   );

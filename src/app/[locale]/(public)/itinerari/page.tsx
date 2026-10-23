@@ -5,7 +5,7 @@ import { TemplateFilters } from "@/components/catalog/template-filters";
 import { ButtonLink } from "@/components/design";
 import { PageContainer } from "@/components/layout/page-container";
 import { parseTemplateFilters, type TemplateSearchParams } from "@/lib/template-filters";
-import { localizedAlternates } from "@/lib/seo";
+import { canonicalFor } from "@/lib/seo";
 import { listTemplateAreas, listTemplates } from "@/server/catalog/queries";
 
 // Lista degli itinerari pronti: stesse card della home, con filtri per durata, zona, per chi e
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return {
     title: t("itinerariesTitle"),
     description: t("itinerariesDescription"),
-    alternates: localizedAlternates(locale, "/itinerari"),
+    alternates: canonicalFor(locale, "/itinerari"),
     openGraph: { title: t("itinerariesTitle"), description: t("itinerariesDescription") },
   };
 }

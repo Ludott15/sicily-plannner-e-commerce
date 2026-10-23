@@ -9,12 +9,14 @@ select tests.create_user('bob');
 select tests.create_user('admin', true);
 
 -- Catalogo e ordine preparati come postgres (lo scrive il webhook Stripe con dbAdmin).
-insert into public.producers (id, name, email)
-values ('11111111-aaaa-0000-0000-000000000001', 'Pistacchi di Bronte', 'ordini@example.com');
-insert into public.products (id, slug, producer_id, title, price_cents, weight_g, is_active)
+insert into public.suppliers (id, name, kind, contact_email)
+values ('a1111111-aaaa-0000-0000-000000000001', 'Fornitore di prova', 'manual', 'fornitore@example.com');
+insert into public.producers (id, slug, name, email, is_public)
+values ('11111111-aaaa-0000-0000-000000000001', 'test-pistacchi', 'Pistacchi di Bronte', 'ordini@example.com', true);
+insert into public.products (id, slug, producer_id, supplier_id, supplier_sku, title, category, price_cents, weight_g, vat_rate, is_active, allergens_declared, format_label, ingredients_it)
 values
-  ('22222222-aaaa-0000-0000-000000000001', 'test-crema', '11111111-aaaa-0000-0000-000000000001', 'Crema di pistacchio', 1200, 200, true),
-  ('22222222-aaaa-0000-0000-000000000002', 'test-bozza', '11111111-aaaa-0000-0000-000000000001', 'Bozza', 900, 150, false);
+  ('22222222-aaaa-0000-0000-000000000001', 'test-crema', '11111111-aaaa-0000-0000-000000000001', 'a1111111-aaaa-0000-0000-000000000001', 'SKU-1', 'Crema di pistacchio', 'dolci', 1200, 200, 4, true, true, 'vasetto 190 g', 'Pistacchi, zucchero'),
+  ('22222222-aaaa-0000-0000-000000000002', 'test-bozza', '11111111-aaaa-0000-0000-000000000001', 'a1111111-aaaa-0000-0000-000000000001', 'SKU-2', 'Bozza', 'dolci', 900, 150, 4, false, true, 'bottiglia 500 ml', 'Olio');
 insert into public.orders (id, user_id, email, status, subtotal_cents, discount_cents, shipping_cents, total_cents, stripe_session_id)
 values
   ('33333333-aaaa-0000-0000-000000000001', tests.uid('alice'), 'alice@example.com', 'paid', 2400, 0, 690, 3090, 'cs_test_alice'),
@@ -70,18 +72,22 @@ select tests.authenticate_as('bob');
 select is_empty($$select 1 from public.orders$$, 'altro utente: non vede gli ordini di alice né quelli degli ospiti');
 select is_empty($$select 1 from public.order_items$$, 'altro utente: non vede le righe');
 select is_empty($$select order_id from public.order_shipments$$, 'altro utente: non vede le spedizioni');
-select is_empty($$select 1 from public.producers$$, 'altro utente: non vede i produttori');
+select results_eq(
+  $$select slug from public.producers where slug like 'test-%'$$,
+  $$values ('test-pistacchi')$$,
+  'altro utente: vede solo i produttori pubblici (senza email né partita IVA)'
+);
 select results_eq(
   $$select slug from public.products where slug like 'test-%'$$,
   $$values ('test-crema')$$,
   'altro utente: vede solo i prodotti attivi'
 );
 select throws_ok(
-  $$insert into public.products (slug, producer_id, title, price_cents, weight_g) values ('x', '11111111-aaaa-0000-0000-000000000001', 'x', 1, 1)$$,
+  $$insert into public.products (slug, producer_id, supplier_id, supplier_sku, title, category, price_cents, vat_rate, weight_g) values ('x', '11111111-aaaa-0000-0000-000000000001', 'a1111111-aaaa-0000-0000-000000000001', 'SKU-X', 'x', 'dolci', 1, 4, 1)$$,
   '42501', null, 'altro utente: non crea prodotti'
 );
 select throws_ok(
-  $$insert into public.producers (name, email) values ('x', 'x@example.com')$$,
+  $$insert into public.producers (slug, name, email) values ('x-produttore', 'x', 'x@example.com')$$,
   '42501', null, 'altro utente: non crea produttori'
 );
 update public.products set price_cents = 1 where slug = 'test-crema';
@@ -99,7 +105,7 @@ select results_eq(
 );
 select isnt_empty($$select 1 from public.producers$$, 'admin: vede i produttori');
 select lives_ok(
-  $$insert into public.producers (name, email, lead_time_days) values ('Cantina', 'cantina@example.com', 5)$$,
+  $$insert into public.producers (slug, name, email) values ('test-cantina', 'Cantina', 'cantina@example.com')$$,
   'admin: crea un produttore'
 );
 select lives_ok(

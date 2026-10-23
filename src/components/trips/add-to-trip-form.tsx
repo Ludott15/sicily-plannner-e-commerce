@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/design";
+import { clearAnnouncement, queueAnnouncement } from "@/lib/announce";
 import { Link } from "@/lib/i18n/navigation";
 import { suggestDay } from "@/lib/trips";
 import { proposeStop, type ProposalFormState } from "@/server/groups/proposals-actions";
@@ -61,8 +62,13 @@ export function AddToTripForm({
         if (result.status === "ok") setSent(true);
         return;
       }
+      // Se l'azione riesce il server reindirizza al viaggio, che legge l'annuncio appena montato.
+      queueAnnouncement(t("stopAddedAnnouncement", { day: day + 1 }));
       const result = await addToTrip({ locale, itineraryId: tripId, activityId, dayIndex: day });
-      if (result?.status === "error") setMessage(t(`errors.${result.code}`));
+      if (result?.status === "error") {
+        clearAnnouncement();
+        setMessage(t(`errors.${result.code}`));
+      }
     });
   }
 

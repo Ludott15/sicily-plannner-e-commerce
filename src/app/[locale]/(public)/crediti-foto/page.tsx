@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { TextPage } from "@/components/layout/text-page";
-import { localizedAlternates } from "@/lib/seo";
+import { canonicalFor } from "@/lib/seo";
 import { listPhotoCredits } from "@/server/catalog/queries";
 
 // Crediti delle foto: tutti i media pubblici (la RLS di media fa vedere solo quelli usabili
@@ -12,7 +12,7 @@ type Props = { params: Promise<{ locale: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Credits" });
-  return { title: t("title"), description: t("intro"), alternates: localizedAlternates(locale, "/crediti-foto") };
+  return { title: t("title"), description: t("intro"), alternates: canonicalFor(locale, "/crediti-foto") };
 }
 
 export default async function PhotoCreditsPage({ params }: Props) {

@@ -7,6 +7,7 @@ select * from no_plan();
 
 select tests.create_user('alice');
 select tests.create_user('bob');
+insert into public.user_consents (user_id, kind, granted, text_version) values (tests.uid('alice'), 'profiling', true, 'profiling-test-v1');
 
 -- Itinerario di bob (privato) e uno di alice (accessibile solo ad alice).
 insert into public.itineraries (id, owner_id, title, days)
