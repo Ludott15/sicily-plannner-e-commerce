@@ -1,16 +1,20 @@
 "use client";
 
-import { useId, useState, useTransition, type FormEvent } from "react";
+import { useId, useRef, useState, useTransition, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/design";
+import { Menu as BaseMenu } from "@base-ui/react/menu";
+import { Ellipsis, Pencil, Trash2 } from "lucide-react";
+import { Button, buttonClass } from "@/components/design";
 import { Dialog } from "@/components/ui/dialog";
 import { useRouter } from "@/lib/i18n/navigation";
 import { deleteChatSession, renameChatSession } from "@/server/chat/actions";
 
-// Azioni di una conversazione salvata: rinomina e elimina. Entrambe passano da un <dialog>
-// e partono da onSubmit/onClick con startTransition (mai <form action>), così un errore non
-// cancella quello che si è scritto. Eliminare toglie solo la conversazione: le modifiche già applicate
-// al viaggio restano.
+// Azioni di una conversazione salvata, dietro un menu "...": rinomina ed elimina. Il menu è il Menu di
+// Base UI: il pannello sta in un portale e si posiziona da solo (non viene tagliato dai contenitori con
+// overflow), e Esc, il clic fuori e le frecce li gestisce la libreria. Le due azioni aprono un <dialog>
+// fuori dal menu, così restano aperte quando il menu si chiude. Partono da onSubmit/onClick con
+// startTransition (mai <form action>), così un errore non cancella quello che si è scritto. Eliminare
+// toglie solo la conversazione: le modifiche già applicate al viaggio restano.
 export function ChatSessionActions({ sessionId, title }: { sessionId: string; title: string }) {
   const t = useTranslations("Chat.session");
   const router = useRouter();
@@ -52,20 +56,64 @@ export function ChatSessionActions({ sessionId, title }: { sessionId: string; ti
       const result = await deleteChatSession(data);
       if (result.status === "ok") {
         router.push("/chat");
+        router.refresh();
         return;
       }
       setError(t("error"));
     });
   }
 
+  // Nello sheet mobile (dialog nativo nel top layer) il menu va nel dialog, non in body: altrimenti resta sotto.
+  const menuContainer = useRef<HTMLElement | null>(null);
+  // Quando una voce apre un dialog, il menu non riporta il focus al pulsante "...": il focus deve restare
+  // nel dialog di rinomina o di conferma. Il valore si riarma ad ogni apertura del menu.
+  const returnFocus = useRef(true);
+
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button variant="ghost" size="sm" onClick={() => setRenameOpen(true)}>
-        {t("rename")}
-      </Button>
-      <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(true)}>
-        {t("delete")}
-      </Button>
+    <>
+      <BaseMenu.Root
+        onOpenChange={(open) => {
+          if (open) returnFocus.current = true;
+        }}
+      >
+        <BaseMenu.Trigger
+          ref={(node: HTMLButtonElement | null) => {
+            menuContainer.current = node?.closest("dialog") ?? null;
+          }}
+          aria-label={t("menu")} className={buttonClass("ghost", "sm", "shrink-0 px-2 text-lava-muted")}>
+          <Ellipsis size={20} strokeWidth={1.5} aria-hidden="true" />
+        </BaseMenu.Trigger>
+        <BaseMenu.Portal container={menuContainer}>
+          <BaseMenu.Positioner side="bottom" align="end" sideOffset={6} collisionPadding={12} className="is-overlay">
+            <BaseMenu.Popup
+              aria-label={t("menu")}
+              className="is-panel is-chat-menu"
+              finalFocus={() => returnFocus.current}
+            >
+              <BaseMenu.Item
+                className="is-chat-menu__item"
+                onClick={() => {
+                  returnFocus.current = false;
+                  setRenameOpen(true);
+                }}
+              >
+                <Pencil size={18} strokeWidth={1.5} aria-hidden="true" />
+                {t("rename")}
+              </BaseMenu.Item>
+              <BaseMenu.Item
+                className="is-chat-menu__item"
+                onClick={() => {
+                  returnFocus.current = false;
+                  setDeleteOpen(true);
+                }}
+              >
+                <Trash2 size={18} strokeWidth={1.5} aria-hidden="true" />
+                {t("delete")}
+              </BaseMenu.Item>
+            </BaseMenu.Popup>
+          </BaseMenu.Positioner>
+        </BaseMenu.Portal>
+      </BaseMenu.Root>
 
       <Dialog open={renameOpen} title={t("rename")} onClose={() => setRenameOpen(false)}>
         <form onSubmit={onRename} className="flex flex-col gap-4" aria-busy={pending}>
@@ -116,6 +164,6 @@ export function ChatSessionActions({ sessionId, title }: { sessionId: string; ti
           </div>
         </div>
       </Dialog>
-    </div>
+    </>
   );
 }

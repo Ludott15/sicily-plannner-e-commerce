@@ -2,7 +2,7 @@
 
 import { useId, useState, useTransition, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
-import { Button, type ButtonSize, type ButtonVariant } from "@/components/design";
+import { Button, Select, type ButtonSize, type ButtonVariant } from "@/components/design";
 import { CART_MAX_QUANTITY } from "@/lib/shop/cart";
 import { addToCart, type CartErrorCode } from "@/server/shop/cart-actions";
 
@@ -56,24 +56,19 @@ export function AddToCart({
             <label htmlFor={quantityId} className="text-body-s font-semibold">
               {t("quantity")}
             </label>
-            <select
+            <Select
               id={quantityId}
               name="quantity"
-              value={quantity}
+              value={String(quantity)}
               disabled={pending}
-              onChange={(event) => {
-                setQuantity(Number(event.currentTarget.value));
+              onValueChange={(value) => {
+                setQuantity(Number(value));
                 setStatus({ kind: "idle" });
               }}
-              aria-label={`${t("quantity")}: ${productTitle}`}
-              className="min-h-11 rounded-md border border-card-edge bg-calce-raised px-3 text-body text-lava focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-            >
-              {quantities.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
+              label={`${t("quantity")}: ${productTitle}`}
+              options={quantities.map((value) => ({ value: String(value), label: String(value) }))}
+              className="w-24"
+            />
           </div>
         )}
         <Button type="submit" variant={variant} size={size} disabled={pending} className={fullWidth ? "w-full" : undefined}>

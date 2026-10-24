@@ -4,14 +4,12 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { z } from "zod";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { ChatSessionActions } from "@/components/chat/chat-session-actions";
-import { PageContainer } from "@/components/layout/page-container";
-import { PageHeader } from "@/components/layout/page-header";
 import { requireUser } from "@/server/auth";
 import { chatStatus, getChatSession } from "@/server/chat/queries";
 
 // Una conversazione salvata (passo 9.1). Solo il proprietario la apre: getChatSession legge con dbAsUser,
 // quindi per chiunque altro la sessione non esiste (404). Le proposte in attesa restano valide finché
-// non si rispondono; i messaggi riassunti non compaiono.
+// non si rispondono; i messaggi riassunti non compaiono. Il titolo è in testa, le azioni nel menu "...".
 type Props = { params: Promise<{ locale: string; sessionId: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -35,13 +33,11 @@ export default async function ChatSessionPage({ params }: Props) {
   const title = session.title ?? t("untitled");
 
   return (
-    <PageContainer width="prose" className="pb-24 md:pb-12">
-      <PageHeader
-        title={title}
-        breadcrumb={[{ label: t("title"), href: "/chat" }]}
-        breadcrumbLabel={t("title")}
-        menu={<ChatSessionActions sessionId={session.id} title={session.title ?? ""} />}
-      />
+    <div className="mx-auto flex w-full min-w-0 max-w-[760px] flex-col gap-8">
+      <header className="flex items-start justify-between gap-3">
+        <h1 className="is-display min-w-0 text-heading-2 break-words text-lava">{title}</h1>
+        <ChatSessionActions sessionId={session.id} title={session.title ?? ""} />
+      </header>
       <ChatPanel
         variant="page"
         sessionId={session.id}
@@ -52,6 +48,6 @@ export default async function ChatSessionPage({ params }: Props) {
         remainingToday={session.remainingToday}
         limit={status.limit}
       />
-    </PageContainer>
+    </div>
   );
 }

@@ -1,3 +1,4 @@
+import { chooseOption, pickDate } from "./helpers/controls";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { signUpWithCode } from "./helpers";
@@ -37,8 +38,8 @@ async function useTemplate(page: Page) {
   // Pagina di salvataggio con l'indirizzo del link "Usa questo itinerario". Il click sul link in dev
   // a volte non completa la navigazione entro il test; il link è coperto da builder-2 e chat.
   await page.goto(`/it/viaggio/salva?da=${TEMPLATE}`);
-  await page.getByLabel("Data di partenza").fill("2027-05-12");
-  await page.getByLabel("Persone").selectOption("4");
+  await pickDate(page, "Data di partenza", "2027-05-12");
+  await chooseOption(page, "Persone", "4 persone");
   const save = page.getByRole("button", { name: "Salva il viaggio" });
   await expect(save).toBeEnabled({ timeout: 30_000 });
   await save.click();

@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Image from "next/image";
-import { Bell, BookOpen, ChevronDown, CalendarDays, Compass, Copy, Link2, LogOut, Map as MapIcon, MessageCircle, Pencil, Plane, Plus, Printer, Settings, Star, Trash2, Trophy, User, Users, BedDouble, Car } from "lucide-react";
+import { Bell, BookOpen, ChevronDown, CalendarDays, Compass, Copy, Link2, LogOut, Map as MapIcon, MessageCircle, Pencil, Plane, Plus, Printer, Settings, Star, Trash2, Trophy, User, Users, BedDouble, Car, Ship } from "lucide-react";
 import { Link } from "@/lib/i18n/navigation";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +32,7 @@ const ICONS = {
   plane: Plane,
   bed: BedDouble,
   car: Car,
+  ship: Ship,
   message: MessageCircle,
   book: BookOpen,
 } as const;
@@ -41,7 +42,7 @@ export type MenuIcon = keyof typeof ICONS;
 type ItemBase = { label: string; icon?: MenuIcon; danger?: boolean };
 
 export type ActionMenuItem =
-  | (ItemBase & { kind: "link"; href: string })
+  | (ItemBase & { kind: "link"; href: string; current?: boolean; className?: string })
   | (ItemBase & { kind: "form"; action: (formData: FormData) => void | Promise<void>; fields?: Record<string, string> })
   | (ItemBase & { kind: "button"; onSelect: () => void; disabled?: boolean })
   | { kind: "separator" };
@@ -50,7 +51,7 @@ type MenuProps = { items: ActionMenuItem[]; align?: "start" | "end" };
 
 export type ActionMenuProps =
   | ({ variant: "more"; label: string } & MenuProps)
-  | ({ variant: "text"; text: string } & MenuProps)
+  | ({ variant: "text"; text: string; active?: boolean } & MenuProps)
   | ({ variant: "avatar"; label: string; initials: string | null; avatarUrl?: string | null } & MenuProps);
 
 const ITEM_CLASS =
@@ -132,7 +133,14 @@ export function ActionMenu(props: ActionMenuProps) {
     );
     if (item.kind === "link") {
       return (
-        <Link key={`${item.href}-${index}`} href={item.href} role="menuitem" className={cn(ITEM_CLASS, tone)} onClick={() => setOpen(false)}>
+        <Link
+          key={`${item.href}-${index}`}
+          href={item.href}
+          role="menuitem"
+          aria-current={item.current ? "page" : undefined}
+          className={cn(ITEM_CLASS, tone, item.className)}
+          onClick={() => setOpen(false)}
+        >
           {content}
         </Link>
       );
@@ -192,7 +200,8 @@ export function ActionMenu(props: ActionMenuProps) {
 
   const triggerClass = cn(
     "inline-flex items-center justify-center gap-1 rounded-pill text-lava transition-colors hover:bg-calce-sunk focus-visible:outline-2 focus-visible:outline-focus",
-    props.variant === "text" ? "min-h-11 px-3 text-[15px] font-medium" : "size-11",
+    props.variant === "text" ? "min-h-11 px-3 text-body font-medium" : "size-11",
+    props.variant === "text" && props.active && "underline underline-offset-[6px]",
   );
 
   return (
@@ -202,6 +211,7 @@ export function ActionMenu(props: ActionMenuProps) {
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-current={props.variant === "text" && props.active ? "true" : undefined}
         aria-controls={open ? menuId : undefined}
         aria-label={props.variant === "text" ? undefined : props.label}
         onClick={() => setOpen((current) => !current)}
@@ -217,7 +227,7 @@ export function ActionMenu(props: ActionMenuProps) {
           aria-label={menuLabel}
           onKeyDown={onMenuKeyDown}
           className={cn(
-            "absolute top-full z-30 mt-2 flex min-w-56 flex-col gap-0.5 rounded-lg border border-card-edge bg-calce-raised p-1.5 shadow-lift",
+            "is-panel absolute top-full z-30 mt-2 flex min-w-56 flex-col gap-0.5 p-1.5",
             align === "end" ? "right-0" : "left-0",
           )}
         >

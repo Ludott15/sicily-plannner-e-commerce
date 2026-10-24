@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUpRight } from "lucide-react";
 import type { ChatActivityCard, ChatProposal, ChatToolName } from "@/lib/chat/events";
 import { GuestStart } from "@/components/auth/guest-start";
 import { Button } from "@/components/design";
-import { usePathname } from "@/lib/i18n/navigation";
+import { useRouter, usePathname } from "@/lib/i18n/navigation";
+import { ChatComposer } from "./chat-composer";
+import { ChatCopyButton } from "./chat-copy-button";
 import { ChatMessage } from "./chat-message";
 import { ChatProposalCard } from "./chat-proposal-card";
 import { readChatStream } from "./read-stream";
@@ -16,9 +18,12 @@ import { readChatStream } from "./read-stream";
 // cosa sta facendo l'assistente, "Interrompi" annulla la richiesta. Gli errori si leggono in
 // parole semplici con "Riprova" quando ha senso. Il limite giornaliero blocca l'invio con l'ora di
 // ripristino. Senza sessione (401) propone "Continua senza account" con il flusso ospite esistente.
+// Lo scroll segue la risposta finché l'utente è in fondo; se risale compare "Ultimi messaggi".
 
 // Come CHAT_MAX_INPUT_CHARS in src/server/chat/config.ts.
 const MAX_INPUT_CHARS = 2000;
+// Sotto questa distanza dal fondo la pagina si considera "in fondo".
+const NEAR_BOTTOM_PX = 96;
 
 type ChatErrorCode =
   | "api_error"
@@ -36,7 +41,7 @@ type ChatErrorCode =
 // messaggio non va bene così com'è.
 const NO_RETRY: readonly ChatErrorCode[] = ["rate_limited", "unauthenticated", "invalid_request", "session_not_found", "chat_disabled"];
 
-const EXAMPLES = ["example1", "example2", "example3"] as const;
+const EXAMPLES = ["example1", "example2", "example3", "example4"] as const;
 
 export type ChatHistoryItem = {
   id: string;
@@ -111,6 +116,7 @@ export function ChatPanel({
   const format = useFormatter();
   const locale = useLocale() === "en" ? "en" : "it";
   const pathname = usePathname();
+  const router = useRouter();
   const inputId = useId();
   const hintId = useId();
 
@@ -122,20 +128,42 @@ export function ChatPanel({
   const [remaining, setRemaining] = useState(remainingToday);
   const [limitHit, setLimitHit] = useState(false);
   const [needsSession, setNeedsSession] = useState(false);
+  const [atBottom, setAtBottom] = useState(true);
 
   const keyRef = useRef(0);
   const sessionRef = useRef<string | null>(sessionId);
   const controllerRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
-  const scrollOnChange = useRef(false);
-
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  // true quando l'utente è in fondo: solo allora la risposta che arriva trascina lo scroll.
+  const followRef = useRef(true);
   // Non si scorre alla fine al primo montaggio (una conversazione salvata si apre dall'inizio);
-  // poi si segue la risposta che arriva.
+  // dopo un invio si segue la risposta.
+  const followOnChange = useRef(false);
+
+  // Lo scroll è dell'intera finestra (pagina) o del riquadro dei messaggi nella variante "sheet".
   useEffect(() => {
-    if (!scrollOnChange.current) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    endRef.current?.scrollIntoView({ block: "end", behavior: reduced ? "auto" : "smooth" });
+    const isSheet = variant === "sheet";
+    const target: EventTarget | null = isSheet ? scrollerRef.current : window;
+    if (!target) return;
+    const distanceFromBottom = () => {
+      const box = scrollerRef.current;
+      if (isSheet && box) return box.scrollHeight - box.scrollTop - box.clientHeight;
+      return document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+    };
+    const onScroll = () => {
+      const near = distanceFromBottom() < NEAR_BOTTOM_PX;
+      followRef.current = near;
+      setAtBottom(near);
+    };
+    target.addEventListener("scroll", onScroll, { passive: true });
+    return () => target.removeEventListener("scroll", onScroll);
+  }, [variant]);
+
+  useEffect(() => {
+    if (!followOnChange.current || !followRef.current) return;
+    // Istantaneo: uno scorrimento animato farebbe scattare il controllo "in fondo" a metà corsa.
+    endRef.current?.scrollIntoView({ block: "end" });
   }, [messages]);
 
   // Uscendo dalla pagina o chiudendo il pannello la richiesta in corso si annulla.
@@ -146,13 +174,21 @@ export function ChatPanel({
   const exhausted = limitHit || (limit > 0 && remaining <= 0);
   const canType = enabled && !exhausted;
 
+  function jumpToLatest() {
+    followRef.current = true;
+    setAtBottom(true);
+    endRef.current?.scrollIntoView({ block: "end" });
+  }
+
   async function send(rawText: string) {
     const message = rawText.trim();
     if (!message || streaming || !canType) return;
 
     const userKey = `u${++keyRef.current}`;
     const assistantKey = `a${++keyRef.current}`;
-    scrollOnChange.current = true;
+    followOnChange.current = true;
+    followRef.current = true;
+    setAtBottom(true);
     setMessages((prev) => [
       ...prev,
       { key: userKey, id: null, role: "user", text: message, cards: [], proposals: [], status: "done", error: null, resetAt: null },
@@ -166,6 +202,7 @@ export function ChatPanel({
     const controller = new AbortController();
     controllerRef.current = controller;
     let streamed = "";
+    let createdSession = false;
 
     const update = (patch: Partial<UiMessage>) =>
       setMessages((prev) => prev.map((item) => (item.key === assistantKey ? { ...item, ...patch } : item)));
@@ -199,6 +236,7 @@ export function ChatPanel({
       await readChatStream(response.body, (event) => {
         switch (event.type) {
           case "session":
+            if (!sessionRef.current) createdSession = true;
             sessionRef.current = event.sessionId;
             return;
           case "text":
@@ -228,9 +266,10 @@ export function ChatPanel({
       if (!finished) fail("network");
       // Nella pagina di una nuova conversazione l'indirizzo diventa quello della sessione, ma solo a
       // risposta finita: Next sincronizza replaceState con il router e cambiare pagina a stream
-      // aperto smonterebbe il pannello, annullando la richiesta.
+      // aperto smonterebbe il pannello, annullando la richiesta. Poi l'elenco laterale si rinfresca.
       if (finished && variant === "page" && !sessionId && sessionRef.current) {
         window.history.replaceState(window.history.state, "", `/${locale}/chat/${sessionRef.current}`);
+        if (createdSession) router.refresh();
       }
     } catch {
       if (controller.signal.aborted) {
@@ -253,28 +292,21 @@ export function ChatPanel({
     void send(previous.text);
   }
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void send(draft);
-  }
-
-  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
-      event.preventDefault();
-      formRef.current?.requestSubmit();
-    }
-  }
-
   function errorText(code: ChatErrorCode): string {
     if (code === "invalid_request") return t("errors.invalid_request", { max: MAX_INPUT_CHARS });
     return t(`errors.${code}`);
   }
 
   const lastIndex = messages.length - 1;
+  const remainingText = limit > 0 && canType ? t("remaining", { count: remaining }) : null;
+  const isSheet = variant === "sheet";
 
   return (
-    <div className={variant === "sheet" ? "flex h-full min-h-0 flex-col gap-4" : "flex min-w-0 flex-col gap-6"}>
-      <div className={variant === "sheet" ? "flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-1" : "flex min-w-0 flex-col gap-6"}>
+    <div className={isSheet ? "flex h-full min-h-0 flex-col" : "flex min-w-0 flex-col gap-8"}>
+      <div
+        ref={scrollerRef}
+        className={isSheet ? "flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto pr-1" : "flex min-w-0 flex-col gap-8"}
+      >
         {!enabled && (
           <p role="status" className="text-body text-lava-muted">
             {t("disabled")}
@@ -282,24 +314,30 @@ export function ChatPanel({
         )}
 
         {enabled && messages.length === 0 && (
-          <section aria-labelledby={`${inputId}-examples`} className="flex flex-col gap-3">
-            <h2 id={`${inputId}-examples`} className="text-heading-3">
-              {t("examplesTitle")}
-            </h2>
-            <ul className="flex flex-col items-stretch gap-2">
-              {EXAMPLES.map((key) => (
-                <li key={key}>
-                  <Button
-                    variant="secondary"
-                    className="h-auto w-full min-h-11 justify-start py-2 text-left whitespace-normal"
-                    disabled={!canType || streaming}
-                    onClick={() => void send(t(key))}
-                  >
-                    {t(key)}
-                  </Button>
-                </li>
-              ))}
-            </ul>
+          <section aria-labelledby={`${inputId}-examples`} className="flex flex-col gap-8 pt-2 md:pt-6">
+            <p className={isSheet ? "is-display text-heading-3 text-lava" : "is-display text-heading-2 text-lava"}>
+              {t("greeting")}
+            </p>
+            <div className="flex flex-col gap-3">
+              <h2 id={`${inputId}-examples`} className="text-label text-lava-muted">
+                {t("examplesTitle")}
+              </h2>
+              <ul className="is-chat-suggest">
+                {EXAMPLES.map((key) => (
+                  <li key={key}>
+                    <button
+                      type="button"
+                      className="is-chat-suggest__item"
+                      disabled={!canType || streaming}
+                      onClick={() => void send(t(key))}
+                    >
+                      <span className="min-w-0">{t(key)}</span>
+                      <ArrowUpRight size={20} strokeWidth={1.5} aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </section>
         )}
 
@@ -315,16 +353,22 @@ export function ChatPanel({
                     aria-busy={item.status === "streaming"}
                     className="min-w-0"
                   >
-                    <ChatMessage role="assistant" text={item.text} cards={item.cards}>
-                      {item.status === "streaming" && (
-                        <p className="flex items-center gap-2 text-body-s text-lava-muted">
-                          <span aria-hidden="true" className="inline-flex gap-1">
-                            <span className="size-1.5 rounded-pill bg-lava-muted motion-safe:animate-pulse" />
-                            <span className="size-1.5 rounded-pill bg-lava-muted motion-safe:animate-pulse [animation-delay:150ms]" />
-                          </span>
-                          {activeTool ? t(`tools.${activeTool}`) : t("thinking")}
-                        </p>
-                      )}
+                    <ChatMessage
+                      role="assistant"
+                      text={item.text}
+                      cards={item.cards}
+                      lead={
+                        item.status === "streaming" ? (
+                          <p className="flex items-center gap-2 text-body-s text-lava-muted">
+                            <span aria-hidden="true" className="inline-flex gap-1">
+                              <span className="size-1.5 rounded-pill bg-lava-muted motion-safe:animate-pulse" />
+                              <span className="size-1.5 rounded-pill bg-lava-muted motion-safe:animate-pulse [animation-delay:150ms]" />
+                            </span>
+                            {activeTool ? t(`tools.${activeTool}`) : t("thinking")}
+                          </p>
+                        ) : null
+                      }
+                    >
                       {item.status === "stopped" && <p className="text-body-s text-lava-muted">{t("stopped")}</p>}
                       {item.status === "error" && item.error && (
                         <div className="flex flex-col items-start gap-3">
@@ -355,10 +399,11 @@ export function ChatPanel({
                       {item.proposals.map((proposal) => (
                         <ChatProposalCard key={proposal.id} proposal={proposal} />
                       ))}
+                      {item.status === "done" && item.text && <ChatCopyButton text={item.text} />}
                     </ChatMessage>
                   </div>
                 )}
-                {index === lastIndex && <div ref={endRef} aria-hidden="true" />}
+                {index === lastIndex && <div ref={endRef} aria-hidden="true" className="scroll-mb-40" />}
               </li>
             ))}
           </ol>
@@ -380,38 +425,34 @@ export function ChatPanel({
       </div>
 
       {enabled && (
-        <form ref={formRef} onSubmit={onSubmit} className="flex shrink-0 flex-col gap-2">
-          <label htmlFor={inputId} className="text-body-s font-semibold text-lava">
-            {t("inputLabel")}
-          </label>
-          <div className="flex items-end gap-2">
-            <textarea
-              id={inputId}
-              name="message"
-              rows={2}
-              maxLength={MAX_INPUT_CHARS}
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={onKeyDown}
-              disabled={!canType}
-              aria-describedby={hintId}
-              className="min-h-11 min-w-0 flex-1 resize-y rounded-md border-[1.5px] border-border-control bg-calce-raised px-4 py-3 text-body text-lava placeholder:text-lava-muted focus-visible:outline-2 focus-visible:outline-focus disabled:opacity-60"
-            />
-            {streaming ? (
-              <Button type="button" variant="secondary" onClick={() => controllerRef.current?.abort()}>
-                {t("stop")}
+        <div
+          className={
+            isSheet
+              ? "flex shrink-0 flex-col gap-2 pt-3"
+              : "sticky bottom-[calc(56px_+_env(safe-area-inset-bottom))] z-10 -mx-4 flex flex-col gap-2 bg-calce px-4 pt-3 pb-4 md:bottom-0 md:mx-0 md:px-0 md:pb-8"
+          }
+        >
+          {!atBottom && messages.length > 0 && (
+            <div className="flex justify-center">
+              <Button variant="secondary" size="sm" onClick={jumpToLatest}>
+                <ArrowDown size={16} strokeWidth={1.5} aria-hidden="true" />
+                {t("jumpToLatest")}
               </Button>
-            ) : (
-              <Button type="submit" variant="primary" disabled={!canType || draft.trim() === ""}>
-                {t("send")}
-              </Button>
-            )}
-          </div>
-          <p id={hintId} className="text-caption text-lava-muted">
-            {t("inputHint")}
-            {limit > 0 && canType ? ` ${t("remaining", { count: remaining })}` : null}
-          </p>
-        </form>
+            </div>
+          )}
+          <ChatComposer
+            inputId={inputId}
+            hintId={hintId}
+            value={draft}
+            maxLength={MAX_INPUT_CHARS}
+            canType={canType}
+            streaming={streaming}
+            remainingText={remainingText}
+            onChange={setDraft}
+            onSend={() => void send(draft)}
+            onStop={() => controllerRef.current?.abort()}
+          />
+        </div>
       )}
     </div>
   );

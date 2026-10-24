@@ -1,5 +1,5 @@
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
-import { Field, TextInput } from "@/components/admin/fields";
+import { DateInput, Field } from "@/components/admin/fields";
 import { Button, ButtonLink } from "@/components/design";
 import { getPathname } from "@/lib/i18n/navigation";
 import { adminDashboard, parseDashboardRange } from "@/server/analytics/dashboard.admin";
@@ -121,10 +121,10 @@ export default async function AdminHome({ params, searchParams }: Props) {
 
         <form method="get" action={formAction} className="flex flex-wrap items-end gap-4">
           <Field label={t("from")} htmlFor="dashboard-da">
-            <TextInput id="dashboard-da" type="date" name="da" defaultValue={range.from} required className="w-auto" />
+            <DateInput id="dashboard-da" name="da" defaultValue={range.from} required className="w-auto" />
           </Field>
           <Field label={t("to")} htmlFor="dashboard-a">
-            <TextInput id="dashboard-a" type="date" name="a" defaultValue={range.to} required className="w-auto" />
+            <DateInput id="dashboard-a" name="a" defaultValue={range.to} required className="w-auto" />
           </Field>
           <Button type="submit" variant="secondary">
             {t("apply")}

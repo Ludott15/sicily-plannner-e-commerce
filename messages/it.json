@@ -40,13 +40,19 @@
     "shopProducts": "Prodotti",
     "accessibility": "Dichiarazione di accessibilità",
     "termsOfUse": "Termini d'uso",
-    "contact": "Contatti"
+    "contact": "Contatti",
+    "navItineraries": "Itinerari",
+    "navServices": "Servizi",
+    "ferries": "Traghetti",
+    "allServices": "Tutti i servizi",
+    "affiliateNote": "Alcuni link portano a partner che ci riconoscono una commissione. Il prezzo per te non cambia.",
+    "explorePageIntro": "Le stesse sezioni dell'intestazione, in un'unica pagina."
   },
   "Home": {
     "title": "La Sicilia di chi ci vive, su misura per te.",
     "subtitle": "Dicci cosa ami e quanto tempo hai: ti proponiamo un itinerario costruito sulle tue preferenze, con i consigli pratici che trovi solo parlando con chi ci abita.",
     "greeting": "Ciao, {name}",
-    "eyebrow": "Planner di viaggio e prodotti dell'isola",
+    "eyebrow": "La Sicilia, giorno per giorno",
     "createTrip": "Crea il tuo viaggio",
     "readyItineraries": "Itinerari pronti",
     "readyEyebrow": "Itinerari pronti",
@@ -63,7 +69,29 @@
     "placesNext": "Luoghi successivi",
     "flightsEyebrow": "Voli",
     "flightsTitle": "Trova un volo per la Sicilia",
-    "flightsText": "Prezzi indicativi dai partner, con la data di aggiornamento. Il prezzo finale lo conferma il partner."
+    "flightsText": "Prezzi indicativi dai partner, con la data di aggiornamento. Il prezzo finale lo conferma il partner.",
+    "trustLine": "Nessun account per iniziare.",
+    "howTitle": "Come funziona",
+    "howStep1Title": "Scegli cosa ti piace",
+    "howStep1Text": "Mare, cibo, storia, ritmo e budget: bastano pochi tocchi per dirci cosa cerchi.",
+    "howStep2Title": "Componi i giorni",
+    "howStep2Text": "Ogni giorno ha orari, spostamenti e il motivo di ogni tappa. Puoi cambiarlo a mano.",
+    "howStep3Title": "Prenota e parti",
+    "howStep3Text": "Prenoti attività, alloggi e voli dai partner. Quello che assaggi in viaggio arriva a casa, spedito dai produttori.",
+    "organizeTitle": "Organizza il viaggio",
+    "serviceLodgingTitle": "Dove dormire",
+    "serviceLodgingText": "Alloggi per zona, con la distanza dalle tappe.",
+    "serviceCarTitle": "Noleggio auto",
+    "serviceCarText": "Confronta le offerte per aeroporto e date.",
+    "serviceFlightsTitle": "Voli",
+    "serviceFlightsText": "Prezzi indicativi dai partner, con la data di aggiornamento.",
+    "servicePrepTitle": "Prima di partire",
+    "servicePrepText": "Traghetti e i servizi per il viaggio, in un'unica pagina.",
+    "guidesTitle": "Le ultime guide",
+    "guidesAll": "Tutte le guide",
+    "shopEyebrow": "Lo shop",
+    "shopTitle": "La Sicilia, anche dopo il viaggio",
+    "shopAll": "Tutti i prodotti"
   },
   "Login": {
     "title": "Accedi",
@@ -101,7 +129,12 @@
     "title": "Stai usando Isula come ospite",
     "description": "I viaggi che crei sono salvati su questo dispositivo. Aggiungi la tua email per ritrovarli ovunque: restano tuoi, non si perde nulla.",
     "signOut": "Esci",
-    "signOutWarning": "Se esci senza salvare l'account, i viaggi creati da ospite non si possono più recuperare."
+    "signOutWarning": "Se esci senza salvare l'account, i viaggi creati da ospite non si possono più recuperare.",
+    "benefitsHeading": "Con l'account",
+    "benefitOne": "Ritrovi i tuoi viaggi su ogni dispositivo.",
+    "benefitTwo": "Guadagni punti per il profilo, i check-in sul posto e le recensioni.",
+    "saveHeading": "Crea l'account con la tua email",
+    "saveIntro": "Ti mandiamo un codice a 6 cifre. Nessuna password da ricordare."
   },
   "Profile": {
     "title": "Il tuo profilo",
@@ -111,7 +144,24 @@
     "memberSince": "Iscritto dal",
     "accountHeading": "Account",
     "hubHeading": "Le tue sezioni",
-    "privacyLink": "Privacy e dati"
+    "privacyLink": "Privacy e dati",
+    "publicName": "Nome pubblico",
+    "noPublicName": "Senza nome pubblico",
+    "memberSinceLabel": "Membro da {date}",
+    "roleAdmin": "Amministratore",
+    "sectionTrips": "I tuoi viaggi",
+    "tripsHint": "Itinerari che hai creato o a cui partecipi.",
+    "groupsHint": "Viaggi condivisi con i compagni di viaggio.",
+    "conversations": "Conversazioni con l'assistente",
+    "conversationsHint": "Le conversazioni salvate con l'assistente.",
+    "sectionActivity": "Attività e premi",
+    "pointsHint": "Saldo, movimenti e badge.",
+    "notificationsHint": "Risposte alle tue proposte nei gruppi e badge ottenuti.",
+    "sectionPreferences": "Preferenze",
+    "tastesLabel": "Gusti di viaggio",
+    "tastesHint": "Interessi, caldo, folla, mobilità e dieta. Valgono per tutti i tuoi viaggi.",
+    "sectionPrivacy": "Privacy e dati",
+    "privacyHint": "Consensi, scarico dei dati ed eliminazione dell'account."
   },
   "Catalog": {
     "activitiesTitle": "Attività in Sicilia",
@@ -2356,7 +2406,7 @@
     "intro": "Chiedi attività, idee per il viaggio o una modifica al tuo itinerario. Rispondo con le attività del catalogo di Isula.",
     "newConversation": "Nuova conversazione",
     "backToList": "Tutte le conversazioni",
-    "listEmpty": "Non hai ancora una conversazione. Inizia da una domanda qui sotto.",
+    "listEmpty": "Qui compariranno le tue conversazioni salvate.",
     "untitled": "Conversazione senza titolo",
     "forTrip": "Per il tuo viaggio",
     "updatedAt": "Ultimo messaggio {date}",
@@ -2366,9 +2416,9 @@
     "stop": "Interrompi",
     "retry": "Riprova",
     "examplesTitle": "Da dove partire",
-    "example1": "Quali attività ci sono a Noto con i bambini?",
-    "example2": "Aggiungi una tappa per il mare al secondo giorno",
-    "example3": "Mi piacciono la natura e il cibo di strada: aggiorna i miei gusti",
+    "example1": "Organizza 3 giorni a Palermo",
+    "example2": "Cosa vedere vicino a Catania con i bambini",
+    "example3": "Un weekend tra Noto e Ortigia",
     "assistantName": "Assistente",
     "you": "Tu",
     "thinking": "Sto preparando la risposta",
@@ -2435,14 +2485,29 @@
       "deleteText": "Messaggi e proposte di questa conversazione spariscono. Le modifiche già applicate al viaggio restano.",
       "cancel": "Annulla",
       "confirmDelete": "Elimina",
-      "error": "Non siamo riusciti a completare l'operazione. Riprova."
+      "error": "Non siamo riusciti a completare l'operazione. Riprova.",
+      "menu": "Azioni della conversazione"
     },
     "launcher": {
       "open": "Chiedi all'assistente",
       "close": "Chiudi l'assistente",
       "title": "Assistente per {title}",
       "disabled": "L'assistente non è attivo in questo momento."
-    }
+    },
+    "greeting": "Ciao. Dimmi cosa ti serve per il viaggio.",
+    "sessionsTitle": "Conversazioni",
+    "closeSessions": "Chiudi l'elenco",
+    "groups": {
+      "today": "Oggi",
+      "week": "Ultimi 7 giorni",
+      "older": "Prima"
+    },
+    "example4": "Cosa portare a casa dalla Sicilia",
+    "jumpToLatest": "Ultimi messaggi",
+    "copy": "Copia",
+    "copied": "Copiato",
+    "note": "L'assistente può sbagliare: verifica orari e prezzi.",
+    "counter": "{count}/{max}"
   },
   "Guides": {
     "title": "Guide",
@@ -2640,7 +2705,8 @@
       "captcha_failed": "Non siamo riusciti a verificare che sei una persona. Riprova.",
       "rate_limited": "Hai chiesto troppi codici. Riprova tra qualche minuto.",
       "failed": "Non è stato possibile completare l'operazione. Riprova."
-    }
+    },
+    "breadcrumbLabel": "Percorso"
   },
   "AccountDeleted": {
     "title": "Account eliminato",
@@ -2707,7 +2773,9 @@
       "limit": "Non puoi aggiungere altro: hai raggiunto il limite di quantità o di prodotti.",
       "invalid": "Scegli una quantità tra 1 e 10.",
       "unavailable": "Il carrello non è disponibile in questo momento."
-    }
+    },
+    "quantityTimes": "{quantity} ×",
+    "editInCart": "Modifica nel carrello"
   },
   "Checkout": {
     "successTitle": "Grazie",
@@ -2738,5 +2806,14 @@
     "fakeCancel": "Annulla",
     "fakeExpire": "Simula la scadenza",
     "fakeExpireError": "Non è stato possibile simulare la scadenza."
+  },
+  "Controls": {
+    "placeholder": "Scegli una data",
+    "calendar": "Calendario",
+    "prevMonth": "Mese precedente",
+    "nextMonth": "Mese successivo",
+    "today": "Oggi",
+    "clear": "Cancella",
+    "close": "Chiudi"
   }
 }

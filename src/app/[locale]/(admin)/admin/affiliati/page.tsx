@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { Field, TextInput } from "@/components/admin/fields";
+import { DateInput, Field } from "@/components/admin/fields";
 import { Button, ButtonAnchor, ButtonLink } from "@/components/design";
 import { PERIOD_DAYS, resolvePeriod, type PeriodDays } from "@/lib/affiliate-conversions/period";
 import { getPathname } from "@/lib/i18n/navigation";
@@ -250,10 +250,10 @@ function PeriodPicker({
       </div>
       <form method="get" action={formAction} className="flex flex-wrap items-end gap-4">
         <Field label={labels.custom} htmlFor="affiliati-da">
-          <TextInput id="affiliati-da" type="date" name="da" defaultValue={period.from} required className="w-auto" />
+          <DateInput id="affiliati-da" name="da" defaultValue={period.from} required className="w-auto" />
         </Field>
         <Field label={labels.to} htmlFor="affiliati-a">
-          <TextInput id="affiliati-a" type="date" name="a" defaultValue={period.to} required className="w-auto" />
+          <DateInput id="affiliati-a" name="a" defaultValue={period.to} required className="w-auto" />
         </Field>
         <Button type="submit" variant="secondary">
           {labels.apply}

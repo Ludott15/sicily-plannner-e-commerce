@@ -59,7 +59,7 @@ test.describe("modulo di contatto", () => {
   test("campi con etichetta, invio disabilitato senza verifica, nessuno scorrimento a 390 px", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/it/contatti");
-    await expect(page.getByLabel("Email")).toBeVisible();
+    await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
     await expect(page.getByLabel("Di cosa si tratta")).toBeVisible();
     await expect(page.getByLabel("Messaggio")).toBeVisible();
     await expect(page.getByRole("button", { name: "Invia il messaggio" })).toBeDisabled();
@@ -70,7 +70,7 @@ test.describe("modulo di contatto", () => {
   test("invio: senza un canale email configurato l'esito è mostrato all'utente", async ({ page }) => {
     await page.goto("/it/contatti");
     const submit = page.getByRole("button", { name: "Invia il messaggio" });
-    await page.getByLabel("Email").fill(`e2e-contatto-${Date.now()}@example.com`);
+    await page.getByLabel("Email", { exact: true }).fill(`e2e-contatto-${Date.now()}@example.com`);
     await page.getByLabel("Messaggio").fill("Vorrei sapere se il tour dell'Etna parte anche in bassa stagione.");
     // Il bottone si attiva con email e messaggio e con il token Turnstile (chiave di prova).
     await expect(submit).toBeEnabled({ timeout: 30_000 });

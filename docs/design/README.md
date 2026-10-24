@@ -2,6 +2,8 @@
 
 Questa cartella contiene il design system e i mockup di riferimento. "Isula" è un nome di lavoro.
 
+Decisione di Ludovico del 2026-10-20: la home (`src/app/[locale]/(public)/page.tsx`) e la navigazione si discostano da `mockups/Home.html` e `HomeMobile.html`; i mockup restano invariati.
+
 ## Cosa c'è e quanto vale
 
 | Percorso | Cosa | Autorità |

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { buttonClass, ButtonAnchor, PendingButton } from "@/components/design";
+import { buttonClass, ButtonAnchor, DateField, PendingButton, Select } from "@/components/design";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { isSicilyAirport } from "@/lib/flights/airports";
@@ -14,8 +14,6 @@ import { carAirports, verticalAvailability, verticalSearchHref } from "@/server/
 // Finché il partner non è pronto la pagina non è indicizzata.
 
 const CAR_ADULTS = 1;
-const FIELD =
-  "min-h-11 w-full rounded-sm border-[1.5px] border-border-control bg-calce-raised px-3 text-body text-lava";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -110,28 +108,30 @@ export default async function CarRentalPage({ params, searchParams }: Props) {
               <label htmlFor="aeroporto" className="text-body-s font-semibold">
                 {t("airportLabel")}
               </label>
-              <select id="aeroporto" name="aeroporto" defaultValue={airport} required className={FIELD}>
-                <option value="" disabled>
-                  {t("airportPlaceholder")}
-                </option>
-                {airports.map((a) => (
-                  <option key={a.iata} value={a.iata}>
-                    {t("airportOption", { name: a.name, city: a.city, iata: a.iata })}
-                  </option>
-                ))}
-              </select>
+              <Select
+                id="aeroporto"
+                name="aeroporto"
+                label={t("airportLabel")}
+                placeholder={t("airportPlaceholder")}
+                defaultValue={airport === "" ? undefined : airport}
+                required
+                options={airports.map((a) => ({
+                  value: a.iata,
+                  label: t("airportOption", { name: a.name, city: a.city, iata: a.iata }),
+                }))}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="checkin" className="text-body-s font-semibold">
                 {t("pickup")}
               </label>
-              <input id="checkin" name="checkin" type="date" defaultValue={checkin} className={FIELD} />
+              <DateField id="checkin" name="checkin" label={t("pickup")} defaultValue={checkin} />
             </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="checkout" className="text-body-s font-semibold">
                 {t("dropoff")}
               </label>
-              <input id="checkout" name="checkout" type="date" defaultValue={checkout} className={FIELD} />
+              <DateField id="checkout" name="checkout" label={t("dropoff")} defaultValue={checkout} />
             </div>
             <div className="flex items-end lg:col-span-4">
               <button type="submit" className={buttonClass("primary", "md", "w-full md:w-auto")}>

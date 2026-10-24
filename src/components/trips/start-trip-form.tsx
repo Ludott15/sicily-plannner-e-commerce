@@ -1,14 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Turnstile } from "@/components/auth/turnstile";
-import { Button } from "@/components/design";
+import { Button, DateField, Select } from "@/components/design";
 import { clearAnnouncement, queueAnnouncement } from "@/lib/announce";
 import { startTrip, type StartTripInput, type TripActionError } from "@/server/trips/actions";
-
-const FIELD =
-  "min-h-11 w-full rounded-sm border-[1.5px] border-border-control bg-calce-raised px-3 text-body font-normal text-lava";
 
 // Date e persone, chiesti quando si salva un viaggio (M5): da un itinerario pronto o da una
 // delle proposte. Chi non ha ancora una sessione la riceve da ospite (Turnstile). Il form sta
@@ -24,6 +21,8 @@ export function StartTripForm({
   needsSession: boolean;
 }) {
   const t = useTranslations("Trips");
+  const startDateId = useId();
+  const travelersId = useId();
   const [startDate, setStartDate] = useState("");
   const [travelers, setTravelers] = useState("2");
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -56,28 +55,32 @@ export function StartTripForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-6">
       <div className="grid gap-6 sm:grid-cols-2">
-        <label className="flex flex-col gap-2 text-body-s font-semibold">
-          {t("startDate")}
-          <input
-            type="date"
-            name="startDate"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className={FIELD}
+        <div className="flex flex-col gap-2">
+          <label htmlFor={startDateId} className="text-body-s font-semibold">
+            {t("startDate")}
+          </label>
+          <DateField id={startDateId} name="startDate" value={startDate} onValueChange={setStartDate} />
+          <span className="text-body-s font-normal text-lava-muted">{t("startDateHint")}</span>
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor={travelersId} className="text-body-s font-semibold">
+            {t("travelers")}
+          </label>
+          <Select
+            id={travelersId}
+            name="travelers"
+            label={t("travelers")}
+            value={travelers}
+            onValueChange={setTravelers}
+            options={[
+              { value: "", label: t("travelersUnknown") },
+              ...Array.from({ length: 12 }, (_, i) => i + 1).map((n) => ({
+                value: String(n),
+                label: t("travelersOption", { count: n }),
+              })),
+            ]}
           />
-          <span className="font-normal text-lava-muted">{t("startDateHint")}</span>
-        </label>
-        <label className="flex flex-col gap-2 text-body-s font-semibold">
-          {t("travelers")}
-          <select name="travelers" value={travelers} onChange={(e) => setTravelers(e.target.value)} className={FIELD}>
-            <option value="">{t("travelersUnknown")}</option>
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-              <option key={n} value={n}>
-                {t("travelersOption", { count: n })}
-              </option>
-            ))}
-          </select>
-        </label>
+        </div>
       </div>
       {needsSession && (
         <Turnstile key={captchaKey} locale={locale} onToken={setCaptchaToken} onError={() => setError("captcha_failed")} />

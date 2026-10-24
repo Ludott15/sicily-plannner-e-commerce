@@ -1,3 +1,4 @@
+import { chooseOption } from "./helpers/controls";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { sessionUserId, signUpWithCode } from "./helpers";
@@ -72,12 +73,12 @@ test("l'admin chiude una stagione e cambia lo stato del premio", async ({ page, 
   // Stagione con un premio: il suo stato si cambia e resta dopo il ricaricamento.
   await page.goto("/it/admin/stagioni?stagione=1990-estate");
   const row = page.locator('tr[data-rank="1"]');
-  await row.getByLabel("Stato del premio").selectOption("shipped");
+  await chooseOption(page, "Stato del premio", "Spedito", row);
   await row.getByRole("button", { name: "Salva stato" }).click();
   await expect(row.getByRole("status").filter({ hasText: "Stato del premio aggiornato." })).toBeVisible();
 
   await page.reload();
-  await expect(page.locator('tr[data-rank="1"]').getByLabel("Stato del premio")).toHaveValue("shipped");
+  await expect(page.locator('tr[data-rank="1"]').getByLabel("Stato del premio")).toHaveText("Spedito");
 
   // Stagioni del solo e2e (1990, 1991): non toccano quelle dei test pgTAP.
   await withDb((sql) => sql`delete from public.season_awards where season in ('1990-estate', '1991-estate')`);

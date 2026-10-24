@@ -2,6 +2,7 @@
 
 import { useOptimistic, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { Select } from "@/components/design";
 import { TRAVEL_PARTIES, type TravelParty } from "@/lib/itinerary-checks";
 import { useRouter } from "@/lib/i18n/navigation";
 import { DAY_BUCKETS, templateFiltersQuery, type DayBucket, type TemplateFilters as Filters } from "@/lib/template-filters";
@@ -105,38 +106,35 @@ export function TemplateFilters({
           <label htmlFor="filtro-zona" className="text-body-s font-semibold">
             {t("filterArea")}
           </label>
-          <select
+          <Select
             id="filtro-zona"
-            className="min-h-11 w-full rounded-sm border-[1.5px] border-border-control bg-calce-raised px-3 text-body text-lava"
+            label={t("filterArea")}
             value={filters.area ?? ""}
-            onChange={(event) => apply({ ...filters, area: event.target.value || null })}
-          >
-            <option value="">{t("filterAllAreas")}</option>
-            {areas.map((area) => (
-              <option key={area.slug} value={area.slug}>
-                {area.name}
-              </option>
-            ))}
-          </select>
+            onValueChange={(value) => apply({ ...filters, area: value || null })}
+            options={[
+              { value: "", label: t("filterAllAreas") },
+              ...areas.map((area) => ({ value: area.slug, label: area.name })),
+            ]}
+          />
         </div>
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="filtro-mese" className="text-body-s font-semibold">
             {t("filterMonth")}
           </label>
-          <select
+          <Select
             id="filtro-mese"
-            className="min-h-11 w-full rounded-sm border-[1.5px] border-border-control bg-calce-raised px-3 text-body text-lava"
-            value={filters.month ?? ""}
-            onChange={(event) => apply({ ...filters, month: event.target.value ? Number(event.target.value) : null })}
-          >
-            <option value="">{t("filterAny")}</option>
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-              <option key={month} value={month}>
-                {monthFormat.format(new Date(2026, month - 1, 1))}
-              </option>
-            ))}
-          </select>
+            label={t("filterMonth")}
+            value={filters.month === null ? "" : String(filters.month)}
+            onValueChange={(value) => apply({ ...filters, month: value ? Number(value) : null })}
+            options={[
+              { value: "", label: t("filterAny") },
+              ...Array.from({ length: 12 }, (_, i) => i + 1).map((month) => ({
+                value: String(month),
+                label: monthFormat.format(new Date(2026, month - 1, 1)),
+              })),
+            ]}
+          />
         </div>
       </div>
     </div>

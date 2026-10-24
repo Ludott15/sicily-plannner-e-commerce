@@ -1,0 +1,42 @@
+/*
+ * Assistente (chat). Stili di componente nel layer components di Tailwind: le classi di utilità
+ * dello stesso elemento li rifiniscono. Solo token (docs/design/tokens.json): nessun colore o font
+ * scritto a mano. Regole di movimento in docs/design/brand/movimento.md.
+ */
+@layer components {
+
+/* Compositore: un solo contenitore con il bordo; il focus sta sul contenitore, non sulla textarea. */
+.is-chat-composer { display: flex; align-items: flex-end; gap: var(--space-2); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); background: var(--calce-raised); border: 1.5px solid var(--border-control); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); transition: border-color var(--dur-fast) var(--ease-out); }
+.is-chat-composer:focus-within { border-color: var(--lava-muted); }
+.is-chat-composer:has(.is-chat-composer__input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* Sei righe di testo (24px) più il padding: oltre, la textarea scorre. */
+.is-chat-composer__input { flex: 1 1 auto; min-width: 0; min-height: 44px; max-height: 10.5rem; padding: 10px 0; background: none; border: 0; outline: none; resize: none; overflow-y: auto; font-family: var(--font-sans); font-size: 16px; line-height: 24px; color: var(--lava); }
+.is-chat-composer__input::placeholder { color: var(--lava-muted); }
+.is-chat-composer__input:disabled { opacity: 0.6; }
+
+/* Menu "..." di una conversazione (Menu di Base UI): il pannello è is-panel nel portale, posizionato
+   dalla libreria; la voce evidenziata (hover o tastiera) ha data-highlighted. */
+.is-chat-menu { min-width: 14rem; padding: var(--space-1); display: flex; flex-direction: column; }
+.is-chat-menu__item { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 44px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: var(--lava); font-family: var(--font-sans); font-size: 15px; text-align: left; cursor: pointer; outline: none; }
+.is-chat-menu__item[data-highlighted] { background: var(--calce-sunk); }
+
+/* Riga dell'elenco conversazioni: il link occupa lo spazio, il menu sta a destra. */
+.is-chat-row { position: relative; display: flex; align-items: center; gap: var(--space-1); border-radius: var(--radius-md); }
+.is-chat-row:hover, .is-chat-row[data-active="true"] { background: var(--calce-sunk); }
+.is-chat-row__link { flex: 1 1 auto; min-width: 0; min-height: 44px; display: flex; align-items: center; padding: 0 var(--space-3); overflow: hidden; color: var(--lava); font-size: 15px; line-height: 20px; text-decoration: none; white-space: nowrap; text-overflow: ellipsis; }
+.is-chat-row__link:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: var(--radius-md); }
+.is-chat-row[data-active="true"] .is-chat-row__link { font-weight: 600; }
+
+/* Suggerimenti della conversazione nuova: righe con separatore sottile, non una griglia di bottoni. */
+.is-chat-suggest { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--divider); }
+.is-chat-suggest__item { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 56px; padding: var(--space-3) 0; border: 0; border-bottom: 1px solid var(--divider); background: none; color: var(--lava); font-family: var(--font-sans); font-size: 17px; line-height: 24px; text-align: left; cursor: pointer; }
+.is-chat-suggest__item:hover { color: var(--coccio-text); }
+.is-chat-suggest__item:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.is-chat-suggest__item:disabled { opacity: 0.45; cursor: not-allowed; }
+.is-chat-suggest__item svg { flex-shrink: 0; color: var(--lava-muted); }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-chat-composer { transition: none; }
+}

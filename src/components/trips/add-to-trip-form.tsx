@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/design";
+import { Button, Select } from "@/components/design";
 import { clearAnnouncement, queueAnnouncement } from "@/lib/announce";
 import { Link } from "@/lib/i18n/navigation";
 import { suggestDay } from "@/lib/trips";
@@ -40,6 +40,8 @@ export function AddToTripForm({
 }) {
   const t = useTranslations("Trips");
   const tg = useTranslations("Groups");
+  const tripFieldId = useId();
+  const dayFieldId = useId();
   const [tripId, setTripId] = useState(trips[0]!.id);
   const trip = trips.find((x) => x.id === tripId)!;
   const suggestion = suggestDay(trip.dayAreas, trip.dayStops, activityArea);
@@ -74,35 +76,35 @@ export function AddToTripForm({
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-8">
-      <label className="flex flex-col gap-2 text-body-s font-semibold">
-        {t("pickTrip")}
-        <select
+      <div className="flex flex-col gap-2">
+        <label htmlFor={tripFieldId} className="text-body-s font-semibold">
+          {t("pickTrip")}
+        </label>
+        <Select
+          id={tripFieldId}
+          label={t("pickTrip")}
           value={tripId}
-          onChange={(e) => setTripId(e.target.value)}
-          className="min-h-11 w-full rounded-sm border-[1.5px] border-border-control bg-calce-raised px-3 text-body font-normal text-lava"
-        >
-          {trips.map((x) => (
-            <option key={x.id} value={x.id}>
-              {x.title}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="flex flex-col gap-2 text-body-s font-semibold">
-        {t("pickDay")}
-        <select
-          value={day}
-          onChange={(e) => setDayByTrip({ ...dayByTrip, [tripId]: Number(e.target.value) })}
-          className="min-h-11 w-full rounded-sm border-[1.5px] border-border-control bg-calce-raised px-3 text-body font-normal text-lava"
-        >
-          {Array.from({ length: trip.days }, (_, d) => (
-            <option key={d} value={d}>
-              {t("dayOption", { n: d + 1, stops: trip.dayStops[d] ?? 0 })}
-              {d === suggestion.day && !suggestion.far && activityArea ? ` · ${t("sameArea")}` : ""}
-            </option>
-          ))}
-        </select>
-      </label>
+          onValueChange={setTripId}
+          options={trips.map((x) => ({ value: x.id, label: x.title }))}
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+        <label htmlFor={dayFieldId} className="text-body-s font-semibold">
+          {t("pickDay")}
+        </label>
+        <Select
+          id={dayFieldId}
+          label={t("pickDay")}
+          value={String(day)}
+          onValueChange={(value) => setDayByTrip({ ...dayByTrip, [tripId]: Number(value) })}
+          options={Array.from({ length: trip.days }, (_, d) => ({
+            value: String(d),
+            label: `${t("dayOption", { n: d + 1, stops: trip.dayStops[d] ?? 0 })}${
+              d === suggestion.day && !suggestion.far && activityArea ? ` · ${t("sameArea")}` : ""
+            }`,
+          }))}
+        />
+      </div>
       {suggestion.far && (
         <p role="note" className="rounded-lg bg-calce-sunk p-4 text-body-s">
           {t("farTrip", { areas: tripAreas.join(", "), area: activityArea ? (areaNames[activityArea] ?? activityArea) : "" })}

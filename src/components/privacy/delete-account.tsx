@@ -108,7 +108,7 @@ export function DeleteAccount({ isGuest, phrase }: { isGuest: boolean; phrase: s
   // Ospite: una sola schermata, con la frase di conferma.
   if (isGuest) {
     return (
-      <section aria-labelledby={headingId} className="flex flex-col gap-6 rounded-lg border border-border-control bg-calce-raised p-6">
+      <section aria-labelledby={headingId} className="flex flex-col gap-6">
         <h2 id={headingId} className="text-heading-3">
           {t("deleteGuestHeading")}
         </h2>
@@ -145,7 +145,7 @@ export function DeleteAccount({ isGuest, phrase }: { isGuest: boolean; phrase: s
   // Account: passo 1, CAPTCHA e invio del codice.
   if (!codeSent) {
     return (
-      <section aria-labelledby={headingId} className="flex flex-col gap-6 rounded-lg border border-border-control bg-calce-raised p-6">
+      <section aria-labelledby={headingId} className="flex flex-col gap-6">
         <h2 id={headingId} className="text-heading-3">
           {t("deleteHeading")}
         </h2>
@@ -167,7 +167,7 @@ export function DeleteAccount({ isGuest, phrase }: { isGuest: boolean; phrase: s
 
   // Account: passo 2, codice a 6 cifre e frase di conferma.
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-6 rounded-lg border border-border-control bg-calce-raised p-6">
+    <section aria-labelledby={headingId} className="flex flex-col gap-6">
       <h2 id={headingId} className="text-heading-3">
         {t("deleteHeading")}
       </h2>

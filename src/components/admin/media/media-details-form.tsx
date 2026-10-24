@@ -59,7 +59,7 @@ export function MediaDetailsForm({
             id={id("sourceType")}
             name="sourceType"
             value={sourceType}
-            onChange={(e) => setSourceType(e.target.value as MediaFormValues["sourceType"])}
+            onValueChange={(next) => setSourceType(next as MediaFormValues["sourceType"])}
           >
             {(values.isSvg ? (["illustration"] as const) : (["own", "licensed", "partner", "illustration"] as const)).map((s) => (
               <option key={s} value={s}>

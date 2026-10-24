@@ -374,7 +374,7 @@ function StopRow({
             aria-label={t("stopMoveToDay")}
             className="w-auto"
             value={String(item.dayIndex)}
-            onChange={(event) => onMoveToDay(Number(event.target.value))}
+            onValueChange={(next) => onMoveToDay(Number(next))}
           >
             {Array.from({ length: days }, (_, day) => (
               <option key={day} value={day}>

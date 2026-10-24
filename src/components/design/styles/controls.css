@@ -1,0 +1,137 @@
+/*
+ * Controlli del design system: menu a tendina (Select), campo data (DateField), superficie delle
+ * finestre dell'header (Popover, sheet su mobile) e calendario.
+ * Solo token (docs/design/tokens.json, variabili in generated/design/tokens.css): nessun colore o font
+ * scritto a mano. Regole in docs/design/components/{Select,DateField,Popover}/README.md.
+ * Nel layer components di Tailwind: una classe di utilità sullo stesso elemento vince.
+ * Il blocco mobile sta in fondo: a parità di specificità vince sulle regole desktop.
+ */
+
+@layer components {
+
+/* Campo: la stessa forma dei campi del sito (bordo di controllo, raggio, 44px di altezza). */
+.is-field {
+  display: flex; align-items: center; gap: var(--space-2);
+  width: 100%; min-height: 44px; padding: 0 var(--space-3);
+  border: 1.5px solid var(--border-control); border-radius: var(--radius-md);
+  background: var(--calce-raised); color: var(--lava);
+  font-family: var(--font-sans); font-size: 16px; line-height: 24px; text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.is-field--sm { min-height: 36px; font-size: 14px; line-height: 20px; }
+.is-field:hover { border-color: var(--lava-muted); }
+.is-field:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.is-field[data-popup-open] { border-color: var(--lava); }
+.is-field:disabled, .is-field[data-disabled] { opacity: 0.45; cursor: not-allowed; }
+
+/* Superficie comune: menu, menu a tendina, calendario e finestre dell'header. */
+.is-panel {
+  background: var(--calce-raised); color: var(--lava);
+  border: 1px solid var(--card-edge); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lift);
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+}
+.is-panel[data-starting-style], .is-panel[data-ending-style] { opacity: 0; transform: translateY(-4px); }
+
+.is-overlay { z-index: 60; }
+
+/* Menu a tendina (Select) */
+.is-select__value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.is-select[data-placeholder] .is-select__value { color: var(--lava-muted); }
+.is-select__icon {
+  display: grid; place-items: center; flex-shrink: 0; color: var(--lava-muted);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.is-select[data-popup-open] .is-select__icon { transform: rotate(180deg); }
+.is-select__popup { min-width: var(--anchor-width); max-width: calc(100vw - 24px); padding: 6px; overflow: hidden; }
+/* Circa otto opzioni (40 px l'una) senza scorrere; poi scorre dentro la lista. */
+.is-select__list { display: flex; flex-direction: column; gap: 2px; max-height: min(336px, var(--available-height, 336px)); overflow-y: auto; outline: none; }
+.is-select__item {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  min-height: 40px; padding: 0 var(--space-3); border-radius: var(--radius-sm);
+  font-size: 16px; line-height: 24px; color: var(--lava); cursor: pointer; user-select: none; outline: none;
+}
+.is-select__item[data-highlighted] { background: var(--coccio-tint); }
+.is-select__item[data-selected] { color: var(--coccio-text); font-weight: 600; }
+.is-select__item[data-disabled] { opacity: 0.45; cursor: not-allowed; }
+.is-select__copy { display: flex; flex-direction: column; min-width: 0; }
+.is-select__desc { font-size: 14px; line-height: 20px; color: var(--lava-muted); }
+.is-select__check { display: grid; place-items: center; flex-shrink: 0; color: var(--coccio-text); }
+
+/* Campo data */
+.is-date { position: relative; }
+.is-date__trigger { display: flex; }
+.is-date__text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.is-date__trigger--empty .is-date__text { color: var(--lava-muted); }
+.is-date__required {
+  position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; margin: 0; padding: 0;
+  overflow: hidden; clip-path: inset(50%); border: 0; white-space: nowrap;
+}
+
+/* Finestre dell'header e calendario (Popover, sheet su mobile) */
+.is-popover__positioner { z-index: 60; }
+.is-popover {
+  display: flex; flex-direction: column; width: min(400px, calc(100vw - 24px));
+  max-height: min(72vh, 640px); overflow: hidden;
+}
+.is-popover__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-4) var(--space-3) 0 var(--space-6); }
+.is-popover__title { margin: 0; font-family: var(--font-display); font-size: 20px; line-height: 28px; font-weight: 600; font-optical-sizing: auto; font-variation-settings: "SOFT" 50; }
+.is-popover__body { flex: 1; min-height: 0; overflow-y: auto; padding: var(--space-4) var(--space-6); }
+.is-popover__foot { display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-4) var(--space-6) var(--space-6); border-top: 1px solid var(--divider); }
+.is-popover__foot .is-btn { flex: 1 1 auto; }
+.is-sheet-handle { display: none; }
+.is-icon-btn {
+  display: inline-grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px;
+  border: 0; border-radius: var(--radius-pill); background: none; color: var(--lava); cursor: pointer;
+}
+.is-icon-btn:hover { background: var(--calce-sunk); }
+.is-icon-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.is-calendar { width: min(344px, calc(100vw - 24px)); }
+.is-calendar__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-4) var(--space-3) 0 var(--space-4); }
+.is-calendar__title { margin: 0; font-family: var(--font-display); font-size: 18px; line-height: 24px; font-weight: 600; font-optical-sizing: auto; font-variation-settings: "SOFT" 50; }
+.is-calendar__grid { display: flex; flex-direction: column; gap: 2px; padding: var(--space-3) var(--space-4) 0; }
+.is-calendar__row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.is-calendar__weekday { display: grid; place-items: center; height: 32px; font-size: 13px; font-weight: 600; color: var(--lava-muted); }
+.is-calendar__day {
+  display: grid; place-items: center; min-height: 44px; border-radius: var(--radius-pill);
+  font-size: 15px; font-variant-numeric: tabular-nums; color: var(--lava); cursor: pointer; user-select: none;
+}
+.is-calendar__day:hover { background: var(--calce-sunk); }
+.is-calendar__day:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.is-calendar__day[aria-current="date"] { box-shadow: inset 0 0 0 1.5px var(--coccio-text); }
+.is-calendar__day[aria-selected="true"] { background: var(--lava); color: var(--calce); font-weight: 600; }
+.is-calendar__day[aria-disabled="true"] { color: var(--lava-muted); opacity: 0.45; cursor: not-allowed; }
+.is-calendar__day[aria-disabled="true"]:hover { background: none; }
+.is-calendar__empty { min-height: 44px; }
+.is-calendar__foot { align-items: center; justify-content: space-between; }
+.is-calendar__foot .is-btn { flex: 0 0 auto; }
+
+/* Mobile (sotto 768px): le finestre dell'header diventano uno sheet dal basso con maniglia.
+   Il posizionamento inline di Base UI si scavalca con !important. */
+@media (max-width: 767px) {
+  .is-popover__positioner {
+    position: fixed !important; top: auto !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+    width: 100% !important; transform: none !important;
+  }
+  .is-popover {
+    width: 100%; max-height: 80vh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0; border-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .is-popover .is-sheet-handle {
+    display: block; width: 40px; height: 4px; margin: var(--space-2) auto 0; flex-shrink: 0;
+    border-radius: var(--radius-pill); background: var(--border-control);
+  }
+  .is-popover[data-starting-style], .is-popover[data-ending-style] { transform: translateY(24px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-panel { transition: opacity var(--dur-fast) linear; }
+  .is-panel[data-starting-style], .is-panel[data-ending-style],
+  .is-popover[data-starting-style], .is-popover[data-ending-style] { transform: none; }
+  .is-select__icon { transition: none; }
+}
+
+}

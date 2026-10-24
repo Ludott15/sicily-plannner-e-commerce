@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/design";
 import type { AdminFormAction } from "@/lib/admin-form";
-import { Checkbox, Field, FormError, Select, TextArea, TextInput } from "./fields";
+import { Checkbox, DateInput, Field, FormError, Select, TextArea, TextInput } from "./fields";
 import { useAdminForm } from "./use-admin-form";
 
 // Form dell'admin dei consigli locali (LocalTip/README.md): un solo fatto concreto, al
@@ -80,7 +80,7 @@ export function TipForm({
           <TextInput id="authorRelation" name="authorRelation" defaultValue={values.authorRelation ?? ""} />
         </Field>
         <Field label={t("tipVerifiedAt")} htmlFor="verifiedAt">
-          <TextInput id="verifiedAt" name="verifiedAt" type="date" defaultValue={values.verifiedAt} required />
+          <DateInput id="verifiedAt" name="verifiedAt" defaultValue={values.verifiedAt} required />
         </Field>
       </div>
       <Checkbox label={t("tipActive")} name="isActive" defaultChecked={values.isActive} />
@@ -140,7 +140,7 @@ export function AuthorForm({ action, locale, values }: { action: AdminFormAction
           <TextInput id={`${prefix}-photo`} name="photoUrl" type="url" defaultValue={values.photoUrl ?? ""} />
         </Field>
         <Field label={t("authorConsent")} hint={t("authorConsentHint")} htmlFor={`${prefix}-consent`}>
-          <TextInput id={`${prefix}-consent`} name="consentAt" type="date" defaultValue={values.consentAt ?? ""} />
+          <DateInput id={`${prefix}-consent`} name="consentAt" defaultValue={values.consentAt ?? ""} />
         </Field>
       </div>
       <Field label={t("authorBio")} htmlFor={`${prefix}-bio`}>

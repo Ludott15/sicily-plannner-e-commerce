@@ -3,7 +3,7 @@
 import { useId, useState, useTransition, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Turnstile } from "@/components/auth/turnstile";
-import { Button } from "@/components/design";
+import { Button, Select } from "@/components/design";
 import { Link } from "@/lib/i18n/navigation";
 import { CONTACT_MESSAGE_MAX_LENGTH, CONTACT_MESSAGE_MIN_LENGTH, CONTACT_TOPICS, type ContactTopic } from "@/lib/contact";
 import { sendContactMessage, type ContactResult } from "@/server/contact/actions";
@@ -109,19 +109,14 @@ export function ContactForm({ locale }: { locale: string }) {
         <label htmlFor={ids.topic} className="text-body-s font-semibold">
           {t("topicLabel")}
         </label>
-        <select
+        <Select
           id={ids.topic}
           name="topic"
+          label={t("topicLabel")}
           value={topic}
-          onChange={(event) => setTopic(event.target.value as ContactTopic)}
-          className={`min-h-11 ${FIELD}`}
-        >
-          {TOPICS.map((value) => (
-            <option key={value} value={value}>
-              {t(`topics.${value}`)}
-            </option>
-          ))}
-        </select>
+          onValueChange={(value) => setTopic(value as ContactTopic)}
+          options={TOPICS.map((value) => ({ value, label: t(`topics.${value}`) }))}
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">

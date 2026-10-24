@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { buttonClass } from "@/components/design";
 import type { AdminFormAction } from "@/lib/admin-form";
@@ -83,8 +83,7 @@ export function BadgeForm({
           : t("errorFailed")
       : null;
 
-  function onCriteriaTypeChange(event: ChangeEvent<HTMLSelectElement>) {
-    const next = event.currentTarget.value;
+  function onCriteriaTypeChange(next: string) {
     if (isCriteriaType(next)) setCriteriaType(next);
   }
 
@@ -122,7 +121,7 @@ export function BadgeForm({
 
       <div className="grid gap-4 md:grid-cols-3">
         <Field label={t("fieldCriteriaType")} htmlFor={id("criteria-type")}>
-          <Select id={id("criteria-type")} name="criteriaType" value={criteriaType} onChange={onCriteriaTypeChange}>
+          <Select id={id("criteria-type")} name="criteriaType" value={criteriaType} onValueChange={onCriteriaTypeChange}>
             {BADGE_CRITERIA_TYPES.map((type) => (
               <option key={type} value={type}>
                 {t(`criterionTypes.${type}`)}
